@@ -11,6 +11,8 @@ interface Node extends d3.SimulationNodeDatum {
   tags: string[]
   gfx?: PIXI.Graphics
   label?: PIXI.Text
+  x?: number
+  y?: number
 }
 
 interface Link extends d3.SimulationLinkDatum<Node> {
@@ -58,7 +60,7 @@ export function GraphView() {
       const links: Link[] = data.links.map(l => ({ ...l }))
 
       simulation = d3.forceSimulation<Node>(nodes)
-        .force("link", d3.forceLink<Node, Link>(links).id(d => d.id).distance(100))
+        .force("link", d3.forceLink<Node, Link>(links).id((d: any) => d.id).distance(100))
         .force("charge", d3.forceManyBody().strength(-200))
         .force("center", d3.forceCenter(0, 0))
         .force("collision", d3.forceCollide().radius(20))
@@ -76,7 +78,7 @@ export function GraphView() {
         gfx.interactive = true
         gfx.cursor = 'pointer'
         
-        gfx.on('pointerdown', (e) => {
+        gfx.on('pointerdown', (e: any) => {
           if (e.button === 0) {
             pushCard({
               url: `/${node.id}`,

@@ -20,7 +20,7 @@ export function ChessPage() {
       return
     }
 
-    const move = moves.find(m => m.to === square)
+    const move = (moves as any[]).find(m => m.to === square)
     if (move) {
       const newGame = new Chess(game.fen())
       try {
@@ -69,12 +69,12 @@ export function ChessPage() {
 
       <div className={styles.gameArea}>
         <div className={styles.board}>
-          {board.map((row, i) => (
-            row.map((piece, j) => {
+          {board.map((row: any[], i: number) => (
+            row.map((piece: any, j: number) => {
               const square = String.fromCharCode(97 + j) + (8 - i)
               const isBlack = (i + j) % 2 === 1
               const isSelected = selectedSquare === square
-              const isPossibleMove = moves.some(m => m.to === square)
+              const isPossibleMove = (moves as any[]).some(m => m.to === square)
 
               return (
                 <div
@@ -113,7 +113,7 @@ export function ChessPage() {
           <div className={styles.history}>
             <h4>History</h4>
             <div className={styles.movesList}>
-              {game.history().map((m, i) => (
+              {game.history().map((m: string, i: number) => (
                 <span key={i} className={styles.moveItem}>{m}</span>
               ))}
             </div>

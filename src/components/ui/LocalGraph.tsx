@@ -12,6 +12,8 @@ interface Node extends d3.SimulationNodeDatum {
   gfx?: PIXI.Graphics
   label?: PIXI.Text
   isCurrent?: boolean
+  x?: number
+  y?: number
 }
 
 interface Link extends d3.SimulationLinkDatum<Node> {
@@ -72,7 +74,7 @@ export function LocalGraph({ slug }: Props) {
       stage.y = height / 2
 
       simulation = d3.forceSimulation<Node>(localNodes)
-        .force("link", d3.forceLink<Node, Link>(localLinks).id(d => d.id).distance(80))
+        .force("link", d3.forceLink<Node, Link>(localLinks).id((d: any) => d.id).distance(80))
         .force("charge", d3.forceManyBody().strength(-150))
         .force("center", d3.forceCenter(0, 0))
         .force("collision", d3.forceCollide().radius(30))

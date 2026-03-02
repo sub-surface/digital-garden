@@ -86,7 +86,7 @@ export function SearchOverlay() {
     if (searchResults.length > 0) {
       // FlexSearch returns results grouped by field
       const seen = new Set<string>()
-      searchResults.forEach((fieldResult) => {
+      searchResults.forEach((fieldResult: any) => {
         fieldResult.result.forEach((res: any) => {
           if (!seen.has(res.id)) {
             seen.add(res.id)
