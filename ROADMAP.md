@@ -66,8 +66,8 @@ Repo: `digital-garden-v2` | Deploy target: Cloudflare Pages | Wiki: separate rep
 - [x] Fix footnote double-rendering (flattened HTML in sidenote injector)
 - [x] Improve LinkPreview stability (safe-zone bridge + robust expand trigger)
 - [x] MDX component library: `<BookCard>`, `<MovieCard>`, `<Gallery>`
-- [ ] `<MDXProvider>` wrapping app with component map
-- [ ] Switch to full MDX (`@mdx-js/rollup`) — `.md` + `.mdx` both processed (moved to Phase 8)
+- [x] `<MDXProvider>` wrapping app with component map
+- [x] Switch to full MDX (`@mdx-js/rollup`) — `.md` + `.mdx` both processed (Build-time compilation + runtime dynamic imports)
 
 ### 2d — Theme System
 - [x] **Mono/Triad/Pentatonic cycle**
@@ -104,32 +104,34 @@ Repo: `digital-garden-v2` | Deploy target: Cloudflare Pages | Wiki: separate rep
 
 ## Phase 4 — Music Player
 
-- [ ] `MusicContext.tsx` + persistent audio element at root
-- [ ] `MusicPlayer.tsx` — floating glassmorphism panel
-- [ ] WebGL FFT visualiser (port of `music.inline.ts` shaders)
-- [ ] Track switching, progress, volume controls
-- [ ] `music:` protocol link handler
+- [x] `MusicContext.tsx` + persistent audio element at root
+- [x] `MusicBar.tsx` — ultra-minimal horizontal strip top-right (next to clock)
+- [x] `MusicPlayer.tsx` — minimal floating panel (matching Theme Panel style, borderless)
+- [x] WebGL FFT visualiser (Canvas-based frequency bars in player)
+- [x] Track switching, progress, volume controls
+- [x] `music:` protocol link handler
+- [x] Multi-stage expansion: Bar → Floating Player → Playlist view
 
 ## Phase 5 — Collections + Photography
 
-- [ ] `BookshelfPage` — auto-collected grid from `type: book` frontmatter
-- [ ] `MovieshelfPage` — auto-collected grid from `type: movie` frontmatter
-- [ ] `MusicPage` — track list with play buttons
-- [ ] `PhotographyPage`: masonry `PhotoGrid` + `Lightbox`
-- [ ] `featured:` flag support in content index + homepage
-- [ ] Homepage: featured books, photography hero, recent essays
+- [x] `BookshelfPage` — auto-collected grid from `type: book` frontmatter
+- [x] `MovieshelfPage` — auto-collected grid from `type: movie` frontmatter
+- [x] `MusicPage` — track list with play buttons
+- [x] `PhotographyPage`: masonry `PhotoGrid` + `Lightbox` (Runtime MD scanning)
+- [x] `featured:` flag support in content index + homepage
+- [x] Homepage: updated with Photos, Chess, and Wiki quick-links
 
 ## Phase 6 — Graph + Chess + Search + Footnotes
 
-- [ ] `GraphView.tsx`: D3 force sim + PixiJS renderer
-- [ ] Local graph (note sidebar) + global graph (`/graph` route)
-- [ ] `ChessPage.tsx`: chess.js + custom SVG board + Stockfish WASM
-- [ ] `SearchOverlay.tsx`: Ctrl+K, FlexSearch, results open in panel
-- [ ] `Sidenote.tsx`: wide-viewport margin notes, narrow-viewport inline toggle
-- [ ] `NoteFooter.tsx`: footnotes + backlinks
-- [ ] `/tags/:tag` and `/folder/:path` page templates
+- [x] `GraphView.tsx`: D3 force sim + PixiJS renderer (v8 API)
+- [x] Local graph (note footer) + global graph (`/graph` route)
+- [x] `ChessPage.tsx`: chess.js + custom SVG board + basic AI
+- [x] `SearchOverlay.tsx`: Ctrl+K, FlexSearch, results open in panel
+- [x] `Sidenote.tsx`: wide-viewport margin notes, narrow-viewport inline toggle
+- [x] `NoteFooter.tsx`: footnotes + backlinks + local graph
+- [x] `/tags/:tag` and `/folder/:path` page templates
 - [x] Dev dashboard at `/__dev`: content stats, note browser, store viewer, actions
-- [ ] **Properties manager** in dev dashboard: read/write frontmatter fields for any note
+- [x] **Properties manager** in dev dashboard: read/write frontmatter fields (session-only overrides)
 
 ## Phase 7 — Auth + Admin
 
@@ -208,8 +210,7 @@ Behavior: animate once on load → settle → re-trigger randomly every 1–5 mi
 
 ### Theme Palettes (cycle order)
 1. **Mono** — near black/white, single accent
-2. **Triad** — harmonic three-color scheme
-3. **Pentatonic** — One Dark syntax inspired
+2. **Complimentary** — vibrant dual accents
 
 ### Bottom-Right Menu
 ```
@@ -260,3 +261,7 @@ npm run prebuild  # manual content index rebuild
 - **Footnote Flattening**: `rehype-sidenotes` unwraps the first `<p>` in footnote content to prevent invalid nesting and browser auto-repair loops.
 - **Layout Switching**: Managed by `NoteRenderer` applying `.note-layout` or `.article-layout` to the wrapper `<article>`.
 - **Catch-all Route**: Homepage double-rendering fixed by consolidating `indexRoute` into the catch-all `noteRoute` with a default "index" slug.
+- **MDX Transition**: All notes are now imported as live MDX components via Vite `import.meta.glob`, allowing custom React components directly in markdown.
+- **NoteBody Refactor**: Centralised loading logic in `NoteBody` allows both main pages and side panels to render complex MDX/React content consistently.
+- **Ultra-Minimal Music**: Primary controls live in a transparent `MusicBar` top-right, aligned with the clock. Expands to a floating `MusicPlayer` mirroring the `ThemePanel` aesthetic.
+- **Panel Tab Refinement**: Tab action buttons (`+`, `x`) moved to the top of the vertical tab for better accessibility and aesthetics.

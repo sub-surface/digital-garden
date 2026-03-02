@@ -1,0 +1,35 @@
+.graphContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.canvasWrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-code);
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
+.controls {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  opacity: 0.4;
+  pointer-events: none;
+}

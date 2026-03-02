@@ -236,7 +236,26 @@ function main() {
   )
   console.log(`  music.json: ${tracks.length} tracks`)
 
-  // Copy markdown files to public/content/ so they can be fetched at runtime
+  // Generate folders manifest
+  const folders: Record<string, string[]> = {}
+  for (const meta of Object.values(index)) {
+    if (meta.folder) {
+      const parts = meta.folder.split("/")
+      let current = ""
+      for (const part of parts) {
+        current = current ? `${current}/${part}` : part
+        if (!folders[current]) folders[current] = []
+      }
+      folders[meta.folder].push(meta.slug)
+    }
+  }
+  fs.writeFileSync(
+    path.join(PUBLIC_DIR, "folders.json"),
+    JSON.stringify(folders, null, 2),
+  )
+  console.log(`  folders.json: ${Object.keys(folders).length} folders`)
+
+  // Copy markdown files to public/content/ for potential runtime fallback
   const publicContent = path.join(PUBLIC_DIR, "content")
   for (const file of files) {
     const rel = path.relative(CONTENT_DIR, file).replace(/\\/g, "/")
@@ -245,6 +264,21 @@ function main() {
     fs.copyFileSync(file, dest)
   }
   console.log(`  public/content/: ${files.length} files copied`)
+
+  // Ensure src/content exists and sync there too for Vite/MDX imports
+  const srcContent = path.resolve(__dirname, "../src/content")
+  if (fs.existsSync(srcContent)) {
+    fs.rmSync(srcContent, { recursive: true, force: true })
+  }
+  fs.mkdirSync(srcContent, { recursive: true })
+  
+  for (const file of files) {
+    const rel = path.relative(CONTENT_DIR, file).replace(/\\/g, "/")
+    const dest = path.join(srcContent, rel)
+    fs.mkdirSync(path.dirname(dest), { recursive: true })
+    fs.copyFileSync(file, dest)
+  }
+  console.log(`  src/content/: ${files.length} files synced for MDX`)
 
   // Copy media assets (images, audio, etc.)
   const mediaDir = path.join(CONTENT_DIR, "Media")

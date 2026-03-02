@@ -29,7 +29,7 @@ export function PanelStack() {
         <PanelCard
           key={`${card.slug}-${i}`}
           title={card.title}
-          html={card.html}
+          slug={card.slug}
           index={i}
           onClose={() => handleClose(i)}
           onPromote={() => handlePromote(i)}

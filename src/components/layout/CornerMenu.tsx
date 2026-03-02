@@ -13,11 +13,12 @@ export function CornerMenu() {
   const [open, setOpen] = useState(false)
   const clearStack = useStore((s) => s.clearStack)
   const toggleThemePanel = useStore((s) => s.toggleThemePanel)
+  const toggleMusic = useStore((s) => s.toggleMusic)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const ARC_ITEMS: ArcItem[] = [
     { label: "Graph", to: "/graph" },
-    { label: "Wiki", to: "/wiki" },
+    { label: "Music", onClick: () => { toggleMusic(); setOpen(false); } },
     { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
     ...(import.meta.env.DEV ? [{ label: "Dev", to: "/__dev", devOnly: true }] : []),
   ]

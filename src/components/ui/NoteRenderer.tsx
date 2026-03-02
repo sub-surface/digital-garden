@@ -1,116 +1,55 @@
-import { useEffect, useRef, useState, useMemo } from "react"
-import { parseMarkdown, type ParsedNote } from "@/lib/markdown"
+import { useState, useMemo } from "react"
 import { useStore } from "@/store"
-import { useTelescopicHandlers } from "./TelescopicHandler"
 import { ArticleLayout } from "./ArticleLayout"
 import { NoteLayout } from "./NoteLayout"
-import { NotFound } from "./NotFound"
+import { NoteFooter } from "./NoteFooter"
+import { NoteBody } from "./NoteBody"
 import type { NoteMetadata } from "@/types/content"
 
 interface Props {
   slug: string
 }
 
-function extractHeadings(html: string): { id: string; text: string; level: number }[] {
-  const regex = /<h([2-4])\s+id="([^"]+)"[^>]*>(.*?)<\/h\1>/gi
-  const headings: { id: string; text: string; level: number }[] = []
-  let match: RegExpExecArray | null
-  while ((match = regex.exec(html)) !== null) {
-    const text = match[3].replace(/<[^>]+>/g, "")
-    headings.push({ id: match[2], text, level: parseInt(match[1]) })
-  }
-  return headings
-}
-
 function resolveLayout(
-  frontmatter: Record<string, unknown>,
+  frontmatter: Record<string, any>,
   meta: NoteMetadata | undefined,
   slug: string,
 ): "article" | "note" {
-  // 1. Explicit frontmatter
   if (frontmatter.layout === "article") return "article"
   if (frontmatter.layout === "note") return "note"
 
-  // 2. Type-based inference
   const type = (frontmatter.type as string) ?? meta?.type
   if (type && ["book", "movie"].includes(type)) return "article"
-
-  // 3. Wiki pages
   if (slug.toLowerCase().startsWith("wiki/")) return "article"
 
-  // 4. Default
   return "note"
 }
 
 export function NoteRenderer({ slug }: Props) {
-  const [note, setNote] = useState<ParsedNote | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<{
+    frontmatter: Record<string, any>
+    headings: { id: string; text: string; level: number }[]
+  }>({ frontmatter: {}, headings: [] })
+  
   const contentIndex = useStore((s) => s.contentIndex)
-  const contentRef = useRef<HTMLDivElement>(null)
+  const sessionOverrides = useStore((s) => s.sessionOverrides)
 
-  useTelescopicHandlers(contentRef)
-
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    setError(null)
-
-    async function load() {
-      try {
-        const paths = [`/content/${slug}.md`, `/content/${slug}/index.md`]
-        let source: string | null = null
-
-        for (const path of paths) {
-          const res = await fetch(path)
-          if (res.ok) {
-            source = await res.text()
-            break
-          }
-        }
-
-        if (!source) {
-          if (!cancelled) setError("Note not found")
-          return
-        }
-
-        const parsed = await parseMarkdown(source)
-        if (!cancelled) setNote(parsed)
-      } catch (err) {
-        if (!cancelled) setError(String(err))
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    load()
-    return () => { cancelled = true }
-  }, [slug])
-
-  const headings = useMemo(() => {
-    if (!note) return []
-    return extractHeadings(note.html)
-  }, [note])
-
-  if (loading) return <div className="note-loading">Loading...</div>
-  if (error === "Note not found") return <NotFound />
-  if (error) return <div className="note-error">{error}</div>
-  if (!note) return null
+  const handleLoad = (loaded: any) => {
+    setData(prev => ({
+      frontmatter: { ...prev.frontmatter, ...loaded.frontmatter },
+      headings: loaded.headings.length > 0 ? loaded.headings : prev.headings
+    }))
+  }
 
   const meta = contentIndex?.[slug]
-  const title = (note.frontmatter.title as string) ?? meta?.title ?? slug.split("/").pop()
-  const growth = (note.frontmatter.growth as string) ?? meta?.growth
-  const date = (note.frontmatter.date as string) ?? meta?.date
+  const override = sessionOverrides[slug] || {}
+  const fm = { ...data.frontmatter, ...override }
+  
+  const title = (fm.title as string) ?? meta?.title ?? slug.split("/").pop()
+  const growth = (fm.growth as string) ?? meta?.growth
+  const date = (fm.date as string) ?? meta?.date
   const tags = meta?.tags ?? []
-  const layout = resolveLayout(note.frontmatter, meta, slug)
-
-  const contentDiv = (
-    <div
-      ref={contentRef}
-      className="note-content"
-      dangerouslySetInnerHTML={{ __html: note.html }}
-    />
-  )
+  const layout = resolveLayout(fm, meta, slug)
 
   return (
     <article className={`${layout}-layout`}>
@@ -132,31 +71,17 @@ export function NoteRenderer({ slug }: Props) {
 
       {/* Layout-wrapped content */}
       {layout === "article" ? (
-        <ArticleLayout headings={headings}>
-          {contentDiv}
+        <ArticleLayout headings={data.headings}>
+          <NoteBody slug={slug} onLoad={handleLoad} />
         </ArticleLayout>
       ) : (
-        <NoteLayout headings={headings}>
-          {contentDiv}
+        <NoteLayout headings={data.headings}>
+          <NoteBody slug={slug} onLoad={handleLoad} />
         </NoteLayout>
       )}
 
-      {/* Shared footer: backlinks */}
-      {meta?.backlinks && meta.backlinks.length > 0 && (
-        <footer className="note-footer">
-          <hr />
-          <section className="backlinks">
-            <h3>Backlinks</h3>
-            <ul>
-              {meta.backlinks.map((bl) => (
-                <li key={bl}>
-                  <a href={`/${bl}`}>{contentIndex?.[bl]?.title ?? bl}</a>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </footer>
-      )}
+      {/* Shared footer: backlinks + local graph */}
+      <NoteFooter slug={slug} meta={meta} />
     </article>
   )
 }

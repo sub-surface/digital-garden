@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { PanelCard, ContentIndex } from "@/types/content"
+import type { PanelCard, ContentIndex, NoteMetadata } from "@/types/content"
 
 interface GardenStore {
   // Theme
@@ -28,6 +28,10 @@ interface GardenStore {
   // Music
   isMusicOpen: boolean
   toggleMusic: () => void
+  isMusicExpanded: boolean
+  setIsMusicExpanded: (expanded: boolean) => void
+  isPlaylistExpanded: boolean
+  setIsPlaylistExpanded: (expanded: boolean) => void
 
   // Background
   bgMode: "simplex" | "dots" | "network" | "terminal" | "chess"
@@ -46,6 +50,10 @@ interface GardenStore {
   // Content index (loaded at startup)
   contentIndex: ContentIndex | null
   setContentIndex: (index: ContentIndex) => void
+
+  // Session overrides (for dev property manager)
+  sessionOverrides: Record<string, Partial<NoteMetadata>>
+  setOverride: (slug: string, data: Partial<NoteMetadata>) => void
 }
 
 const getInitialTheme = (): "light" | "dark" => {
@@ -121,6 +129,10 @@ export const useStore = create<GardenStore>((set) => ({
   // Music
   isMusicOpen: false,
   toggleMusic: () => set((s) => ({ isMusicOpen: !s.isMusicOpen })),
+  isMusicExpanded: false,
+  setIsMusicExpanded: (isMusicExpanded) => set({ isMusicExpanded }),
+  isPlaylistExpanded: false,
+  setIsPlaylistExpanded: (isPlaylistExpanded) => set({ isPlaylistExpanded }),
 
   // Background
   bgMode: "simplex",
@@ -159,6 +171,16 @@ export const useStore = create<GardenStore>((set) => ({
   // Content index
   contentIndex: null,
   setContentIndex: (contentIndex) => set({ contentIndex }),
+
+  // Session overrides
+  sessionOverrides: {},
+  setOverride: (slug, data) => 
+    set((s) => ({
+      sessionOverrides: {
+        ...s.sessionOverrides,
+        [slug]: { ...s.sessionOverrides[slug], ...data }
+      }
+    })),
 }))
 
 // Initialize attributes on load

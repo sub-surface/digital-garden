@@ -299,7 +299,9 @@ export function TerminalTitle() {
           {booted && !isAnimating && <span className={styles.karat} />}
         </button>
       </div>
-      <span className={styles.clock} data-panel-ignore>{clock}</span>
+      <div className={styles.clockWrap} data-panel-ignore>
+        <span className={styles.clock}>{clock}</span>
+      </div>
     </>
   )
 }

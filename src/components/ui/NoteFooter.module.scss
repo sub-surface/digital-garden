@@ -1,0 +1,60 @@
+.footer {
+  margin-top: var(--space-16);
+  padding-bottom: var(--space-12);
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--color-border-light);
+  margin-bottom: var(--space-8);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+
+  @media (max-width: 800px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.backlinksSection {
+  h3 {
+    font-family: var(--font-code);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.5;
+    margin-bottom: var(--space-4);
+  }
+}
+
+.backlinksList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    margin-bottom: var(--space-2);
+    
+    a {
+      font-size: 0.95rem;
+      text-decoration: none;
+      
+      &:hover {
+        color: var(--color-accent-base);
+      }
+    }
+  }
+}
+
+.empty {
+  font-size: 0.85rem;
+  opacity: 0.4;
+  font-style: italic;
+}
+
+.graphSection {
+  // Local graph is handled by its own component styles
+}

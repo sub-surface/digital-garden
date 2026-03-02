@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client"
 import { RouterProvider } from "@tanstack/react-router"
 import { router } from "./router"
 import { useStore } from "./store"
+import { MusicProvider } from "@/components/ui/MusicContext"
 import "./styles/global.scss"
 
 // Apply initial theme before render
@@ -21,6 +22,8 @@ fetch("/content-index.json")
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <MusicProvider>
+      <RouterProvider router={router} />
+    </MusicProvider>
   </StrictMode>,
 )

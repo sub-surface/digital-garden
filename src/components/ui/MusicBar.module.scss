@@ -1,0 +1,89 @@
+.musicBar {
+  position: fixed;
+  top: 12px;
+  right: 320px; // Placed to the left of the clock
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none; // No background or border for ultra-minimal
+  height: 20px; // Match clock line height
+  pointer-events: auto;
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  opacity: 0.5; // Match clock opacity
+  letter-spacing: 1px;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  @media (max-width: 800px) {
+    display: none;
+  }
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+.iconBtn {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--color-primary);
+  }
+}
+
+.trackInfo {
+  max-width: 150px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 12px;
+}
+
+.title {
+  text-transform: uppercase;
+  font-size: 0.65rem;
+}
+
+.expandBtn {
+  background: none;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  margin-left: 4px;
+  padding-left: 12px;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+.plus {
+  display: inline-block;
+  transition: transform 0.3s var(--ease-out);
+
+  &.active {
+    transform: rotate(45deg);
+  }
+}

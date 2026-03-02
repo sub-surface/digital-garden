@@ -1,13 +1,61 @@
 import { useState, useMemo } from "react"
 import { useStore } from "@/store"
-import type { ContentIndex } from "@/types/content"
+import type { ContentIndex, NoteMetadata } from "@/types/content"
 import styles from "./DevDashboard.module.scss"
+
+function PropertyManager({ slug, onClose }: { slug: string, onClose: () => void }) {
+  const contentIndex = useStore(s => s.contentIndex)
+  const sessionOverrides = useStore(s => s.sessionOverrides)
+  const setOverride = useStore(s => s.setOverride)
+  
+  const meta = contentIndex?.[slug]
+  const current = { ...meta, ...(sessionOverrides[slug] || {}) }
+  
+  const [title, setTitle] = useState(current.title || "")
+  const [type, setType] = useState(current.type || "")
+  const [tags, setTags] = useState(current.tags?.join(", ") || "")
+
+  const handleSave = () => {
+    setOverride(slug, {
+      title,
+      type: type || undefined,
+      tags: tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+    })
+    onClose()
+  }
+
+  return (
+    <div className={styles.propManagerOverlay} onClick={onClose}>
+      <div className={styles.propManagerModal} onClick={e => e.stopPropagation()}>
+        <h3>Edit Properties: {slug}</h3>
+        <div className={styles.formGroup}>
+          <label>Title</label>
+          <input value={title} onChange={e => setTitle(e.target.value)} />
+        </div>
+        <div className={styles.formGroup}>
+          <label>Type</label>
+          <input value={type} onChange={e => setType(e.target.value)} placeholder="book, movie, music..." />
+        </div>
+        <div className={styles.formGroup}>
+          <label>Tags (comma separated)</label>
+          <input value={tags} onChange={e => setTags(e.target.value)} />
+        </div>
+        <div className={styles.modalActions}>
+          <button onClick={onClose}>Cancel</button>
+          <button className={styles.primary} onClick={handleSave}>Apply Overrides</button>
+        </div>
+        <p className={styles.disclaimer}>* Changes are session-only and will reset on page reload.</p>
+      </div>
+    </div>
+  )
+}
 
 export function DevDashboard() {
   const contentIndex = useStore((s) => s.contentIndex)
   const store = useStore()
   const [filter, setFilter] = useState("")
   const [rebuildStatus, setRebuildStatus] = useState<string | null>(null)
+  const [editingSlug, setEditingSlug] = useState<string | null>(null)
 
   const stats = useMemo(() => {
     if (!contentIndex) return null
@@ -133,7 +181,8 @@ export function DevDashboard() {
               {filteredNotes.map((n) => (
                 <tr key={n.slug}>
                   <td>
-                    <a href={`/${n.slug}`}>{n.title}</a>
+                    <button className={styles.editBtn} onClick={() => setEditingSlug(n.slug)}>✎</button>
+                    <a href={`/${n.slug}`} style={{ marginLeft: '8px' }}>{n.title}</a>
                   </td>
                   <td style={{ color: "var(--color-text-muted)" }}>{n.slug}</td>
                   <td>{n.type ?? "—"}</td>
@@ -200,6 +249,10 @@ export function DevDashboard() {
           </p>
         )}
       </div>
+
+      {editingSlug && (
+        <PropertyManager slug={editingSlug} onClose={() => setEditingSlug(null)} />
+      )}
     </div>
   )
 }

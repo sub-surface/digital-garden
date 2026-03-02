@@ -1,135 +1,156 @@
 .dashboard {
-  max-width: 900px;
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
   font-family: var(--font-code);
-  font-size: 0.85rem;
 }
 
 .header {
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  margin-bottom: var(--space-8);
-  padding-bottom: var(--space-4);
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 40px;
   border-bottom: 1px solid var(--color-border);
+  padding-bottom: 20px;
 
   h1 {
-    font-family: var(--font-code);
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--color-accent);
     margin: 0;
+    font-size: 2.5rem;
+    color: var(--color-accent-base);
   }
 
   .version {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    background: var(--color-highlight);
-    padding: 2px 8px;
-    border-radius: 4px;
+    opacity: 0.4;
+    font-size: 0.9rem;
   }
 }
 
 .section {
-  margin-bottom: var(--space-8);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg-surface);
+  margin-bottom: 60px;
 
   h2 {
-    font-family: var(--font-code);
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--color-primary);
-    margin: 0 0 var(--space-4) 0;
+    font-size: 1.2rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.1em;
+    margin-bottom: 20px;
+    opacity: 0.6;
   }
 }
 
 .statGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px;
 }
 
 .stat {
-  padding: var(--space-3);
-  border-radius: 6px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-light);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 
   .label {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: var(--space-1);
+    font-size: 0.7rem;
+    opacity: 0.5;
+    margin-bottom: 5px;
   }
 
   .value {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     font-weight: 600;
-    color: var(--color-heading);
+  }
+}
+
+.filterInput {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  border-radius: 6px;
+  color: var(--color-text);
+  margin-bottom: 20px;
+  outline: none;
+
+  &:focus {
+    border-color: var(--color-accent-base);
   }
 }
 
 .noteList {
-  max-height: 300px;
-  overflow-y: auto;
-  font-size: 0.8rem;
+  overflow-x: auto;
 
   table {
     width: 100%;
     border-collapse: collapse;
-  }
+    font-size: 0.85rem;
 
-  th {
-    text-align: left;
-    font-weight: 600;
-    color: var(--color-text-muted);
-    padding: var(--space-1) var(--space-2);
-    border-bottom: 1px solid var(--color-border);
-    position: sticky;
-    top: 0;
-    background: var(--color-bg-surface);
-  }
+    th {
+      text-align: left;
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      opacity: 0.5;
+    }
 
-  td {
-    padding: var(--space-1) var(--space-2);
-    border-bottom: 1px solid var(--color-border-light);
-    color: var(--color-text);
+    td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+  }
+}
+
+.editBtn {
+  background: none;
+  border: none;
+  color: var(--color-accent-base);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0.6;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(var(--color-accent-base-rgb), 0.1);
+  }
+}
+
+.storeView {
+  background: #000;
+  padding: 20px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  pre {
+    margin: 0;
+    color: #0f0;
   }
 }
 
 .actions {
   display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .actionBtn {
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-bg);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--color-text);
-  font-family: var(--font-code);
-  font-size: 0.8rem;
+  padding: 10px 20px;
+  border-radius: 6px;
   cursor: pointer;
-  transition:
-    background var(--duration-fast) var(--ease-default),
-    border-color var(--duration-fast) var(--ease-default);
+  font-family: inherit;
 
   &:hover {
-    background: var(--color-highlight);
-    border-color: var(--color-primary);
+    background: rgba(255, 255, 255, 0.1);
   }
 
   &.primary {
-    background: var(--color-primary);
-    color: var(--color-bg);
-    border-color: var(--color-primary);
+    background: var(--color-accent-base);
+    border-color: transparent;
+    color: white;
+    font-weight: 600;
 
     &:hover {
       opacity: 0.9;
@@ -137,36 +158,92 @@
   }
 }
 
-.storeView {
-  font-size: 0.75rem;
-  max-height: 200px;
-  overflow-y: auto;
-  padding: var(--space-3);
-  background: var(--color-bg);
-  border-radius: 6px;
-  border: 1px solid var(--color-border-light);
+// ── Property Manager Modal ──
 
-  pre {
-    margin: 0;
-    white-space: pre-wrap;
-    word-break: break-all;
+.propManagerOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 6000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.propManagerModal {
+  background: var(--color-bg-surface, #1a1a1a);
+  width: 90%;
+  max-width: 500px;
+  padding: 30px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    font-size: 1.1rem;
+    color: var(--color-accent-base);
   }
 }
 
-.filterInput {
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-code);
-  font-size: 0.8rem;
-  margin-bottom: var(--space-3);
-  outline: none;
+.formGroup {
+  margin-bottom: 20px;
 
-  &:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 2px var(--color-highlight);
+  label {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.5;
+    margin-bottom: 8px;
+    text-transform: uppercase;
   }
+
+  input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px;
+    border-radius: 4px;
+    color: var(--color-text);
+    font-family: inherit;
+    outline: none;
+
+    &:focus {
+      border-color: var(--color-accent-base);
+    }
+  }
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 30px;
+
+  button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-text);
+
+    &.primary {
+      background: var(--color-accent-base);
+      border-color: transparent;
+      color: white;
+    }
+  }
+}
+
+.disclaimer {
+  font-size: 0.7rem;
+  opacity: 0.4;
+  margin-top: 20px;
+  font-style: italic;
 }

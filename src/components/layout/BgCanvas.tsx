@@ -170,6 +170,7 @@ export function BgCanvas() {
   return (
     <canvas
       ref={canvasRef}
+      data-testid="bg-canvas"
       style={{
         position: "fixed",
         top: 0,

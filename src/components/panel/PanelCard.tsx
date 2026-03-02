@@ -1,16 +1,17 @@
 import { useRef, useEffect } from "react"
 import { useTelescopicHandlers } from "@/components/ui/TelescopicHandler"
+import { NoteBody } from "@/components/ui/NoteBody"
 import styles from "./Panel.module.scss"
 
 interface Props {
   title: string
-  html: string
+  slug: string
   index: number
   onClose: () => void
   onPromote: () => void
 }
 
-export function PanelCard({ title, html, index, onClose, onPromote }: Props) {
+export function PanelCard({ title, slug, index, onClose, onPromote }: Props) {
   const contentRef = useRef<HTMLDivElement>(null)
 
   // Attach telescopic text handlers to panel content
@@ -31,13 +32,18 @@ export function PanelCard({ title, html, index, onClose, onPromote }: Props) {
         zIndex: index + 10,
       }}
       data-index={index}
+      data-testid="panel-card"
     >
       {/* Vertical tab header */}
       <div className={styles.cardHeader}>
-        <div className={styles.titleWrap} onClick={onPromote} title="Open as main page">
-          <span className={styles.title}>{title}</span>
-        </div>
         <div className={styles.actions}>
+          <button
+            className={styles.closeBtn}
+            onClick={onClose}
+            aria-label="Close card"
+          >
+            &times;
+          </button>
           <button
             className={styles.expandBtn}
             onClick={onPromote}
@@ -46,23 +52,15 @@ export function PanelCard({ title, html, index, onClose, onPromote }: Props) {
           >
             +
           </button>
-          <button
-            className={styles.closeBtn}
-            onClick={onClose}
-            aria-label="Close card"
-          >
-            &times;
-          </button>
+        </div>
+        <div className={styles.titleWrap} onClick={onPromote} title="Open as main page">
+          <span className={styles.title}>{title}</span>
         </div>
       </div>
 
       {/* Scrollable content */}
       <div className={styles.contentScroll}>
-        <div
-          ref={contentRef}
-          className={styles.content}
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <NoteBody slug={slug} />
       </div>
     </div>
   )
