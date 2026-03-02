@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.vite/
+*.log
+.DS_Store
+Thumbs.db
+
+# Generated at build time
+public/content-index.json
+public/graph.json
+public/music.json
+public/search-index.json
+public/content/
