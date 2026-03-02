@@ -11,6 +11,7 @@ import { remarkWikilinks } from "./remark-wikilinks"
 import { remarkTelescopic } from "./remark-telescopic"
 import { remarkCallouts } from "./remark-callouts"
 import { rehypeSidenotes } from "./rehype-sidenotes"
+import { rehypeImagePaths } from "./rehype-image-paths"
 
 const processor = unified()
   .use(remarkParse)
@@ -22,6 +23,7 @@ const processor = unified()
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeRaw)
   .use(rehypeSlug)
+  .use(rehypeImagePaths)
   .use(rehypeSidenotes)
   .use(rehypeStringify)
 

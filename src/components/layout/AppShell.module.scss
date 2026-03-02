@@ -2,7 +2,7 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: var(--color-bg);
+  background: transparent; // Reveal canvas
 }
 
 // ── Workspace: full-viewport horizontal scroll container ──
@@ -12,7 +12,7 @@
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
-  background: var(--color-bg);
+  background: transparent; // Reveal canvas
 
   // Thin overlay scrollbar — hidden until hover
   scrollbar-width: thin;
@@ -46,7 +46,7 @@
   position: sticky;
   left: 0;
   z-index: 1;
-  background: var(--color-bg);
+  background: transparent; // Reveal canvas
   border-right: 1px solid var(--color-border);
   overflow-y: auto;
 

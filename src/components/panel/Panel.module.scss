@@ -11,7 +11,7 @@
   height: 100vh;
   position: sticky;
   display: flex;
-  background: var(--color-bg);
+  background: transparent; // Reveal canvas
   border-right: 1px solid var(--color-border);
   overflow: hidden;
   box-shadow: -4px 0 12px rgba(0, 0, 0, 0.05);
@@ -45,7 +45,7 @@
   align-items: center;
   padding: 0.75rem 0;
   border-right: 1px solid var(--color-border);
-  background: var(--color-bg);
+  background: transparent; // Reveal canvas
   cursor: pointer;
   z-index: 10;
   transition: background 0.2s ease;

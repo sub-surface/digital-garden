@@ -8,7 +8,7 @@ export function NoteLayout({ children, headings }: Props) {
     headings.length > 0 ? Math.min(...headings.map((h) => h.level)) : 2
 
   return (
-    <div className="note-layout-wrapper">
+    <div className="note-layout-wrapper" style={{ background: 'transparent' }}>
       {headings.length >= 3 && (
         <nav className="toc">
           <h3>Contents</h3>

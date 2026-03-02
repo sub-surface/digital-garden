@@ -52,8 +52,12 @@ export function BgCanvas() {
     colorCache: { secondary: "", palette: [] as string[] },
     colorValid: false,
     nodes: [] as any[],
+    links: [] as any[],
+    nodeMap: new Map<string, any>(),
     ripples: [] as { x: number; y: number; t: number }[],
     lastFrame: 0,
+    w: 0,
+    h: 0
   })
 
   // Field params
@@ -68,29 +72,31 @@ export function BgCanvas() {
 
   useEffect(() => {
     stateRef.current.colorValid = false
-  }, [theme, palette, bgStyle])
+  }, [theme, palette])
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-
     const ctx = canvas.getContext("2d")!
     
     const resize = () => {
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = window.innerWidth * dpr
-      canvas.height = window.innerHeight * dpr
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      const w = window.innerWidth
+      const h = window.innerHeight
+      stateRef.current.w = w
+      stateRef.current.h = h
+      canvas.width = w
+      canvas.height = h
       stateRef.current.colorValid = false
     }
 
     const refreshColors = () => {
       const style = getComputedStyle(document.documentElement)
       const css = (p: string) => style.getPropertyValue(p).trim()
-      stateRef.current.colorCache.secondary = css("--color-primary") || "#b4424c"
+      const secondary = css("--color-primary") || "#b4424c"
+      stateRef.current.colorCache.secondary = secondary
       stateRef.current.colorCache.palette = [
-        stateRef.current.colorCache.secondary,
-        css("--color-accent") || "#ff6b6b",
+        secondary,
+        css("--color-accent-base") || "#ff6b6b",
         css("--color-text-muted") || "#8e8e93",
         css("--color-border") || "#2a2a30",
       ]
@@ -102,46 +108,48 @@ export function BgCanvas() {
       stateRef.current.my = e.clientY
     }
 
-    const click = (e: MouseEvent) => {
-      stateRef.current.ripples.push({
-        x: e.clientX,
-        y: e.clientY + window.scrollY,
-        t: performance.now() / 1000,
-      })
-      if (stateRef.current.ripples.length > 8) stateRef.current.ripples.shift()
-    }
-
     window.addEventListener("resize", resize)
     window.addEventListener("mousemove", mouseMove)
-    window.addEventListener("click", click)
     resize()
 
-    // Fetch nodes for network mode
+    // Fetch nodes once
     fetch("/graph.json")
       .then(res => res.json())
       .then(data => {
-        stateRef.current.nodes = data.nodes ? data.nodes.map((n: any) => ({
+        const nodes = data.nodes ? data.nodes.map((n: any) => ({
           ...n,
           x: Math.random() * window.innerWidth,
           y: Math.random() * window.innerHeight,
           vx: (Math.random() - 0.5) * 0.2,
           vy: (Math.random() - 0.5) * 0.2
         })) : []
+        stateRef.current.nodes = nodes
+        stateRef.current.links = data.links || []
+        
+        const map = new Map()
+        nodes.forEach((n: any) => map.set(n.id, n))
+        stateRef.current.nodeMap = map
       })
       .catch(() => {})
 
-    let animationId: number
-
+    let frameCount = 0
     const frame = (t: number) => {
+      frameCount++
+      if (frameCount % 60 === 0) {
+        // Log every 60 frames to confirm life
+        // console.log("BgCanvas Frame Loop Running", bgMode, bgStyle)
+      }
+      
       const state = stateRef.current
       state.readerAlpha += (state.readerTarget - state.readerAlpha) * 0.08
-      if (Math.abs(state.readerAlpha - state.readerTarget) < 0.005) {
-        state.readerAlpha = state.readerTarget
-      }
-
+      
       if (bgStyle !== "off") {
         if (!state.colorValid) refreshColors()
-        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
+        ctx.clearRect(0, 0, state.w, state.h)
+
+        // TEST: Draw a red box to confirm visibility
+        // ctx.fillStyle = "red"
+        // ctx.fillRect(10, 10, 50, 50)
 
         if (bgMode === "simplex" || bgMode === "dots" || bgMode === "terminal") {
           drawField(ctx, state, bgMode, bgStyle, P)
@@ -149,9 +157,11 @@ export function BgCanvas() {
           drawChess(ctx, state)
         } else if (bgMode === "network") {
           drawNetwork(ctx, state)
+        } else if (bgMode === "graph") {
+          drawGraph(ctx, state)
         }
       } else {
-        ctx.clearRect(0, 0, window.innerWidth, window.innerHeight)
+        ctx.clearRect(0, 0, state.w, state.h)
       }
 
       animationId = requestAnimationFrame(frame)
@@ -162,10 +172,9 @@ export function BgCanvas() {
     return () => {
       window.removeEventListener("resize", resize)
       window.removeEventListener("mousemove", mouseMove)
-      window.removeEventListener("click", click)
       cancelAnimationFrame(animationId)
     }
-  }, [bgMode, bgStyle, P])
+  }, [bgMode, bgStyle, theme, palette, P]) // Added theme/palette dependencies
 
   return (
     <canvas
@@ -177,8 +186,10 @@ export function BgCanvas() {
         left: 0,
         width: "100%",
         height: "100%",
-        zIndex: -1,
+        zIndex: 100, // High z-index for debug
         pointerEvents: "none",
+        background: "transparent",
+        display: "block",
       }}
     />
   )
@@ -189,12 +200,13 @@ function drawField(
   state: any,
   mode: string,
   style: string,
-  P: any
+  config: any
 ) {
-  const { step, rx, ry, speed, sc, range, vortex, radius, oct } = P
+  const p = config.backgrounds.simplex
+  const { step, rx, ry, speed, scale: sc, range, vortex, radius } = p
   const now = performance.now() / 1000
   const t = now * speed
-  const sy0 = window.scrollY % step
+  const sy0 = (window.scrollY || 0) % step
   const pad = step * 2
 
   if (mode === "terminal") {
@@ -203,15 +215,15 @@ function drawField(
     ctx.textBaseline = "middle"
   }
 
-  for (let x = step / 2 - pad; x < window.innerWidth + pad; x += step) {
-    for (let vy = step / 2 - sy0 - pad; vy < window.innerHeight + pad; vy += step) {
-      const docY = vy + window.scrollY
+  for (let x = step / 2 - pad; x < state.w + pad; x += step) {
+    for (let vy = step / 2 - sy0 - pad; vy < state.h + pad; vy += step) {
+      const docY = vy + (window.scrollY || 0)
       const nx = x * sc, ny = docY * sc
 
       let a = 0
-      if (oct[0]) a += simplex(nx, ny + t) * 0.55
-      if (oct[1]) a += simplex(nx * 2.2, ny * 2.2 + t * 2.5) * 0.3
-      if (oct[2]) a += simplex(nx * 5, ny * 5 + t * 6) * 0.15
+      a += simplex(nx, ny + t) * 0.55
+      a += simplex(nx * 2.2, ny * 2.2 + t * 2.5) * 0.3
+      a += simplex(nx * 5, ny * 5 + t * 6) * 0.15
       a *= Math.PI * range
 
       const dx = x - state.mx, dy = vy - state.my, d = Math.hypot(dx, dy)
@@ -227,19 +239,30 @@ function drawField(
 
       ctx.globalAlpha = finalAlpha
 
-      if (mode === "simplex") {
+      if (style === "vectors") {
+        const minRx = rx * 0.3
+        const curRx = minRx + intensity * (rx - minRx)
         ctx.fillStyle = state.colorCache.secondary
         ctx.beginPath()
-        ctx.ellipse(x, vy, rx, ry, a, 0, Math.PI * 2)
+        ctx.ellipse(x, vy, curRx, ry, a, 0, Math.PI * 2)
         ctx.fill()
-      } else if (mode === "terminal") {
+        
+        const tipX = x + curRx * Math.cos(a), tipY = vy + curRx * Math.sin(a)
+        const ha = 3 + intensity * 2, hw = Math.PI / 5
+        ctx.beginPath()
+        ctx.moveTo(tipX, tipY)
+        ctx.lineTo(tipX - ha * Math.cos(a - hw), tipY - ha * Math.sin(a - hw))
+        ctx.lineTo(tipX - ha * Math.cos(a + hw), tipY - ha * Math.sin(a + hw))
+        ctx.closePath()
+        ctx.fill()
+      } else if (style === "glyphs" || mode === "terminal") {
         const ci = PM[(Math.floor(x * 7) + PM[Math.floor(docY * 3) & 255]) & 255] % state.colorCache.palette.length
         const posHash = PM[(Math.floor(x * 13) + PM[Math.floor(docY * 7) & 255]) & 255]
         const tOff = Math.floor(now * 0.15 + posHash * 0.02)
         const ch = GLYPH_POOL[PM[(posHash + tOff) & 255] % GLYPH_POOL.length]
         ctx.fillStyle = state.colorCache.palette[ci]
         ctx.fillText(ch, x, vy)
-      } else if (mode === "dots") {
+      } else if (style === "dots" || mode === "dots") {
         const ci = PM[(Math.floor(x * 7) + PM[Math.floor(docY * 3) & 255]) & 255] % state.colorCache.palette.length
         const dotR = 2 + intensity * 4
         ctx.fillStyle = state.colorCache.palette[ci]
@@ -249,13 +272,12 @@ function drawField(
       }
     }
   }
-  ctx.globalAlpha = 1
 }
 
 function drawChess(ctx: CanvasRenderingContext2D, state: any) {
-  const cell = Math.max(window.innerWidth, window.innerHeight) / 8
-  const cols = Math.ceil(window.innerWidth / cell) + 1
-  const rows = Math.ceil(window.innerHeight / cell) + 1
+  const cell = Math.max(state.w, state.h) / 8
+  const cols = Math.ceil(state.w / cell) + 1
+  const rows = Math.ceil(state.h / cell) + 1
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -267,31 +289,72 @@ function drawChess(ctx: CanvasRenderingContext2D, state: any) {
       ctx.fillRect(x, y, cell, cell)
     }
   }
-  ctx.globalAlpha = 1
 }
 
-function drawNetwork(ctx: CanvasRenderingContext2D, state: any) {
+function drawNetwork(ctx: CanvasRenderingContext2D, state: any, config: any) {
+  const p = config.backgrounds.network
   const color = state.colorCache.secondary
   ctx.strokeStyle = color
   ctx.fillStyle = color
 
   state.nodes.forEach((node: any) => {
-    node.x += node.vx
-    node.y += node.vy
-    if (node.x < 0 || node.x > window.innerWidth) node.vx *= -1
-    if (node.y < 0 || node.y > window.innerHeight) node.vy *= -1
+    node.x += node.vx * (p.speed / 0.2)
+    node.y += node.vy * (p.speed / 0.2)
+    if (node.x < 0 || node.x > state.w) node.vx *= -1
+    if (node.y < 0 || node.y > state.h) node.vy *= -1
 
     const dx = node.x - state.mx, dy = node.y - state.my, d = Math.hypot(dx, dy)
-    if (d < 150) {
+    if (d < p.proximity) {
       node.x += (dx / d) * 2
       node.y += (dy / d) * 2
     }
 
-    const r = 2
+    const r = p.nodeSize
     ctx.globalAlpha = 0.2 * state.readerAlpha
     ctx.beginPath()
     ctx.arc(node.x, node.y, r, 0, Math.PI * 2)
     ctx.fill()
   })
-  ctx.globalAlpha = 1
+}
+
+function drawGraph(ctx: CanvasRenderingContext2D, state: any, config: any) {
+  const p = config.backgrounds.graph
+  const color = state.colorCache.secondary
+  const nodes = state.nodes
+  const links = state.links || []
+  const nodeMap = state.nodeMap
+
+  // Drift
+  nodes.forEach((n: any) => {
+    n.x += n.vx * p.drift
+    n.y += n.vy * p.drift
+    if (n.x < 0 || n.x > state.w) n.vx *= -1
+    if (n.y < 0 || n.y > state.h) n.vy *= -1
+  })
+
+  // Draw Links
+  ctx.globalAlpha = p.linkOpacity * state.readerAlpha
+  ctx.strokeStyle = color
+  ctx.lineWidth = p.linkWidth
+  ctx.beginPath()
+  links.forEach((l: any) => {
+    const s = nodeMap.get(l.source)
+    const t = nodeMap.get(l.target)
+    if (s && t) {
+      ctx.moveTo(s.x, s.y)
+      ctx.lineTo(t.x, t.y)
+    }
+  })
+  ctx.stroke()
+
+  // Draw Nodes
+  nodes.forEach((n: any) => {
+    const dx = n.x - state.mx, dy = n.y - state.my, d = Math.hypot(dx, dy)
+    const isHovered = d < 100
+    ctx.globalAlpha = (isHovered ? p.nodeHoverOpacity : p.nodeOpacity) * state.readerAlpha
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.arc(n.x, n.y, isHovered ? p.nodeHoverSize : p.nodeSize, 0, Math.PI * 2)
+    ctx.fill()
+  })
 }

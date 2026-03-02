@@ -9,16 +9,6 @@
   margin-bottom: var(--space-8);
 }
 
-.columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-12);
-
-  @media (max-width: 800px) {
-    grid-template-columns: 1fr;
-  }
-}
-
 .backlinksSection {
   h3 {
     font-family: var(--font-code);

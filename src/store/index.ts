@@ -1,7 +1,12 @@
 import { create } from "zustand"
 import type { PanelCard, ContentIndex, NoteMetadata } from "@/types/content"
+import { SITE_DEFAULTS, type SiteConfig } from "@/config/site-defaults"
 
 interface GardenStore {
+  // Config (Live Settings)
+  config: SiteConfig
+  updateConfig: (updater: (c: SiteConfig) => void) => void
+
   // Theme
   theme: "light" | "dark"
   setTheme: (theme: "light" | "dark") => void
@@ -34,9 +39,11 @@ interface GardenStore {
   setIsPlaylistExpanded: (expanded: boolean) => void
 
   // Background
-  bgMode: "simplex" | "dots" | "network" | "terminal" | "chess"
+  bgMode: "simplex" | "dots" | "network" | "terminal" | "chess" | "graph"
+  lastBgMode: "simplex" | "dots" | "network" | "terminal" | "chess" | "graph"
   bgStyle: "vectors" | "glyphs" | "off"
   setBgMode: (mode: GardenStore["bgMode"]) => void
+  toggleGraphBackground: () => void
   cycleBgMode: () => void
   setBgStyle: (style: GardenStore["bgStyle"]) => void
 
@@ -46,6 +53,10 @@ interface GardenStore {
   popCard: () => void
   removeCard: (index: number) => void
   clearStack: () => void
+
+  // Graph state
+  activeGraphSlug: string
+  setActiveGraphSlug: (slug: string) => void
 
   // Content index (loaded at startup)
   contentIndex: ContentIndex | null
@@ -77,6 +88,15 @@ const getInitialAccent = (): string => {
 }
 
 export const useStore = create<GardenStore>((set) => ({
+  // Config
+  config: SITE_DEFAULTS,
+  updateConfig: (updater) => set((s) => {
+    const next = { ...s.config }
+    // We handle deep nesting carefully
+    updater(next)
+    return { config: next }
+  }),
+
   // Theme
   theme: getInitialTheme(),
   setTheme: (theme) => {
@@ -136,8 +156,17 @@ export const useStore = create<GardenStore>((set) => ({
 
   // Background
   bgMode: "simplex",
+  lastBgMode: "simplex",
   bgStyle: "vectors",
-  setBgMode: (bgMode) => set({ bgMode }),
+  setBgMode: (bgMode) =>
+    set((s) => ({
+      bgMode,
+      lastBgMode: bgMode === "graph" ? s.lastBgMode : bgMode,
+    })),
+  toggleGraphBackground: () =>
+    set((s) => ({
+      bgMode: s.bgMode === "graph" ? s.lastBgMode : "graph",
+    })),
   cycleBgMode: () =>
     set((s) => {
       const modes: GardenStore["bgMode"][] = [
@@ -146,9 +175,12 @@ export const useStore = create<GardenStore>((set) => ({
         "network",
         "terminal",
         "chess",
+        "graph",
       ]
-      const idx = modes.indexOf(s.bgMode)
-      return { bgMode: modes[(idx + 1) % modes.length] }
+      const currentMode = s.bgMode
+      const idx = modes.indexOf(currentMode)
+      const next = modes[(idx + 1) % modes.length]
+      return { bgMode: next, lastBgMode: next }
     }),
   setBgStyle: (bgStyle) => set({ bgStyle }),
 
@@ -167,6 +199,10 @@ export const useStore = create<GardenStore>((set) => ({
       panelStack: s.panelStack.slice(0, index),
     })),
   clearStack: () => set({ panelStack: [] }),
+
+  // Graph state
+  activeGraphSlug: "index",
+  setActiveGraphSlug: (activeGraphSlug) => set({ activeGraphSlug }),
 
   // Content index
   contentIndex: null,

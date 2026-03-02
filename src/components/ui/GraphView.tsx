@@ -182,8 +182,9 @@ export function GraphView() {
     init()
 
     return () => {
-      app?.destroy(true, { children: true, texture: true })
       simulation?.stop()
+      app?.ticker.stop()
+      app?.destroy(true, { children: true, texture: true })
     }
   }, [])
 

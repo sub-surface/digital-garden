@@ -10,6 +10,7 @@ import { LinkPreview } from "@/components/ui/LinkPreview"
 import { MusicPlayer } from "@/components/ui/MusicPlayer"
 import { MusicBar } from "@/components/ui/MusicBar"
 import { SearchOverlay } from "@/components/ui/SearchOverlay"
+import { BgModeToggle } from "@/components/ui/BgModeToggle"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
 import styles from "./AppShell.module.scss"
 
@@ -30,6 +31,7 @@ export function AppShell() {
         <LinkPreview />
         <MusicPlayer />
         <MusicBar />
+        <BgModeToggle />
         <SearchOverlay />
         
         {/* Terminal title — top-left */}

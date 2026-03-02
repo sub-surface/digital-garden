@@ -1,0 +1,26 @@
+.toggleBtn {
+  position: fixed;
+  top: 12px;
+  right: 280px; // Between MusicBar and Clock
+  z-index: 200;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  cursor: pointer;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: opacity 0.2s, color 0.2s;
+
+  &:hover {
+    opacity: 0.8;
+    color: var(--color-primary);
+  }
+
+  @media (max-width: 800px) {
+    display: none;
+  }
+}

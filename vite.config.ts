@@ -14,6 +14,7 @@ import { remarkWikilinks } from "./src/lib/remark-wikilinks"
 import { remarkTelescopic } from "./src/lib/remark-telescopic"
 import { remarkCallouts } from "./src/lib/remark-callouts"
 import { rehypeSidenotes } from "./src/lib/rehype-sidenotes"
+import { rehypeImagePaths } from "./src/lib/rehype-image-paths"
 
 export default defineConfig({
   plugins: [
@@ -31,6 +32,7 @@ export default defineConfig({
         rehypePlugins: [
           rehypeSlug,
           [rehypeRaw, { passThrough: ['mdxjsEsm', 'mdxJsxFlowElement', 'mdxJsxTextElement'] }],
+          rehypeImagePaths,
           rehypeSidenotes,
         ],
         providerImportSource: "@mdx-js/react",

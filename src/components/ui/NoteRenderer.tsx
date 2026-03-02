@@ -25,7 +25,9 @@ function resolveLayout(
   return "note"
 }
 
-export function NoteRenderer({ slug }: Props) {
+export function NoteRenderer({ slug: rawSlug }: Props) {
+  const slug = useMemo(() => decodeURIComponent(rawSlug), [rawSlug])
+  
   const [data, setData] = useState<{
     frontmatter: Record<string, any>
     headings: { id: string; text: string; level: number }[]
@@ -37,7 +39,7 @@ export function NoteRenderer({ slug }: Props) {
   const handleLoad = (loaded: any) => {
     setData(prev => ({
       frontmatter: { ...prev.frontmatter, ...loaded.frontmatter },
-      headings: loaded.headings.length > 0 ? loaded.headings : prev.headings
+      headings: (loaded.headings && loaded.headings.length > 0) ? loaded.headings : prev.headings
     }))
   }
 

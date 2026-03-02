@@ -255,6 +255,31 @@ function main() {
   )
   console.log(`  folders.json: ${Object.keys(folders).length} folders`)
 
+  // Generate photography manifest
+  const photography: { src: string; alt: string; noteSlug: string; noteTitle: string }[] = []
+  for (const meta of Object.values(index)) {
+    if (meta.tags.includes("Photography")) {
+      const file = files.find((f) => slugify(f) === meta.slug)!
+      const content = fs.readFileSync(file, "utf-8")
+      const regex = /!\[\[([^\]]+)\]\]/g
+      let match: RegExpExecArray | null
+      while ((match = regex.exec(content)) !== null) {
+        const fileName = match[1].trim()
+        photography.push({
+          src: `/content/Media/${fileName}`,
+          alt: fileName,
+          noteSlug: meta.slug,
+          noteTitle: meta.title,
+        })
+      }
+    }
+  }
+  fs.writeFileSync(
+    path.join(PUBLIC_DIR, "photography.json"),
+    JSON.stringify(photography, null, 2),
+  )
+  console.log(`  photography.json: ${photography.length} photos`)
+
   // Copy markdown files to public/content/ for potential runtime fallback
   const publicContent = path.join(PUBLIC_DIR, "content")
   for (const file of files) {

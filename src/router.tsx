@@ -13,6 +13,7 @@ import { PhotographyPage } from "@/components/ui/PhotographyPage"
 import { GraphView } from "@/components/ui/GraphView"
 import { ChessPage } from "@/components/ui/ChessPage"
 import { NotFound } from "@/components/ui/NotFound"
+import { useEffect } from "react"
 import { useStore } from "@/store"
 
 // Root layout
@@ -138,8 +139,13 @@ const noteRoute = createRoute({
   path: "$",
   component: function NotePage() {
     const params = noteRoute.useParams()
-    const slug = (params as Record<string, string>)["_splat"]
-    if (!slug) return <NoteRenderer slug="index" />
+    const slug = (params as Record<string, string>)["_splat"] || "index"
+    
+    const setActiveGraphSlug = useStore((s) => s.setActiveGraphSlug)
+    useEffect(() => {
+      setActiveGraphSlug(slug)
+    }, [slug, setActiveGraphSlug])
+
     return <NoteRenderer slug={slug} />
   },
 })

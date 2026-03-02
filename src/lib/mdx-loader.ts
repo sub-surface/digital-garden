@@ -8,7 +8,8 @@ export interface MDXNoteModule {
   frontmatter: Record<string, any>
 }
 
-export function getNoteComponent(slug: string) {
+export function getNoteComponent(rawSlug: string) {
+  const slug = decodeURIComponent(rawSlug)
   // Normalize slug to match glob keys
   const paths = [
     `/src/content/${slug}.md`,

@@ -66,7 +66,12 @@ export function LocalGraph({ slug }: Props) {
         antialias: true,
         resolution: window.devicePixelRatio || 1,
       })
-      containerRef.current!.appendChild(app.canvas)
+      
+      if (!containerRef.current) {
+        app.destroy(true, { children: true, texture: true })
+        return
+      }
+      containerRef.current.appendChild(app.canvas)
 
       const stage = new PIXI.Container()
       app.stage.addChild(stage)
@@ -154,8 +159,11 @@ export function LocalGraph({ slug }: Props) {
     init()
 
     return () => {
-      app?.destroy(true, { children: true, texture: true })
       simulation?.stop()
+      if (app) {
+        app.ticker?.stop()
+        app.destroy(true, { children: true, texture: true })
+      }
     }
   }, [slug])
 

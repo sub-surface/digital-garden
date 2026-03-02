@@ -11,6 +11,21 @@ export function MusicBar() {
 
   return (
     <div className={styles.musicBar} data-panel-ignore>
+      <button 
+        className={styles.expandBtn} 
+        onClick={() => setIsExpanded(!isExpanded)}
+        title="Show details"
+      >
+        <span className={`${styles.plus} ${isExpanded ? styles.active : ""}`}>+</span>
+      </button>
+
+      <div className={styles.trackInfo}>
+        <div className={styles.marquee}>
+          <span className={styles.title}>{currentTrack.title}</span>
+          <span className={styles.title} aria-hidden="true">{currentTrack.title}</span>
+        </div>
+      </div>
+
       <div className={styles.controls}>
         <button className={styles.iconBtn} onClick={prevTrack} title="Previous">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -34,18 +49,6 @@ export function MusicBar() {
           </svg>
         </button>
       </div>
-      
-      <div className={styles.trackInfo}>
-        <span className={styles.title}>{currentTrack.title}</span>
-      </div>
-
-      <button 
-        className={styles.expandBtn} 
-        onClick={() => setIsExpanded(!isExpanded)}
-        title="Show details"
-      >
-        <span className={`${styles.plus} ${isExpanded ? styles.active : ""}`}>+</span>
-      </button>
     </div>
   )
 }

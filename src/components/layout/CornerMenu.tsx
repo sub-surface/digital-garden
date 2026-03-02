@@ -17,7 +17,6 @@ export function CornerMenu() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const ARC_ITEMS: ArcItem[] = [
-    { label: "Graph", to: "/graph" },
     { label: "Music", onClick: () => { toggleMusic(); setOpen(false); } },
     { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
     ...(import.meta.env.DEV ? [{ label: "Dev", to: "/__dev", devOnly: true }] : []),

@@ -119,7 +119,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const currentTrack = tracks[currentTrackIndex] || null
 
+  const ensureAudioContext = () => {
+    if (audioContextRef.current?.state === "suspended") {
+      audioContextRef.current.resume()
+    }
+  }
+
   const playTrack = (index: number) => {
+    ensureAudioContext()
     if (index === currentTrackIndex) {
       togglePlay()
     } else {
@@ -129,15 +136,18 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }
 
   const togglePlay = () => {
+    ensureAudioContext()
     setIsPlaying(!isPlaying)
   }
 
   const nextTrack = () => {
+    ensureAudioContext()
     setCurrentTrackIndex((prev) => (prev + 1) % tracks.length)
     setIsPlaying(true)
   }
 
   const prevTrack = () => {
+    ensureAudioContext()
     setCurrentTrackIndex((prev) => (prev - 1 + tracks.length) % tracks.length)
     setIsPlaying(true)
   }

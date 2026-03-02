@@ -8,7 +8,7 @@ export function ArticleLayout({ children, headings }: Props) {
     headings.length > 0 ? Math.min(...headings.map((h) => h.level)) : 2
 
   return (
-    <div className="article-layout-wrapper">
+    <div className="article-layout-wrapper" style={{ background: 'transparent' }}>
       <div className="article-body">{children}</div>
 
       {headings.length >= 3 && (

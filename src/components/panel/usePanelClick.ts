@@ -12,6 +12,7 @@ export function usePanelClick() {
   const popCard = useStore((s) => s.popCard)
   const contentIndex = useStore((s) => s.contentIndex)
   const toggleMusic = useStore((s) => s.toggleMusic)
+  const setActiveGraphSlug = useStore((s) => s.setActiveGraphSlug)
   const { tracks, playTrack } = useMusic()
 
   useEffect(() => {
@@ -67,6 +68,9 @@ export function usePanelClick() {
         // Extract slug from URL path
         const slug = decodeURIComponent(url.pathname.replace(/^\//, "")).replace(/\/$/, "")
         if (!slug) return
+
+        // Update active graph target
+        setActiveGraphSlug(slug)
 
         // Determine depth: are we clicking from within a panel card?
         const cardEl = target.closest("[data-index]")
