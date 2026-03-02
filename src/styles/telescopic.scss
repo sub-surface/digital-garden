@@ -1,0 +1,110 @@
+.telescopic-container {
+  position: relative;
+  margin: var(--space-4) 0;
+  padding-left: 20px;
+  line-height: 1.55;
+
+  &:hover .telescopic-controls {
+    opacity: 1;
+  }
+}
+
+.telescopic-controls {
+  position: absolute;
+  left: 0;
+  top: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-default);
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 0.7rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-default);
+
+    &:hover {
+      color: var(--color-accent);
+    }
+  }
+}
+
+.telescopic-content {
+  display: block;
+}
+
+.telescopic-node {
+  &,
+  & > .telescopic-label,
+  & > .telescopic-children {
+    display: inline;
+  }
+
+  &.closed {
+    & > .telescopic-label {
+      display: inline;
+      padding: 0 3px;
+      margin: -1px;
+      box-shadow:
+        0px 1px 0px 1px var(--color-bg) inset,
+        0px 1px 0px 2px var(--color-primary) inset;
+      cursor: pointer;
+      transition:
+        box-shadow var(--duration-fast) var(--ease-default),
+        background-color var(--duration-fast) var(--ease-default);
+    }
+
+    & > .telescopic-children {
+      display: none;
+    }
+
+    &:hover > .telescopic-label {
+      box-shadow:
+        0px 1px 0px 0px var(--color-bg) inset,
+        0px 1px 0px 1px var(--color-primary) inset;
+      border-bottom: 1px solid var(--color-primary);
+    }
+
+    &:active > .telescopic-label {
+      color: var(--color-bg);
+      background-color: transparent;
+    }
+  }
+
+  &.open {
+    & > .telescopic-label {
+      display: inline;
+      background-color: transparent;
+      box-shadow: none;
+      padding: 0;
+      margin: 0;
+      cursor: default;
+    }
+
+    & > .telescopic-children {
+      display: inline;
+      opacity: 1;
+      filter: blur(0);
+      transition:
+        opacity 0.6s cubic-bezier(0, 0, 0.2, 1),
+        filter 0.6s cubic-bezier(0, 0, 0.2, 1),
+        display 0.6s allow-discrete;
+
+      @starting-style {
+        opacity: 0;
+        filter: blur(8px);
+      }
+    }
+  }
+}

@@ -1,0 +1,122 @@
+.container {
+  position: fixed;
+  bottom: var(--space-8);
+  right: var(--space-8);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.menuWrapper {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arc {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.arcItem {
+  position: absolute;
+  top: -24px;
+  left: -24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  text-decoration: none;
+  opacity: 0;
+  transform: translate(0, 0) scale(0.5);
+  transition: 
+    transform 0.4s var(--ease-spring),
+    opacity 0.3s ease,
+    color 0.2s ease;
+  transition-delay: var(--arc-delay);
+  pointer-events: none;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    color: var(--color-primary);
+    transform: translate(var(--arc-x), var(--arc-y)) scale(1.1) !important;
+  }
+}
+
+.arc[data-open] {
+  .arcItem {
+    opacity: 1;
+    transform: translate(var(--arc-x), var(--arc-y)) scale(1);
+    pointer-events: auto;
+  }
+}
+
+.toggle {
+  width: 48px;
+  height: 48px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+  padding: 0;
+
+  &:hover {
+    color: var(--color-primary);
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.static {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+  opacity: 0.6;
+}
+
+.copyright {
+  font-family: var(--font-code);
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.aboutLink {
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
+}

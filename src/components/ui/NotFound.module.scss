@@ -1,0 +1,88 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: var(--space-8);
+}
+
+.glitchArt {
+  font-family: var(--font-code);
+  color: var(--color-primary);
+  margin-bottom: var(--space-8);
+  opacity: 0.8;
+  animation: flicker 2s infinite;
+
+  pre {
+    background: transparent;
+    padding: 0;
+    line-height: 1.1;
+  }
+}
+
+.title {
+  font-family: var(--font-code);
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-bottom: var(--space-4);
+  color: var(--color-heading);
+}
+
+.message {
+  max-width: 450px;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-8);
+  line-height: 1.6;
+}
+
+.actions {
+  margin-bottom: var(--space-12);
+}
+
+.button {
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--color-highlight);
+    transform: scale(1.05);
+  }
+}
+
+.terminal {
+  width: 100%;
+  max-width: 400px;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.2);
+  padding: var(--space-4);
+  border-radius: 4px;
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.line {
+  margin-bottom: 4px;
+  &:last-child { margin-bottom: 0; }
+}
+
+@keyframes flicker {
+  0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100% {
+    opacity: 0.8;
+    transform: translateX(0);
+  }
+  20%, 21.999%, 63%, 63.999%, 65%, 69.999% {
+    opacity: 0.4;
+    transform: translateX(2px);
+  }
+}

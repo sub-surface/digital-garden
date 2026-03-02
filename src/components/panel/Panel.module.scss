@@ -1,0 +1,150 @@
+// Stacked panel — horizontal card stack to the right of the main pane
+
+.stack {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.card {
+  flex: 0 0 750px;
+  min-width: 750px;
+  height: 100vh;
+  position: sticky;
+  display: flex;
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
+  overflow: hidden;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.05);
+
+  animation: slideFadeIn 0.4s var(--ease-out) both;
+
+  @starting-style {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+}
+
+@keyframes slideFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// ── Vertical tab header (left edge of each card) ──
+
+.cardHeader {
+  flex: 0 0 24px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg);
+  cursor: pointer;
+  z-index: 10;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: var(--color-highlight);
+
+    .actions {
+      opacity: 1;
+    }
+  }
+}
+
+.titleWrap {
+  flex: 1;
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.title {
+  font-family: var(--font-code);
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-height: 70vh;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 1rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.expandBtn,
+.closeBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-family: var(--font-code);
+  font-size: 1rem;
+  line-height: 1;
+
+  &:hover {
+    color: var(--color-primary);
+  }
+}
+
+// ── Scrollable content area ──
+
+.contentScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem 3rem;
+}
+
+.content {
+  // Inherit all prose styling from base
+  line-height: 1.7;
+  letter-spacing: 0.2px;
+
+  h1 {
+    font-size: 1.5rem;
+    margin-top: var(--space-8);
+  }
+
+  // Slightly reduce heading sizes in cards
+  h2 { font-size: 1.3rem; }
+  h3 { font-size: 1.1rem; }
+
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+  }
+}
+
+// ── Mobile: hide panel ──
+
+@media (max-width: 800px) {
+  .stack {
+    display: none !important;
+  }
+}

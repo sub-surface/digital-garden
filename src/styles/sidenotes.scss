@@ -1,0 +1,128 @@
+// Tufte-style sidenotes — wide viewport: margin float, narrow: inline toggle
+
+.sidenote-checkbox {
+  display: none;
+}
+
+.sidenote-toggle {
+  display: none; // Hidden by default, only shown in ArticleLayout (wide)
+  cursor: pointer;
+  color: var(--color-primary);
+  font-size: 0.75em;
+  vertical-align: super;
+  line-height: 0;
+  padding: 0 1px;
+  transition: color var(--duration-fast) var(--ease-default);
+
+  &:hover {
+    color: var(--color-accent);
+  }
+}
+
+.sidenote {
+  display: none; // Hidden by default, only shown in ArticleLayout (wide)
+}
+
+// ── Layout Specific Controls ──
+
+.article-layout {
+  @media (min-width: 1101px) {
+    // In wide article view, hide original marker and show sidenote components
+    .footnote-marker {
+      display: none;
+    }
+    
+    .sidenote-toggle {
+      display: inline;
+    }
+
+    .sidenote {
+      display: block;
+      float: right;
+      clear: right;
+      margin-right: -280px;
+      width: 240px;
+      margin-top: 0;
+      margin-bottom: var(--space-3);
+      font-size: 0.82em;
+      line-height: 1.4;
+      color: var(--color-text-muted);
+      position: relative;
+
+      p {
+        margin-bottom: var(--space-2);
+        &:last-child { margin-bottom: 0; }
+      }
+    }
+  }
+
+  .footnotes-section {
+    display: none;
+  }
+}
+
+.note-layout {
+  .sidenote,
+  .sidenote-toggle,
+  .sidenote-checkbox {
+    display: none !important;
+  }
+  
+  .footnote-marker {
+    display: inline;
+  }
+
+  .footnotes-section {
+    display: block;
+    margin-top: var(--space-12);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border-light);
+    
+    h2[id="footnote-label"] {
+      font-size: 1.1rem;
+      font-family: var(--font-code);
+      text-transform: uppercase;
+      margin-bottom: var(--space-4);
+      opacity: 0.8;
+    }
+    
+    ol {
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: var(--color-text-muted);
+      
+      li {
+        margin-bottom: var(--space-2);
+        &::marker {
+          font-family: var(--font-code);
+          color: var(--color-primary);
+        }
+      }
+    }
+  }
+}
+
+// Narrow viewports: inline toggle for ArticleLayout
+@media (max-width: 1100px) {
+  .article-layout {
+    .footnote-marker {
+      display: inline;
+    }
+    
+    .sidenote {
+      display: none;
+      float: none;
+      margin-right: 0;
+      width: 100%;
+      margin-top: var(--space-2);
+      padding: var(--space-3);
+      background: var(--color-bg-surface);
+      border-radius: 4px;
+      border-left: 2px solid var(--color-primary);
+    }
+
+    .sidenote-checkbox:checked + .sidenote-toggle + .sidenote {
+      display: block;
+    }
+  }
+}

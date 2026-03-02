@@ -1,0 +1,266 @@
+// ── Note header ──
+
+.note-header {
+  margin-bottom: var(--space-8);
+}
+
+.growth-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.8em;
+  color: var(--color-text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: var(--space-2);
+
+  &::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: var(--space-1);
+  }
+
+  &.growth-larval::before { background-color: var(--color-text-muted); }
+  &.growth-becoming::before { background-color: var(--color-primary); }
+  &.growth-actual::before { background-color: var(--color-accent); }
+}
+
+.note-date {
+  font-size: 0.85em;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+
+// ── Tags ──
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.tag-pill {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  border-radius: 12px;
+  font-size: 0.8em;
+  background: var(--color-highlight);
+  color: var(--color-primary);
+  transition:
+    background var(--duration-fast) var(--ease-default),
+    color var(--duration-fast) var(--ease-default);
+
+  &:hover {
+    background: var(--color-primary);
+    color: var(--color-bg);
+    box-shadow: none;
+  }
+}
+
+// ── Note footer ──
+
+.note-footer {
+  margin-top: var(--space-16);
+
+  hr {
+    margin-bottom: var(--space-8);
+  }
+}
+
+.backlinks {
+  h3 {
+    font-size: 1em;
+    color: var(--color-primary);
+    margin-bottom: var(--space-4);
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  li {
+    margin-bottom: var(--space-2);
+  }
+
+  a {
+    font-size: 0.95em;
+  }
+}
+
+// ── Table of Contents ──
+
+.toc {
+  position: sticky;
+  top: 2rem;
+  float: right;
+  width: 200px;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  font-size: 0.82em;
+  background: var(--glass-bg-heavy);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  z-index: 10;
+
+  h3 {
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--space-2);
+    margin-top: 0;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  li {
+    margin-bottom: var(--space-1);
+  }
+
+  a {
+    color: var(--color-text-muted);
+    font-size: 0.95em;
+    border-bottom: none;
+
+    &:hover {
+      color: var(--color-primary);
+      box-shadow: none;
+    }
+  }
+
+  // Indent nested levels
+  ul ul {
+    padding-left: var(--space-3);
+  }
+
+  @media (max-width: 900px) {
+    display: none !important;
+  }
+}
+
+// ── Bookshelf / Movieshelf grid ──
+
+.shelf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-8);
+  margin: var(--space-12) 0;
+}
+
+.shelf-card {
+  transition: transform var(--duration-normal) var(--ease-spring);
+
+  &:hover {
+    transform: translateY(-3px);
+  }
+}
+
+.shelf-card-link {
+  border-bottom: none !important;
+  box-shadow: none !important;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  display: block;
+
+  &:hover {
+    color: inherit;
+    box-shadow: none !important;
+  }
+}
+
+.shelf-cover {
+  aspect-ratio: 2 / 3;
+  background: var(--color-highlight);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: var(--space-4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: box-shadow var(--duration-normal) var(--ease-spring);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0;
+  }
+
+  .shelf-card:hover & {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.shelf-cover--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-border);
+
+  span {
+    font-family: var(--font-header);
+    font-size: 2.5rem;
+    color: var(--color-text-muted);
+    opacity: 0.5;
+  }
+}
+
+.shelf-title {
+  display: block;
+  font-family: var(--font-header);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 var(--space-1) 0;
+  line-height: 1.3;
+}
+
+.shelf-subtitle {
+  font-size: 0.85em;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.shelf-year {
+  font-size: 0.8em;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+// ── Note loading / error ──
+
+.note-loading {
+  padding: var(--space-16) 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.9em;
+}
+
+.note-error {
+  padding: var(--space-8);
+  color: var(--color-accent);
+  font-family: var(--font-code);
+  font-size: 0.9em;
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+// ── Internal links ──
+
+.internal-link {
+  background: none !important;
+}

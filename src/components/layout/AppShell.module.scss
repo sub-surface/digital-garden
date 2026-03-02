@@ -1,0 +1,95 @@
+.shell {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+// ── Workspace: full-viewport horizontal scroll container ──
+.workspace {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--color-bg);
+
+  // Thin overlay scrollbar — hidden until hover
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &:hover {
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  &::-webkit-scrollbar {
+    height: 3px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 2px;
+    transition: background var(--duration-normal) var(--ease-default);
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+  }
+}
+
+// ── Main pane: sticky left, full-height ──
+.mainPane {
+  flex: 0 0 var(--main-width);
+  min-width: var(--main-width);
+  height: 100vh;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto;
+
+  // Thin overlay scrollbar — hidden until hover
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &:hover {
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  &::-webkit-scrollbar {
+    width: 3px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 2px;
+  }
+  &:hover::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+  }
+}
+
+.mainContent {
+  padding: 2rem 3rem;
+}
+
+// ── Reader mode ──
+.shell[data-reader="true"] {
+  // Reader mode specific shell adjustments if any
+}
+
+// ── Mobile ──
+@media (max-width: 800px) {
+  .mainPane {
+    flex: 1;
+    min-width: 100%;
+  }
+
+  .mainContent {
+    padding: 1.5rem;
+  }
+}
