@@ -145,6 +145,8 @@ function main() {
       growth: data.growth as string | undefined,
       featured: data.featured === true,
       private: false,
+      cover: (data.cover || data.poster) as string | undefined,
+      poster: (data.poster || data.cover) as string | undefined,
       links: [], // resolved in pass 2
       backlinks: [],
       folder,

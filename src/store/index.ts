@@ -30,6 +30,11 @@ interface GardenStore {
   isReaderMode: boolean
   toggleReaderMode: () => void
 
+  // Search
+  isSearchOpen: boolean
+  setSearchOpen: (open: boolean) => void
+  toggleSearch: () => void
+
   // Music
   isMusicOpen: boolean
   toggleMusic: () => void
@@ -39,13 +44,17 @@ interface GardenStore {
   setIsPlaylistExpanded: (expanded: boolean) => void
 
   // Background
-  bgMode: "simplex" | "dots" | "network" | "terminal" | "chess" | "graph"
-  lastBgMode: "simplex" | "dots" | "network" | "terminal" | "chess" | "graph"
+  bgMode: "graph" | "vectors" | "dots" | "terminal" | "chess"
+  lastBgMode: "graph" | "vectors" | "dots" | "terminal" | "chess"
   bgStyle: "vectors" | "glyphs" | "off"
   setBgMode: (mode: GardenStore["bgMode"]) => void
   toggleGraphBackground: () => void
   cycleBgMode: () => void
   setBgStyle: (style: GardenStore["bgStyle"]) => void
+
+  // Chess
+  chessDifficulty: number
+  setChessDifficulty: (level: number) => void
 
   // Panel navigation
   panelStack: PanelCard[]
@@ -146,6 +155,11 @@ export const useStore = create<GardenStore>((set) => ({
   isReaderMode: false,
   toggleReaderMode: () => set((s) => ({ isReaderMode: !s.isReaderMode })),
 
+  // Search
+  isSearchOpen: false,
+  setSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
+  toggleSearch: () => set((s) => ({ isSearchOpen: !s.isSearchOpen })),
+
   // Music
   isMusicOpen: false,
   toggleMusic: () => set((s) => ({ isMusicOpen: !s.isMusicOpen })),
@@ -155,13 +169,13 @@ export const useStore = create<GardenStore>((set) => ({
   setIsPlaylistExpanded: (isPlaylistExpanded) => set({ isPlaylistExpanded }),
 
   // Background
-  bgMode: "simplex",
-  lastBgMode: "simplex",
+  bgMode: "graph",
+  lastBgMode: "graph",
   bgStyle: "vectors",
   setBgMode: (bgMode) =>
     set((s) => ({
       bgMode,
-      lastBgMode: bgMode === "graph" ? s.lastBgMode : bgMode,
+      lastBgMode: bgMode === "chess" ? s.lastBgMode : bgMode,
     })),
   toggleGraphBackground: () =>
     set((s) => ({
@@ -170,19 +184,21 @@ export const useStore = create<GardenStore>((set) => ({
   cycleBgMode: () =>
     set((s) => {
       const modes: GardenStore["bgMode"][] = [
-        "simplex",
-        "dots",
-        "network",
-        "terminal",
-        "chess",
         "graph",
+        "vectors",
+        "dots",
+        "terminal",
       ]
       const currentMode = s.bgMode
-      const idx = modes.indexOf(currentMode)
+      const idx = modes.indexOf(currentMode as any)
       const next = modes[(idx + 1) % modes.length]
       return { bgMode: next, lastBgMode: next }
     }),
   setBgStyle: (bgStyle) => set({ bgStyle }),
+
+  // Chess
+  chessDifficulty: 1,
+  setChessDifficulty: (chessDifficulty) => set({ chessDifficulty }),
 
   // Panel navigation
   panelStack: [],

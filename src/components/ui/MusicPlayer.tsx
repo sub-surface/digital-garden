@@ -7,6 +7,7 @@ export function MusicPlayer() {
   const isExpanded = useStore((s) => s.isMusicExpanded)
   const isPlaylistOpen = useStore((s) => s.isPlaylistExpanded)
   const setIsPlaylistOpen = useStore((s) => s.setIsPlaylistExpanded)
+  const toggleMusic = useStore((s) => s.toggleMusic)
   
   const {
     tracks,
@@ -78,15 +79,24 @@ export function MusicPlayer() {
           <div className={styles.title}>{currentTrack?.title}</div>
           <div className={styles.artist}>{currentTrack?.artist}</div>
         </div>
-        <button 
-          className={`${styles.playlistToggle} ${isPlaylistOpen ? styles.active : ""}`}
-          onClick={() => setIsPlaylistOpen(!isPlaylistOpen)}
-          title="Toggle Playlist"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-          </svg>
-        </button>
+        <div className={styles.headerActions}>
+          <button 
+            className={`${styles.playlistToggle} ${isPlaylistOpen ? styles.active : ""}`}
+            onClick={() => setIsPlaylistOpen(!isPlaylistOpen)}
+            title="Toggle Playlist"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+            </svg>
+          </button>
+          <button 
+            className={styles.closeBtn} 
+            onClick={toggleMusic}
+            title="Close Player"
+          >
+            &times;
+          </button>
+        </div>
       </div>
 
       <div className={styles.mainContent}>

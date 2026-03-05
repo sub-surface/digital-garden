@@ -1,5 +1,5 @@
 .collectionPage {
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: var(--space-12) var(--space-4);
 }
@@ -11,6 +11,9 @@
   h1 {
     font-size: 3rem;
     margin-bottom: var(--space-2);
+    font-family: var(--font-code);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
   }
 
   p {
@@ -21,8 +24,8 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-8);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-6);
 }
 
 .musicList {

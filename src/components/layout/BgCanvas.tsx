@@ -34,6 +34,29 @@ function simplex(x: number, y: number): number {
   return 70 * (n0 + n1 + n2)
 }
 
+const MATRIX_SNIPPETS = [
+  "SUB-SURFACE CORE v2.0.0", "loading thought-graph...", "mapping territories...", "indexing 120 notes", "calibrating noise field...", "system ready.",
+  "0000: 53 55 42 2D 53 55 52 46", "0008: 41 43 45 00 54 45 52 52", "0010: 49 54 4F 52 49 45 53 00",
+  "thinking...", "processing...", "re-caffeinating core", "spectral activity high",
+  "function simplex(x, y) { return (x + y) * F2 }", "const GR = [[1, 1], [-1, 1]]",
+  "Is the machine dreaming?", "Ghost in the shell", "Pattern recognition", "Signal to noise",
+  "The medium is the message", "We shape our tools", "Simulacra and Simulation",
+  "Hyperreality", "Cybernetics", "Feedback loops", "Neural networks", "Entropy",
+  "░", "▒", "▓", "█", "─", "│", "┌", "┐", "└", "┘", "├", "┤", "┬", "┴", "┼", "═", "║", "╔", "╗", "╚", "╝", "╠", "╣", "╦", "╩", "╬",
+  "0", "1", "0", "1", "null", "undefined", "NaN", "[object Object]",
+]
+
+const TERMINAL_ANIMATIONS = [
+  { frames: ["|", "/", "-", "\\"] },
+  { frames: [" ", "▂", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃", "▂"] },
+  { frames: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] },
+  { frames: ["( ● )", "(  ●)", "(   ●)", "(    )", "(●   )", "( ●  )"] },
+  { frames: ["◢", "◣", "◤", "◥"] },
+  { frames: ["[    ]", "[=   ]", "[==  ]", "[=== ]", "[====]", "[ ===]", "[  ==]", "[   =]", "[    ]"] },
+  { frames: ["* . .", ". * .", ". . *", ". * ."] },
+  { frames: ["<o>", "(o)", " o ", "   "] }
+]
+
 const GLYPH_POOL = '░▒▓█─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬■□●○◘▄▀▌▐«»¶§±≡≈∞ΩαβπΣφ♠♣♥♦☺☻♪♫►◄▲▼'
 
 export function BgCanvas() {
@@ -43,6 +66,8 @@ export function BgCanvas() {
   const isReaderMode = useStore((s) => s.isReaderMode)
   const theme = useStore((s) => s.theme)
   const palette = useStore((s) => s.palette)
+  const config = useStore((s) => s.config)
+  const activeSlug = useStore((s) => s.activeGraphSlug)
 
   const stateRef = useRef({
     mx: -9999,
@@ -55,16 +80,26 @@ export function BgCanvas() {
     links: [] as any[],
     nodeMap: new Map<string, any>(),
     ripples: [] as { x: number; y: number; t: number }[],
+    drops: [] as { x: number; y: number; text: string; speed: number; opacity: number; color: string }[],
     lastFrame: 0,
     w: 0,
     h: 0
   })
 
-  // Field params
-  const P = useMemo(() => ({
-    step: 60, rx: 24, ry: 1, sc: 0.0008, range: 1.2, speed: 0.094,
-    oct: [true, true, true], vortex: 0.9, radius: 110,
-  }), [])
+  // Automatically switch to chess background on chess page
+  useEffect(() => {
+    if (activeSlug.toLowerCase() === "chess") {
+      if (bgMode !== "chess") {
+        useStore.getState().setBgMode("chess")
+      }
+    } else {
+      // Revert if we were in chess mode because of the slug
+      if (bgMode === "chess") {
+        const lastMode = useStore.getState().lastBgMode
+        useStore.getState().setBgMode(lastMode)
+      }
+    }
+  }, [activeSlug])
 
   useEffect(() => {
     stateRef.current.readerTarget = isReaderMode ? 0.04 : 1
@@ -84,8 +119,10 @@ export function BgCanvas() {
       const h = window.innerHeight
       stateRef.current.w = w
       stateRef.current.h = h
-      canvas.width = w
-      canvas.height = h
+      const dpr = window.devicePixelRatio || 1
+      canvas.width = w * dpr
+      canvas.height = h * dpr
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       stateRef.current.colorValid = false
     }
 
@@ -132,14 +169,8 @@ export function BgCanvas() {
       })
       .catch(() => {})
 
-    let frameCount = 0
-    const frame = (t: number) => {
-      frameCount++
-      if (frameCount % 60 === 0) {
-        // Log every 60 frames to confirm life
-        // console.log("BgCanvas Frame Loop Running", bgMode, bgStyle)
-      }
-      
+    let animationId: number
+    const frame = () => {
       const state = stateRef.current
       state.readerAlpha += (state.readerTarget - state.readerAlpha) * 0.08
       
@@ -147,18 +178,15 @@ export function BgCanvas() {
         if (!state.colorValid) refreshColors()
         ctx.clearRect(0, 0, state.w, state.h)
 
-        // TEST: Draw a red box to confirm visibility
-        // ctx.fillStyle = "red"
-        // ctx.fillRect(10, 10, 50, 50)
-
-        if (bgMode === "simplex" || bgMode === "dots" || bgMode === "terminal") {
-          drawField(ctx, state, bgMode, bgStyle, P)
+        if (bgMode === "vectors" || bgMode === "dots") {
+          drawField(ctx, state, bgMode, bgStyle, config)
+        } else if (bgMode === "terminal") {
+          drawTerminalPops(ctx, state, config)
         } else if (bgMode === "chess") {
+
           drawChess(ctx, state)
-        } else if (bgMode === "network") {
-          drawNetwork(ctx, state)
         } else if (bgMode === "graph") {
-          drawGraph(ctx, state)
+          drawGraph(ctx, state, config)
         }
       } else {
         ctx.clearRect(0, 0, state.w, state.h)
@@ -174,7 +202,7 @@ export function BgCanvas() {
       window.removeEventListener("mousemove", mouseMove)
       cancelAnimationFrame(animationId)
     }
-  }, [bgMode, bgStyle, theme, palette, P]) // Added theme/palette dependencies
+  }, [bgMode, bgStyle, theme, palette, config])
 
   return (
     <canvas
@@ -186,7 +214,7 @@ export function BgCanvas() {
         left: 0,
         width: "100%",
         height: "100%",
-        zIndex: 100, // High z-index for debug
+        zIndex: 0, 
         pointerEvents: "none",
         background: "transparent",
         display: "block",
@@ -202,8 +230,14 @@ function drawField(
   style: string,
   config: any
 ) {
-  const p = config.backgrounds.simplex
-  const { step, rx, ry, speed, scale: sc, range, vortex, radius } = p
+  // Select correct config based on mode
+  const p = mode === "vectors" ? config.backgrounds.vectors :
+            mode === "dots" ? config.backgrounds.dots :
+            config.backgrounds.terminal
+
+  if (!p) return
+
+  const { step, speed, scale: sc } = p
   const now = performance.now() / 1000
   const t = now * speed
   const sy0 = (window.scrollY || 0) % step
@@ -224,22 +258,25 @@ function drawField(
       a += simplex(nx, ny + t) * 0.55
       a += simplex(nx * 2.2, ny * 2.2 + t * 2.5) * 0.3
       a += simplex(nx * 5, ny * 5 + t * 6) * 0.15
-      a *= Math.PI * range
+      a *= Math.PI * (p.range || 1.2)
 
       const dx = x - state.mx, dy = vy - state.my, d = Math.hypot(dx, dy)
+      const radius = p.radius || 110
       if (d < radius && d > 0) {
         const f = 1 - d / radius
         const v = Math.atan2(dy, dx) + Math.PI / 2
-        a += (v - a) * f * f * vortex
+        a += (v - a) * f * f * (p.vortex || 0.9)
       }
 
       const intensity = simplex(nx + 100, ny + 100 + t * 1.2) * 0.5 + 0.5
-      const finalAlpha = (0.05 + intensity * 0.15) * state.readerAlpha
+      const baseAlpha = mode === "terminal" ? p.opacity : (0.05 + intensity * 0.15)
+      const finalAlpha = baseAlpha * state.readerAlpha
       if (finalAlpha < 0.01) continue
 
       ctx.globalAlpha = finalAlpha
 
-      if (style === "vectors") {
+      if (mode === "vectors") {
+        const rx = p.rx, ry = p.ry
         const minRx = rx * 0.3
         const curRx = minRx + intensity * (rx - minRx)
         ctx.fillStyle = state.colorCache.secondary
@@ -255,16 +292,16 @@ function drawField(
         ctx.lineTo(tipX - ha * Math.cos(a + hw), tipY - ha * Math.sin(a + hw))
         ctx.closePath()
         ctx.fill()
-      } else if (style === "glyphs" || mode === "terminal") {
+      } else if (mode === "terminal") {
         const ci = PM[(Math.floor(x * 7) + PM[Math.floor(docY * 3) & 255]) & 255] % state.colorCache.palette.length
         const posHash = PM[(Math.floor(x * 13) + PM[Math.floor(docY * 7) & 255]) & 255]
         const tOff = Math.floor(now * 0.15 + posHash * 0.02)
         const ch = GLYPH_POOL[PM[(posHash + tOff) & 255] % GLYPH_POOL.length]
         ctx.fillStyle = state.colorCache.palette[ci]
         ctx.fillText(ch, x, vy)
-      } else if (style === "dots" || mode === "dots") {
+      } else if (mode === "dots") {
         const ci = PM[(Math.floor(x * 7) + PM[Math.floor(docY * 3) & 255]) & 255] % state.colorCache.palette.length
-        const dotR = 2 + intensity * 4
+        const dotR = p.minSize + intensity * (p.maxSize - p.minSize)
         ctx.fillStyle = state.colorCache.palette[ci]
         ctx.beginPath()
         ctx.arc(x, vy, dotR, 0, Math.PI * 2)
@@ -272,6 +309,49 @@ function drawField(
       }
     }
   }
+}
+
+function drawTerminalPops(
+  ctx: CanvasRenderingContext2D,
+  state: any,
+  config: any
+) {
+  const p = config.backgrounds.terminal
+  const { speed, opacity } = p
+  const now = performance.now() / 1000
+
+  // Spawn new pops
+  if (Math.random() < 0.05) {
+    const anim = TERMINAL_ANIMATIONS[Math.floor(Math.random() * TERMINAL_ANIMATIONS.length)]
+    state.pops.push({
+      x: Math.random() * state.w,
+      y: Math.random() * state.h,
+      anim,
+      frame: 0,
+      life: 1.0,
+      opacity: opacity * (0.5 + Math.random() * 0.5),
+      color: state.colorCache.palette[Math.floor(Math.random() * state.colorCache.palette.length)]
+    })
+  }
+
+  // Update and Draw
+  ctx.font = `14px 'IBM Plex Mono', monospace`
+  ctx.textAlign = "center"
+  
+  state.pops = state.pops.filter((pop: any) => {
+    pop.life -= 0.005 * (speed / 0.08)
+    pop.frame = Math.floor((1 - pop.life) * 20) % pop.anim.frames.length
+    
+    if (pop.life <= 0) return false
+
+    // Fade in and out
+    const alpha = pop.life > 0.8 ? (1 - pop.life) * 5 : pop.life * 1.25
+    ctx.globalAlpha = Math.min(pop.opacity, alpha) * state.readerAlpha
+    ctx.fillStyle = pop.color
+    ctx.fillText(pop.anim.frames[pop.frame], pop.x, pop.y)
+    
+    return true
+  })
 }
 
 function drawChess(ctx: CanvasRenderingContext2D, state: any) {
@@ -289,32 +369,6 @@ function drawChess(ctx: CanvasRenderingContext2D, state: any) {
       ctx.fillRect(x, y, cell, cell)
     }
   }
-}
-
-function drawNetwork(ctx: CanvasRenderingContext2D, state: any, config: any) {
-  const p = config.backgrounds.network
-  const color = state.colorCache.secondary
-  ctx.strokeStyle = color
-  ctx.fillStyle = color
-
-  state.nodes.forEach((node: any) => {
-    node.x += node.vx * (p.speed / 0.2)
-    node.y += node.vy * (p.speed / 0.2)
-    if (node.x < 0 || node.x > state.w) node.vx *= -1
-    if (node.y < 0 || node.y > state.h) node.vy *= -1
-
-    const dx = node.x - state.mx, dy = node.y - state.my, d = Math.hypot(dx, dy)
-    if (d < p.proximity) {
-      node.x += (dx / d) * 2
-      node.y += (dy / d) * 2
-    }
-
-    const r = p.nodeSize
-    ctx.globalAlpha = 0.2 * state.readerAlpha
-    ctx.beginPath()
-    ctx.arc(node.x, node.y, r, 0, Math.PI * 2)
-    ctx.fill()
-  })
 }
 
 function drawGraph(ctx: CanvasRenderingContext2D, state: any, config: any) {

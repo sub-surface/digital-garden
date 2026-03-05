@@ -28,48 +28,6 @@ const devRoute = createRoute({
   component: DevDashboard,
 })
 
-// Bookshelf
-const bookshelfRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/bookshelf",
-  component: BookshelfPage,
-})
-
-// Movieshelf
-const movieshelfRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/movieshelf",
-  component: MovieshelfPage,
-})
-
-// Music
-const musicRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/music",
-  component: MusicPage,
-})
-
-// Photography
-const photographyRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/photography",
-  component: PhotographyPage,
-})
-
-// Global Graph
-const graphRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/graph",
-  component: GraphView,
-})
-
-// Chess
-const chessRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/chess",
-  component: ChessPage,
-})
-
 // Tag pages
 const tagRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -134,6 +92,7 @@ const folderRoute = createRoute({
 })
 
 // Catch-all note route — handles /Books/foo, /Movies/bar, etc.
+// Also now handles /Bookshelf, /Photography, /Chess via NoteRenderer fallback
 const noteRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "$",
@@ -151,15 +110,8 @@ const noteRoute = createRoute({
 })
 
 // Build the router
-// Note: More specific routes (dev, tag, collections) MUST come before the catch-all ($)
 const routeTree = rootRoute.addChildren([
   devRoute,
-  bookshelfRoute,
-  movieshelfRoute,
-  musicRoute,
-  photographyRoute,
-  graphRoute,
-  chessRoute,
   tagRoute,
   folderRoute,
   noteRoute,

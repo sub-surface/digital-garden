@@ -22,17 +22,22 @@ export function BookshelfPage() {
         {books.length === 0 ? (
           <p>No books found in the garden yet.</p>
         ) : (
-          books.map((book) => (
-            <BookCard
-              key={book.slug}
-              title={book.title}
-              author={(book as any).author || "Unknown"}
-              cover={(book as any).cover}
-              rating={(book as any).rating}
-              status={(book as any).status}
-              link={`/${book.slug}`}
-            />
-          ))
+          books.map((book) => {
+            const rawCover = (book as any).cover
+            const cover = rawCover ? (rawCover.startsWith("http") ? rawCover : `/content/Media/${rawCover}`) : undefined
+            
+            return (
+              <BookCard
+                key={book.slug}
+                title={book.title}
+                author={(book as any).author || "Unknown"}
+                cover={cover}
+                rating={(book as any).rating}
+                status={(book as any).status}
+                link={`/${book.slug}`}
+              />
+            )
+          })
         )}
       </div>
     </div>

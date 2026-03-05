@@ -25,6 +25,30 @@
   }
 }
 
+.actionGroup {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  opacity: 0.6;
+  transition: all 0.2s;
+  padding: 0;
+
+  &:hover {
+    color: var(--color-primary);
+    opacity: 1;
+  }
+}
+
 .expandBtn {
   background: none;
   border: none;
@@ -43,6 +67,7 @@
     color: var(--color-text);
   }
 }
+
 
 .plus {
   display: inline-block;

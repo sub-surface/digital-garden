@@ -9,7 +9,7 @@ export interface MDXNoteModule {
 }
 
 export function getNoteComponent(rawSlug: string) {
-  const slug = decodeURIComponent(rawSlug)
+  const slug = decodeURIComponent(rawSlug).replace(/\s+/g, "-")
   // Normalize slug to match glob keys
   const paths = [
     `/src/content/${slug}.md`,
@@ -27,7 +27,8 @@ export function getNoteComponent(rawSlug: string) {
   return null
 }
 
-export function hasNote(slug: string): boolean {
+export function hasNote(rawSlug: string): boolean {
+  const slug = decodeURIComponent(rawSlug).replace(/\s+/g, "-")
   const paths = [
     `/src/content/${slug}.md`,
     `/src/content/${slug}.mdx`,

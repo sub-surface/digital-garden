@@ -94,19 +94,18 @@ Repo: `digital-garden-v2` | Deploy target: Cloudflare Pages | Wiki: separate rep
 
 ## Phase 3 — Background Engine
 
-- [x] `BgCanvas.tsx` React component (Ported from v1, performance optimized)
-- [ ] Simplex noise + glyph/ASCII mode
-- [ ] Dots mode (particle field)
-- [ ] Vectors mode (flowing line art)
-- [x] Network mode (Springy nodes, drifted background)
-- [x] **Knowledge Map Mode**: Background-layer non-interactive graph
-- [ ] Terminal mode (phosphor scanline + monospace glyphs)
-- [x] **Integrated Switcher**: Toggle between active mode and knowledge map
+- [x] `BgCanvas.tsx` React component (port of BgCanvas.inline.ts)
+- [x] Simplex noise + glyph/ASCII mode
+- [x] Dots mode (particle field)
+- [x] Vectors mode (flowing line art)
+- [x] Network mode (springy oscillating nodes)
+- [x] Terminal mode (phosphor scanline + monospace glyphs)
+- [x] **Integrated Switcher**: Context-aware background selection in Theme Panel
 - [x] Reader mode: fade canvas alpha
 - [x] Color cache pattern (refreshed on theme change)
 - [x] **Config Manager**: Centralised `SITE_DEFAULTS` for global baseline
 - [x] **Dev Options Tab**: Real-time parameter tuning in Theme Panel
-- [ ] **Commit Workflow**: "Copy Commit Data" signal for agent-led source updates
+- [x] **Commit Workflow**: "Copy Commit Data" signal for agent-led source updates
 
 ## Phase 4 — Music Player
 
@@ -151,11 +150,15 @@ Repo: `digital-garden-v2` | Deploy target: Cloudflare Pages | Wiki: separate rep
 
 - [ ] `document.startViewTransition()` on route changes
 - [ ] CSS: Stabilise `LinkPreview` positioning and safe-zones
-- [ ] UI: Add "EXPAND" button to hover previews for direct navigation
+- [x] UI: Add "EXPAND" button to hover previews for direct navigation
 - [ ] Fix: Ensure consistent monospace styling across all terminal-themed elements
 - [x] **Clean MDX**: Committed fully to MDX pipeline, removed runtime markdown fetching
 - [ ] **Store Refactor**: Slice Zustand store for better performance/organisation
 - [ ] **Search Index Optimization**: Move FlexSearch index to Web Worker or warm Singleton
+- [x] **Infrastructure: DNS & Domain Management**
+  - [x] Automated Porkbun nameserver update to Cloudflare (`maya`, `vin`)
+  - [x] Fixed `avatar.subsurfaces.net` migration from GitHub Pages to Cloudflare infrastructure
+  - [x] Secured Porkbun API credentials in `.env.local` + `.gitignore`
 - [ ] Pre-render all notes to HTML at build time (SSG optimization)
 - [ ] `sharp` image optimization: WebP variants + `<picture>` srcsets
 - [ ] Typography: dropcaps for essays, pull quotes
@@ -275,6 +278,10 @@ npm run prebuild  # manual content index rebuild
 - **Catch-all Route**: Homepage double-rendering fixed by consolidating `indexRoute` into the catch-all `noteRoute` with a default "index" slug.
 - **MDX Transition**: All notes are now imported as live MDX components via Vite `import.meta.glob`, allowing custom React components directly in markdown.
 - **NoteBody Refactor**: Centralised loading logic in `NoteBody` allows both main pages and side panels to render complex MDX/React content consistently.
+- **Unified System Pages**: `Bookshelf`, `Chess`, `Photography` etc. now correctly resolve in panels and previews via `NoteRenderer`.
+- **Stable Controls**: Top-right minimal controls (`MusicBar`, `BgModeToggle`) and `ThemePanel` now have stable positioning and layout.
+- **Chess Redesign**: High-fidelity board, drag-and-drop, animations, and Roman numeral difficulty system.
+- **Dynamic Backgrounds**: Fixed Dots/Terminal modes and added automatic Chess-page context awareness.
 - **Ultra-Minimal Music**: Primary controls live in a transparent `MusicBar` top-right, aligned with the clock. Expands to a floating `MusicPlayer` mirroring the `ThemePanel` aesthetic.
 - **Panel Tab Refinement**: Tab action buttons (`+`, `x`) moved to the top of the vertical tab for better accessibility and aesthetics.
 - **Background & Layering**: `BgCanvas` rendered at `zIndex: 0`. To prevent occlusion, all major layout containers (`.shell`, `.workspace`, `.mainPane`, `.card`) must have `background: transparent`. The global background color is applied only to the `body` element or a bottom-layer container.

@@ -2,6 +2,13 @@ import React, { useEffect, useRef, useState, Suspense } from "react"
 import { useTelescopicHandlers } from "./TelescopicHandler"
 import { NotFound } from "./NotFound"
 
+// Import shelf components for panel usage
+import { BookshelfPage } from "./BookshelfPage"
+import { MovieshelfPage } from "./MovieshelfPage"
+import { MusicPage } from "./MusicPage"
+import { PhotographyPage } from "./PhotographyPage"
+import { ChessPage } from "./ChessPage"
+
 interface Props {
   slug: string
   onLoad?: (data: { frontmatter?: Record<string, any>; html?: string; headings?: { id: string; text: string; level: number }[] }) => void
@@ -15,7 +22,19 @@ export function NoteBody({ slug, onLoad }: Props) {
   const contentRef = useRef<HTMLDivElement>(null)
   useTelescopicHandlers(contentRef)
 
+  // Handle "System" pages that aren't MDX files
+  const isSystemPage = ["Bookshelf", "Movieshelf", "Music", "Photography", "Chess"].includes(slug)
+
   useEffect(() => {
+    if (isSystemPage) {
+      setLoading(false)
+      if (onLoad) {
+        // Provide default system frontmatter
+        onLoad({ frontmatter: { title: slug, layout: slug === "Chess" ? "article" : "note" } })
+      }
+      return
+    }
+
     let cancelled = false
     setLoading(true)
     setNotFound(false)
@@ -61,7 +80,7 @@ export function NoteBody({ slug, onLoad }: Props) {
 
     load()
     return () => { cancelled = true }
-  }, [slug])
+  }, [slug, isSystemPage])
 
   // Extract headings from MDX after render
   useEffect(() => {
@@ -78,6 +97,18 @@ export function NoteBody({ slug, onLoad }: Props) {
 
   if (loading) return <div className="note-loading">Loading...</div>
   if (notFound) return <NotFound />
+
+  if (isSystemPage) {
+    return (
+      <div ref={contentRef} className="note-content">
+        {slug === "Bookshelf" && <BookshelfPage />}
+        {slug === "Movieshelf" && <MovieshelfPage />}
+        {slug === "Music" && <MusicPage />}
+        {slug === "Photography" && <PhotographyPage />}
+        {slug === "Chess" && <ChessPage />}
+      </div>
+    )
+  }
 
   return (
     <div ref={contentRef} className="note-content">

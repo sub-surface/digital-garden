@@ -7,7 +7,7 @@ export const SITE_DEFAULTS = {
   
   // Background Mode Specifics
   backgrounds: {
-    simplex: {
+    vectors: {
       step: 60,
       rx: 24,
       ry: 1,
@@ -26,17 +26,19 @@ export const SITE_DEFAULTS = {
       nodeOpacity: 0.15,
       nodeHoverOpacity: 0.4,
     },
-    network: {
-      speed: 0.2,
-      nodeCount: 100, // Used if we generate random nodes
-      proximity: 150,
-      nodeSize: 2,
-    },
     dots: {
       step: 40,
       minSize: 2,
       maxSize: 6,
       opacity: 0.2,
+      speed: 0.05,
+      scale: 0.001,
+    },
+    terminal: {
+      step: 50,
+      opacity: 0.15,
+      speed: 0.08,
+      scale: 0.0008,
     }
   }
 }

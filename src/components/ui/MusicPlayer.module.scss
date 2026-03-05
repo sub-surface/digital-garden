@@ -2,13 +2,13 @@
   position: fixed;
   top: 50px;
   right: 16px;
-  width: 240px; // Match ThemePanel width
+  width: 240px; 
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
   padding: 1.5rem;
   z-index: 1001;
-  background: none; // Rely on global glassmorphism if any, or just transparent floating
+  background: none; 
   animation: fadeIn 0.3s ease;
   pointer-events: auto;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
@@ -57,7 +57,13 @@
   }
 }
 
-.playlistToggle {
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.playlistToggle, .closeBtn {
   background: none;
   border: none;
   color: var(--color-text-muted);
@@ -69,10 +75,16 @@
   &:hover {
     color: var(--color-primary);
   }
+}
 
+.playlistToggle {
   &.active {
     color: var(--color-primary);
   }
+}
+
+.closeBtn {
+  font-size: 1.2rem;
 }
 
 .mainContent {

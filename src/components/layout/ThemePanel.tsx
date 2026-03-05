@@ -142,14 +142,14 @@ export function ThemePanel() {
               </button>
             </div>
             <div className={styles.scrollSelect}>
-              {(["simplex", "dots", "network", "terminal", "chess", "graph"] as const).map((m) => (
+              {(["graph", "vectors", "dots", "terminal"] as const).map((m) => (
                 <button 
                   key={m}
                   className={styles.textLink} 
                   data-active={bgMode === m} 
                   onClick={() => setBgMode(m)}
                 >
-                  {m}
+                  {m === "graph" ? "Graph [Default]" : m}
                 </button>
               ))}
             </div>
@@ -157,21 +157,36 @@ export function ThemePanel() {
         </div>
       ) : (
         <div className={styles.tabContent}>
-          <div className={styles.section}>
-            <h3>Simplex Noise</h3>
-            <Slider label="Speed" value={config.backgrounds.simplex.speed} min={0.01} max={0.5} step={0.001} onChange={v => updateConfig(c => { c.backgrounds.simplex.speed = v })} />
-            <Slider label="Scale" value={config.backgrounds.simplex.scale} min={0.0001} max={0.005} step={0.0001} onChange={v => updateConfig(c => { c.backgrounds.simplex.scale = v })} />
-            <Slider label="Density" value={config.backgrounds.simplex.step} min={20} max={100} step={1} onChange={v => updateConfig(c => { c.backgrounds.simplex.step = v })} />
+          <div className={styles.scrollSection}>
+            <div className={styles.section}>
+              <h3>Vectors</h3>
+              <Slider label="Speed" value={config.backgrounds.vectors.speed} min={0.01} max={0.5} step={0.001} onChange={v => updateConfig(c => { c.backgrounds.vectors.speed = v })} />
+              <Slider label="Scale" value={config.backgrounds.vectors.scale} min={0.0001} max={0.005} step={0.0001} onChange={v => updateConfig(c => { c.backgrounds.vectors.scale = v })} />
+              <Slider label="Density" value={config.backgrounds.vectors.step} min={20} max={100} step={1} onChange={v => updateConfig(c => { c.backgrounds.vectors.step = v })} />
+            </div>
+
+            <div className={styles.section}>
+              <h3>Dots</h3>
+              <Slider label="Opacity" value={config.backgrounds.dots.opacity} min={0.01} max={1} step={0.01} onChange={v => updateConfig(c => { c.backgrounds.dots.opacity = v })} />
+              <Slider label="Min Size" value={config.backgrounds.dots.minSize} min={0.5} max={10} step={0.5} onChange={v => updateConfig(c => { c.backgrounds.dots.minSize = v })} />
+              <Slider label="Max Size" value={config.backgrounds.dots.maxSize} min={1} max={20} step={0.5} onChange={v => updateConfig(c => { c.backgrounds.dots.maxSize = v })} />
+            </div>
+
+            <div className={styles.section}>
+              <h3>Terminal</h3>
+              <Slider label="Opacity" value={config.backgrounds.terminal.opacity} min={0.01} max={1} step={0.01} onChange={v => updateConfig(c => { c.backgrounds.terminal.opacity = v })} />
+              <Slider label="Step" value={config.backgrounds.terminal.step} min={10} max={100} step={1} onChange={v => updateConfig(c => { c.backgrounds.terminal.step = v })} />
+            </div>
+
+            <div className={styles.section}>
+              <h3>Graph View</h3>
+              <Slider label="Link Opacity" value={config.backgrounds.graph.linkOpacity} min={0.01} max={0.2} step={0.01} onChange={v => updateConfig(c => { c.backgrounds.graph.linkOpacity = v })} />
+              <Slider label="Node Size" value={config.backgrounds.graph.nodeSize} min={1} max={10} step={0.5} onChange={v => updateConfig(c => { c.backgrounds.graph.nodeSize = v })} />
+              <Slider label="Drift" value={config.backgrounds.graph.drift} min={0} max={2} step={0.1} onChange={v => updateConfig(c => { c.backgrounds.graph.drift = v })} />
+            </div>
           </div>
 
-          <div className={styles.section}>
-            <h3>Graph View</h3>
-            <Slider label="Link Opacity" value={config.backgrounds.graph.linkOpacity} min={0.01} max={0.2} step={0.01} onChange={v => updateConfig(c => { c.backgrounds.graph.linkOpacity = v })} />
-            <Slider label="Node Size" value={config.backgrounds.graph.nodeSize} min={1} max={10} step={0.5} onChange={v => updateConfig(c => { c.backgrounds.graph.nodeSize = v })} />
-            <Slider label="Drift" value={config.backgrounds.graph.drift} min={0} max={2} step={0.1} onChange={v => updateConfig(c => { c.backgrounds.graph.drift = v })} />
-          </div>
-
-          <div className={styles.section} style={{ marginTop: 'auto' }}>
+          <div className={styles.section} style={{ marginTop: 'auto', paddingBottom: '1rem' }}>
             <button className={styles.primaryBtn} onClick={handleCopyCommit}>
               Copy Commit Data
             </button>

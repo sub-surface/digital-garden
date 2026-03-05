@@ -4,7 +4,7 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
-
+.env.local
 # Generated at build time
 public/content-index.json
 public/graph.json

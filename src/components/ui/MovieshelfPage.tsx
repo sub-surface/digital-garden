@@ -22,17 +22,22 @@ export function MovieshelfPage() {
         {movies.length === 0 ? (
           <p>No movies found in the garden yet.</p>
         ) : (
-          movies.map((movie) => (
-            <MovieCard
-              key={movie.slug}
-              title={movie.title}
-              year={(movie as any).year}
-              director={(movie as any).director || "Unknown"}
-              poster={(movie as any).poster}
-              rating={(movie as any).rating}
-              link={`/${movie.slug}`}
-            />
-          ))
+          movies.map((movie) => {
+            const rawPoster = (movie as any).poster
+            const poster = rawPoster ? (rawPoster.startsWith("http") ? rawPoster : `/content/Media/${rawPoster}`) : undefined
+
+            return (
+              <MovieCard
+                key={movie.slug}
+                title={movie.title}
+                year={(movie as any).year}
+                director={(movie as any).director || "Unknown"}
+                poster={poster}
+                rating={(movie as any).rating}
+                link={`/${movie.slug}`}
+              />
+            )
+          })
         )}
       </div>
     </div>

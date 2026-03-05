@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router"
 import styles from "./MDXComponents.module.scss"
 
 interface MovieCardProps {
@@ -22,9 +23,9 @@ export function MovieCard({ title, director, year, poster, rating, link }: Movie
         <div className={styles.director}>{director} {year && `(${year})`}</div>
         {rating && <div className={styles.rating}>{rating}</div>}
         {link && (
-          <a href={link} target="_blank" rel="noopener noreferrer" className={styles.link}>
-            Letterboxd →
-          </a>
+          <Link to={link} className={styles.link}>
+            Details →
+          </Link>
         )}
       </div>
     </div>

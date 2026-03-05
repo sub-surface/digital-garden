@@ -12,7 +12,8 @@ interface SearchResult {
 }
 
 export function SearchOverlay() {
-  const [isOpen, setIsOpen] = useState(false)
+  const isOpen = useStore((s) => s.isSearchOpen)
+  const setIsOpen = useStore((s) => s.setSearchOpen)
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<SearchResult[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
@@ -51,14 +52,14 @@ export function SearchOverlay() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault()
-        setIsOpen((prev) => !prev)
+        setIsOpen(!isOpen)
       } else if (e.key === "Escape") {
         setIsOpen(false)
       }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [])
+  }, [isOpen])
 
   // Focus input when opened
   useEffect(() => {

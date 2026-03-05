@@ -7,6 +7,8 @@ export function MusicBar() {
   const setIsExpanded = useStore((s) => s.setIsMusicExpanded)
   const { isPlaying, togglePlay, nextTrack, prevTrack, currentTrack } = useMusic()
 
+  const toggleMusic = useStore((s) => s.toggleMusic)
+
   if (!currentTrack) return null
 
   return (

@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router"
 import styles from "./MDXComponents.module.scss"
 
 interface BookCardProps {
@@ -20,16 +21,12 @@ export function BookCard({ title, author, cover, rating, status, link }: BookCar
       <div className={styles.info}>
         <div className={styles.title}>{title}</div>
         <div className={styles.author}>{author}</div>
-        {(rating || status) && (
-          <div className={styles.meta}>
-            {rating && <span className={styles.rating}>{rating}</span>}
-            {status && <span className={styles.status}>{status}</span>}
-          </div>
-        )}
+        {status && <div className={styles.status}>{status}</div>}
+        {rating && <div className={styles.rating}>{rating}</div>}
         {link && (
-          <a href={link} target="_blank" rel="noopener noreferrer" className={styles.link}>
+          <Link to={link} className={styles.link}>
             Details →
-          </a>
+          </Link>
         )}
       </div>
     </div>
