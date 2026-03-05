@@ -81,6 +81,7 @@ export function BgCanvas() {
     nodeMap: new Map<string, any>(),
     ripples: [] as { x: number; y: number; t: number }[],
     drops: [] as { x: number; y: number; text: string; speed: number; opacity: number; color: string }[],
+    pops: [] as any[],
     lastFrame: 0,
     w: 0,
     h: 0

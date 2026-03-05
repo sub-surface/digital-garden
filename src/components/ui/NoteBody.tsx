@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, Suspense } from "react"
 import { useTelescopicHandlers } from "./TelescopicHandler"
 import { NotFound } from "./NotFound"
+import { useMusic } from "./MusicContext"
 
 // Import shelf components for panel usage
 import { BookshelfPage } from "./BookshelfPage"
@@ -20,7 +21,27 @@ export function NoteBody({ slug, onLoad }: Props) {
   const [notFound, setNotFound] = useState(false)
   
   const contentRef = useRef<HTMLDivElement>(null)
+  const { playTrack } = useMusic()
   useTelescopicHandlers(contentRef)
+
+  // Intercept music: links
+  useEffect(() => {
+    if (!contentRef.current) return
+    
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      const link = target.closest("a")
+      if (link && link.getAttribute("href")?.startsWith("music:")) {
+        e.preventDefault()
+        const trackSlug = link.getAttribute("href")?.replace("music:", "")
+        if (trackSlug) playTrack(trackSlug)
+      }
+    }
+
+    const el = contentRef.current
+    el.addEventListener("click", handleClick)
+    return () => el.removeEventListener("click", handleClick)
+  }, [playTrack, MDXComponent])
 
   // Handle "System" pages that aren't MDX files
   const isSystemPage = ["Bookshelf", "Movieshelf", "Music", "Photography", "Chess"].includes(slug)

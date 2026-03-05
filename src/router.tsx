@@ -6,15 +6,13 @@ import {
 import { AppShell } from "@/components/layout/AppShell"
 import { NoteRenderer } from "@/components/ui/NoteRenderer"
 import { DevDashboard } from "@/components/dev/DevDashboard"
-import { BookshelfPage } from "@/components/ui/BookshelfPage"
-import { MovieshelfPage } from "@/components/ui/MovieshelfPage"
-import { MusicPage } from "@/components/ui/MusicPage"
-import { PhotographyPage } from "@/components/ui/PhotographyPage"
-import { GraphView } from "@/components/ui/GraphView"
-import { ChessPage } from "@/components/ui/ChessPage"
 import { NotFound } from "@/components/ui/NotFound"
-import { useEffect } from "react"
+import { useEffect, lazy, Suspense } from "react"
 import { useStore } from "@/store"
+
+// Lazy load heavy components
+const GraphView = lazy(() => import("@/components/ui/GraphView").then(m => ({ default: m.GraphView })))
+const ChessPage = lazy(() => import("@/components/ui/ChessPage").then(m => ({ default: m.ChessPage })))
 
 // Root layout
 const rootRoute = createRootRoute({
@@ -26,6 +24,29 @@ const devRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/__dev",
   component: DevDashboard,
+})
+
+// Full Graph Route (Explicit)
+const graphRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/graph",
+  component: function GraphRoute() {
+    const setActiveGraphSlug = useStore((s) => s.setActiveGraphSlug)
+    useEffect(() => {
+      setActiveGraphSlug("graph")
+    }, [setActiveGraphSlug])
+
+    return (
+      <div className="article-layout">
+        <div className="note-header" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: 'var(--space-12)' }}>
+          <h1 style={{ margin: 'var(--space-2) 0' }}>Knowledge Graph</h1>
+        </div>
+        <Suspense fallback={<div className="loading-shimmer">Mapping territories...</div>}>
+          <GraphView />
+        </Suspense>
+      </div>
+    )
+  }
 })
 
 // Tag pages
@@ -92,7 +113,6 @@ const folderRoute = createRoute({
 })
 
 // Catch-all note route — handles /Books/foo, /Movies/bar, etc.
-// Also now handles /Bookshelf, /Photography, /Chess via NoteRenderer fallback
 const noteRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "$",
@@ -105,13 +125,18 @@ const noteRoute = createRoute({
       setActiveGraphSlug(slug)
     }, [slug, setActiveGraphSlug])
 
-    return <NoteRenderer slug={slug} />
+    return (
+      <Suspense fallback={<div className="loading-shimmer">Loading note...</div>}>
+        <NoteRenderer slug={slug} />
+      </Suspense>
+    )
   },
 })
 
 // Build the router
 const routeTree = rootRoute.addChildren([
   devRoute,
+  graphRoute,
   tagRoute,
   folderRoute,
   noteRoute,

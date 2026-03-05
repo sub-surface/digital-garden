@@ -2,6 +2,16 @@ import { create } from "zustand"
 import type { PanelCard, ContentIndex, NoteMetadata } from "@/types/content"
 import { SITE_DEFAULTS, type SiteConfig } from "@/config/site-defaults"
 
+export const ROYGBIV_ACCENTS = [
+  "#b4424c", // Red
+  "#b47a42", // Orange
+  "#b49442", // Amber
+  "#42b464", // Green
+  "#427ab4", // Blue
+  "#424cb4", // Indigo
+  "#8a42b4", // Violet
+]
+
 interface GardenStore {
   // Config (Live Settings)
   config: SiteConfig
@@ -15,10 +25,10 @@ interface GardenStore {
   // Accent Base
   accentBase: string
   setAccentBase: (color: string) => void
+  cycleAccent: () => void
 
-  // Palette (Mono, Complimentary cycle)
+  // Palette (Legacy, now just for data-attributes if needed)
   palette: "mono" | "complimentary"
-  cyclePalette: () => void
   setPalette: (p: GardenStore["palette"]) => void
 
   // Theme Panel
@@ -83,14 +93,6 @@ const getInitialTheme = (): "light" | "dark" => {
   return "dark"
 }
 
-const getInitialPalette = (): GardenStore["palette"] => {
-  if (typeof window === "undefined") return "mono"
-  const stored = localStorage.getItem("palette") as GardenStore["palette"]
-  const palettes = ["mono", "complimentary"]
-  if (palettes.includes(stored)) return stored
-  return "mono"
-}
-
 const getInitialAccent = (): string => {
   if (typeof window === "undefined") return "#b4424c"
   return localStorage.getItem("accentBase") || "#b4424c"
@@ -101,7 +103,6 @@ export const useStore = create<GardenStore>((set) => ({
   config: SITE_DEFAULTS,
   updateConfig: (updater) => set((s) => {
     const next = { ...s.config }
-    // We handle deep nesting carefully
     updater(next)
     return { config: next }
   }),
@@ -128,23 +129,20 @@ export const useStore = create<GardenStore>((set) => ({
     document.documentElement.style.setProperty("--color-accent-base", accentBase)
     set({ accentBase })
   },
+  cycleAccent: () => 
+    set((s) => {
+      const idx = ROYGBIV_ACCENTS.indexOf(s.accentBase)
+      const next = ROYGBIV_ACCENTS[(idx + 1) % ROYGBIV_ACCENTS.length]
+      localStorage.setItem("accentBase", next)
+      document.documentElement.style.setProperty("--color-accent-base", next)
+      return { accentBase: next }
+    }),
 
-  // Palette
-  palette: getInitialPalette(),
+  // Palette (Fixed to complimentary for the dynamic mixing)
+  palette: "complimentary",
   setPalette: (palette) => {
-    localStorage.setItem("palette", palette)
-    document.documentElement.setAttribute("data-palette", palette)
     set({ palette })
   },
-  cyclePalette: () =>
-    set((s) => {
-      const palettes: GardenStore["palette"][] = ["mono", "complimentary"]
-      const idx = palettes.indexOf(s.palette)
-      const next = palettes[(idx + 1) % palettes.length]
-      localStorage.setItem("palette", next)
-      document.documentElement.setAttribute("data-palette", next)
-      return { palette: next }
-    }),
 
   // Theme Panel
   isThemePanelOpen: false,
@@ -169,8 +167,8 @@ export const useStore = create<GardenStore>((set) => ({
   setIsPlaylistExpanded: (isPlaylistExpanded) => set({ isPlaylistExpanded }),
 
   // Background
-  bgMode: "graph",
-  lastBgMode: "graph",
+  bgMode: "terminal",
+  lastBgMode: "terminal",
   bgStyle: "vectors",
   setBgMode: (bgMode) =>
     set((s) => ({
@@ -238,6 +236,6 @@ export const useStore = create<GardenStore>((set) => ({
 // Initialize attributes on load
 if (typeof window !== "undefined") {
   document.documentElement.setAttribute("data-theme", getInitialTheme())
-  document.documentElement.setAttribute("data-palette", getInitialPalette())
+  document.documentElement.setAttribute("data-palette", "complimentary")
   document.documentElement.style.setProperty("--color-accent-base", getInitialAccent())
 }

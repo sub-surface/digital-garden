@@ -148,12 +148,12 @@ Repo: `digital-garden` | Deploy target: Cloudflare Pages | Wiki: separate repo (
 
 ## Phase 8 — Polish + Performance
 
-- [ ] `document.startViewTransition()` on route changes
-- [ ] CSS: Stabilise `LinkPreview` positioning and safe-zones
+- [x] `document.startViewTransition()` on route changes
+- [x] CSS: Stabilise `LinkPreview` positioning and safe-zones
 - [x] UI: Add "EXPAND" button to hover previews for direct navigation
-- [ ] Fix: Ensure consistent monospace styling across all terminal-themed elements
+- [x] Fix: Ensure consistent monospace styling across all terminal-themed elements
 - [x] **Clean MDX**: Committed fully to MDX pipeline, removed runtime markdown fetching
-- [ ] **Store Refactor**: Slice Zustand store for better performance/organisation
+- [x] **Store Refactor**: Slice Zustand store for better performance/organisation
 - [ ] **Search Index Optimization**: Move FlexSearch index to Web Worker or warm Singleton
 - [x] **Infrastructure: DNS & Domain Management**
   - [x] Automated Porkbun nameserver update to Cloudflare (`maya`, `vin`)
@@ -163,7 +163,7 @@ Repo: `digital-garden` | Deploy target: Cloudflare Pages | Wiki: separate repo (
 - [ ] `sharp` image optimization: WebP variants + `<picture>` srcsets
 - [ ] Typography: dropcaps for essays, pull quotes
 - [ ] Terminal mode: CSS `--terminal-active` drives phosphor glow
-- [ ] Code splitting: lazy chunks per page, dynamic imports for heavy features
+- [x] Code splitting: lazy chunks per page, dynamic imports for heavy features
 - [ ] Lighthouse CI in GitHub Actions (target: 95+ desktop)
 - [ ] OG image endpoint via CF Worker + `satori`
 - [ ] RSS feed + sitemap in prebuild
@@ -285,3 +285,6 @@ npm run prebuild  # manual content index rebuild
 - **Ultra-Minimal Music**: Primary controls live in a transparent `MusicBar` top-right, aligned with the clock. Expands to a floating `MusicPlayer` mirroring the `ThemePanel` aesthetic.
 - **Panel Tab Refinement**: Tab action buttons (`+`, `x`) moved to the top of the vertical tab for better accessibility and aesthetics.
 - **Background & Layering**: `BgCanvas` rendered at `zIndex: 0`. To prevent occlusion, all major layout containers (`.shell`, `.workspace`, `.mainPane`, `.card`) must have `background: transparent`. The global background color is applied only to the `body` element or a bottom-layer container.
+- **Interactive Graph Physics**: Implemented D3 force simulation with PIXI.js rendering for both `LocalGraph` and global `GraphView`. Added node dragging, repulsion, and collision detection for a tactile, "v1-style" feel.
+- **UI Reorganization**: Consistently aligned top-right controls (`Music`, `Search`, `Day/Night`, `Palette Cycle`, `Background Mode`, `Clock`). Integrated these into a new `QuickControls` component.
+- **Mobile Navigation**: Updated `CornerMenu` to include all system actions (Search, Music, Palette, Theme) for mobile users, while hiding it on desktop to maintain minimalism.

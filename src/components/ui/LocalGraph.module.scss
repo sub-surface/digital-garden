@@ -2,11 +2,56 @@
   position: relative;
   width: 100%;
   height: 300px;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.01);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   overflow: hidden;
-  margin: var(--space-8) 0;
+  
+  // Desktop Floating State
+  &[data-floating] {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 280px;
+    height: 280px;
+    z-index: 90;
+    opacity: 0.33;
+    backdrop-filter: blur(8px);
+    transition: opacity 0.3s ease, transform 0.3s var(--ease-spring), width 0.3s ease, height 0.3s ease;
+    background: rgba(10, 10, 10, 0.15); // More transparent
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+    &:hover {
+      opacity: 1;
+      transform: translateY(-4px);
+    }
+
+    &[data-minimised] {
+      width: 120px;
+      height: 36px;
+      opacity: 0.6;
+      backdrop-filter: blur(4px);
+      
+      &:hover {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .canvasWrapper {
+        display: none;
+      }
+
+      .header {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 0 12px;
+        align-items: center;
+      }
+    }
+  }
 }
 
 .canvasWrapper {
@@ -14,14 +59,60 @@
   height: 100%;
 }
 
-.title {
+.header {
   position: absolute;
   top: 12px;
   left: 12px;
-  font-family: var(--font-code);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  opacity: 0.4;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   pointer-events: none;
+  z-index: 10;
+}
+
+.title {
+  font-family: var(--font-code);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  opacity: 0.4;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.actionBtn {
+  background: none;
+  border: none;
+  color: var(--color-text);
+  opacity: 0.4;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  transition: opacity 0.2s, color 0.2s;
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  text-decoration: none;
+
+  &:hover {
+    opacity: 1;
+    color: var(--color-accent-base);
+  }
+}
+
+@media (max-width: 800px) {
+  .localGraph {
+    margin: var(--space-8) 0;
+    height: 240px;
+    
+    &[data-minimised] {
+      height: 40px;
+    }
+  }
 }

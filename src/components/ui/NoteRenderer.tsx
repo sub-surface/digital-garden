@@ -1,10 +1,18 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, lazy, Suspense } from "react"
 import { useStore } from "@/store"
 import { ArticleLayout } from "./ArticleLayout"
 import { NoteLayout } from "./NoteLayout"
 import { NoteFooter } from "./NoteFooter"
 import { NoteBody } from "./NoteBody"
 import type { NoteMetadata } from "@/types/content"
+
+// Lazy system pages
+const GraphView = lazy(() => import("./GraphView").then(m => ({ default: m.GraphView })))
+const ChessPage = lazy(() => import("./ChessPage").then(m => ({ default: m.ChessPage })))
+const PhotographyPage = lazy(() => import("./PhotographyPage").then(m => ({ default: m.PhotographyPage })))
+const BookshelfPage = lazy(() => import("./BookshelfPage").then(m => ({ default: m.BookshelfPage })))
+const MovieshelfPage = lazy(() => import("./MovieshelfPage").then(m => ({ default: m.MovieshelfPage })))
+const MusicPage = lazy(() => import("./MusicPage").then(m => ({ default: m.MusicPage })))
 
 interface Props {
   slug: string
@@ -22,6 +30,7 @@ function resolveLayout(
   if (type && ["book", "movie"].includes(type)) return "article"
   if (slug.toLowerCase().startsWith("wiki/")) return "article"
   if (slug.toLowerCase() === "chess") return "article"
+  if (["graph", "photography", "bookshelf", "movieshelf", "music-library"].includes(slug.toLowerCase())) return "article"
 
   return "note"
 }
@@ -54,6 +63,19 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
   const tags = meta?.tags ?? []
   const layout = resolveLayout(fm, meta, slug)
 
+  // System Page Fallback Logic
+  const renderContent = () => {
+    const s = slug.toLowerCase()
+    if (s === "graph") return <Suspense fallback={<div>Loading map...</div>}><GraphView /></Suspense>
+    if (s === "chess") return <Suspense fallback={<div>Loading board...</div>}><ChessPage /></Suspense>
+    if (s === "photography") return <Suspense fallback={<div>Loading gallery...</div>}><PhotographyPage /></Suspense>
+    if (s === "bookshelf") return <Suspense fallback={<div>Loading shelf...</div>}><BookshelfPage /></Suspense>
+    if (s === "movieshelf") return <Suspense fallback={<div>Loading shelf...</div>}><MovieshelfPage /></Suspense>
+    if (s === "music-library") return <Suspense fallback={<div>Loading library...</div>}><MusicPage /></Suspense>
+    
+    return <NoteBody slug={slug} onLoad={handleLoad} />
+  }
+
   return (
     <article className={`${layout}-layout`}>
       {/* Shared header */}
@@ -75,11 +97,11 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
       {/* Layout-wrapped content */}
       {layout === "article" ? (
         <ArticleLayout headings={data.headings}>
-          <NoteBody slug={slug} onLoad={handleLoad} />
+          {renderContent()}
         </ArticleLayout>
       ) : (
         <NoteLayout headings={data.headings}>
-          <NoteBody slug={slug} onLoad={handleLoad} />
+          {renderContent()}
         </NoteLayout>
       )}
 

@@ -148,45 +148,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
-// ── Clock ──
-
-function getOrdinal(n: number) {
-  const s = ["th", "st", "nd", "rd"]
-  const v = n % 100
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
-}
-
-function useClock() {
-  const [time, setTime] = useState(() => formatDateTime())
-  useEffect(() => {
-    const id = setInterval(() => setTime(formatDateTime()), 1000)
-    return () => clearInterval(id)
-  }, [])
-  return time
-}
-
-function formatDateTime(): string {
-  const d = new Date()
-  const dayName = d.toLocaleDateString("en-GB", { weekday: "long" })
-  const monthName = d.toLocaleDateString("en-GB", { month: "long" })
-  const day = d.getDate()
-  const year = d.getFullYear()
-  const time = d.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  })
-  return `${dayName}, ${monthName} ${getOrdinal(day)} ${year} | ${time}`
-}
-
 // ── Component ──
 
 export function TerminalTitle() {
   const navigate = useNavigate()
   const location = useLocation()
   const clearStack = useStore((s) => s.clearStack)
-  const clock = useClock()
 
   const [line, setLine] = useState("")
   const [tooltip, setTooltip] = useState("Go to homepage")
@@ -283,25 +250,20 @@ export function TerminalTitle() {
   const displayText = (isHovered && booted && !isAnimating) ? "Sub-Surface Territories" : line
 
   return (
-    <>
-      <div className={styles.container} data-panel-ignore>
-        <button
-          className={styles.title}
-          onClick={handleClick}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          aria-label={tooltip}
-          title={tooltip}
-        >
-          <span className={styles.text} data-hovered={isHovered || undefined}>
-            {displayText || "\u00a0"}
-          </span>
-          {booted && !isAnimating && <span className={styles.karat} />}
-        </button>
-      </div>
-      <div className={styles.clockWrap} data-panel-ignore>
-        <span className={styles.clock}>{clock}</span>
-      </div>
-    </>
+    <div className={styles.container} data-panel-ignore>
+      <button
+        className={styles.title}
+        onClick={handleClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        aria-label={tooltip}
+        title={tooltip}
+      >
+        <span className={styles.text} data-hovered={isHovered || undefined}>
+          {displayText || "\u00a0"}
+        </span>
+        {booted && !isAnimating && <span className={styles.karat} />}
+      </button>
+    </div>
   )
 }

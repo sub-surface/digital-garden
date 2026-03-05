@@ -1,8 +1,4 @@
 .musicBar {
-  position: fixed;
-  top: 12px;
-  right: 320px;
-  z-index: 200;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -15,13 +11,10 @@
   opacity: 0.5;
   letter-spacing: 1px;
   transition: opacity 0.2s;
+  flex-shrink: 0;
 
   &:hover {
     opacity: 0.8;
-  }
-
-  @media (max-width: 800px) {
-    display: none;
   }
 }
 

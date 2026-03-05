@@ -9,6 +9,17 @@
   margin-bottom: var(--space-8);
 }
 
+.footerGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-8);
+  align-items: start;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
 .backlinksSection {
   h3 {
     font-family: var(--font-code);
@@ -46,5 +57,19 @@
 }
 
 .graphSection {
-  // Local graph is handled by its own component styles
+  min-height: 300px;
+}
+
+.graphLoading {
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  opacity: 0.4;
+  letter-spacing: 0.1em;
 }

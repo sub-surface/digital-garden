@@ -14,10 +14,18 @@ export function CornerMenu() {
   const clearStack = useStore((s) => s.clearStack)
   const toggleThemePanel = useStore((s) => s.toggleThemePanel)
   const toggleMusic = useStore((s) => s.toggleMusic)
+  const toggleSearch = useStore((s) => s.toggleSearch)
+  const theme = useStore((s) => s.theme)
+  const palette = useStore((s) => s.palette)
+  const setTheme = (t: "light" | "dark") => useStore.getState().setTheme(t)
+  const setPalette = (p: "mono" | "complimentary") => useStore.getState().setPalette(p)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const ARC_ITEMS: ArcItem[] = [
+    { label: "Search", onClick: () => { toggleSearch(); setOpen(false); } },
     { label: "Music", onClick: () => { toggleMusic(); setOpen(false); } },
+    { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },
+    { label: "Palette", onClick: () => { setPalette(palette === "mono" ? "complimentary" : "mono"); setOpen(false); } },
     { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
     ...(import.meta.env.DEV ? [{ label: "Dev", to: "/__dev", devOnly: true }] : []),
   ]
@@ -57,7 +65,7 @@ export function CornerMenu() {
   // Spaced out arc positions
   const arcRadius = 110
   const startAngle = -90 // Straight up
-  const sweepAngle = 100 // Spread over 100 degrees to the left
+  const sweepAngle = 140 // Spread more for more items
   const step = ARC_ITEMS.length > 1 ? sweepAngle / (ARC_ITEMS.length - 1) : 0
 
   return (
@@ -94,7 +102,8 @@ export function CornerMenu() {
               <button key={item.label} {...commonProps}>
                 {item.label}
               </button>
-            )          })}
+            )
+          })}
         </div>
 
         {/* Toggle button */}

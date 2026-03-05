@@ -10,11 +10,13 @@
   min-width: 750px;
   height: 100vh;
   position: sticky;
+  left: 0; // Ensure they stack when scrolling
   display: flex;
-  background: transparent; // Reveal canvas
+  background: rgba(10, 10, 10, 0.01); // Almost fully transparent
+  backdrop-filter: blur(12px); // Blurs the notes underneath
   border-right: 1px solid var(--color-border);
   overflow: hidden;
-  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.05);
+  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.1);
 
   animation: slideFadeIn 0.4s var(--ease-out) both;
 

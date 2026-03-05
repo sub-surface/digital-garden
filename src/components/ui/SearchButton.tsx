@@ -1,13 +1,11 @@
 import { useStore } from "@/store"
-import styles from "./BgModeToggle.module.scss"
 
 export function SearchButton() {
   const toggleSearch = useStore((s) => s.toggleSearch)
 
   return (
     <button 
-      className={styles.toggleBtn} 
-      style={{ right: "310px" }} // Beside BgModeToggle
+      className="quick-icon-btn" 
       onClick={toggleSearch}
       title="Search (Ctrl+K)"
       data-panel-ignore

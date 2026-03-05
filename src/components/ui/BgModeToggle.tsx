@@ -1,5 +1,4 @@
 import { useStore } from "@/store"
-import styles from "./BgModeToggle.module.scss"
 
 export function BgModeToggle() {
   const bgMode = useStore((s) => s.bgMode)
@@ -7,7 +6,7 @@ export function BgModeToggle() {
 
   const getLabel = () => {
     switch (bgMode) {
-      case "graph": return "Graph [Default]"
+      case "graph": return "Graph"
       case "vectors": return "Vectors"
       case "dots": return "Dots"
       case "terminal": return "Terminal"
@@ -17,9 +16,9 @@ export function BgModeToggle() {
 
   return (
     <button 
-      className={styles.toggleBtn} 
+      className="quick-icon-btn" 
       onClick={cycleBg}
-      title={`Cycle Background: Currently ${getLabel()}`}
+      title={`Cycle Background: ${getLabel()}`}
       data-panel-ignore
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

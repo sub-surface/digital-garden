@@ -11,8 +11,8 @@ interface Node extends d3.SimulationNodeDatum {
   tags: string[]
   gfx?: PIXI.Graphics
   label?: PIXI.Text
-  x?: number
-  y?: number
+  fx?: number | null
+  fy?: number | null
 }
 
 interface Link extends d3.SimulationLinkDatum<Node> {
@@ -22,23 +22,26 @@ interface Link extends d3.SimulationLinkDatum<Node> {
 
 export function GraphView() {
   const containerRef = useRef<HTMLDivElement>(null)
+  const appRef = useRef<PIXI.Application | null>(null)
   const [loading, setLoading] = useState(true)
   const pushCard = useStore((s) => s.pushCard)
 
   useEffect(() => {
     if (!containerRef.current) return
 
-    let app: PIXI.Application | null = null
     let simulation: d3.Simulation<Node, Link> | null = null
+    let mounted = true
 
     async function init() {
       const data = await loadGraphData()
-      if (!data) return
+      if (!data || !mounted) return
 
       const width = containerRef.current!.clientWidth
       const height = containerRef.current!.clientHeight
 
-      app = new PIXI.Application()
+      const app = new PIXI.Application()
+      appRef.current = app
+
       await app.init({
         width,
         height,
@@ -46,13 +49,18 @@ export function GraphView() {
         antialias: true,
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
+        eventMode: 'static',
       })
+      if (!mounted || !containerRef.current) {
+        app.destroy(true, { children: true, texture: true })
+        appRef.current = null
+        return
+      }
+      containerRef.current!.innerHTML = ''
       containerRef.current!.appendChild(app.canvas)
 
       const stage = new PIXI.Container()
       app.stage.addChild(stage)
-
-      // Center stage
       stage.x = width / 2
       stage.y = height / 2
 
@@ -60,16 +68,22 @@ export function GraphView() {
       const links: Link[] = data.links.map(l => ({ ...l }))
 
       simulation = d3.forceSimulation<Node>(nodes)
-        .force("link", d3.forceLink<Node, Link>(links).id((d: any) => d.id).distance(100))
-        .force("charge", d3.forceManyBody().strength(-200))
+        .force("link", d3.forceLink<Node, Link>(links).id((d: any) => d.id).distance(120))
+        .force("charge", d3.forceManyBody().strength(-400))
         .force("center", d3.forceCenter(0, 0))
-        .force("collision", d3.forceCollide().radius(20))
+        .force("collision", d3.forceCollide().radius(30))
 
       const linkLayer = new PIXI.Graphics()
       stage.addChild(linkLayer)
 
       const nodeLayer = new PIXI.Container()
       stage.addChild(nodeLayer)
+
+      // Interaction State
+      let dragTarget: Node | null = null
+      let isPanning = false
+      let lastPos = { x: 0, y: 0 }
+      let hasDragged = false
 
       nodes.forEach(node => {
         const gfx = new PIXI.Graphics()
@@ -78,14 +92,14 @@ export function GraphView() {
         gfx.interactive = true
         gfx.cursor = 'pointer'
         
-        gfx.on('pointerdown', (e: any) => {
+        gfx.on('pointerdown', (e) => {
           if (e.button === 0) {
-            pushCard({
-              url: `/${node.id}`,
-              slug: node.id,
-              title: node.title,
-              html: `<div class="note-loading">Loading...</div>`
-            }, -1)
+            e.stopPropagation()
+            dragTarget = node
+            node.fx = node.x
+            node.fy = node.y
+            simulation?.alphaTarget(0.3).restart()
+            hasDragged = false
           }
         })
 
@@ -96,22 +110,20 @@ export function GraphView() {
             fontSize: 10,
             fill: 0xffffff,
             align: 'center',
-          }
+          },
+          resolution: 4, // High resolution
         })
         label.anchor.set(0.5, -1.5)
         label.visible = false
 
         gfx.on('pointerover', () => {
           label.visible = true
-          gfx.clear()
-          const accent = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--color-accent-base").replace('#', ''), 16) || 0xffffff
-          gfx.circle(0, 0, 8).fill(accent)
         })
 
         gfx.on('pointerout', () => {
-          label.visible = false
-          gfx.clear()
-          gfx.circle(0, 0, 5).fill(0xffffff)
+          if (dragTarget !== node) {
+            label.visible = false
+          }
         })
 
         node.gfx = gfx
@@ -120,8 +132,58 @@ export function GraphView() {
         nodeLayer.addChild(label)
       })
 
+      // Global Stage interactions
+      app.stage.interactive = true
+      app.stage.hitArea = new PIXI.Rectangle(-10000, -10000, 20000, 20000)
+
+      app.stage.on('pointerdown', (e) => {
+        if (!dragTarget) {
+          isPanning = true
+          lastPos = { x: e.global.x, y: e.global.y }
+        }
+      })
+
+      app.stage.on('pointermove', (e) => {
+        if (dragTarget) {
+          const pos = e.getLocalPosition(stage)
+          dragTarget.fx = pos.x
+          dragTarget.fy = pos.y
+          hasDragged = true
+        } else if (isPanning) {
+          const dx = e.global.x - lastPos.x
+          const dy = e.global.y - lastPos.y
+          stage.x += dx
+          stage.y += dy
+          lastPos = { x: e.global.x, y: e.global.y }
+        }
+      })
+
+      const onGlobalUp = () => {
+        if (dragTarget) {
+          if (!hasDragged) {
+            pushCard({
+              url: `/${dragTarget.id}`,
+              slug: dragTarget.id,
+              title: dragTarget.title,
+              html: `<div class="note-loading">Loading...</div>`
+            }, -1)
+          }
+          dragTarget.fx = null
+          dragTarget.fy = null
+          dragTarget = null
+          simulation?.alphaTarget(0)
+        }
+        isPanning = false
+      }
+
+      app.stage.on('pointerup', onGlobalUp)
+      app.stage.on('pointerupoutside', onGlobalUp)
+
       app.ticker.add(() => {
         linkLayer.clear()
+        const isDark = document.documentElement.getAttribute("data-theme") === "dark"
+        const linkBaseColor = isDark ? 0xffffff : 0x000000
+        const labelColor = isDark ? 0xffffff : 0x000000
         const accent = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--color-accent-base").replace('#', ''), 16) || 0xffffff
         
         links.forEach(link => {
@@ -136,44 +198,35 @@ export function GraphView() {
           if (node.gfx) {
             node.gfx.x = node.x!
             node.gfx.y = node.y!
+            
+            node.gfx.clear()
+            if (node.label?.visible || dragTarget === node) {
+              node.gfx.circle(0, 0, 8).fill(accent)
+            } else {
+              node.gfx.circle(0, 0, 5).fill(linkBaseColor)
+            }
           }
           if (node.label) {
             node.label.x = node.x!
             node.label.y = node.y!
+            node.label.style.fill = labelColor
           }
         })
       })
 
-      // Zoom and Pan
-      let isDragging = false
-      let lastPos = { x: 0, y: 0 }
-
+      // Zoom
       containerRef.current!.onwheel = (e) => {
         e.preventDefault()
-        const scaleChange = e.deltaY > 0 ? 0.9 : 1.1
-        stage.scale.x *= scaleChange
-        stage.scale.y *= scaleChange
-      }
-
-      containerRef.current!.onmousedown = (e) => {
-        if (e.button === 1 || (e.button === 0 && e.altKey)) {
-          isDragging = true
-          lastPos = { x: e.clientX, y: e.clientY }
-        }
-      }
-
-      window.onmousemove = (e) => {
-        if (isDragging) {
-          const dx = e.clientX - lastPos.x
-          const dy = e.clientY - lastPos.y
-          stage.x += dx
-          stage.y += dy
-          lastPos = { x: e.clientX, y: e.clientY }
-        }
-      }
-
-      window.onmouseup = () => {
-        isDragging = false
+        const scaleChange = e.deltaY > 0 ? 0.95 : 1.05
+        const oldScale = stage.scale.x
+        const newScale = Math.max(0.1, Math.min(stage.scale.x * scaleChange, 5))
+        
+        const mousePos = app.renderer.events.pointer.global
+        const localPos = stage.toLocal(mousePos)
+        
+        stage.scale.set(newScale)
+        stage.x -= localPos.x * (newScale - oldScale)
+        stage.y -= localPos.y * (newScale - oldScale)
       }
 
       setLoading(false)
@@ -182,18 +235,26 @@ export function GraphView() {
     init()
 
     return () => {
+      mounted = false
       simulation?.stop()
-      app?.ticker.stop()
-      app?.destroy(true, { children: true, texture: true })
+      if (appRef.current) {
+        try {
+          appRef.current.destroy(true, { children: true, texture: true })
+        } catch (e) {
+          console.warn("Pixi destruction failed:", e)
+        }
+        appRef.current = null
+      }
     }
-  }, [])
+  }, [pushCard])
 
   return (
     <div className={styles.graphContainer}>
       <div ref={containerRef} className={styles.canvasWrapper} />
       {loading && <div className={styles.loading}>Generating knowledge map...</div>}
       <div className={styles.controls}>
-        <span>Middle-click or Alt+Drag to Pan</span>
+        <span>Drag Nodes to Explore</span>
+        <span>Drag Space to Pan</span>
         <span>Scroll to Zoom</span>
       </div>
     </div>

@@ -91,7 +91,7 @@ export function MusicPlayer() {
           </button>
           <button 
             className={styles.closeBtn} 
-            onClick={toggleMusic}
+            onClick={() => useStore.getState().setIsMusicExpanded(false)}
             title="Close Player"
           >
             &times;

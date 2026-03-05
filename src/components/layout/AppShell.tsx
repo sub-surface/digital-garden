@@ -1,4 +1,4 @@
-import { Outlet } from "@tanstack/react-router"
+import { Outlet, useLocation } from "@tanstack/react-router"
 import { useStore } from "@/store"
 import { PanelStack } from "@/components/panel/PanelStack"
 import { usePanelClick } from "@/components/panel/usePanelClick"
@@ -6,19 +6,24 @@ import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
 import { BgCanvas } from "./BgCanvas"
 import { ThemePanel } from "./ThemePanel"
+import { QuickControls } from "./QuickControls"
 import { LinkPreview } from "@/components/ui/LinkPreview"
 import { MusicPlayer } from "@/components/ui/MusicPlayer"
-import { MusicBar } from "@/components/ui/MusicBar"
 import { SearchOverlay } from "@/components/ui/SearchOverlay"
-import { BgModeToggle } from "@/components/ui/BgModeToggle"
-import { SearchButton } from "@/components/ui/SearchButton"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
+import { LocalGraph } from "@/components/ui/LocalGraph"
+import { Suspense, lazy } from "react"
 import styles from "./AppShell.module.scss"
 
 export function AppShell() {
   const isReaderMode = useStore((s) => s.isReaderMode)
+  const activeSlug = useStore((s) => s.activeGraphSlug)
+  const location = useLocation()
   
   usePanelClick()
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 800
+  const showFloatingGraph = !isMobile && location.pathname !== '/graph'
 
   return (
     <MDXProvider>
@@ -31,9 +36,7 @@ export function AppShell() {
         <ThemePanel />
         <LinkPreview />
         <MusicPlayer />
-        <MusicBar />
-        <SearchButton />
-        <BgModeToggle />
+        <QuickControls />
         <SearchOverlay />
         
         {/* Terminal title — top-left */}
@@ -48,6 +51,13 @@ export function AppShell() {
           </div>
           <PanelStack />
         </div>
+
+        {/* Floating Local Graph (Desktop Only) */}
+        {showFloatingGraph && (
+          <Suspense fallback={null}>
+            <LocalGraph slug={activeSlug} />
+          </Suspense>
+        )}
 
         {/* Corner menu — bottom-right (includes Theme toggle) */}
         <CornerMenu />
