@@ -7,7 +7,8 @@
     "prebuild": "tsx scripts/prebuild.ts",
     "dev": "npm run prebuild && concurrently -n vite,watch -c cyan,yellow \"vite\" \"nodemon --watch content -e md,mdx,yaml --exec npm run prebuild\"",
     "build": "npm run prebuild && tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dash": "node dash.mjs"
   },
   "dependencies": {
     "@mdx-js/react": "^3.1.0",
