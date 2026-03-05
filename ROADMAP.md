@@ -1,7 +1,7 @@
 # Digital Garden v2 — Roadmap
 
 Ground-up rebuild from Quartz v4.5.2 into a custom React/Vite stack.
-Repo: `digital-garden-v2` | Deploy target: Cloudflare Pages | Wiki: separate repo (Starlight)
+Repo: `digital-garden` | Deploy target: Cloudflare Pages | Wiki: separate repo (Starlight)
 
 ---
 

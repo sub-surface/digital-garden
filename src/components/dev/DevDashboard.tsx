@@ -101,7 +101,7 @@ export function DevDashboard() {
     <div className={styles.dashboard}>
       <div className={styles.header}>
         <h1>__dev</h1>
-        <span className={styles.version}>digital-garden-v2</span>
+        <span className={styles.version}>digital-garden</span>
       </div>
 
       {/* Stats */}
