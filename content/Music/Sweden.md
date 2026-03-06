@@ -3,7 +3,7 @@ type: music
 title: Sweden
 artist: m0rvidd
 year: 2025-03-22
-audio: /Media/Music/Sweden.wav
+audio: /Media/Music/Sweden.mp3
 cover: https://i1.sndcdn.com/artworks-lYFi8Ds85WW4qDHc-gjHgKQ-t500x500.png
 ---
 # [PLAY](music:Sweden)
