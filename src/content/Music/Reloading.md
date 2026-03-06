@@ -3,7 +3,7 @@ type: music
 title: Reloading
 artist: m0rvidd
 year: 2026-01-06
-audio: /Media/Music/Reloading.wav
+audio: /Media/Music/Reloading.mp3
 cover: /Media/Reloading-cover.jpg
 ---
 # [PLAY](music:Reloading)
