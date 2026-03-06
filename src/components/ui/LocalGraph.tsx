@@ -44,6 +44,7 @@ export function LocalGraph({ slug }: Props) {
 
     let simulation: d3.Simulation<Node, Link> | null = null
     let mounted = true
+    const currentContainer = containerRef.current
 
     async function init() {
       const data = await loadGraphData()
@@ -64,9 +65,9 @@ export function LocalGraph({ slug }: Props) {
         .filter(l => neighbors.has(l.source as string) && neighbors.has(l.target as string))
         .map(l => ({ ...l }))
 
-      if (!containerRef.current) return
-      const width = containerRef.current.clientWidth
-      const height = containerRef.current.clientHeight
+      if (!currentContainer) return
+      const width = currentContainer.clientWidth
+      const height = currentContainer.clientHeight
 
       const app = new PIXI.Application()
       appRef.current = app
@@ -81,14 +82,14 @@ export function LocalGraph({ slug }: Props) {
         eventMode: 'static',
       })
       
-      if (!mounted || !containerRef.current) {
+      if (!mounted || !currentContainer) {
         app.destroy(true, { children: true, texture: true })
         appRef.current = null
         return
       }
 
-      containerRef.current.innerHTML = ''
-      containerRef.current.appendChild(app.canvas)
+      currentContainer.innerHTML = ''
+      currentContainer.appendChild(app.canvas)
 
       const stage = new PIXI.Container()
       app.stage.addChild(stage)
@@ -107,11 +108,16 @@ export function LocalGraph({ slug }: Props) {
       const nodeLayer = new PIXI.Container()
       stage.addChild(nodeLayer)
 
-      // Interaction State
+      // Interaction & Zoom State
       let dragTarget: Node | null = null
       let isPanning = false
       let lastPos = { x: 0, y: 0 }
       let hasDragged = false
+      
+      // Easing state
+      let targetScale = 1
+      let targetX = stage.x
+      let targetY = stage.y
 
       localNodes.forEach(node => {
         const gfx = new PIXI.Graphics()
@@ -157,6 +163,8 @@ export function LocalGraph({ slug }: Props) {
         if (!dragTarget) {
           isPanning = true
           lastPos = { x: e.global.x, y: e.global.y }
+          targetX = stage.x
+          targetY = stage.y
         }
       })
 
@@ -172,6 +180,8 @@ export function LocalGraph({ slug }: Props) {
           const dy = e.global.y - lastPos.y
           stage.x += dx
           stage.y += dy
+          targetX = stage.x
+          targetY = stage.y
           lastPos = { x: e.global.x, y: e.global.y }
         }
       })
@@ -197,25 +207,35 @@ export function LocalGraph({ slug }: Props) {
       app.stage.on('pointerup', onGlobalUp)
       app.stage.on('pointerupoutside', onGlobalUp)
 
-      if (containerRef.current) {
-        containerRef.current.onwheel = (e) => {
-          if (!mounted || !appRef.current) return
-          e.preventDefault()
-          const scaleChange = e.deltaY > 0 ? 0.95 : 1.05
-          const oldScale = stage.scale.x
-          const newScale = Math.max(0.2, Math.min(stage.scale.x * scaleChange, 4))
-          
-          const mousePos = app.renderer.events.pointer.global
-          const localPos = stage.toLocal(mousePos)
-          
-          stage.scale.set(newScale)
-          stage.x -= localPos.x * (newScale - oldScale)
-          stage.y -= localPos.y * (newScale - oldScale)
-        }
+      // Stronger Scroll Zoom (Fixed Violation)
+      const handleWheel = (e: WheelEvent) => {
+        if (!mounted || !appRef.current) return
+        e.preventDefault()
+        
+        const scaleChange = e.deltaY > 0 ? 0.85 : 1.15
+        const oldScale = targetScale
+        targetScale = Math.max(0.2, Math.min(targetScale * scaleChange, 4))
+        
+        const mousePos = app.renderer.events.pointer.global
+        const localPos = stage.toLocal(mousePos)
+        
+        targetX -= localPos.x * (targetScale - oldScale)
+        targetY -= localPos.y * (targetScale - oldScale)
       }
+
+      currentContainer.addEventListener("wheel", handleWheel, { passive: false })
 
       const tickerCallback = () => {
         if (!mounted || !appRef.current) return
+        
+        // Easing interpolation (LERP)
+        const lerpFactor = 0.15
+        stage.scale.set(stage.scale.x + (targetScale - stage.scale.x) * lerpFactor)
+        if (!isPanning) {
+          stage.x += (targetX - stage.x) * lerpFactor
+          stage.y += (targetY - stage.y) * lerpFactor
+        }
+
         linkLayer.clear()
         const isDark = document.documentElement.getAttribute("data-theme") === "dark"
         const linkColor = isDark ? 0xffffff : 0x000000
@@ -234,6 +254,7 @@ export function LocalGraph({ slug }: Props) {
           if (node.gfx) {
             node.gfx.x = node.x!
             node.gfx.y = node.y!
+            // Redraw nodes to ensure they exist
             node.gfx.clear().circle(0, 0, node.isCurrent ? 6 : 4).fill(node.isCurrent ? accentHex : linkColor)
           }
           if (node.label) {
@@ -245,22 +266,31 @@ export function LocalGraph({ slug }: Props) {
       }
 
       app.ticker.add(tickerCallback)
+
+      // Cleanup
+      return () => {
+        mounted = false
+        simulation?.stop()
+        if (currentContainer) {
+          currentContainer.removeEventListener("wheel", handleWheel)
+        }
+        if (appRef.current) {
+          try {
+            appRef.current.ticker.stop()
+            appRef.current.destroy(true, { children: true, texture: true })
+          } catch (e) {
+            console.warn("Pixi destruction failed:", e)
+          }
+          appRef.current = null
+        }
+      }
     }
 
-    init()
+    const cleanup = init()
 
     return () => {
       mounted = false
-      simulation?.stop()
-      if (appRef.current) {
-        try {
-          appRef.current.ticker.stop()
-          appRef.current.destroy(true, { children: true, texture: true })
-        } catch (e) {
-          console.warn("Pixi destruction failed:", e)
-        }
-        appRef.current = null
-      }
+      cleanup.then(fn => fn?.())
     }
   }, [slug, pushCard, isMobile, isMinimised])
 

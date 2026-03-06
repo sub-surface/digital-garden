@@ -296,3 +296,8 @@ npm run prebuild  # manual content index rebuild
 - **Case-Insensitive Resolution**: Updated note loading logic to be case-insensitive, ensuring consistent content retrieval regardless of slug casing.
 - **Smooth Navigation**: Enabled global smooth scrolling and refined horizontal workspace transitions with snap-points and eased-out physics.
 - **Deployment Configuration**: Updated `wrangler.toml` with the `[assets]` block and switched to a `404.html` fallback pattern (removing `_redirects`) to resolve Cloudflare Pages redirect loops and ensure proper SPA routing.
+- **Eased Graph Motion**: Implemented target-based LERP (Linear Interpolation) for graph zooming and panning, providing a fluid, "eased" feel. Increased zoom intensity to 15% per tick and enabled zoom-to-cursor.
+- **Refined Collection UI**: Overhauled `TagPage` and `FolderPage` to use the `article-layout`. Implemented case-insensitive tag filtering and explicit loading handlers to prevent UI flickering.
+- **Music Bar Ergonomics**: Reorganized `MusicBar` control layout—playback buttons are now grouped on the left, with the expansion toggle on the right for better spatial balance.
+- **Wikilink Extraction**: Fixed a regex flaw in `prebuild.ts` that missed aliased links and links with spaces, restoring the full link density of the knowledge graph.
+- **SPA Stability**: Added `_redirects` fallback rules and fixed case-sensitivity for system routes (e.g. `/Chess`) to ensure direct URL entry and refreshes work reliably on Cloudflare.

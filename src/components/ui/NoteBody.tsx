@@ -50,14 +50,15 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
   }, [playTrack, MDXComponent])
 
   // Handle "System" pages that aren't MDX files
-  const isSystemPage = ["Bookshelf", "Movieshelf", "Music", "Photography", "Chess"].includes(slug)
+  const isSystemPage = ["bookshelf", "movieshelf", "music", "photography", "chess"].includes(slug.toLowerCase())
 
   useEffect(() => {
     if (isSystemPage) {
       setLoading(false)
       if (onLoad) {
         // Provide default system frontmatter
-        onLoad({ frontmatter: { title: slug, layout: slug === "Chess" ? "article" : "note" } })
+        const systemTitle = slug.charAt(0).toUpperCase() + slug.slice(1).toLowerCase()
+        onLoad({ frontmatter: { title: systemTitle, layout: slug.toLowerCase() === "chess" ? "article" : "note" } })
       }
       return
     }

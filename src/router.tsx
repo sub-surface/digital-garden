@@ -58,19 +58,36 @@ const tagRoute = createRoute({
     const contentIndex = useStore((s) => s.contentIndex)
 
     const notes = contentIndex
-      ? Object.values(contentIndex).filter((n) => n.tags.includes(tag))
+      ? Object.values(contentIndex).filter((n) => n.tags.some(t => t.toLowerCase() === tag.toLowerCase()))
       : []
 
+    if (!contentIndex) {
+      return (
+        <div className="article-layout">
+          <div className="note-loading">Loading index...</div>
+        </div>
+      )
+    }
+
     return (
-      <div className="collection-page">
-        <h1>#{tag}</h1>
+      <div className="article-layout">
+        <div className="note-header" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: 'var(--space-12)' }}>
+          <h1 style={{ margin: 'var(--space-2) 0' }}>#{tag}</h1>
+          <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.8rem', opacity: 0.6 }}>
+            {notes.length} {notes.length === 1 ? 'note' : 'notes'} found
+          </div>
+        </div>
+        
         {notes.length === 0 ? (
           <p>No notes tagged with "{tag}".</p>
         ) : (
-          <ul className="notes-list">
+          <ul className="notes-list" style={{ listStyle: 'none', padding: 0, marginTop: 'var(--space-8)' }}>
             {notes.map((n) => (
-              <li key={n.slug}>
-                <a href={`/${n.slug.replace(/\s+/g, "-")}`} className="internal-link">{n.title}</a>
+              <li key={n.slug} style={{ marginBottom: 'var(--space-4)', textAlign: 'right' }}>
+                <a href={`/${n.slug}`} className="internal-link" style={{ fontSize: '1.2rem', fontWeight: 500 }}>
+                  {n.title}
+                </a>
+                <div style={{ fontSize: '0.8rem', opacity: 0.5, marginTop: '2px' }}>{n.slug}</div>
               </li>
             ))}
           </ul>
@@ -93,16 +110,33 @@ const folderRoute = createRoute({
       ? Object.values(contentIndex).filter((n) => n.folder === folderPath)
       : []
 
+    if (!contentIndex) {
+      return (
+        <div className="article-layout">
+          <div className="note-loading">Loading index...</div>
+        </div>
+      )
+    }
+
     return (
-      <div className="collection-page">
-        <h1>Folder: {folderPath}</h1>
+      <div className="article-layout">
+        <div className="note-header" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: 'var(--space-12)' }}>
+          <h1 style={{ margin: 'var(--space-2) 0' }}>Folder: {folderPath}</h1>
+          <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.8rem', opacity: 0.6 }}>
+            {notes.length} {notes.length === 1 ? 'note' : 'notes'} found
+          </div>
+        </div>
+
         {notes.length === 0 ? (
           <p>No notes found in "{folderPath}".</p>
         ) : (
-          <ul className="notes-list">
+          <ul className="notes-list" style={{ listStyle: 'none', padding: 0, marginTop: 'var(--space-8)' }}>
             {notes.map((n) => (
-              <li key={n.slug}>
-                <a href={`/${n.slug.replace(/\s+/g, "-")}`} className="internal-link">{n.title}</a>
+              <li key={n.slug} style={{ marginBottom: 'var(--space-4)', textAlign: 'right' }}>
+                <a href={`/${n.slug}`} className="internal-link" style={{ fontSize: '1.2rem', fontWeight: 500 }}>
+                  {n.title}
+                </a>
+                <div style={{ fontSize: '0.8rem', opacity: 0.5, marginTop: '2px' }}>{n.slug}</div>
               </li>
             ))}
           </ul>

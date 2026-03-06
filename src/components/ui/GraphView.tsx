@@ -31,13 +31,14 @@ export function GraphView() {
 
     let simulation: d3.Simulation<Node, Link> | null = null
     let mounted = true
+    const currentContainer = containerRef.current
 
     async function init() {
       const data = await loadGraphData()
       if (!data || !mounted) return
 
-      const width = containerRef.current!.clientWidth
-      const height = containerRef.current!.clientHeight
+      const width = currentContainer.clientWidth
+      const height = currentContainer.clientHeight
 
       const app = new PIXI.Application()
       appRef.current = app
@@ -52,13 +53,13 @@ export function GraphView() {
         eventMode: 'static',
       })
       
-      if (!mounted || !containerRef.current) {
+      if (!mounted || !currentContainer) {
         app.destroy(true, { children: true, texture: true })
         appRef.current = null
         return
       }
-      containerRef.current!.innerHTML = ''
-      containerRef.current!.appendChild(app.canvas)
+      currentContainer.innerHTML = ''
+      currentContainer.appendChild(app.canvas)
 
       const stage = new PIXI.Container()
       app.stage.addChild(stage)
@@ -80,11 +81,16 @@ export function GraphView() {
       const nodeLayer = new PIXI.Container()
       stage.addChild(nodeLayer)
 
-      // Interaction State
+      // Interaction & Zoom State
       let dragTarget: Node | null = null
       let isPanning = false
       let lastPos = { x: 0, y: 0 }
       let hasDragged = false
+      
+      // Easing state
+      let targetScale = 1
+      let targetX = stage.x
+      let targetY = stage.y
 
       nodes.forEach(node => {
         const gfx = new PIXI.Graphics()
@@ -141,6 +147,8 @@ export function GraphView() {
         if (!dragTarget) {
           isPanning = true
           lastPos = { x: e.global.x, y: e.global.y }
+          targetX = stage.x
+          targetY = stage.y
         }
       })
 
@@ -156,6 +164,8 @@ export function GraphView() {
           const dy = e.global.y - lastPos.y
           stage.x += dx
           stage.y += dy
+          targetX = stage.x
+          targetY = stage.y
           lastPos = { x: e.global.x, y: e.global.y }
         }
       })
@@ -181,8 +191,34 @@ export function GraphView() {
       app.stage.on('pointerup', onGlobalUp)
       app.stage.on('pointerupoutside', onGlobalUp)
 
+      // Wheel Listener (Fixed Violation)
+      const handleWheel = (e: WheelEvent) => {
+        if (!mounted || !appRef.current) return
+        e.preventDefault()
+        const scaleChange = e.deltaY > 0 ? 0.85 : 1.15
+        const oldScale = targetScale
+        targetScale = Math.max(0.1, Math.min(targetScale * scaleChange, 5))
+        
+        const mousePos = app.renderer.events.pointer.global
+        const localPos = stage.toLocal(mousePos)
+        
+        targetX -= localPos.x * (targetScale - oldScale)
+        targetY -= localPos.y * (targetScale - oldScale)
+      }
+
+      currentContainer.addEventListener("wheel", handleWheel, { passive: false })
+
       const tickerCallback = () => {
         if (!mounted || !appRef.current) return
+        
+        // Easing interpolation (LERP)
+        const lerpFactor = 0.15
+        stage.scale.set(stage.scale.x + (targetScale - stage.scale.x) * lerpFactor)
+        if (!isPanning) {
+          stage.x += (targetX - stage.x) * lerpFactor
+          stage.y += (targetY - stage.y) * lerpFactor
+        }
+
         linkLayer.clear()
         const isDark = document.documentElement.getAttribute("data-theme") === "dark"
         const linkBaseColor = isDark ? 0xffffff : 0x000000
@@ -219,41 +255,32 @@ export function GraphView() {
 
       app.ticker.add(tickerCallback)
 
-      // Zoom
-      if (containerRef.current) {
-        containerRef.current.onwheel = (e) => {
-          if (!mounted || !appRef.current) return
-          e.preventDefault()
-          const scaleChange = e.deltaY > 0 ? 0.95 : 1.05
-          const oldScale = stage.scale.x
-          const newScale = Math.max(0.1, Math.min(stage.scale.x * scaleChange, 5))
-          
-          const mousePos = app.renderer.events.pointer.global
-          const localPos = stage.toLocal(mousePos)
-          
-          stage.scale.set(newScale)
-          stage.x -= localPos.x * (newScale - oldScale)
-          stage.y -= localPos.y * (newScale - oldScale)
+      setLoading(false)
+
+      // Cleanup
+      return () => {
+        mounted = false
+        simulation?.stop()
+        if (currentContainer) {
+          currentContainer.removeEventListener("wheel", handleWheel)
+        }
+        if (appRef.current) {
+          try {
+            appRef.current.ticker.stop()
+            appRef.current.destroy(true, { children: true, texture: true })
+          } catch (e) {
+            console.warn("Pixi destruction failed:", e)
+          }
+          appRef.current = null
         }
       }
-
-      setLoading(false)
     }
 
-    init()
+    const cleanup = init()
 
     return () => {
       mounted = false
-      simulation?.stop()
-      if (appRef.current) {
-        try {
-          appRef.current.ticker.stop()
-          appRef.current.destroy(true, { children: true, texture: true })
-        } catch (e) {
-          console.warn("Pixi destruction failed:", e)
-        }
-        appRef.current = null
-      }
+      cleanup.then(fn => fn?.())
     }
   }, [pushCard])
 

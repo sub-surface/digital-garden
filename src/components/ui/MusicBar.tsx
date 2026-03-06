@@ -7,27 +7,11 @@ export function MusicBar() {
   const setIsExpanded = useStore((s) => s.setIsMusicExpanded)
   const { isPlaying, togglePlay, nextTrack, prevTrack, currentTrack } = useMusic()
 
-  const toggleMusic = useStore((s) => s.toggleMusic)
-
   if (!currentTrack) return null
 
   return (
     <div className={styles.musicBar} data-panel-ignore>
-      <button 
-        className={styles.expandBtn} 
-        onClick={() => setIsExpanded(!isExpanded)}
-        title="Show details"
-      >
-        <span className={`${styles.plus} ${isExpanded ? styles.active : ""}`}>+</span>
-      </button>
-
-      <div className={styles.trackInfo}>
-        <div className={styles.marquee}>
-          <span className={styles.title}>{currentTrack.title}</span>
-          <span className={styles.title} aria-hidden="true">{currentTrack.title}</span>
-        </div>
-      </div>
-
+      {/* 1. Playback Buttons (Now on the Left) */}
       <div className={styles.controls}>
         <button className={styles.iconBtn} onClick={prevTrack} title="Previous">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -51,6 +35,23 @@ export function MusicBar() {
           </svg>
         </button>
       </div>
+
+      {/* 2. Song Title Carousel (Center) */}
+      <div className={styles.trackInfo}>
+        <div className={styles.marquee}>
+          <span className={styles.title}>{currentTrack.title}</span>
+          <span className={styles.title} aria-hidden="true">{currentTrack.title}</span>
+        </div>
+      </div>
+
+      {/* 3. Expand Button (Now on the Right) */}
+      <button 
+        className={styles.expandBtn} 
+        onClick={() => setIsExpanded(!isExpanded)}
+        title="Show details"
+      >
+        <span className={`${styles.plus} ${isExpanded ? styles.active : ""}`}>+</span>
+      </button>
     </div>
   )
 }
