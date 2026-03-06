@@ -295,4 +295,4 @@ npm run prebuild  # manual content index rebuild
 - **Slug Normalization**: Standardized slug handling to replace spaces with hyphens across the prebuild engine and frontend routing.
 - **Case-Insensitive Resolution**: Updated note loading logic to be case-insensitive, ensuring consistent content retrieval regardless of slug casing.
 - **Smooth Navigation**: Enabled global smooth scrolling and refined horizontal workspace transitions with snap-points and eased-out physics.
-- **Deployment Configuration**: Updated `wrangler.toml` with the `[assets]` block to resolve Cloudflare Pages deployment issues and ensure proper asset routing.
+- **Deployment Configuration**: Updated `wrangler.toml` with the `[assets]` block and switched to a `404.html` fallback pattern (removing `_redirects`) to resolve Cloudflare Pages redirect loops and ensure proper SPA routing.
