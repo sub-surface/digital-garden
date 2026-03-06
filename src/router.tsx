@@ -70,7 +70,7 @@ const tagRoute = createRoute({
           <ul className="notes-list">
             {notes.map((n) => (
               <li key={n.slug}>
-                <a href={`/${n.slug}`} className="internal-link">{n.title}</a>
+                <a href={`/${n.slug.replace(/\s+/g, "-")}`} className="internal-link">{n.title}</a>
               </li>
             ))}
           </ul>
@@ -102,7 +102,7 @@ const folderRoute = createRoute({
           <ul className="notes-list">
             {notes.map((n) => (
               <li key={n.slug}>
-                <a href={`/${n.slug}`} className="internal-link">{n.title}</a>
+                <a href={`/${n.slug.replace(/\s+/g, "-")}`} className="internal-link">{n.title}</a>
               </li>
             ))}
           </ul>
@@ -136,7 +136,6 @@ const noteRoute = createRoute({
 // Build the router
 const routeTree = rootRoute.addChildren([
   devRoute,
-  graphRoute,
   tagRoute,
   folderRoute,
   noteRoute,

@@ -10,6 +10,7 @@ import { QuickControls } from "./QuickControls"
 import { LinkPreview } from "@/components/ui/LinkPreview"
 import { MusicPlayer } from "@/components/ui/MusicPlayer"
 import { SearchOverlay } from "@/components/ui/SearchOverlay"
+import { GraphOverlay } from "@/components/ui/GraphOverlay"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
 import { LocalGraph } from "@/components/ui/LocalGraph"
 import { Suspense, lazy } from "react"
@@ -23,7 +24,7 @@ export function AppShell() {
   usePanelClick()
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 800
-  const showFloatingGraph = !isMobile && location.pathname !== '/graph'
+  const showFloatingGraph = !isMobile
 
   return (
     <MDXProvider>
@@ -38,6 +39,7 @@ export function AppShell() {
         <MusicPlayer />
         <QuickControls />
         <SearchOverlay />
+        <GraphOverlay />
         
         {/* Terminal title — top-left */}
         <TerminalTitle />

@@ -51,6 +51,7 @@ export function GraphView() {
         autoDensity: true,
         eventMode: 'static',
       })
+      
       if (!mounted || !containerRef.current) {
         app.destroy(true, { children: true, texture: true })
         appRef.current = null
@@ -111,7 +112,7 @@ export function GraphView() {
             fill: 0xffffff,
             align: 'center',
           },
-          resolution: 4, // High resolution
+          resolution: 4,
         })
         label.anchor.set(0.5, -1.5)
         label.visible = false
@@ -144,6 +145,7 @@ export function GraphView() {
       })
 
       app.stage.on('pointermove', (e) => {
+        if (!mounted || !appRef.current) return
         if (dragTarget) {
           const pos = e.getLocalPosition(stage)
           dragTarget.fx = pos.x
@@ -179,7 +181,8 @@ export function GraphView() {
       app.stage.on('pointerup', onGlobalUp)
       app.stage.on('pointerupoutside', onGlobalUp)
 
-      app.ticker.add(() => {
+      const tickerCallback = () => {
+        if (!mounted || !appRef.current) return
         linkLayer.clear()
         const isDark = document.documentElement.getAttribute("data-theme") === "dark"
         const linkBaseColor = isDark ? 0xffffff : 0x000000
@@ -212,21 +215,26 @@ export function GraphView() {
             node.label.style.fill = labelColor
           }
         })
-      })
+      }
+
+      app.ticker.add(tickerCallback)
 
       // Zoom
-      containerRef.current!.onwheel = (e) => {
-        e.preventDefault()
-        const scaleChange = e.deltaY > 0 ? 0.95 : 1.05
-        const oldScale = stage.scale.x
-        const newScale = Math.max(0.1, Math.min(stage.scale.x * scaleChange, 5))
-        
-        const mousePos = app.renderer.events.pointer.global
-        const localPos = stage.toLocal(mousePos)
-        
-        stage.scale.set(newScale)
-        stage.x -= localPos.x * (newScale - oldScale)
-        stage.y -= localPos.y * (newScale - oldScale)
+      if (containerRef.current) {
+        containerRef.current.onwheel = (e) => {
+          if (!mounted || !appRef.current) return
+          e.preventDefault()
+          const scaleChange = e.deltaY > 0 ? 0.95 : 1.05
+          const oldScale = stage.scale.x
+          const newScale = Math.max(0.1, Math.min(stage.scale.x * scaleChange, 5))
+          
+          const mousePos = app.renderer.events.pointer.global
+          const localPos = stage.toLocal(mousePos)
+          
+          stage.scale.set(newScale)
+          stage.x -= localPos.x * (newScale - oldScale)
+          stage.y -= localPos.y * (newScale - oldScale)
+        }
       }
 
       setLoading(false)
@@ -239,6 +247,7 @@ export function GraphView() {
       simulation?.stop()
       if (appRef.current) {
         try {
+          appRef.current.ticker.stop()
           appRef.current.destroy(true, { children: true, texture: true })
         } catch (e) {
           console.warn("Pixi destruction failed:", e)

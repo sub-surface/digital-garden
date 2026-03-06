@@ -89,6 +89,7 @@ function slugify(filePath: string): string {
     .replace(/\\/g, "/")
     .replace(/\.mdx?$/, "")
     .replace(/\/index$/, "")
+    .replace(/\s+/g, "-")
 }
 
 function walkDir(dir: string): string[] {
@@ -300,12 +301,13 @@ function main() {
   fs.mkdirSync(srcContent, { recursive: true })
   
   for (const file of files) {
-    const rel = path.relative(CONTENT_DIR, file).replace(/\\/g, "/")
-    const dest = path.join(srcContent, rel)
+    const slug = slugify(file)
+    const ext = path.extname(file)
+    const dest = path.join(srcContent, `${slug}${ext}`)
     fs.mkdirSync(path.dirname(dest), { recursive: true })
     fs.copyFileSync(file, dest)
   }
-  console.log(`  src/content/: ${files.length} files synced for MDX`)
+  console.log(`  src/content/: ${files.length} files synced for MDX (slugified names)`)
 
   // Copy media assets (images, audio, etc.)
   const mediaDir = path.join(CONTENT_DIR, "Media")

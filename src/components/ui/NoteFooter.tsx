@@ -32,7 +32,7 @@ export function NoteFooter({ slug, meta }: Props) {
             <ul className={styles.backlinksList}>
               {meta.backlinks.map((bl) => (
                 <li key={bl}>
-                  <a href={`/${bl}`} className="internal-link">
+                  <a href={`/${bl.replace(/\s+/g, "-")}`} className="internal-link">
                     {contentIndex?.[bl]?.title ?? bl}
                   </a>
                 </li>

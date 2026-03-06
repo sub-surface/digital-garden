@@ -36,7 +36,12 @@ function resolveLayout(
 }
 
 export function NoteRenderer({ slug: rawSlug }: Props) {
-  const slug = useMemo(() => decodeURIComponent(rawSlug), [rawSlug])
+  const slug = useMemo(() => 
+    decodeURIComponent(rawSlug)
+      .replace(/\.mdx?$/, "")
+      .replace(/\s+/g, "-"),
+    [rawSlug]
+  )
   
   const [data, setData] = useState<{
     frontmatter: Record<string, any>

@@ -45,6 +45,11 @@ interface GardenStore {
   setSearchOpen: (open: boolean) => void
   toggleSearch: () => void
 
+  // Graph Overlay
+  isGraphOpen: boolean
+  setGraphOpen: (open: boolean) => void
+  toggleGraph: () => void
+
   // Music
   isMusicOpen: boolean
   toggleMusic: () => void
@@ -157,6 +162,11 @@ export const useStore = create<GardenStore>((set) => ({
   isSearchOpen: false,
   setSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
   toggleSearch: () => set((s) => ({ isSearchOpen: !s.isSearchOpen })),
+
+  // Graph Overlay
+  isGraphOpen: false,
+  setGraphOpen: (isGraphOpen) => set({ isGraphOpen }),
+  toggleGraph: () => set((s) => ({ isGraphOpen: !s.isGraphOpen })),
 
   // Music
   isMusicOpen: false,

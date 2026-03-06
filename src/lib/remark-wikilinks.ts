@@ -72,7 +72,8 @@ export function remarkWikilinks() {
         } else {
           // Handle Links
           const displayText = alias || rawSlug
-          const href = `/${encodeURIComponent(rawSlug).replace(/%20/g, " ")}${anchor}`
+          const slugified = rawSlug.replace(/\s+/g, "-")
+          const href = `/${encodeURIComponent(slugified)}${anchor}`
           newNodes.push({
             type: "link",
             url: href,

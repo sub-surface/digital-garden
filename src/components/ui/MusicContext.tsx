@@ -9,7 +9,7 @@ interface MusicContextType {
   progress: number
   duration: number
   currentTime: number
-  playTrack: (index: number) => void
+  playTrack: (target: number | string) => void
   togglePlay: () => void
   nextTrack: () => void
   prevTrack: () => void
@@ -125,8 +125,18 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }
 
-  const playTrack = (index: number) => {
+  const playTrack = (target: number | string) => {
     ensureAudioContext()
+    
+    let index = -1
+    if (typeof target === "number") {
+      index = target
+    } else {
+      index = tracks.findIndex(t => t.slug === target)
+    }
+
+    if (index === -1) return
+
     if (index === currentTrackIndex) {
       togglePlay()
     } else {

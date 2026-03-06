@@ -13,6 +13,9 @@
   overflow-x: auto;
   overflow-y: hidden;
   background: transparent; // Reveal canvas
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
 
   // Thin overlay scrollbar — hidden until hover
   scrollbar-width: thin;
@@ -49,6 +52,8 @@
   background: transparent; // Reveal canvas
   border-right: 1px solid var(--color-border);
   overflow-y: auto;
+  scroll-behavior: smooth;
+  scroll-snap-align: start;
 
   // Thin overlay scrollbar — hidden until hover
   scrollbar-width: thin;

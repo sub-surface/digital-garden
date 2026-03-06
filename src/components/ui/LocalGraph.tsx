@@ -139,7 +139,7 @@ export function LocalGraph({ slug }: Props) {
             fill: 0xffffff,
             align: 'center',
           },
-          resolution: 4, // High resolution text
+          resolution: 4,
         })
         label.anchor.set(0.5, -1.5)
         label.alpha = node.isCurrent ? 1 : 0.4
@@ -150,7 +150,6 @@ export function LocalGraph({ slug }: Props) {
         nodeLayer.addChild(label)
       })
 
-      // Stage interactions (Panning & Global Dragging)
       app.stage.interactive = true
       app.stage.hitArea = new PIXI.Rectangle(-10000, -10000, 20000, 20000)
 
@@ -162,6 +161,7 @@ export function LocalGraph({ slug }: Props) {
       })
 
       app.stage.on('pointermove', (e) => {
+        if (!mounted || !appRef.current) return
         if (dragTarget) {
           const pos = e.getLocalPosition(stage)
           dragTarget.fx = pos.x
@@ -197,23 +197,25 @@ export function LocalGraph({ slug }: Props) {
       app.stage.on('pointerup', onGlobalUp)
       app.stage.on('pointerupoutside', onGlobalUp)
 
-      // Scroll Zoom
-      containerRef.current!.onwheel = (e) => {
-        e.preventDefault()
-        const scaleChange = e.deltaY > 0 ? 0.95 : 1.05
-        const oldScale = stage.scale.x
-        const newScale = Math.max(0.2, Math.min(stage.scale.x * scaleChange, 4))
-        
-        // Zoom towards mouse
-        const mousePos = app.renderer.events.pointer.global
-        const localPos = stage.toLocal(mousePos)
-        
-        stage.scale.set(newScale)
-        stage.x -= localPos.x * (newScale - oldScale)
-        stage.y -= localPos.y * (newScale - oldScale)
+      if (containerRef.current) {
+        containerRef.current.onwheel = (e) => {
+          if (!mounted || !appRef.current) return
+          e.preventDefault()
+          const scaleChange = e.deltaY > 0 ? 0.95 : 1.05
+          const oldScale = stage.scale.x
+          const newScale = Math.max(0.2, Math.min(stage.scale.x * scaleChange, 4))
+          
+          const mousePos = app.renderer.events.pointer.global
+          const localPos = stage.toLocal(mousePos)
+          
+          stage.scale.set(newScale)
+          stage.x -= localPos.x * (newScale - oldScale)
+          stage.y -= localPos.y * (newScale - oldScale)
+        }
       }
 
-      app.ticker.add(() => {
+      const tickerCallback = () => {
+        if (!mounted || !appRef.current) return
         linkLayer.clear()
         const isDark = document.documentElement.getAttribute("data-theme") === "dark"
         const linkColor = isDark ? 0xffffff : 0x000000
@@ -240,7 +242,9 @@ export function LocalGraph({ slug }: Props) {
             node.label.style.fill = labelColor
           }
         })
-      })
+      }
+
+      app.ticker.add(tickerCallback)
     }
 
     init()
@@ -250,6 +254,7 @@ export function LocalGraph({ slug }: Props) {
       simulation?.stop()
       if (appRef.current) {
         try {
+          appRef.current.ticker.stop()
           appRef.current.destroy(true, { children: true, texture: true })
         } catch (e) {
           console.warn("Pixi destruction failed:", e)
@@ -266,20 +271,15 @@ export function LocalGraph({ slug }: Props) {
         <span className={styles.title}>{isMinimised ? "Radar" : "Radar Scope"}</span>
         <div className={styles.actions}>
           {!isMinimised && (
-            <a 
-              href="/graph" 
+            <button 
               className={styles.actionBtn} 
-              onClick={(e) => {
-                e.preventDefault()
-                clearStack()
-                window.location.href = '/graph'
-              }}
+              onClick={() => useStore.getState().setGraphOpen(true)}
               title="Open Full Graph"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
               </svg>
-            </a>
+            </button>
           )}
           <button 
             className={styles.actionBtn} 

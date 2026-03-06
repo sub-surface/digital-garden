@@ -285,6 +285,13 @@ npm run prebuild  # manual content index rebuild
 - **Ultra-Minimal Music**: Primary controls live in a transparent `MusicBar` top-right, aligned with the clock. Expands to a floating `MusicPlayer` mirroring the `ThemePanel` aesthetic.
 - **Panel Tab Refinement**: Tab action buttons (`+`, `x`) moved to the top of the vertical tab for better accessibility and aesthetics.
 - **Background & Layering**: `BgCanvas` rendered at `zIndex: 0`. To prevent occlusion, all major layout containers (`.shell`, `.workspace`, `.mainPane`, `.card`) must have `background: transparent`. The global background color is applied only to the `body` element or a bottom-layer container.
-- **Interactive Graph Physics**: Implemented D3 force simulation with PIXI.js rendering for both `LocalGraph` and global `GraphView`. Added node dragging, repulsion, and collision detection for a tactile, "v1-style" feel.
+- **Interactive Graph Physics**: Implemented D3 force simulation with PIXI.js rendering for both `LocalGraph` and global `GraphView`. Added node dragging (global move listeners), repulsion, and collision detection for a tactile, "v1-style" feel.
 - **UI Reorganization**: Consistently aligned top-right controls (`Music`, `Search`, `Day/Night`, `Palette Cycle`, `Background Mode`, `Clock`). Integrated these into a new `QuickControls` component.
 - **Mobile Navigation**: Updated `CornerMenu` to include all system actions (Search, Music, Palette, Theme) for mobile users, while hiding it on desktop to maintain minimalism.
+- **Graph UX Refinements**: Added scroll-zoom (zoom towards mouse), view panning (drag space), and high-resolution text rendering (resolution: 4). Implemented a "minimise" feature for the local radar scope and fixed node-click navigation.
+- **Note Readability**: Implemented subtle backdrop-blur (12px) on overlapping side panel cards with a transparent background to prevent content bleed while maintaining the "terminal" look.
+- **System Stability**: Resolved 404 errors for system routes (/graph, etc.) and fixed TypeScript build errors related to the music protocol link handler.
+- **Graph Overlay**: Refactored the full graph view into a dedicated overlay system (similar to search) for better reliability and consistent interaction.
+- **Slug Normalization**: Standardized slug handling to replace spaces with hyphens across the prebuild engine and frontend routing.
+- **Case-Insensitive Resolution**: Updated note loading logic to be case-insensitive, ensuring consistent content retrieval regardless of slug casing.
+- **Smooth Navigation**: Enabled global smooth scrolling and refined horizontal workspace transitions with snap-points and eased-out physics.

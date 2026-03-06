@@ -15,7 +15,13 @@ interface Props {
   onLoad?: (data: { frontmatter?: Record<string, any>; html?: string; headings?: { id: string; text: string; level: number }[] }) => void
 }
 
-export function NoteBody({ slug, onLoad }: Props) {
+export function NoteBody({ slug: rawSlug, onLoad }: Props) {
+  const slug = React.useMemo(() => 
+    rawSlug
+      .replace(/\.mdx?$/, "")
+      .replace(/\s+/g, "-"),
+    [rawSlug]
+  )
   const [loading, setLoading] = useState(true)
   const [MDXComponent, setMDXComponent] = useState<React.ComponentType<any> | null>(null)
   const [notFound, setNotFound] = useState(false)
@@ -68,11 +74,18 @@ export function NoteBody({ slug, onLoad }: Props) {
           `/src/content/${slug}.mdx`,
           `/src/content/${slug}/index.md`,
           `/src/content/${slug}/index.mdx`
-        ]
+        ].map(p => p.toLowerCase())
         
         const notes = import.meta.glob("/src/content/**/*.{md,mdx}")
         let match = ""
-        for (const p of paths) { if (notes[p]) { match = p; break; } }
+        
+        // Case-insensitive match
+        for (const p of Object.keys(notes)) {
+          if (paths.includes(p.toLowerCase())) {
+            match = p
+            break
+          }
+        }
 
         if (match) {
           const mod = (await notes[match]()) as any
