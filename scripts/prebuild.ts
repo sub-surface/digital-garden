@@ -74,10 +74,14 @@ function shouldIgnore(filePath: string): boolean {
 
 function extractWikiLinks(content: string): string[] {
   const links: string[] = []
+  // Matches [[target]] or [[target|alias]]
   const regex = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g
   let match: RegExpExecArray | null
   while ((match = regex.exec(content)) !== null) {
-    links.push(match[1].trim())
+    const rawTarget = match[1].trim()
+    // Normalise the target to match our slug system (hyphenated)
+    const normalized = rawTarget.replace(/\s+/g, "-")
+    links.push(normalized)
   }
   return links
 }

@@ -25,28 +25,30 @@ export async function loadMusicManifest(): Promise<Track[]> {
   return cachedMusic!
 }
 
-export async function loadNoteHtml(slug: string): Promise<string> {
-  const res = await fetch(`/notes/${slug}.html`)
-  if (!res.ok) throw new Error(`Note not found: ${slug}`)
-  return res.text()
-}
-
 export async function loadNoteSource(slug: string): Promise<string> {
+  // Use normalized slug (hyphenated)
+  const normalized = slug.replace(/\s+/g, "-")
+  
   // Try .md first (most common)
-  const res = await fetch(`/content/${slug}.md`)
+  const res = await fetch(`/content/${normalized}.md`)
   if (res.ok) return res.text()
+  
   // Try .mdx
-  const res2 = await fetch(`/content/${slug}.mdx`)
+  const res2 = await fetch(`/content/${normalized}.mdx`)
   if (res2.ok) return res2.text()
-  throw new Error(`Note source not found: ${slug}`)
+  
+  throw new Error(`Note source not found: ${normalized}`)
 }
 
 export function resolveSlug(raw: string, contentIndex: ContentIndex): string | null {
+  // Normalise raw input first
+  const normalizedRaw = raw.replace(/\s+/g, "-")
+  
   // Direct match
-  if (contentIndex[raw]) return raw
+  if (contentIndex[normalizedRaw]) return normalizedRaw
 
   // Case-insensitive match
-  const lower = raw.toLowerCase()
+  const lower = normalizedRaw.toLowerCase()
   const match = Object.keys(contentIndex).find(
     (k) => k.toLowerCase() === lower,
   )

@@ -9,4 +9,11 @@ NODE_VERSION = "20"
 
 [build]
 command = "npm run build"
-path = "dist"
+
+[[routes]]
+pattern = "subsurfaces.net"
+custom_domain = true
+
+[[routes]]
+pattern = "www.subsurfaces.net"
+custom_domain = true
