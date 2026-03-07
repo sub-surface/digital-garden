@@ -1,14 +1,15 @@
 .shell {
   width: 100vw;
-  min-height: 100vh;
+  height: 100vh;
   background: transparent;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .mainPane {
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .mainContent {
