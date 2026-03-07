@@ -9,11 +9,10 @@
   width: 100%;
   min-height: 100vh;
   overflow-y: auto;
-  max-width: var(--main-width);
-  margin: 0 auto;
   
   .shell[data-layout="article"] & {
     max-width: 900px;
+    margin: 0 auto;
   }
 }
 
