@@ -1,9 +1,11 @@
 name = "digital-garden-v2"
 compatibility_date = "2024-04-03"
+main = "src/worker.ts"
 
 [assets]
 directory = "./dist"
 not_found_handling = "single-page-application"
+binding = "ASSETS"
 
 [vars]
 NODE_VERSION = "20"
