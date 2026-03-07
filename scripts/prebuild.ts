@@ -85,10 +85,14 @@ function shouldIgnore(filePath: string): boolean {
 
 function extractWikiLinks(content: string): string[] {
   const links: string[] = []
+  // Strip code blocks and inline backtick spans before extracting links
+  const stripped = content
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`[^`]*`/g, "")
   // Matches [[target]] or [[target|alias]]
   const regex = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g
   let match: RegExpExecArray | null
-  while ((match = regex.exec(content)) !== null) {
+  while ((match = regex.exec(stripped)) !== null) {
     const rawTarget = match[1].trim()
     // Normalise the target to match our slug system (hyphenated)
     const normalized = rawTarget.replace(/\s+/g, "-")
@@ -243,10 +247,12 @@ function main() {
   )
   console.log(`  slug-map.json generated`)
 
-  // Broken link detection
+  // Broken link detection (skip media files — they aren't in the slug-map by design)
+  const MEDIA_EXT = /\.(png|jpe?g|gif|webp|svg|mp3|mp4|wav|pdf|gif)$/i
   let brokenCount = 0
   for (const [slug, rawLinks] of linkMap) {
     for (const raw of rawLinks) {
+      if (MEDIA_EXT.test(raw)) continue
       if (!resolveLink(raw)) {
         console.warn(`  [broken link] ${slug} → [[${raw}]]`)
         brokenCount++

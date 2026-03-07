@@ -45,7 +45,12 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 
 ### Wiki Submission System (code complete, env config pending)
 - [x] `functions/api/submit.ts` — CF Pages Function (Turnstile + GitHub PR)
-- [x] `WikiSubmitPage.tsx` — multi-step form (basic info → 35-question survey → review)
+- [x] `WikiSubmitPage.tsx` — 4-step form: basic info → survey (35 questions) → page body editor → review
+- [x] Survey dropdowns include "Other…" option with inline free-text input
+- [x] Markdown editor (step 3): toolbar (bold, italic, heading, link, blockquote, code, rule, bullet), word count, expanded placeholder with image/MDX syntax guide and link to markdownguide.org
+- [x] Profile image: upload file (JPEG/PNG/GIF/WebP, max 4MB) or paste URL; upload committed to `content/Wiki/chatters/images/` on PR branch; preview thumbnail shown
+- [x] `WikiSubmitForm` registered in MDXProvider — embeds in any MDX note via `<WikiSubmitForm />`
+- [x] `Wiki/Submit.md` uses `<WikiSubmitForm />` component directly
 - [x] `/wiki/submit` route with Turnstile widget
 - [ ] Turnstile widget created in CF dashboard + site key set
 - [ ] GitHub fine-grained PAT created + set in CF env vars
@@ -82,15 +87,16 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 
 ### Content Features
 - [x] **Reading time**: calculated at build time in prebuild, stored in content-index, shown in article header
-- [x] **Broken link detection**: prebuild pass warns on `[[wikilinks]]` that don't resolve in slug-map
+- [x] **Broken link detection**: prebuild pass warns on `[[wikilinks]]` that don't resolve in slug-map; skips media file extensions and code-block/backtick-span false positives
+- [x] **`contentPath` in index**: original relative path stored in content-index so runtime fetches use correct casing on CF's case-sensitive Linux filesystem
 - [x] **Note aliases**: `aliases: [Name, AltName]` frontmatter → added to slug-map at prebuild, resolves from any alias
 - [x] **`/recent` page**: notes sorted by `date` descending, similar to folder page layout
-- [x] **Dataview-lite**: `<Query filter="type=book" sort="-date" limit="5" display="list|grid|table" />` MDX component — filters/sorts contentIndex at runtime, registered in MDXProvider
+- [x] **Dataview-lite**: `<Query filter="type=book" sort="-date" limit="5" display="list|grid|table" />` MDX component — filters/sorts contentIndex at runtime, registered in MDXProvider; `<Query>` fix: components passed explicitly via props to bypass MDX context lookup issue
 
 ### UX Polish
 - [x] **Breadcrumbs on articles**: `Folder / Subfolder / Note` derived from slug, shown above title in article layout
 - [x] **Export / print styles**: `@media print` CSS — hides shell chrome, full-width content, sidenotes inline
-- [x] **Hover cards simplification**: body content fetched from public/content/, title+excerpt+tags, recursive hover to depth 4, OPEN button
+- [x] **Hover previews**: body text fetched from `public/content/` using `contentPath` from index (preserves original filename casing); wikilinks rendered as hoverable `<a>` tags; first image shown as full-width header; HTML SPA-fallback rejection via `content-type` check; recursive hover to depth 4; OPEN button pushes panel card
 
 ### Dev Tools
 - [x] **Properties editor redesign**: floating glass panel (bottom-right, no overlay, glassmorphism), session-override fields (title, type, tags)
@@ -109,8 +115,8 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 ---
 
 ## Future / Low Priority
-- [ ] Improve chess UI to match site themes, optimise  WASM performance, add analysis mode with move evaluation and variations, add multiplayer support with public leaderboard (track  wins/losses/draws against the engine and other players, maybe calculate ELO ratings for fun keep it lightweight and casual)
-- [ ] Typography: dropcaps for essays, pull quotes
+- [ ] Improve chess UI to match site themes, optimise WASM performance, public leaderboard (Stockfish has built-in support for this)
+- [x] Typography: dropcaps (`.dropcap` / `data-dropcap`), pull quotes (`.pullquote` blockquote)
 - [ ] GitHub App token for non-expiring wiki submissions
 - [ ] Wiki community features (comments, reactions)
 
@@ -120,7 +126,9 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 
 - `src/content/` is auto-generated — never edit directly
 - `functions/` is compiled by CF Workers separately — not part of Vite build
-- `public/_redirects` must remain for SPA routing
+- SPA routing: `wrangler.toml` `[assets]` block + `public/404.html` fallback (not `_redirects`)
 - `VITE_WIKI_MODE` must never be `true` in CF Pages build env vars
 - Wiki submit route must appear before catch-all in `routeTree.addChildren()`
 - `BgCanvas` at z-index 0 — all layout containers must be `background: transparent`
+- MDX custom components (`Query`, `WikiSubmitForm`, `BookCard`, etc.) must be passed via `components` prop on `<MDXComponent>` in `NoteBody` as well as registered in `MDXProvider` — context alone is insufficient
+- `contentPath` in content-index preserves original filename casing for `public/content/` fetches on CF's Linux filesystem

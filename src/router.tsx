@@ -7,7 +7,6 @@ import { AppShell } from "@/components/layout/AppShell"
 import { NoteRenderer } from "@/components/ui/NoteRenderer"
 import { DevDashboard } from "@/components/dev/DevDashboard"
 import { NotFound } from "@/components/ui/NotFound"
-import { WikiSubmitPage } from "@/components/ui/WikiSubmitPage"
 import { useEffect, lazy, Suspense } from "react"
 import { useStore } from "@/store"
 import { TagPage } from "@/components/ui/TagPage"
@@ -93,13 +92,6 @@ const recentRoute = createRoute({
   component: RecentPage,
 })
 
-// Wiki submit route — must be before the catch-all noteRoute
-const wikiSubmitRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/wiki/submit",
-  component: WikiSubmitPage,
-})
-
 // Catch-all note route — handles /Books/foo, /Movies/bar, etc.
 const noteRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -129,7 +121,6 @@ const routeTree = rootRoute.addChildren([
   foldersRoute,
   folderRoute,
   recentRoute,
-  wikiSubmitRoute,
   noteRoute,
 ])
 

@@ -14,8 +14,13 @@ draft: true
 
 # [Username]'s Profile
 
+  <div class="dropcap">
 
+  The first letter of this paragraph gets the dropcap treatment automatically.
 
+  > *[Username]* is a [brief description of the user, e.g., "philosophy enthusiast with a focus on epistemology and philosophy of mind."]*
+
+  </div>
 
 ## Metaphysics & Epistemology
 * **A priori knowledge:** [Yes / No]

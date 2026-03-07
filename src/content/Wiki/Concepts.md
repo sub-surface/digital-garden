@@ -51,6 +51,5 @@ Here's a markdown template for creating a wiki article. Follow the structure and
 * *[Classic Critique]* by [Author]
 
 ## Related Wiki Pages
-* [[Related Concept 1]]
-* [[Related Concept 2]]
+* Link to related articles using `[[Article Name]]`
 ```

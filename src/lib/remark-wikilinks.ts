@@ -187,7 +187,7 @@ export function remarkWikilinks(opts: { embedDepth?: number } = {}) {
           const lookup = rawTarget.toLowerCase().replace(/\s+/g, "-")
           const resolvedSlug = map[lookup] || lookup
           const displayText = alias || rawTarget
-          const href = `/${encodeURIComponent(resolvedSlug)}${anchor}`
+          const href = `/${resolvedSlug.replace(/\s+/g, "-")}${anchor}`
 
           newNodes.push({
             type: "link",

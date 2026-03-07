@@ -14,10 +14,10 @@ The Philchat Wiki is a collaborative knowledge base built by and for the philcha
 
 | Section | What you'll find |
 |---|---|
-| [[Wiki/Philosophers/index\|Philosophers]] | Survey profiles of canonical philosophers — positions, influences, key works |
-| [[Wiki/Concepts/index\|Concepts]] | Definitions, distinctions, and debates on core philosophical concepts |
-| [[Wiki/Movements/index\|Movements]] | Traditions, schools, and intellectual lineages |
-| Chatters | Profile pages for community members, using the Philsurvey format |
+| [Philosophers](/tags/philosopher) | Survey profiles of canonical philosophers — positions, influences, key works |
+| [Concepts](/tags/concept) | Definitions, distinctions, and debates on core philosophical concepts |
+| [Movements](/tags/movement) | Traditions, schools, and intellectual lineages |
+| [Chatters](/tags/chatter) | Profile pages for community members, using the Philsurvey format |
 
 ---
 
@@ -27,7 +27,7 @@ The Philchat Wiki is a collaborative knowledge base built by and for the philcha
 
 **Chatter profiles** use the Philsurvey format — a standardised set of questions drawn from the PhilPapers survey. See [[Wiki/Ape|Ape's Profile]] for an example.
 
-**Concept and movement articles** are less rigidly structured but should aim for clarity, charity, and accuracy.
+**Concept and movement articles** are less rigidly structured but should aim for clarity, charity, and accuracy. See [[Wiki/Concepts/index|Concepts]] and [[Wiki/Movements/index|Movements]] for format guidelines.
 
 ---
 
@@ -46,4 +46,4 @@ The wiki is maintained by Hugh Chungus (@hughchungus) with contributions from th
 
 ---
 
-Want to contribute? [[Submit|Submit a profile or article →]]
+Want to contribute? [[Wiki/Submit|Submit a profile or article →]]
