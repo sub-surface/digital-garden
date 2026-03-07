@@ -11,6 +11,8 @@ export interface NoteMetadata {
   excerpt?: string      // first paragraph plain text, for hover previews
   readingTime?: number  // minutes, rounded up
   aliases?: string[]    // alternate slug names
+  published?: boolean   // opt-in to RSS feed
+  image?: string
   cover?: string
   poster?: string
   links: string[]       // slugs this note links to

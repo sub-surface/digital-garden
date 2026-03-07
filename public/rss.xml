@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>Sub-Surface Territories</title>
     <link>https://subsurfaces.net</link>
-    <description>Notes, essays, and explorations from subsurfaces.net</description>
+    <description>Writing and notes from subsurfaces.net</description>
     <language>en-us</language>
     <atom:link href="https://subsurfaces.net/rss.xml" rel="self" type="application/rss+xml" />
     

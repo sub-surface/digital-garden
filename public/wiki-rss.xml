@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Philchat Wiki</title>
+    <link>https://wiki.subsurfaces.net</link>
+    <description>New articles and profiles from wiki.subsurfaces.net</description>
+    <language>en-us</language>
+    <atom:link href="https://wiki.subsurfaces.net/wiki-rss.xml" rel="self" type="application/rss+xml" />
+    
+  </channel>
+</rss>
