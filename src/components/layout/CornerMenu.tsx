@@ -5,30 +5,42 @@ import styles from "./CornerMenu.module.scss"
 interface ArcItem {
   label: string
   to?: string
+  href?: string
   onClick?: () => void
   devOnly?: boolean
 }
 
-export function CornerMenu() {
+interface CornerMenuProps {
+  variant?: "default" | "wiki"
+}
+
+export function CornerMenu({ variant = "default" }: CornerMenuProps = {}) {
   const [open, setOpen] = useState(false)
   const clearStack = useStore((s) => s.clearStack)
   const toggleThemePanel = useStore((s) => s.toggleThemePanel)
   const toggleMusic = useStore((s) => s.toggleMusic)
   const toggleSearch = useStore((s) => s.toggleSearch)
   const theme = useStore((s) => s.theme)
-  const palette = useStore((s) => s.palette)
+  const cycleAccent = useStore((s) => s.cycleAccent)
   const setTheme = (t: "light" | "dark") => useStore.getState().setTheme(t)
-  const setPalette = (p: "mono" | "complimentary") => useStore.getState().setPalette(p)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const ARC_ITEMS: ArcItem[] = [
-    { label: "Search", onClick: () => { toggleSearch(); setOpen(false); } },
-    { label: "Music", onClick: () => { toggleMusic(); setOpen(false); } },
-    { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },
-    { label: "Palette", onClick: () => { setPalette(palette === "mono" ? "complimentary" : "mono"); setOpen(false); } },
-    { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
-    ...(import.meta.env.DEV ? [{ label: "Dev", to: "/__dev", devOnly: true }] : []),
-  ]
+  const ARC_ITEMS: ArcItem[] = variant === "wiki"
+    ? [
+        { label: "Search", onClick: () => { toggleSearch(); setOpen(false); } },
+        { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },
+        { label: "Palette", onClick: () => { cycleAccent(); setOpen(false); } },
+        { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
+        { label: "⬡ Garden", href: "https://subsurfaces.net" },
+      ]
+    : [
+        { label: "Search", onClick: () => { toggleSearch(); setOpen(false); } },
+        { label: "Music", onClick: () => { toggleMusic(); setOpen(false); } },
+        { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },
+        { label: "Palette", onClick: () => { cycleAccent(); setOpen(false); } },
+        { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
+        ...(import.meta.env.DEV ? [{ label: "Dev", to: "/__dev", devOnly: true }] : []),
+      ]
 
   // Close on outside click
   useEffect(() => {
@@ -53,6 +65,10 @@ export function CornerMenu() {
   }, [open])
 
   const handleNav = (item: ArcItem) => {
+    if (item.href) {
+      window.location.href = item.href
+      return
+    }
     if (item.to) {
       clearStack()
     }
@@ -90,9 +106,9 @@ export function CornerMenu() {
               } as React.CSSProperties
             }
 
-            if (item.to) {
+            if (item.to || item.href) {
               return (
-                <a key={item.label} href={item.to} {...commonProps}>
+                <a key={item.label} href={item.to ?? item.href} {...commonProps}>
                   {item.label}
                 </a>
               )

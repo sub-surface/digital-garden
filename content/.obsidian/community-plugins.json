@@ -1,4 +1,6 @@
 [
   "obsidian-style-settings",
-  "dataview"
+  "dataview",
+  "templater-obsidian",
+  "obsidian-linter"
 ]

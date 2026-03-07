@@ -1,7 +1,7 @@
 ---
 title: Ape's Profile
 description: Young but highly educated philosophy enthusiast with a focus on Australian Philosophy and Epistemology.
-tags: [wiki]
+tags: [wiki, chatter]
 type: chatter
 username: "ape1284"
 pronouns: "he/him"
@@ -15,8 +15,7 @@ influences: "Susan Haack, David Lewis, Howard Sankey, G.E. Moore, John McDowell,
 
 > "**Ape**" is a Discord user known for "*Strong Critical thinking skills and somehow being  
 more educated and smarter than most Phil chat individuals, despite being the youngest*"  
-—Pearl.
-
+**—Pearl.**
 
 ## Metaphysics & Epistemology
 * **A priori knowledge:** Yes

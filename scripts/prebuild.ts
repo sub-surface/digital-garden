@@ -2,6 +2,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "url"
 import matter from "gray-matter"
+import { execSync } from "child_process"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CONTENT_DIR = path.resolve(__dirname, "../content")
@@ -20,9 +21,14 @@ interface NoteMeta {
   growth?: string
   featured?: boolean
   private?: boolean
+  readingTime?: number
+  aliases?: string[]
+  cover?: string
+  poster?: string
   links: string[]
   backlinks: string[]
   folder?: string
+  contentPath?: string
 }
 
 function extractExcerpt(content: string, maxLen = 200): string {
@@ -59,6 +65,11 @@ function extractExcerpt(content: string, maxLen = 200): string {
     paragraph = paragraph.slice(0, maxLen).replace(/\s\S*$/, "") + "..."
   }
   return paragraph
+}
+
+function calcReadingTime(content: string): number {
+  const words = content.replace(/```[\s\S]*?```/g, "").split(/\s+/).filter(Boolean).length
+  return Math.max(1, Math.ceil(words / 200))
 }
 
 interface ContentIndex {
@@ -135,9 +146,14 @@ function main() {
     const { data, content } = matter(raw)
     const slug = slugify(file)
     const folder = slug.includes("/") ? slug.split("/").slice(0, -1).join("/") : undefined
+    const contentPath = path.relative(CONTENT_DIR, file).replace(/\\/g, "/")
 
     const links = extractWikiLinks(content)
     linkMap.set(slug, links)
+
+    const aliases = Array.isArray(data.aliases)
+      ? (data.aliases as string[]).map((a) => String(a).replace(/\s+/g, "-"))
+      : []
 
     index[slug] = {
       slug,
@@ -150,11 +166,14 @@ function main() {
       growth: data.growth as string | undefined,
       featured: data.featured === true,
       private: false,
+      readingTime: calcReadingTime(content),
+      aliases: aliases.length ? aliases : undefined,
       cover: (data.cover || data.poster) as string | undefined,
       poster: (data.poster || data.cover) as string | undefined,
       links: [], // resolved in pass 2
       backlinks: [],
       folder,
+      contentPath,
     }
   }
 
@@ -203,6 +222,40 @@ function main() {
     JSON.stringify(index, null, 2),
   )
   console.log(`  content-index.json: ${Object.keys(index).length} notes`)
+
+  // Write slug map for link resolution (includes aliases)
+  const slugMap: Record<string, string> = {}
+  for (const s of allSlugs) {
+    const base = s.split("/").pop()!.toLowerCase()
+    slugMap[base] = s
+    slugMap[s.toLowerCase()] = s
+    // Register aliases
+    const meta = index[s]
+    if (meta.aliases) {
+      for (const alias of meta.aliases) {
+        slugMap[alias.toLowerCase()] = s
+      }
+    }
+  }
+  fs.writeFileSync(
+    path.join(PUBLIC_DIR, "slug-map.json"),
+    JSON.stringify(slugMap, null, 2),
+  )
+  console.log(`  slug-map.json generated`)
+
+  // Broken link detection
+  let brokenCount = 0
+  for (const [slug, rawLinks] of linkMap) {
+    for (const raw of rawLinks) {
+      if (!resolveLink(raw)) {
+        console.warn(`  [broken link] ${slug} → [[${raw}]]`)
+        brokenCount++
+      }
+    }
+  }
+  if (brokenCount > 0) {
+    console.warn(`  ${brokenCount} broken wikilink(s) found`)
+  }
 
   // Write graph data
   const nodes = Object.values(index).map((n) => ({
@@ -330,6 +383,60 @@ function main() {
     }
     copyDirRecursive(mediaDir, path.join(publicContent, "Media"))
     console.log("  public/content/Media/: media assets copied")
+  }
+
+  // Generate RSS feed
+  const SITE_URL = "https://subsurfaces.net"
+  const datedNotes = Object.values(index)
+    .filter((n) => n.date && !isNaN(new Date(n.date).getTime()))
+    .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
+    .slice(0, 40)
+
+  const rssItems = datedNotes.map((n) => `
+    <item>
+      <title><![CDATA[${n.title}]]></title>
+      <link>${SITE_URL}/${n.slug}</link>
+      <guid isPermaLink="true">${SITE_URL}/${n.slug}</guid>
+      <pubDate>${new Date(n.date!).toUTCString()}</pubDate>
+      ${n.excerpt ? `<description><![CDATA[${n.excerpt}]]></description>` : ""}
+      ${n.tags.map((t) => `<category>${t}</category>`).join("")}
+    </item>`).join("")
+
+  const rss = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Sub-Surface Territories</title>
+    <link>${SITE_URL}</link>
+    <description>Notes, essays, and explorations from subsurfaces.net</description>
+    <language>en-us</language>
+    <atom:link href="${SITE_URL}/rss.xml" rel="self" type="application/rss+xml" />
+    ${rssItems}
+  </channel>
+</rss>`
+
+  fs.writeFileSync(path.join(PUBLIC_DIR, "rss.xml"), rss.trim())
+  console.log(`  rss.xml: ${datedNotes.length} items`)
+
+  // Generate sitemap
+  const sitemapUrls = Object.keys(index).map((slug) =>
+    `  <url><loc>${SITE_URL}/${slug}</loc></url>`
+  ).join("\n")
+
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${sitemapUrls}
+</urlset>`
+
+  fs.writeFileSync(path.join(PUBLIC_DIR, "sitemap.xml"), sitemap.trim())
+  console.log(`  sitemap.xml: ${Object.keys(index).length} urls`)
+
+  // Generate OG images (opt-in: set PROCESS_OG=true)
+  if (process.env.PROCESS_OG === "true") {
+    try {
+      execSync("tsx scripts/og-gen.ts", { stdio: "inherit" })
+    } catch (err) {
+      console.error("Failed to generate OG images:", err)
+    }
   }
 
   console.log("Prebuild complete.")

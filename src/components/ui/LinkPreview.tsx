@@ -1,162 +1,156 @@
 import { useEffect, useRef, useState, useCallback } from "react"
-import { parseMarkdown, type ParsedNote } from "@/lib/markdown"
 import { useStore } from "@/store"
-import { useTelescopicHandlers } from "./TelescopicHandler"
 
 interface PreviewState {
-  id: string // Unique ID for each preview instance
-  visible: boolean
-  expanded: boolean
-  loading: boolean
+  id: string
   slug: string
   title: string
   excerpt: string
-  richHtml: string
-  leadImage: string
-  animLine: string
+  body: string        // first ~300 chars of note body (plain text)
+  bodyHtml: string    // body with wikilinks rendered as <a> tags
+  image: string       // first image URL found in the note, or ""
+  tags: string[]
   x: number
   y: number
   pos: "above" | "below"
   isFootnote?: boolean
+  footnoteHtml?: string
   depth: number
 }
 
-const INITIAL_BASE: Omit<PreviewState, "id" | "depth"> = {
-  visible: true,
-  expanded: false,
-  loading: false,
-  slug: "",
-  title: "",
-  excerpt: "",
-  richHtml: "",
-  leadImage: "",
-  animLine: "",
-  x: 0,
-  y: 0,
-  pos: "below",
-}
-
-const DELAY = 400
-const previewCache = new Map<string, ParsedNote>()
-
-// ── Animation Snippets ──
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms))
-}
-
-const LOADING_LABELS = ["indexing notes", "mapping links", "loading graph", "calibrating", "syncing state", "building index"]
-
-async function* loadingBar(): AsyncGenerator<string, void, unknown> {
-  const W = 15
-  const label = LOADING_LABELS[Math.floor(Math.random() * LOADING_LABELS.length)]
-  for (let i = 0; i <= W; i++) {
-    const bar = "\u2588".repeat(i) + "\u2591".repeat(W - i)
-    const pct = Math.round((i / W) * 100).toString().padStart(3)
-    yield `${label} [${bar}] ${pct}%`
-    await sleep(30)
-  }
-}
-
-async function* asciiPulse(): AsyncGenerator<string, void, unknown> {
-  const W = 24
-  const frames = 8
-  for (let f = 0; f <= frames; f++) {
-    const t = f / frames
-    const row = Array.from({ length: W }, (_, i) => {
-      const x = (i / W - 0.5) * Math.PI * 4
-      const y = Math.sin(x + t * Math.PI * 6) * (1 - t * 0.6)
-      if (y > 0.5) return "\u2584"
-      if (y > 0.1) return "\u2583"
-      if (y > -0.1) return "\u2500"
-      if (y > -0.5) return "\u2581"
-      return " "
-    }).join("")
-    yield row
-    await sleep(40)
-  }
-}
-
-const SNIPPETS = [loadingBar, asciiPulse]
+const DELAY = 350
+const MAX_DEPTH = 4
+const PREVIEW_W = 300
+const PREVIEW_H = 200
 
 function extractSlug(href: string): string | null {
   try {
     const url = new URL(href, window.location.origin)
     if (url.origin !== window.location.origin) return null
-    const path = decodeURIComponent(url.pathname).replace(/^\//, "")
-    return path || null
+    const p = decodeURIComponent(url.pathname).replace(/^\//, "")
+    return p || null
   } catch {
     return null
   }
 }
 
-function computePosition(rect: DOMRect, isExpanded: boolean, depth: number): { x: number; y: number; pos: "above" | "below" } {
-  const width = isExpanded ? 420 : 320
-  const height = isExpanded ? 500 : 150 // Approximate heights
-  const GAP = 12
-  const PADDING = 16
-  
-  // Offset based on depth for a tiered look
-  const offset = depth * 15
-  let x = rect.left + rect.width / 2 - width / 2 + offset
-  
-  // Constrain X to viewport
-  x = Math.max(PADDING, Math.min(x, window.innerWidth - width - PADDING))
+function computePosition(
+  rect: DOMRect,
+  depth: number,
+): { x: number; y: number; pos: "above" | "below" } {
+  const GAP = 10
+  const PADDING = 12
+  // Cascade each depth level rightward so cards don't stack exactly
+  const offset = depth * 20
+  let x = rect.left + rect.width / 2 - PREVIEW_W / 2 + offset
+  x = Math.max(PADDING, Math.min(x, window.innerWidth - PREVIEW_W - PADDING))
 
-  // Try below first
   let y = rect.bottom + GAP
   let pos: "above" | "below" = "below"
-  
-  // If it goes off screen bottom, show above
-  if (y + height > window.innerHeight - PADDING) {
-    y = rect.top - GAP - height
+
+  if (y + PREVIEW_H > window.innerHeight - PADDING) {
+    y = rect.top - GAP - PREVIEW_H
     pos = "above"
-    
-    // If it now goes off screen TOP, constrain to padding
-    if (y < PADDING) {
-      y = PADDING
-    }
+    if (y < PADDING) y = PADDING
   }
-  
+
   return { x, y, pos }
 }
 
-function extractPreview(html: string, maxWords: number): { truncatedHtml: string; firstImage: string } {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(html, "text/html")
-  const img = doc.querySelector("img")
-  const firstImage = img?.getAttribute("src") ?? ""
-  const children = Array.from(doc.body.children)
-  let wordCount = 0
-  const parts: string[] = []
-  const allowedTags = ["P", "UL", "OL", "BLOCKQUOTE", "H1", "H2", "H3", "H4", "DIV"]
+// Extract the first image URL (external http or internal /content/) from markdown
+function extractFirstImage(md: string): string {
+  // Strip frontmatter first
+  const body = md.replace(/^---[\s\S]*?---\n?/, "")
+  // External image: ![alt](url)
+  const extMatch = body.match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/)
+  if (extMatch) return extMatch[1]
+  // Internal wikilink image: ![[filename.ext]]
+  const wikiMatch = body.match(/!\[\[([^\]]+\.(png|jpe?g|gif|webp|svg))\]\]/i)
+  if (wikiMatch) return `/content/Media/${wikiMatch[1]}`
+  // Internal markdown image: ![alt](/content/... or relative)
+  const intMatch = body.match(/!\[[^\]]*\]\(([^)]+\.(png|jpe?g|gif|webp|svg))\)/i)
+  if (intMatch) return intMatch[1].startsWith("http") ? intMatch[1] : `/content/${intMatch[1]}`
+  return ""
+}
 
-  for (const child of children) {
-    if (!allowedTags.includes(child.tagName)) continue
-    if (child.classList.contains("telescopic-controls")) continue
-    const words = (child.textContent ?? "").split(/\s+/).filter(Boolean)
-    wordCount += words.length
-    parts.push(child.outerHTML)
-    if (wordCount >= maxWords) break
+// Convert markdown body to HTML with wikilinks/md-links as <a> tags, strip other formatting
+function mdToBodyHtml(md: string): string {
+  return md
+    .replace(/^---[\s\S]*?---\n?/, "")          // frontmatter
+    .replace(/!\[\[[^\]]*\]\]/g, "")             // note embeds (not images)
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, "")        // inline images
+    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) => {
+      const label = alias || target
+      const href = "/" + target.replace(/\s+/g, "-")
+      return `<a href="${href}" class="internal-link">${label}</a>`
+    })
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" class="external-link" target="_blank" rel="noopener">$1</a>')
+    .replace(/\[([^\]]+)\]\(\/([^)]+)\)/g, '<a href="/$2" class="internal-link">$1</a>')
+    .replace(/^#{1,6}\s+(.+)$/gm, "<strong>$1</strong>")  // headings → bold
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/^>\s+(.+)$/gm, "<span class=\"preview-quote\">$1</span>")
+    .replace(/[_~]/g, "")
+    .replace(/\n{2,}/g, " · ")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 400)
+}
+
+// Plain text fallback (for excerpt field)
+function mdToPlain(md: string): string {
+  return md
+    .replace(/^---[\s\S]*?---\n?/, "")
+    .replace(/!\[\[[^\]]*\]\]/g, "")
+    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, t, a) => a || t)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/[*_`~>]/g, "")
+    .replace(/\n{2,}/g, " · ")
+    .replace(/\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 320)
+}
+
+interface FetchedBody { plain: string; html: string; image: string }
+const bodyCache = new Map<string, FetchedBody>()
+
+async function fetchBody(slug: string, contentPath?: string): Promise<FetchedBody> {
+  if (bodyCache.has(slug)) return bodyCache.get(slug)!
+  const paths = contentPath
+    ? [`/content/${contentPath}`]
+    : [`/content/${slug}.md`, `/content/${slug}.mdx`, `/content/${slug}/index.md`]
+  for (const p of paths) {
+    try {
+      const res = await fetch(p)
+      if (res.ok && !res.headers.get("content-type")?.includes("text/html")) {
+        const text = await res.text()
+        const result: FetchedBody = {
+          plain: mdToPlain(text),
+          html: mdToBodyHtml(text),
+          image: extractFirstImage(text),
+        }
+        bodyCache.set(slug, result)
+        return result
+      }
+    } catch { /* ignore */ }
   }
-  return { truncatedHtml: parts.join(""), firstImage }
+  return { plain: "", html: "", image: "" }
 }
 
 export function LinkPreview() {
   const [stack, setStack] = useState<PreviewState[]>([])
   const contentIndex = useStore((s) => s.contentIndex)
+  const pushCard = useStore((s) => s.pushCard)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const currentSlug = useRef("")
-  const abortControllers = useRef<Map<string, AbortController>>(new Map())
 
   const popTo = useCallback((depth: number) => {
     setStack(prev => {
       const newStack = prev.slice(0, depth)
-      // Abort removed controllers
-      prev.slice(depth).forEach(p => {
-        abortControllers.current.get(p.id)?.abort()
-        abortControllers.current.delete(p.id)
-      })
       if (newStack.length === 0) currentSlug.current = ""
       else currentSlug.current = newStack[newStack.length - 1].slug
       return newStack
@@ -165,26 +159,15 @@ export function LinkPreview() {
 
   const pushPreview = useCallback((slug: string, isFootnote: boolean, anchor: HTMLAnchorElement) => {
     if (stack.some(p => p.slug === slug)) return
-
     const depth = stack.length
+    if (depth >= MAX_DEPTH) return
+
     const meta = contentIndex?.[slug]
     const rect = anchor.getBoundingClientRect()
-    const { x, y, pos } = computePosition(rect, isFootnote, depth)
+    const { x, y, pos } = computePosition(rect, depth)
     const id = Math.random().toString(36).slice(2)
 
-    const newState: PreviewState = {
-      ...INITIAL_BASE,
-      id,
-      depth,
-      slug,
-      isFootnote,
-      title: isFootnote ? `Footnote ${anchor.textContent}` : (meta?.title ?? slug.split("/").pop() ?? ""),
-      excerpt: meta?.excerpt ?? "",
-      x,
-      y,
-      pos,
-    }
-
+    let footnoteHtml: string | undefined
     if (isFootnote) {
       const href = anchor.getAttribute("href") ?? ""
       const fnId = href.startsWith("#") ? href.slice(1) : ""
@@ -193,77 +176,33 @@ export function LinkPreview() {
       if (fnLi) {
         const cloned = fnLi.cloneNode(true) as HTMLElement
         cloned.querySelectorAll("[data-footnote-backref]").forEach(el => el.remove())
-        newState.richHtml = cloned.innerHTML
-        newState.expanded = true
-        // Re-calculate position with expanded height for footnote
-        const { x: fx, y: fy, pos: fpos } = computePosition(rect, true, depth)
-        newState.x = fx
-        newState.y = fy
-        newState.pos = fpos
+        footnoteHtml = cloned.innerHTML
       }
     }
 
-    setStack(prev => [...prev, newState])
+    const initial: PreviewState = {
+      id, depth, slug, isFootnote, footnoteHtml,
+      title: isFootnote ? `Footnote ${anchor.textContent}` : (meta?.title ?? slug.split("/").pop() ?? ""),
+      excerpt: meta?.excerpt ?? "",
+      body: "",
+      bodyHtml: "",
+      image: "",
+      tags: meta?.tags ?? [],
+      x, y, pos,
+    }
+
+    setStack(prev => [...prev, initial])
     currentSlug.current = slug
+
+    // Fetch body content async and patch state
+    if (!isFootnote) {
+      fetchBody(slug, meta?.contentPath).then(({ plain, html, image }) => {
+        setStack(prev => prev.map(p =>
+          p.id === id ? { ...p, body: plain, bodyHtml: html, image } : p
+        ))
+      })
+    }
   }, [stack, contentIndex])
-
-  const expand = useCallback(async (id: string) => {
-    const preview = stack.find(p => p.id === id)
-    if (!preview || preview.isFootnote || preview.expanded) return
-
-    const ac = new AbortController()
-    abortControllers.current.set(id, ac)
-
-    // Find original anchor to re-position
-    const anchor = document.querySelector(`a.internal-link[href$="/${preview.slug}"]`) as HTMLAnchorElement | null
-    let nextPos = { x: preview.x, y: preview.y, pos: preview.pos }
-    if (anchor) {
-      const rect = anchor.getBoundingClientRect()
-      nextPos = computePosition(rect, true, preview.depth)
-    }
-
-    setStack(prev => prev.map(p => p.id === id ? { 
-      ...p, 
-      loading: true, 
-      expanded: true,
-      x: nextPos.x,
-      y: nextPos.y,
-      pos: nextPos.pos
-    } : p))
-
-    try {
-      let parsed = previewCache.get(preview.slug)
-      if (!parsed) {
-        const paths = [`/content/${preview.slug}.md`, `/content/${preview.slug}/index.md`]
-        let source: string | null = null
-        for (const p of paths) {
-          const res = await fetch(p)
-          if (res.ok) { source = await res.text(); break }
-        }
-        if (!source) return
-        parsed = await parseMarkdown(source)
-        previewCache.set(preview.slug, parsed)
-      }
-
-      const { truncatedHtml, firstImage } = extractPreview(parsed.html, 400)
-      
-      const snippet = SNIPPETS[Math.floor(Math.random() * SNIPPETS.length)]
-      for await (const line of snippet()) {
-        if (ac.signal.aborted) return
-        setStack(prev => prev.map(p => p.id === id ? { ...p, animLine: line } : p))
-      }
-      
-      setStack(prev => prev.map(p => p.id === id ? { 
-        ...p, 
-        loading: false, 
-        richHtml: truncatedHtml, 
-        leadImage: firstImage,
-        animLine: "READY."
-      } : p))
-    } catch {
-      setStack(prev => prev.map(p => p.id === id ? { ...p, loading: false } : p))
-    }
-  }, [stack])
 
   useEffect(() => {
     function handleOver(e: MouseEvent) {
@@ -286,11 +225,10 @@ export function LinkPreview() {
     function handleOut(e: MouseEvent) {
       const related = e.relatedTarget as Element | null
       const toPreview = related?.closest(".link-preview")
-      
+
       if (toPreview) {
         const depth = parseInt(toPreview.getAttribute("data-depth") || "0")
         clearTimeout(timer.current)
-        // If we moved to a parent preview, cull the children
         if (depth < stack.length - 1) {
           timer.current = setTimeout(() => popTo(depth + 1), DELAY)
         }
@@ -302,7 +240,6 @@ export function LinkPreview() {
 
       clearTimeout(timer.current)
       timer.current = setTimeout(() => {
-        // If we're not over ANY preview or internal link, clear all
         if (!currentSlug.current) return
         popTo(0)
       }, DELAY)
@@ -320,11 +257,13 @@ export function LinkPreview() {
   return (
     <>
       {stack.map((p) => (
-        <PreviewCard 
-          key={p.id} 
-          state={p} 
-          onExpand={() => expand(p.id)} 
-          onClose={() => popTo(p.depth)}
+        <PreviewCard
+          key={p.id}
+          state={p}
+          onOpen={() => {
+            pushCard({ url: `/${p.slug}`, slug: p.slug, title: p.title, html: "" }, -1)
+            popTo(0)
+          }}
           onEnter={() => {
             clearTimeout(timer.current)
             currentSlug.current = p.slug
@@ -335,77 +274,61 @@ export function LinkPreview() {
   )
 }
 
-function PreviewCard({ state, onExpand, onClose, onEnter }: { 
-  state: PreviewState; 
-  onExpand: () => void; 
-  onClose: () => void;
-  onEnter: () => void;
+function PreviewCard({ state, onOpen, onEnter }: {
+  state: PreviewState
+  onOpen: () => void
+  onEnter: () => void
 }) {
-  const richRef = useRef<HTMLDivElement>(null)
-  useTelescopicHandlers(richRef)
-
   return (
     <div
-      className={`link-preview${state.expanded ? " link-preview--expanded" : ""}`}
-      style={{ 
-        left: state.x, 
-        top: state.y, 
+      className="link-preview"
+      style={{
+        left: state.x,
+        top: state.y,
         zIndex: 1000 + state.depth,
-        // Visual depth cue
-        boxShadow: `0 ${4 + state.depth * 2}px ${12 + state.depth * 4}px rgba(0,0,0,0.2)`
+        boxShadow: `0 ${4 + state.depth * 2}px ${12 + state.depth * 4}px rgba(0,0,0,0.25)`
       }}
       data-panel-ignore
       data-pos={state.pos}
       data-depth={state.depth}
       onMouseEnter={onEnter}
     >
-      {state.expanded && state.animLine && (
-        <div className="link-preview__terminal">{state.animLine}</div>
-      )}
-
-      {!state.expanded ? (
-        <div className="link-preview__small">
-          <h4 className="link-preview__title">{state.title}</h4>
-          <p className="link-preview__excerpt">{state.excerpt}</p>
-        </div>
+      {state.isFootnote && state.footnoteHtml ? (
+        <div
+          className="link-preview__rich"
+          dangerouslySetInnerHTML={{ __html: state.footnoteHtml }}
+        />
       ) : (
         <>
-          {state.loading ? (
-            <div className="link-preview__excerpt" style={{ opacity: 0.5 }}>
-              Retrieving territories...
+          {state.image && (
+            <div className="link-preview__image">
+              <img src={state.image} alt="" onError={(e) => { (e.currentTarget.parentElement!).style.display = "none" }} />
             </div>
-          ) : (
-            <>
-              {state.leadImage && (
-                <img className="link-preview__image" src={state.leadImage} alt="" />
-              )}
-              {state.richHtml ? (
-                <div
-                  ref={richRef}
-                  className="link-preview__rich"
-                  dangerouslySetInnerHTML={{ __html: state.richHtml }}
-                />
-              ) : (
-                <p className="link-preview__excerpt">{state.excerpt}</p>
-              )}
-            </>
           )}
+          <div className="link-preview__body">
+            <h4 className="link-preview__title">{state.title}</h4>
+            {state.bodyHtml ? (
+              <p className="link-preview__excerpt" dangerouslySetInnerHTML={{ __html: state.bodyHtml }} />
+            ) : state.excerpt ? (
+              <p className="link-preview__excerpt">{state.excerpt}</p>
+            ) : null}
+            {state.tags.length > 0 && (
+              <div className="link-preview__tags">
+                {state.tags.map(t => (
+                  <a key={t} href={`/tags/${t}`} className="tag-pill">#{t}</a>
+                ))}
+              </div>
+            )}
+            <div className="link-preview__footer">
+              <button
+                className="link-preview__expand-btn"
+                onClick={(e) => { e.stopPropagation(); onOpen() }}
+              >
+                OPEN →
+              </button>
+            </div>
+          </div>
         </>
-      )}
-
-      {!state.isFootnote && (
-        <div className="link-preview__footer">
-          <button 
-            className="link-preview__expand-btn"
-            onClick={(e) => {
-              e.stopPropagation()
-              if (state.expanded) onClose()
-              else onExpand()
-            }}
-          >
-            {state.expanded ? "CLOSE" : "EXPAND"}
-          </button>
-        </div>
       )}
     </div>
   )

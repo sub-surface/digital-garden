@@ -148,9 +148,30 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
+// ── Wiki boot lines ──
+
+const WIKI_BOOT_LINES: string[] = [
+  "PHILCHAT WIKI v1.0.0",
+  "loading philosopher index...",
+  "mapping debates...",
+  "wiki ready.",
+]
+
+async function* wikiBootSequence(): AsyncGenerator<string, void, unknown> {
+  for (const line of WIKI_BOOT_LINES) {
+    yield line
+    await sleep(80 + Math.random() * 120)
+  }
+}
+
 // ── Component ──
 
-export function TerminalTitle() {
+interface TerminalTitleProps {
+  context?: "wiki"
+}
+
+export function TerminalTitle({ context }: TerminalTitleProps = {}) {
+  const isWiki = context === "wiki"
   const navigate = useNavigate()
   const location = useLocation()
   const clearStack = useStore((s) => s.clearStack)
@@ -162,6 +183,8 @@ export function TerminalTitle() {
   const [isAnimating, setIsAnimating] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const settledText = isWiki ? "Philchat Wiki" : "Sub-Surface Territories"
 
   // Run a snippet generator, updating the displayed line
   const runSnippet = useCallback(
@@ -192,8 +215,8 @@ export function TerminalTitle() {
         // Settle back to site name after a short pause
         await sleep(1200)
         if (!ac.signal.aborted) {
-          setLine("Sub-Surface Territories")
-          setTooltip("Go to homepage")
+          setLine(settledText)
+          setTooltip(isWiki ? "← subsurfaces.net" : "Go to homepage")
         }
         scheduleIdle()
       }
@@ -205,37 +228,43 @@ export function TerminalTitle() {
     const ac = new AbortController()
     abortRef.current = ac
     ;(async () => {
-      await runSnippet(bootSequence(), ac.signal)
+      await runSnippet(isWiki ? wikiBootSequence() : bootSequence(), ac.signal)
       if (!ac.signal.aborted) {
         await sleep(600)
-        setLine("Sub-Surface Territories")
+        setLine(settledText)
         setBooted(true)
-        scheduleIdle()
+        if (!isWiki) scheduleIdle()
       }
     })()
     return () => {
       ac.abort()
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
     }
-  }, [runSnippet, scheduleIdle])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runSnippet, scheduleIdle, isWiki])
 
   const handleClick = async () => {
+    if (isWiki) {
+      window.location.href = "https://subsurfaces.net"
+      return
+    }
+
     const isIndex = location.pathname === "/" || location.pathname === ""
-    
+
     if (isIndex && booted && !isAnimating) {
       setIsAnimating(true)
       const ac = new AbortController()
       abortRef.current?.abort() // Stop current idle
       abortRef.current = ac
-      
+
       const snippet = IDLE_SNIPPETS[Math.floor(Math.random() * IDLE_SNIPPETS.length)]
       if (snippet.tooltip) setTooltip(snippet.tooltip)
       await runSnippet(snippet.gen(), ac.signal)
-      
+
       if (!ac.signal.aborted) {
         await sleep(1000)
         if (!ac.signal.aborted) {
-          setLine("Sub-Surface Territories")
+          setLine(settledText)
           setTooltip("Go to homepage")
         }
       }
@@ -247,23 +276,43 @@ export function TerminalTitle() {
     }
   }
 
-  const displayText = (isHovered && booted && !isAnimating) ? "Sub-Surface Territories" : line
+  const displayText = (isHovered && booted && !isAnimating) ? settledText : line
+  const titleTooltip = isWiki ? "← subsurfaces.net" : tooltip
+
+  const titleContent = (
+    <>
+      <span className={styles.text} data-hovered={isHovered || undefined}>
+        {displayText || "\u00a0"}
+      </span>
+      {booted && !isAnimating && <span className={styles.karat} />}
+    </>
+  )
 
   return (
     <div className={styles.container} data-panel-ignore>
-      <button
-        className={styles.title}
-        onClick={handleClick}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        aria-label={tooltip}
-        title={tooltip}
-      >
-        <span className={styles.text} data-hovered={isHovered || undefined}>
-          {displayText || "\u00a0"}
-        </span>
-        {booted && !isAnimating && <span className={styles.karat} />}
-      </button>
+      {isWiki ? (
+        <a
+          className={styles.title}
+          href="https://subsurfaces.net"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          aria-label={titleTooltip}
+          title={titleTooltip}
+        >
+          {titleContent}
+        </a>
+      ) : (
+        <button
+          className={styles.title}
+          onClick={handleClick}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          aria-label={tooltip}
+          title={tooltip}
+        >
+          {titleContent}
+        </button>
+      )}
     </div>
   )
 }

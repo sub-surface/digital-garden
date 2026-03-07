@@ -8,10 +8,15 @@ export interface NoteMetadata {
   growth?: "larval" | "becoming" | "actual"
   featured?: boolean
   private?: boolean
-  excerpt?: string // first paragraph plain text, for hover previews
-  links: string[] // slugs this note links to
-  backlinks: string[] // slugs that link to this note
-  folder?: string // parent folder path
+  excerpt?: string      // first paragraph plain text, for hover previews
+  readingTime?: number  // minutes, rounded up
+  aliases?: string[]    // alternate slug names
+  cover?: string
+  poster?: string
+  links: string[]       // slugs this note links to
+  backlinks: string[]   // slugs that link to this note
+  folder?: string       // parent folder path
+  contentPath?: string  // original relative path in public/content/ (preserves casing)
 }
 
 export interface ContentIndex {

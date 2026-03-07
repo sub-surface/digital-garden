@@ -40,7 +40,6 @@
     background: var(--color-border);
   }
 }
-
 // ── Main pane: sticky left, full-height ──
 .mainPane {
   flex: 0 0 var(--main-width);
@@ -55,7 +54,16 @@
   scroll-behavior: smooth;
   scroll-snap-align: start;
 
+  .shell[data-layout="article"] & {
+    flex: 1;
+    min-width: 100vw;
+    border-right: none;
+    z-index: 0; // Don't occlude panels if they happen to open
+  }
+
   // Thin overlay scrollbar — hidden until hover
+// ...
+
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 

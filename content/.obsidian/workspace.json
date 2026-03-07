@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "index.md",
+                "file": "Wiki/index.md",
                 "mode": "preview",
                 "source": false
               },
@@ -177,18 +177,23 @@
       "daily-notes:Open today's daily note": false,
       "templates:Insert template": false,
       "command-palette:Open command palette": false,
-      "bases:Create new base": false
+      "bases:Create new base": false,
+      "templater-obsidian:Templater": false
     }
   },
   "active": "3f87f10ff44213a5",
   "lastOpenFiles": [
-    "ESA POSTER.md",
-    "index.md",
-    "Movieshelf.md",
+    "Bookshelf.md",
+    "Chess.md",
     "getting lost.md",
     "m0rvidd.md",
+    "index.md",
+    "Daily/11-02-26.md",
+    "Daily/07-02-26.md",
+    "Daily/06-02-26.md",
+    "ESA POSTER.md",
+    "Movieshelf.md",
     "a place I'll always call home.md",
-    "Best Of Moltbook.md",
-    "Chess.md"
+    "Best Of Moltbook.md"
   ]
 }

@@ -65,7 +65,7 @@ export function BgCanvas() {
   const bgStyle = useStore((s) => s.bgStyle)
   const isReaderMode = useStore((s) => s.isReaderMode)
   const theme = useStore((s) => s.theme)
-  const palette = useStore((s) => s.palette)
+  const accentBase = useStore((s) => s.accentBase)
   const config = useStore((s) => s.config)
   const activeSlug = useStore((s) => s.activeGraphSlug)
 
@@ -108,7 +108,7 @@ export function BgCanvas() {
 
   useEffect(() => {
     stateRef.current.colorValid = false
-  }, [theme, palette])
+  }, [theme, accentBase])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -130,11 +130,12 @@ export function BgCanvas() {
     const refreshColors = () => {
       const style = getComputedStyle(document.documentElement)
       const css = (p: string) => style.getPropertyValue(p).trim()
-      const secondary = css("--color-primary") || "#b4424c"
-      stateRef.current.colorCache.secondary = secondary
+      const primary = css("--color-primary") || "#b4424c"
+      stateRef.current.colorCache.secondary = primary
       stateRef.current.colorCache.palette = [
-        secondary,
-        css("--color-accent-base") || "#ff6b6b",
+        primary,
+        css("--color-secondary") || "#424cb4",
+        css("--color-tertiary") || "#42b464",
         css("--color-text-muted") || "#8e8e93",
         css("--color-border") || "#2a2a30",
       ]
@@ -203,7 +204,7 @@ export function BgCanvas() {
       window.removeEventListener("mousemove", mouseMove)
       cancelAnimationFrame(animationId)
     }
-  }, [bgMode, bgStyle, theme, palette, config])
+  }, [bgMode, bgStyle, theme, accentBase, config])
 
   return (
     <canvas

@@ -82,32 +82,11 @@
   color-scheme: light;
 }
 
-// ── Palettes ──
-
-[data-palette="mono"] {
-  // Everything is a shade of the primary accent
-  --color-secondary: color-mix(in srgb, var(--color-primary) 70%, var(--color-bg));
-  --color-tertiary: color-mix(in srgb, var(--color-primary) 40%, var(--color-bg));
+// ── Triadic palette ──
+// Secondary and tertiary are set dynamically via JS (120° / 240° hue rotation).
+// These fallbacks match the default accent (#b4424c → triadic).
+:root {
+  --color-secondary: #424cb4; // +120° from default red
+  --color-tertiary: #42b464; // +240° from default red
   --color-accent: var(--color-primary);
-  
-  [data-theme="dark"] & {
-    --color-secondary: color-mix(in srgb, var(--color-primary) 70%, white);
-    --color-tertiary: color-mix(in srgb, var(--color-primary) 40%, white);
-  }
-}
-
-[data-palette="complimentary"] {
-  // Mix primary with complementary target hues to generate dynamic secondary/tertiary
-  --color-secondary: color-mix(in srgb, var(--color-primary) 60%, #42b4ab); // Pulled towards teal
-  --color-tertiary: color-mix(in srgb, var(--color-primary) 60%, #ab42b4);  // Pulled towards purple
-  
-  // High-contrast accent derived from primary
-  --color-accent: color-mix(in srgb, var(--color-primary) 50%, #fb8500); // Pulled towards orange
-  
-  [data-theme="dark"] & {
-    --color-accent: color-mix(in srgb, var(--color-primary) 80%, white);
-  }
-  [data-theme="light"] & {
-    --color-accent: color-mix(in srgb, var(--color-primary) 80%, black);
-  }
 }

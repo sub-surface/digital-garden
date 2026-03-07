@@ -1,0 +1,60 @@
+.shell {
+  width: 100vw;
+  min-height: 100vh;
+  background: var(--color-bg);
+  overflow-x: hidden;
+}
+
+.mainPane {
+  width: 100%;
+  min-height: 100vh;
+  overflow-y: auto;
+
+  .shell[data-layout="article"] & {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+}
+
+.mainContent {
+  padding: 2rem 3rem;
+  // Give space for fixed TerminalTitle at top
+  padding-top: 4rem;
+
+  @media (max-width: 800px) {
+    padding: 1.5rem;
+    padding-top: 3.5rem;
+  }
+}
+
+.breadcrumb {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 199;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+
+  @media (max-width: 800px) {
+    display: none;
+  }
+}
+
+.breadcrumbSegment {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.breadcrumbSep {
+  opacity: 0.4;
+  margin: 0 0.1rem;
+}

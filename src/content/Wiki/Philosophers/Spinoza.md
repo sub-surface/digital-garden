@@ -1,7 +1,13 @@
 ---
 title: Baruch de Spinoza
-description: A collaborative wiki for the philchat community
-tags: [wiki]
+description: 17th-century Dutch rationalist philosopher, author of the Ethics.
+tags: [wiki, philosopher]
+type: philosopher
+born: "1632, Amsterdam"
+died: "1677, The Hague"
+school: "Rationalism, Spinozism"
+main_interests: "Metaphysics, Ethics, Philosophy of Mind, Political Philosophy"
+notable_ideas: "Substance Monism, Deus sive Natura, Determinism, Conatus"
 ---
 
 # Philosopher: Spinoza
@@ -41,8 +47,8 @@ Spinoza believed that all events are determined by prior causes in accordance wi
 ---
 
 ## Major Works
-1. *[Ethics]* ([1677]) - Spinoza's magnum opus, where he lays out his metaphysical system and ethical philosophy.
-2. *[Tractatus Theologico-Politicus]* ([1677]) - A work on political philosophy and biblical criticism.
+1. *Ethics* (1677) - Spinoza's magnum opus, where he lays out his metaphysical system and ethical philosophy.
+2. *Tractatus Theologico-Politicus* (1677) - A work on political philosophy and biblical criticism.
 
 ## Influence & Legacy
 * **Influenced by:** Descartes, Stoicism, Jewish philosophy

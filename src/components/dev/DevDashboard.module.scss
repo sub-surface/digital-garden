@@ -44,10 +44,10 @@
 }
 
 .stat {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-highlight);
   padding: 15px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: var(--glass-border);
 
   .label {
     font-size: 0.7rem;
@@ -63,8 +63,8 @@
 
 .filterInput {
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-highlight);
+  border: var(--glass-border);
   padding: 12px;
   border-radius: 6px;
   color: var(--color-text);
@@ -87,13 +87,13 @@
     th {
       text-align: left;
       padding: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid var(--color-border);
       opacity: 0.5;
     }
 
     td {
       padding: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--color-border-light);
     }
   }
 }
@@ -114,17 +114,17 @@
 }
 
 .storeView {
-  background: #000;
+  background: var(--color-bg);
   padding: 20px;
   border-radius: 8px;
   font-size: 0.8rem;
   max-height: 400px;
   overflow-y: auto;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: var(--glass-border);
 
   pre {
     margin: 0;
-    color: #0f0;
+    color: var(--color-tertiary);
   }
 }
 
@@ -134,8 +134,8 @@
 }
 
 .actionBtn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-highlight);
+  border: var(--glass-border);
   color: var(--color-text);
   padding: 10px 20px;
   border-radius: 6px;
@@ -143,7 +143,7 @@
   font-family: inherit;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--color-bg-surface);
   }
 
   &.primary {
@@ -158,36 +158,38 @@
   }
 }
 
-// ── Property Manager Modal ──
+// ── Property Manager — floating glass panel, no overlay ──
 
 .propManagerOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  bottom: var(--space-8);
+  right: var(--space-8);
   z-index: 6000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  pointer-events: none; // clicks pass through except the panel itself
 }
 
 .propManagerModal {
-  background: var(--color-bg-surface, #1a1a1a);
-  width: 90%;
-  max-width: 500px;
-  padding: 30px;
+  pointer-events: all;
+  background: var(--glass-bg-heavy);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-lg);
+  width: 340px;
+  padding: 20px;
+  font-family: var(--font-code);
 
   h3 {
     margin-top: 0;
-    margin-bottom: 25px;
-    font-size: 1.1rem;
+    margin-bottom: 16px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     color: var(--color-accent-base);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
@@ -204,8 +206,8 @@
 
   input {
     width: 100%;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--color-bg);
+    border: var(--glass-border);
     padding: 10px;
     border-radius: 4px;
     color: var(--color-text);
@@ -230,7 +232,7 @@
     cursor: pointer;
     font-family: inherit;
     background: none;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: var(--glass-border);
     color: var(--color-text);
 
     &.primary {

@@ -1,7 +1,7 @@
 ---
 title: Philchat Wiki - Concepts
 description: A collaborative wiki for the philchat community
-tags: [wiki]
+tags: [wiki, concept]
 ---
 
 A shared knowledge base by and for the philchat community.

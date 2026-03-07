@@ -24,8 +24,8 @@
   }
 
   &.growth-larval::before { background-color: var(--color-text-muted); }
-  &.growth-becoming::before { background-color: var(--color-primary); }
-  &.growth-actual::before { background-color: var(--color-accent); }
+  &.growth-becoming::before { background-color: var(--color-secondary); }
+  &.growth-actual::before { background-color: var(--color-tertiary); }
 }
 
 .note-date {
@@ -111,6 +111,17 @@
   border-radius: 8px;
   padding: 0.75rem;
   z-index: 10;
+  transition: width 0.3s ease, padding 0.3s ease;
+
+  &.is-minimised {
+    width: auto;
+    padding: 0.5rem 0.75rem;
+    overflow: hidden;
+
+    h3 {
+      margin-bottom: 0;
+    }
+  }
 
   h3 {
     font-size: 0.85em;
@@ -263,4 +274,98 @@
 
 .internal-link {
   background: none !important;
+}
+
+// ── Note embeds (![[Note]]) ──
+
+.note-embed {
+  margin: var(--space-8) 0;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-secondary);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-secondary) 4%, var(--color-bg));
+  overflow: hidden;
+
+  &--broken {
+    border-left-color: var(--color-text-muted);
+    background: var(--color-bg-surface);
+    padding: var(--space-4);
+    opacity: 0.6;
+    font-family: var(--font-code);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border-light);
+    background: color-mix(in srgb, var(--color-secondary) 6%, var(--color-bg));
+  }
+
+  &__label {
+    font-family: var(--font-code);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-secondary);
+    opacity: 0.7;
+  }
+
+  &__title {
+    font-family: var(--font-code);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-secondary);
+    text-decoration: none;
+
+    &:hover {
+      opacity: 0.8;
+      box-shadow: none;
+    }
+  }
+
+  &__body {
+    padding: var(--space-4) var(--space-5);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--color-text);
+    max-height: 300px;
+    overflow: hidden;
+    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+
+    // Suppress heading sizes inside embed
+    h1, h2, h3, h4 {
+      font-size: 1rem;
+      margin-top: var(--space-4);
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__source {
+    display: block;
+    padding: var(--space-2) var(--space-5);
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+    color: var(--color-secondary);
+    opacity: 0.6;
+    text-align: right;
+    border-top: 1px solid var(--color-border-light);
+
+    &:hover {
+      opacity: 1;
+      box-shadow: none;
+    }
+  }
+}
+
+.note-body {
+  text-align: justify;
 }

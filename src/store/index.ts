@@ -2,6 +2,44 @@ import { create } from "zustand"
 import type { PanelCard, ContentIndex, NoteMetadata } from "@/types/content"
 import { SITE_DEFAULTS, type SiteConfig } from "@/config/site-defaults"
 
+function hexToHsl(hex: string): [number, number, number] {
+  const r = parseInt(hex.slice(1, 3), 16) / 255
+  const g = parseInt(hex.slice(3, 5), 16) / 255
+  const b = parseInt(hex.slice(5, 7), 16) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  let h = 0, s = 0
+  const l = (max + min) / 2
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break
+      case g: h = ((b - r) / d + 2) / 6; break
+      case b: h = ((r - g) / d + 4) / 6; break
+    }
+  }
+  return [h * 360, s * 100, l * 100]
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  s /= 100; l /= 100
+  const k = (n: number) => (n + h / 30) % 12
+  const a = s * Math.min(l, 1 - l)
+  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))
+  const toHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, "0")
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`
+}
+
+function applyTriadicPalette(hex: string) {
+  const [h, s, l] = hexToHsl(hex)
+  const secondary = hslToHex((h + 120) % 360, s, l)
+  const tertiary = hslToHex((h + 240) % 360, s, l)
+  const el = document.documentElement
+  el.style.setProperty("--color-accent-base", hex)
+  el.style.setProperty("--color-secondary", secondary)
+  el.style.setProperty("--color-tertiary", tertiary)
+}
+
 export const ROYGBIV_ACCENTS = [
   "#b4424c", // Red
   "#b47a42", // Orange
@@ -26,10 +64,6 @@ interface GardenStore {
   accentBase: string
   setAccentBase: (color: string) => void
   cycleAccent: () => void
-
-  // Palette (Legacy, now just for data-attributes if needed)
-  palette: "mono" | "complimentary"
-  setPalette: (p: GardenStore["palette"]) => void
 
   // Theme Panel
   isThemePanelOpen: boolean
@@ -82,6 +116,9 @@ interface GardenStore {
   activeGraphSlug: string
   setActiveGraphSlug: (slug: string) => void
 
+  activeLayout: "article" | "note"
+  setActiveLayout: (layout: "article" | "note") => void
+
   // Content index (loaded at startup)
   contentIndex: ContentIndex | null
   setContentIndex: (index: ContentIndex) => void
@@ -131,23 +168,17 @@ export const useStore = create<GardenStore>((set) => ({
   accentBase: getInitialAccent(),
   setAccentBase: (accentBase) => {
     localStorage.setItem("accentBase", accentBase)
-    document.documentElement.style.setProperty("--color-accent-base", accentBase)
+    applyTriadicPalette(accentBase)
     set({ accentBase })
   },
-  cycleAccent: () => 
+  cycleAccent: () =>
     set((s) => {
       const idx = ROYGBIV_ACCENTS.indexOf(s.accentBase)
       const next = ROYGBIV_ACCENTS[(idx + 1) % ROYGBIV_ACCENTS.length]
       localStorage.setItem("accentBase", next)
-      document.documentElement.style.setProperty("--color-accent-base", next)
+      applyTriadicPalette(next)
       return { accentBase: next }
     }),
-
-  // Palette (Fixed to complimentary for the dynamic mixing)
-  palette: "complimentary",
-  setPalette: (palette) => {
-    set({ palette })
-  },
 
   // Theme Panel
   isThemePanelOpen: false,
@@ -228,6 +259,9 @@ export const useStore = create<GardenStore>((set) => ({
   activeGraphSlug: "index",
   setActiveGraphSlug: (activeGraphSlug) => set({ activeGraphSlug }),
 
+  activeLayout: "note",
+  setActiveLayout: (activeLayout) => set({ activeLayout }),
+
   // Content index
   contentIndex: null,
   setContentIndex: (contentIndex) => set({ contentIndex }),
@@ -246,6 +280,5 @@ export const useStore = create<GardenStore>((set) => ({
 // Initialize attributes on load
 if (typeof window !== "undefined") {
   document.documentElement.setAttribute("data-theme", getInitialTheme())
-  document.documentElement.setAttribute("data-palette", "complimentary")
-  document.documentElement.style.setProperty("--color-accent-base", getInitialAccent())
+  applyTriadicPalette(getInitialAccent())
 }

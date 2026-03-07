@@ -161,36 +161,6 @@
   }
 }
 
-.paletteGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.paletteOption {
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  font-family: var(--font-code);
-  font-size: 0.7rem;
-  padding: 4px 0;
-  cursor: pointer;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  transition: color 0.2s;
-
-  &:hover {
-    color: var(--color-primary);
-  }
-
-  &[data-active="true"] {
-    color: var(--color-primary);
-    &::before {
-      content: "> ";
-    }
-  }
-}
 
 .scrollSelect {
   display: flex;

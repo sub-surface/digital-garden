@@ -1,6 +1,6 @@
-import { useState } from "react"
 import { useStore } from "@/store"
 import styles from "./ThemePanel.module.scss"
+import { useState } from "react"
 
 const ACCENTS = [
   { name: "Red", color: "#b4424c" },
@@ -19,9 +19,6 @@ export function ThemePanel() {
   
   const theme = useStore((s) => s.theme)
   const setTheme = (t: "light" | "dark") => useStore.getState().setTheme(t)
-  
-  const palette = useStore((s) => s.palette)
-  const setPalette = useStore((s) => s.setPalette)
   
   const accentBase = useStore((s) => s.accentBase)
   const setAccentBase = useStore((s) => s.setAccentBase)
@@ -101,24 +98,6 @@ export function ThemePanel() {
                   onClick={() => setAccentBase(a.color)}
                   title={a.name}
                 />
-              ))}
-            </div>
-          </div>
-
-          <div className={styles.section}>
-            <h3>Palette</h3>
-            <div className={styles.paletteGrid}>
-              {(["mono", "complimentary"] as const).map((p) => (
-                <button 
-                  key={p}
-                  className={styles.paletteOption} 
-                  data-active={palette === p} 
-                  onClick={() => setPalette(p)}
-                  title={p}
-                >
-                  <PaletteIcon type={p} />
-                  <span style={{ marginLeft: '8px', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{p}</span>
-                </button>
               ))}
             </div>
           </div>
@@ -217,19 +196,3 @@ function Slider({ label, value, min, max, step, onChange }: { label: string, val
   )
 }
 
-function PaletteIcon({ type }: { type: "mono" | "complimentary" }) {
-  if (type === "mono") {
-    return (
-      <svg width="14" height="14" viewBox="0 0 16 16">
-        <circle cx="8" cy="8" r="7" fill="currentColor" stroke="currentColor" strokeWidth="1" />
-      </svg>
-    )
-  }
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16">
-      <path d="M 8,8 L 8,1 A 7,7 0 0 1 14.06,11.5 Z" fill="var(--color-primary)" />
-      <path d="M 8,8 L 14.06,11.5 A 7,7 0 0 1 1.94,11.5 Z" fill="var(--color-secondary)" />
-      <path d="M 8,8 L 1.94,11.5 A 7,7 0 0 1 8,1 Z" fill="var(--color-tertiary)" />
-    </svg>
-  )
-}

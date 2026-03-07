@@ -1,16 +1,22 @@
 ---
-title: Philchat Wiki - Philosophers
-description: A collaborative wiki for the philchat community
-tags: [wiki]
+title: Philosophers
+description: Survey profiles of canonical philosophers, with positions on the major questions.
+tags: [wiki, philosopher]
 ---
 
-A shared knowledge base by and for the philchat community.
+Survey profiles of canonical philosophers — positions, influences, and key works.
 
-Inspect the [[Sample Article]] below or [[Wiki/Submit|submit your own]].
+<Query filter="folder=Wiki/Philosophers" sort="title" display="list" />
 
 ---
 
-## Guidelines for Philosophers Articles
+## Submit a Profile
+
+Know a philosopher not yet in the wiki? [[Wiki/Submit|Submit a philosopher profile →]]
+
+---
+
+## Article Format
 
 Here's a markdown template for creating a wiki article. Follow the structure and formatting to ensure consistency across the wiki.
 

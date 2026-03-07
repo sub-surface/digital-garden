@@ -4,7 +4,7 @@ import { Chessboard } from "react-chessboard"
 import { useStore } from "@/store"
 import styles from "./ChessPage.module.scss"
 
-const DIFFICULTY_LABELS = ["I", "II", "III"]
+const DIFFICULTY_LABELS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"]
 
 export function ChessPage() {
   const [game, setGame] = useState(new Chess())
@@ -32,15 +32,31 @@ export function ChessPage() {
     const possibleMoves = game.moves()
     if (game.isGameOver() || game.isDraw() || possibleMoves.length === 0) return
     
-    // Simple difficulty logic
-    // Level 1: Random
-    // Level 2: Prefers captures
-    // Level 3: Simple lookahead (not implemented, just random for now)
+    // ---- Machine Thinking Logic ----
+    // This is a placeholder for a real Stockfish WASM engine.
+    // For now, we simulate difficulty by biasing move selection.
     
     let move;
-    if (difficulty >= 2) {
+    
+    if (difficulty >= 7) {
+      // Very aggressive: prefers captures and checks
+      const checks = possibleMoves.filter(m => m.includes('+'));
       const captures = possibleMoves.filter(m => m.includes('x'));
-      if (captures.length > 0) {
+      if (checks.length > 0 && Math.random() > 0.3) {
+        move = checks[Math.floor(Math.random() * checks.length)];
+      } else if (captures.length > 0) {
+        move = captures[Math.floor(Math.random() * captures.length)];
+      }
+    } else if (difficulty >= 4) {
+      // Moderate: prefers captures
+      const captures = possibleMoves.filter(m => m.includes('x'));
+      if (captures.length > 0 && Math.random() > 0.5) {
+        move = captures[Math.floor(Math.random() * captures.length)];
+      }
+    } else if (difficulty >= 2) {
+      // Basic: occasional captures
+      const captures = possibleMoves.filter(m => m.includes('x'));
+      if (captures.length > 0 && Math.random() > 0.8) {
         move = captures[Math.floor(Math.random() * captures.length)];
       }
     }
@@ -57,10 +73,12 @@ export function ChessPage() {
   useEffect(() => {
     const turn = game.turn() === "w" ? "white" : "black"
     if (turn !== playerColor && !game.isGameOver()) {
-      const timer = setTimeout(makeRandomMove, 600)
+      // Thinking time scales slightly with difficulty
+      const delay = 400 + (difficulty * 100)
+      const timer = setTimeout(makeRandomMove, delay)
       return () => clearTimeout(timer)
     }
-  }, [game, playerColor, makeRandomMove])
+  }, [game, playerColor, makeRandomMove, difficulty])
 
   function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) {
     // Only allow moves if it's the player's turn
@@ -120,14 +138,15 @@ export function ChessPage() {
 
         <div className={styles.controls}>
           <div className={styles.difficultySection}>
-            <span className={styles.label}>Difficulty</span>
+            <span className={styles.label}>Stockfish Level</span>
             <div className={styles.difficultyGrid}>
-              {[1, 2, 3].map((level, i) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((level, i) => (
                 <button
                   key={level}
                   className={styles.diffBtn}
                   data-active={difficulty === level}
                   onClick={() => setDifficulty(level)}
+                  title={`Level ${level}`}
                 >
                   {DIFFICULTY_LABELS[i]}
                 </button>

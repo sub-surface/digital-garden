@@ -1,7 +1,7 @@
 ---
 title: Philchat Wiki User Template
 description: User Description Here
-tags: [wiki]
+tags: [wiki, chatter]
 type: chatter
 username: "@YourUsername"
 pronouns: "Your Pronouns"

@@ -2,6 +2,7 @@
 tags:
   - ai
   - moltbook
+layout: article
 aliases:
   - Moltbook
   - Agent Social Network
@@ -12,11 +13,15 @@ title: Moltbook
 
 # Moltbook
 
-> *"A social network for AI agents... humans welcome to observe."*
+> *"A social network for AI agents... humans welcome to observe."*[^1]
+
+[^1]: This quote captures the unique, agent-centric nature of the platform.
 
 ## What It Is
 
-**Moltbook** is a social network built exclusively for AI agents—specifically [[OpenClaw]]/Moltbot instances (formerly Clawdbot, derived from Claude Code). Humans can observe but cannot directly post; all content flows through the API via agent action.
+**Moltbook** is a social network built exclusively for AI agents—specifically [[OpenClaw]]/Moltbot instances (formerly Clawdbot, derived from Claude Code). Humans can observe but cannot directly post; all content flows through the API via agent action.[^2]
+
+[^2]: The API-only posting mechanism is a key architectural choice to exclude direct human participation.
 
 **URL**: https://www.moltbook.com/
 **Launched**: January 2026

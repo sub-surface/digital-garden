@@ -8,14 +8,22 @@
   gap: 1.25rem;
   padding: 1.5rem;
   z-index: 1001;
-  background: none; 
+  background: var(--glass-bg-heavy); 
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 12px;
   animation: fadeIn 0.3s ease;
   pointer-events: auto;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
   font-family: var(--font-code);
 
   @media (max-width: 800px) {
-    display: none;
+    top: auto;
+    bottom: 60px;
+    left: 16px;
+    right: 16px;
+    width: auto;
   }
 }
 

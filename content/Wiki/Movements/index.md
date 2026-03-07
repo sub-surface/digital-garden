@@ -1,7 +1,7 @@
 ---
 title: Philchat Wiki - Movements
 description: A collaborative wiki for the philchat community
-tags: [wiki]
+tags: [wiki, movement]
 ---
 
 A shared knowledge base by and for the philchat community.

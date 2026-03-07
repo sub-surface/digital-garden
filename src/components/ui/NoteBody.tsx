@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, Suspense } from "react"
 import { useTelescopicHandlers } from "./TelescopicHandler"
 import { NotFound } from "./NotFound"
 import { useMusic } from "./MusicContext"
+import { mdxComponents } from "@/components/mdx/MDXProvider"
 
 // Import shelf components for panel usage
 import { BookshelfPage } from "./BookshelfPage"
@@ -9,6 +10,8 @@ import { MovieshelfPage } from "./MovieshelfPage"
 import { MusicPage } from "./MusicPage"
 import { PhotographyPage } from "./PhotographyPage"
 import { ChessPage } from "./ChessPage"
+import { TagPage } from "./TagPage"
+import { FolderPage } from "./FolderPage"
 
 interface Props {
   slug: string
@@ -50,15 +53,29 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
   }, [playTrack, MDXComponent])
 
   // Handle "System" pages that aren't MDX files
-  const isSystemPage = ["bookshelf", "movieshelf", "music", "photography", "chess"].includes(slug.toLowerCase())
+  const isTagPage = slug.toLowerCase() === "tags" || slug.toLowerCase().startsWith("tags/")
+  const isFolderPage = slug.toLowerCase() === "folder" || slug.toLowerCase().startsWith("folder/")
+  const isSystemPage = isTagPage || isFolderPage || ["bookshelf", "movieshelf", "music", "photography", "chess"].includes(slug.toLowerCase())
 
   useEffect(() => {
     if (isSystemPage) {
       setLoading(false)
       if (onLoad) {
         // Provide default system frontmatter
-        const systemTitle = slug.charAt(0).toUpperCase() + slug.slice(1).toLowerCase()
-        onLoad({ frontmatter: { title: systemTitle, layout: slug.toLowerCase() === "chess" ? "article" : "note" } })
+        let systemTitle = slug.charAt(0).toUpperCase() + slug.slice(1).toLowerCase()
+        if (isTagPage) {
+          const tag = slug.split("/")[1]
+          systemTitle = tag ? `#${tag}` : "Tags"
+        } else if (isFolderPage) {
+          const folder = slug.split("/").slice(1).join("/")
+          systemTitle = folder ? `Folder: ${folder}` : "Folders"
+        }
+        onLoad({ 
+          frontmatter: { 
+            title: systemTitle, 
+            layout: (slug.toLowerCase() === "chess" || isTagPage || isFolderPage) ? "article" : "note" 
+          } 
+        })
       }
       return
     }
@@ -115,7 +132,7 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
 
     load()
     return () => { cancelled = true }
-  }, [slug, isSystemPage])
+  }, [slug, isSystemPage, isTagPage, isFolderPage])
 
   // Extract headings from MDX after render
   useEffect(() => {
@@ -134,13 +151,19 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
   if (notFound) return <NotFound />
 
   if (isSystemPage) {
+    const s = slug.toLowerCase()
+    const tagPart = isTagPage ? slug.split("/")[1] : undefined
+    const folderPart = isFolderPage ? slug.split("/").slice(1).join("/") : undefined
+
     return (
       <div ref={contentRef} className="note-content">
-        {slug === "Bookshelf" && <BookshelfPage />}
-        {slug === "Movieshelf" && <MovieshelfPage />}
-        {slug === "Music" && <MusicPage />}
-        {slug === "Photography" && <PhotographyPage />}
-        {slug === "Chess" && <ChessPage />}
+        {isTagPage && <TagPage tag={tagPart} />}
+        {isFolderPage && <FolderPage folderPath={folderPart} />}
+        {s === "bookshelf" && <BookshelfPage />}
+        {s === "movieshelf" && <MovieshelfPage />}
+        {s === "music" && <MusicPage />}
+        {s === "photography" && <PhotographyPage />}
+        {s === "chess" && <ChessPage />}
       </div>
     )
   }
@@ -149,7 +172,7 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
     <div ref={contentRef} className="note-content">
       {MDXComponent && (
         <Suspense fallback={<div>Loading component...</div>}>
-          <MDXComponent />
+          <MDXComponent components={mdxComponents as any} />
         </Suspense>
       )}
     </div>

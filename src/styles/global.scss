@@ -6,3 +6,79 @@
 @use "./sidenotes";
 @use "./article";
 @use "./link-preview";
+@use "./wiki-form";
+
+@media print {
+  // Hide all shell chrome
+  [data-panel-ignore],
+  .link-preview,
+  canvas,
+  .panel-stack,
+  .corner-menu,
+  .quick-controls,
+  .music-bar,
+  .mobile-music-bar,
+  .theme-panel,
+  .search-overlay,
+  .graph-overlay,
+  nav {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    overflow: auto !important;
+    height: auto !important;
+  }
+
+  // Full-width content
+  .article-layout,
+  .note-layout-wrapper,
+  .article-layout-wrapper {
+    display: block !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .article-body,
+  .note-body {
+    grid-column: 1 !important;
+    max-width: 100% !important;
+    text-align: left !important;
+  }
+
+  .article-toc,
+  .body-side-group {
+    display: none !important;
+  }
+
+  // Show sidenotes inline as footnotes
+  .sidenote {
+    display: block !important;
+    float: none !important;
+    margin: 0.5em 0 !important;
+    width: 100% !important;
+    font-size: 0.85em;
+    border-left: 2px solid #999 !important;
+    padding-left: 1em !important;
+    color: #555 !important;
+  }
+
+  a {
+    color: #000 !important;
+    text-decoration: underline;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    opacity: 0.6;
+  }
+
+  // Don't print internal link hrefs (they're not useful on paper)
+  a.internal-link[href]::after {
+    content: none;
+  }
+}

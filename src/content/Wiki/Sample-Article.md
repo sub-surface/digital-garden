@@ -2,6 +2,7 @@
 title: Sample Article
 description: A dummy article for demo purposes
 tags: [wiki]
+layout: article
 ---
 
 # Hey there!

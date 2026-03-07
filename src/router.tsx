@@ -7,8 +7,12 @@ import { AppShell } from "@/components/layout/AppShell"
 import { NoteRenderer } from "@/components/ui/NoteRenderer"
 import { DevDashboard } from "@/components/dev/DevDashboard"
 import { NotFound } from "@/components/ui/NotFound"
+import { WikiSubmitPage } from "@/components/ui/WikiSubmitPage"
 import { useEffect, lazy, Suspense } from "react"
 import { useStore } from "@/store"
+import { TagPage } from "@/components/ui/TagPage"
+import { FolderPage } from "@/components/ui/FolderPage"
+import { RecentPage } from "@/components/ui/RecentPage"
 
 // Lazy load heavy components
 const GraphView = lazy(() => import("@/components/ui/GraphView").then(m => ({ default: m.GraphView })))
@@ -50,100 +54,50 @@ const graphRoute = createRoute({
 })
 
 // Tag pages
+const tagsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/tags",
+  component: TagPage,
+})
+
 const tagRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/tags/$tag",
-  component: function TagPage() {
+  component: function TagRouteComponent() {
     const { tag } = tagRoute.useParams()
-    const contentIndex = useStore((s) => s.contentIndex)
-
-    const notes = contentIndex
-      ? Object.values(contentIndex).filter((n) => n.tags.some(t => t.toLowerCase() === tag.toLowerCase()))
-      : []
-
-    if (!contentIndex) {
-      return (
-        <div className="article-layout">
-          <div className="note-loading">Loading index...</div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="article-layout">
-        <div className="note-header" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: 'var(--space-12)' }}>
-          <h1 style={{ margin: 'var(--space-2) 0' }}>#{tag}</h1>
-          <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.8rem', opacity: 0.6 }}>
-            {notes.length} {notes.length === 1 ? 'note' : 'notes'} found
-          </div>
-        </div>
-        
-        {notes.length === 0 ? (
-          <p>No notes tagged with "{tag}".</p>
-        ) : (
-          <ul className="notes-list" style={{ listStyle: 'none', padding: 0, marginTop: 'var(--space-8)' }}>
-            {notes.map((n) => (
-              <li key={n.slug} style={{ marginBottom: 'var(--space-4)', textAlign: 'right' }}>
-                <a href={`/${n.slug}`} className="internal-link" style={{ fontSize: '1.2rem', fontWeight: 500 }}>
-                  {n.title}
-                </a>
-                <div style={{ fontSize: '0.8rem', opacity: 0.5, marginTop: '2px' }}>{n.slug}</div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    )
+    return <TagPage tag={tag} />
   },
 })
 
 // Folder pages
+const foldersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/folder",
+  component: FolderPage,
+})
+
 const folderRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/folder/$",
-  component: function FolderPage() {
+  component: function FolderRouteComponent() {
     const params = folderRoute.useParams()
     const folderPath = (params as any)["_splat"]
-    const contentIndex = useStore((s) => s.contentIndex)
-
-    const notes = contentIndex
-      ? Object.values(contentIndex).filter((n) => n.folder === folderPath)
-      : []
-
-    if (!contentIndex) {
-      return (
-        <div className="article-layout">
-          <div className="note-loading">Loading index...</div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="article-layout">
-        <div className="note-header" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: 'var(--space-12)' }}>
-          <h1 style={{ margin: 'var(--space-2) 0' }}>Folder: {folderPath}</h1>
-          <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.8rem', opacity: 0.6 }}>
-            {notes.length} {notes.length === 1 ? 'note' : 'notes'} found
-          </div>
-        </div>
-
-        {notes.length === 0 ? (
-          <p>No notes found in "{folderPath}".</p>
-        ) : (
-          <ul className="notes-list" style={{ listStyle: 'none', padding: 0, marginTop: 'var(--space-8)' }}>
-            {notes.map((n) => (
-              <li key={n.slug} style={{ marginBottom: 'var(--space-4)', textAlign: 'right' }}>
-                <a href={`/${n.slug}`} className="internal-link" style={{ fontSize: '1.2rem', fontWeight: 500 }}>
-                  {n.title}
-                </a>
-                <div style={{ fontSize: '0.8rem', opacity: 0.5, marginTop: '2px' }}>{n.slug}</div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    )
+    return <FolderPage folderPath={folderPath} />
   },
+})
+
+// Recent notes route
+const recentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/recent",
+  component: RecentPage,
+})
+
+// Wiki submit route — must be before the catch-all noteRoute
+const wikiSubmitRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/wiki/submit",
+  component: WikiSubmitPage,
 })
 
 // Catch-all note route — handles /Books/foo, /Movies/bar, etc.
@@ -170,8 +124,12 @@ const noteRoute = createRoute({
 // Build the router
 const routeTree = rootRoute.addChildren([
   devRoute,
+  tagsRoute,
   tagRoute,
+  foldersRoute,
   folderRoute,
+  recentRoute,
+  wikiSubmitRoute,
   noteRoute,
 ])
 

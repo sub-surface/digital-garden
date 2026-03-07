@@ -26,14 +26,19 @@ export function usePanelClick() {
       const href = anchor.getAttribute("href")
       if (!href) return
 
+      // In article mode, we don't want to open side panels.
+      // We check the store for the active layout.
+      if (useStore.getState().activeLayout === "article") return
+
       // Handle music: protocol
+// ...
       if (href.startsWith("music:")) {
         event.preventDefault()
         event.stopPropagation()
-        
+
         const trackTitle = decodeURIComponent(href.slice(6))
         const trackIndex = tracks.findIndex(t => t.title.toLowerCase() === trackTitle.toLowerCase())
-        
+
         if (trackIndex !== -1) {
           playTrack(trackIndex)
           // Ensure player is open
@@ -43,6 +48,9 @@ export function usePanelClick() {
         }
         return
       }
+
+      // Skip hash links (they should scroll within the page)
+      if (href.startsWith("#")) return
 
       // Mobile: no panel
       if (window.innerWidth <= 800) return

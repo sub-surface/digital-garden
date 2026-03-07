@@ -25,26 +25,26 @@ function PropertyManager({ slug, onClose }: { slug: string, onClose: () => void 
   }
 
   return (
-    <div className={styles.propManagerOverlay} onClick={onClose}>
-      <div className={styles.propManagerModal} onClick={e => e.stopPropagation()}>
-        <h3>Edit Properties: {slug}</h3>
+    <div className={styles.propManagerOverlay}>
+      <div className={styles.propManagerModal}>
+        <h3>✎ {slug}</h3>
         <div className={styles.formGroup}>
           <label>Title</label>
           <input value={title} onChange={e => setTitle(e.target.value)} />
         </div>
         <div className={styles.formGroup}>
           <label>Type</label>
-          <input value={type} onChange={e => setType(e.target.value)} placeholder="book, movie, music..." />
+          <input value={type} onChange={e => setType(e.target.value)} placeholder="book, movie, chatter…" />
         </div>
         <div className={styles.formGroup}>
           <label>Tags (comma separated)</label>
           <input value={tags} onChange={e => setTags(e.target.value)} />
         </div>
         <div className={styles.modalActions}>
-          <button onClick={onClose}>Cancel</button>
-          <button className={styles.primary} onClick={handleSave}>Apply Overrides</button>
+          <button onClick={onClose}>Dismiss</button>
+          <button className={styles.primary} onClick={handleSave}>Apply</button>
         </div>
-        <p className={styles.disclaimer}>* Changes are session-only and will reset on page reload.</p>
+        <p className={styles.disclaimer}>Session-only — resets on reload</p>
       </div>
     </div>
   )
