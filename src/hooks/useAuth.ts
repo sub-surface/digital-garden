@@ -27,7 +27,6 @@ export function useAuth(): AuthState & {
     // onAuthStateChange fires for both initial session detection (from localStorage
     // or URL hash fragments) and subsequent changes. It's the primary mechanism.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("[auth]", event, session?.user?.email ?? "no session")
       setSession(session)
       if (session) fetchRole(session.access_token)
       else {
