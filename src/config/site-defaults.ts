@@ -1,7 +1,7 @@
 export const SITE_DEFAULTS = {
-  "initialTheme": "dark",
+  "initialTheme": "light",
   "initialPalette": "complimentary",
-  "initialAccent": "#b4424c",
+  "initialAccent": "#427ab4",
   "masterOpacity": 1,
   "backgrounds": {
     "vectors": {
