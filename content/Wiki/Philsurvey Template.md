@@ -16,11 +16,17 @@ draft: true
 
   <div class="dropcap">
 
-  The first letter of this paragraph gets the dropcap treatment automatically.
+The first letter of this paragraph is a drop cap using `<div class="dropcap">`. The rest of the paragraph is a brief introduction to the user, their philosophical interests, and any other relevant information.
 
-  > *[Username]* is a [brief description of the user, e.g., "philosophy enthusiast with a focus on epistemology and philosophy of mind."]*
+ > *[Username]* is a [brief description of the user, e.g., "philosophy enthusiast with a focus on epistemology and philosophy of mind."]*
+ —Quote or personal motto here, if desired.
 
   </div>
+
+
+
+
+
 
 ## Metaphysics & Epistemology
 * **A priori knowledge:** [Yes / No]

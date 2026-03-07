@@ -320,8 +320,9 @@ function SurveyQuestion({
   value: string
   onChange: (key: string, value: string) => void
 }) {
-  const isOther = value !== "" && !question.options.includes(value)
+  const isOther = value.startsWith("__other__:")
   const selectValue = isOther ? "__other__" : value
+  const otherInputValue = isOther ? value.replace("__other__:", "") : ""
 
   return (
     <div className="wiki-form-field">
@@ -334,7 +335,7 @@ function SurveyQuestion({
         value={selectValue}
         onChange={(e) => {
           if (e.target.value === "__other__") {
-            onChange(question.key, "")
+            onChange(question.key, "__other__:")
           } else {
             onChange(question.key, e.target.value)
           }
@@ -346,13 +347,13 @@ function SurveyQuestion({
         ))}
         <option value="__other__">Other…</option>
       </select>
-      {(selectValue === "__other__" || isOther) && (
+      {isOther && (
         <input
           type="text"
           className="wiki-form-input wiki-form-other-input"
           placeholder="Describe your position…"
-          value={isOther ? value : ""}
-          onChange={(e) => onChange(question.key, e.target.value)}
+          value={otherInputValue}
+          onChange={(e) => onChange(question.key, "__other__:" + e.target.value)}
           autoFocus
         />
       )}
@@ -449,9 +450,18 @@ export function WikiSubmitForm() {
     setSubmitting(true)
     setError(null)
     try {
+      // Clean survey answers by stripping the "__other__:" prefix
+      const cleanedFormData = { ...formData }
+      ALL_QUESTIONS.forEach((q) => {
+        const val = cleanedFormData[q.key]
+        if (val?.startsWith("__other__:")) {
+          cleanedFormData[q.key] = val.replace("__other__:", "").trim()
+        }
+      })
+
       // Don't send the local data-URL preview as imageUrl — the server derives the final URL
       const payload = {
-        ...formData,
+        ...cleanedFormData,
         imageUrl: formData.imageBase64 ? "" : formData.imageUrl,
         turnstileToken,
       }
@@ -473,7 +483,13 @@ export function WikiSubmitForm() {
     }
   }
 
-  const answeredCount = ALL_QUESTIONS.filter((q) => formData[q.key]).length
+  const answeredCount = ALL_QUESTIONS.filter((q) => {
+    const val = formData[q.key]
+    if (!val) return false
+    // Prefix only (selected "Other" but haven't typed yet)
+    if (val === "__other__:") return false
+    return true
+  }).length
 
   // ── Success state ──
   if (result) {
