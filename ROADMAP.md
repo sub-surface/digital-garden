@@ -107,6 +107,7 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [ ] **Pre-render SSG**: build-time HTML generation for all notes
 - [ ] **Image optimisation**: sharp WebP variants + `<picture>` srcsets
 - [ ] **Lighthouse CI**: GitHub Actions target 95+ desktop
+- [ ] **Auto-deploy on merge**: GitHub Actions workflow — `npm ci && npm run build && npx wrangler deploy` triggered on push to `master`, using `CLOUDFLARE_API_TOKEN` secret
 
 ### Content & SEO
 - [x] **RSS feed + sitemap** in prebuild (rss.xml + sitemap.xml → public/)

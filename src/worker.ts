@@ -67,21 +67,21 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
     if (body.imageBase64 && body.imageFilename) {
       const rawExt = body.imageFilename.split(".").pop()?.toLowerCase() ?? ""
       const ext = ["jpg", "jpeg", "png", "gif", "webp"].includes(rawExt) ? rawExt : "jpg"
-      const imgPath = `content/Wiki/chatters/images/${safeName}.${ext}`
+      const imgPath = `content/Media/Wiki/chatters/${safeName}.${ext}`
       const imgRes = await gh(`/repos/sub-surface/digital-garden/contents/${imgPath}`, "PUT", {
         message: `wiki: add profile image for ${body.username}`,
         content: body.imageBase64,
         branch: branchName,
       })
       if (!imgRes.ok) throw new Error(`commit image: ${imgRes.status}`)
-      resolvedImageUrl = `https://raw.githubusercontent.com/sub-surface/digital-garden/master/${imgPath}`
+      resolvedImageUrl = `/content/Media/Wiki/chatters/${safeName}.${ext}`
     }
 
     const fm = [
       "---",
       `title: "${body.name}'s Profile"`,
       `description: "Philchat wiki profile for ${body.name}"`,
-      "tags: [wiki]", "type: chatter",
+      "tags: [wiki, chatter]", "type: chatter",
       `username: "${body.username}"`,
       body.pronouns ? `pronouns: "${body.pronouns}"` : null,
       resolvedImageUrl ? `image: "${resolvedImageUrl}"` : null,
