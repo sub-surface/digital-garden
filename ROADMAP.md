@@ -109,8 +109,8 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 ---
 
 ## Future / Low Priority
-- [x] Terminal CSS mode: `[data-terminal-active]` phosphor glow — green text/glow, activated when bgMode=terminal
-- [x] Typography: dropcaps (`.dropcap` class or `data-dropcap` attr), pull quotes (`.pullquote` blockquote)
+- [ ] Improve chess UI to match site themes, optimise  WASM performance, add analysis mode with move evaluation and variations, add multiplayer support with public leaderboard (track  wins/losses/draws against the engine and other players, maybe calculate ELO ratings for fun keep it lightweight and casual)
+- [ ] Typography: dropcaps for essays, pull quotes
 - [ ] GitHub App token for non-expiring wiki submissions
 - [ ] Wiki community features (comments, reactions)
 
