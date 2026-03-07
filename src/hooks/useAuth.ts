@@ -24,17 +24,24 @@ export function useAuth(): AuthState & {
       return
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      if (session) fetchRole(session.access_token)
-      else setLoading(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // onAuthStateChange fires for both initial session detection (from localStorage
+    // or URL hash fragments) and subsequent changes. It's the primary mechanism.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("[auth]", event, session?.user?.email ?? "no session")
       setSession(session)
       if (session) fetchRole(session.access_token)
       else {
         setRole(null)
+        setLoading(false)
+      }
+    })
+
+    // Also check for existing session (covers page refresh with valid localStorage token)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setSession(session)
+        fetchRole(session.access_token)
+      } else {
         setLoading(false)
       }
     })
@@ -62,7 +69,12 @@ export function useAuth(): AuthState & {
 
   async function signIn(email: string) {
     if (!supabase) return { error: "Auth not configured" }
-    const { error } = await supabase.auth.signInWithOtp({ email })
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    })
     return { error: error?.message ?? null }
   }
 
