@@ -132,12 +132,12 @@ const getInitialTheme = (): "light" | "dark" => {
   if (typeof window === "undefined") return "dark"
   const stored = localStorage.getItem("theme")
   if (stored === "light" || stored === "dark") return stored
-  return "dark"
+  return "light"
 }
 
 const getInitialAccent = (): string => {
-  if (typeof window === "undefined") return "#b4424c"
-  return localStorage.getItem("accentBase") || "#b4424c"
+  if (typeof window === "undefined") return "#427ab4"
+  return localStorage.getItem("accentBase") || "#427ab4"
 }
 
 export const useStore = create<GardenStore>((set) => ({

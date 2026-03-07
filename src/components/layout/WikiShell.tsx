@@ -1,6 +1,8 @@
 import { Outlet, useLocation } from "@tanstack/react-router"
 import { useStore } from "@/store"
 import { ThemePanel } from "./ThemePanel"
+import { BgCanvas } from "./BgCanvas"
+import { QuickControls } from "./QuickControls"
 import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
 import { LinkPreview } from "@/components/ui/LinkPreview"
@@ -24,7 +26,9 @@ export function WikiShell() {
         data-layout={activeLayout}
         data-testid="wiki-shell"
       >
+        <BgCanvas />
         <ThemePanel />
+        <QuickControls />
         <LinkPreview />
         <SearchOverlay />
 
