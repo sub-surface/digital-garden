@@ -5,6 +5,7 @@ tags: [wiki, chatter]
 type: chatter
 username: "myname1"
 pronouns: "My/Name"
+image: "https://subsurfaces.net/Media/myname.PNG"
 tradition: "Continental"
 aos: "Political Theory"
 influences: "Locke, Rousseau, Montesquieu, Machiavelli, Nietzsche, Deleuze and Guttari, Kant, Arendt, Aristotle, All of the Founding Fathers, Blackstone, Rawls, Walzer, Rorty, Foucault, Stirner, Camus, Fumurescu, Kantrowitz, Bentham, Malthus, Voltare, Dante, Thoreau, Wolff, Land, Le Botie, John of Paris, Schleiermacher, Pascal, Plato, Aquinas, Augustine, Appleby, Habermas, Hume, Strauss, Democritus, Diogenes, Euclid, Freud, F.A Hayek, W.V.O Quine, Hofstadter, Beard, Bailyn, Wood, and J. G. A. Pocock"
