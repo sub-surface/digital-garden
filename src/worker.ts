@@ -118,8 +118,8 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
     ).join("\n\n")
 
     const notes = body.additionalNotes ? `\n\n---\n## Additional Notes\n${body.additionalNotes}` : ""
-    const bodySection = body.bodyContent?.trim() ? `\n\n---\n\n${body.bodyContent.trim()}` : ""
-    const markdown = `${fm}\n\n# ${body.name}'s Profile\n\n${sections}${notes}${bodySection}\n`
+    const bodySection = body.bodyContent?.trim() ? `\n\n${body.bodyContent.trim()}\n\n---\n\n` : ""
+    const markdown = `${fm}\n\n# ${body.name}'s Profile\n\n${bodySection}${sections}${notes}\n`
 
     const filePath = `content/Wiki/chatters/${safeName}.md`
     const commitRes = await gh(`/repos/sub-surface/digital-garden/contents/${filePath}`, "PUT", {
