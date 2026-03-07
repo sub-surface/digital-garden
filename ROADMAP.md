@@ -40,26 +40,31 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 ### Wiki Subdomain
 - [x] `wiki.subsurfaces.net` Worker custom domain configured
 - [x] `useIsWiki` hook (hostname + VITE_WIKI_MODE detection)
-- [x] WikiShell with breadcrumb, simplified CornerMenu, back-to-garden link
-- [x] Wiki content: index, Philosophers, Concepts, Movements sections
+- [x] WikiShell with BgCanvas, QuickControls, breadcrumb, simplified CornerMenu
+- [x] Wiki content: index, Philosophers, Concepts, Movements, Chatters sections
+- [x] Wiki index routing: `wiki.subsurfaces.net/` correctly resolves to `Wiki/index.md`
+- [x] Case-insensitive `contentIndex` lookup via `resolveSlug` — fixes titles/metadata on all wiki pages
 
-### Wiki Submission System (code complete, env config pending)
-- [x] `functions/api/submit.ts` — CF Pages Function (Turnstile + GitHub PR)
+### Wiki Submission System
+- [x] `src/worker.ts` — CF Worker entry point handles `POST /api/submit` (Turnstile + GitHub PR)
 - [x] `WikiSubmitPage.tsx` — 4-step form: basic info → survey (35 questions) → page body editor → review
 - [x] Survey dropdowns include "Other…" option with inline free-text input
-- [x] Markdown editor (step 3): toolbar (bold, italic, heading, link, blockquote, code, rule, bullet), word count, expanded placeholder with image/MDX syntax guide and link to markdownguide.org
-- [x] Profile image: upload file (JPEG/PNG/GIF/WebP, max 4MB) or paste URL; upload committed to `content/Wiki/chatters/images/` on PR branch; preview thumbnail shown
-- [x] `WikiSubmitForm` registered in MDXProvider — embeds in any MDX note via `<WikiSubmitForm />`
-- [x] `Wiki/Submit.md` uses `<WikiSubmitForm />` component directly
-- [x] `/wiki/submit` route with Turnstile widget
-- [ ] Turnstile widget created in CF dashboard + site key set
-- [ ] GitHub fine-grained PAT created + set in CF env vars
-- [ ] End-to-end submission verified in production
+- [x] Markdown editor with toolbar, word count, MDX syntax guide
+- [x] Profile image: upload file or paste URL; committed to `content/Media/Wiki/chatters/` on PR branch
+- [x] Draft save/load: `localStorage` auto-restore, download/upload `.json` draft file
+- [x] Upload draft on step 1 — jumps straight to review step
+- [x] Submissions create PR against `master` branch with `tags: [wiki, chatter]`
+- [x] Turnstile + GitHub token configured in CF Worker runtime secrets
+- [x] End-to-end submission verified in production
 
 ### Infrastructure
-- [x] OG image generation: satori + @resvg/resvg-js (opt-in)
+- [x] OG image generation: satori + @resvg/resvg-js, per-note thumbnail (cover/image/poster), description linting
+- [x] OG meta tag injection in `src/worker.ts` — per-route `og:title`, `og:description`, `og:image`, `twitter:card`
+- [x] Wiki subdomain gets "Philchat Wiki" branding in OG/title tags
+- [x] `public/og/` gitignored — generated fresh at CF build time via `PROCESS_OG=true`
 - [x] DNS: Cloudflare nameservers, Worker custom domains for all subdomains
-- [x] SPA routing: wrangler.toml `[assets]` block + 404.html fallback
+- [x] SPA routing: `wrangler.toml` `[assets]` + `not_found_handling = "single-page-application"`
+- [x] Default theme: light mode, blue accent (`#427ab4`)
 
 ---
 
@@ -110,7 +115,14 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [ ] **Auto-deploy on merge**: GitHub Actions workflow — `npm ci && npm run build && npx wrangler deploy` triggered on push to `master`, using `CLOUDFLARE_API_TOKEN` secret
 
 ### Content & SEO
-- [x] **RSS feed + sitemap** in prebuild (rss.xml + sitemap.xml → public/)
+- [x] **Sitemap** in prebuild (sitemap.xml → public/)
+- [x] **`image` field in content-index**: extracted from frontmatter (`image`/`cover`/`poster`) for OG and meta use
+- [ ] **RSS feeds (two, opt-in)** — replace current shotgun RSS with curated feeds:
+  - `public/rss.xml` — main site feed (`subsurfaces.net`): includes notes from `content/Writing/` OR with `published: true` frontmatter; requires `date` field; stable `<guid>` per URL so readers don't re-notify on rebuild; rich item format (styled excerpt, image if available, link back)
+  - `public/wiki-rss.xml` — wiki feed (`wiki.subsurfaces.net`): includes wiki notes with `published: true` and `date`
+  - `published` field extracted into content-index at prebuild
+  - `content/Writing/` folder — dedicated home for complete long-form works; no index page needed, `/folder/Writing` (FolderPage) serves as listing
+  - Undated notes never appear in either feed; existing undated notes can be surfaced by adding `date:` + `published: true` when ready
 - [ ] **Detailed documentation**: comprehensive docs for the codebase (delegate to worker agent)
 
 ---
@@ -126,8 +138,9 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 ## Architecture Notes
 
 - `src/content/` is auto-generated — never edit directly
-- `functions/` is compiled by CF Workers separately — not part of Vite build
-- SPA routing: `wrangler.toml` `[assets]` block + `public/404.html` fallback (not `_redirects`)
+- `src/worker.ts` is the CF Worker entry point — excluded from main tsconfig, compiled by wrangler independently
+- `functions/` directory removed — API handled directly in `src/worker.ts`
+- SPA routing: `wrangler.toml` `[assets]` + `not_found_handling = "single-page-application"` (not `_redirects`)
 - `VITE_WIKI_MODE` must never be `true` in CF Pages build env vars
 - Wiki submit route must appear before catch-all in `routeTree.addChildren()`
 - `BgCanvas` at z-index 0 — all layout containers must be `background: transparent`

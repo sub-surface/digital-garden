@@ -9,7 +9,6 @@ image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Greek_uc_phi_i
 tradition: "Analytic / Continental / Other"
 aos: "e.g., Epistemology, Meta-ethics, Phil. of Mind"
 influences: "e.g., Aristotle, Hume, Kant, Wittgenstein, Lewis"
-draft: true
 ---
 
 # [Username]'s Profile

@@ -25,9 +25,9 @@ The Philchat Wiki is a collaborative knowledge base built by and for the philcha
 
 **Philosopher profiles** follow a standard format: a quick-info block, biography summary, key contributions, a PhilPapers-style survey, major works, and influence notes. See [[Wiki/Philosophers/Spinoza|Spinoza]] for an example.
 
-**Chatter profiles** use the Philsurvey format — a standardised set of questions drawn from the PhilPapers survey. See [[Wiki/Ape|Ape's Profile]] for an example.
+**Chatter profiles** use the Philsurvey format — a standardised set of questions drawn from the PhilPapers survey. See [[Wiki/chatters/Ape|Ape's Profile]] for an example.
 
-**Concept and movement articles** are less rigidly structured but should aim for clarity, charity, and accuracy. See [[Wiki/Concepts/index|Concepts]] and [[Wiki/Movements/index|Movements]] for format guidelines.
+**Concept and movement articles** are less rigidly structured but should aim for clarity, charity, and accuracy. See [[Wiki/Concepts|Concepts]] and [[Wiki/Movements|Movements]] for format guidelines.
 
 ---
 

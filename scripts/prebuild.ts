@@ -23,6 +23,8 @@ interface NoteMeta {
   private?: boolean
   readingTime?: number
   aliases?: string[]
+  published?: boolean
+  image?: string
   cover?: string
   poster?: string
   links: string[]
@@ -172,6 +174,8 @@ function main() {
       private: false,
       readingTime: calcReadingTime(content),
       aliases: aliases.length ? aliases : undefined,
+      published: data.published === true,
+      image: (data.image || data.cover || data.poster) as string | undefined,
       cover: (data.cover || data.poster) as string | undefined,
       poster: (data.poster || data.cover) as string | undefined,
       links: [], // resolved in pass 2
@@ -391,37 +395,84 @@ function main() {
     console.log("  public/content/Media/: media assets copied")
   }
 
-  // Generate RSS feed
+  // Generate RSS feeds (opt-in, curated)
   const SITE_URL = "https://subsurfaces.net"
-  const datedNotes = Object.values(index)
-    .filter((n) => n.date && !isNaN(new Date(n.date).getTime()))
-    .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
-    .slice(0, 40)
+  const WIKI_URL = "https://wiki.subsurfaces.net"
 
-  const rssItems = datedNotes.map((n) => `
+  function cleanText(text: string): string {
+    return text
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2")
+      .replace(/\[\[([^\]]+)\]\]/g, "$1")
+      .replace(/\[(\^[^\]]+)\]/g, "")
+      .replace(/\\([\[\]])/g, "$1")
+      .replace(/[*_`~]+/g, "")
+      .replace(/^#+\s+/gm, "")
+      .replace(/^>\s+/gm, "")
+      .replace(/\s+/g, " ")
+      .trim()
+  }
+
+  function buildRssItem(n: NoteMeta, baseUrl: string): string {
+    const link = `${baseUrl}/${n.slug}`
+    const desc = cleanText(n.description || n.excerpt || "")
+    const imgTag = n.image
+      ? `<img src="${n.image.startsWith("http") ? n.image : `${baseUrl}${n.image}`}" alt="${n.title}" style="max-width:100%;margin-bottom:1em;" />`
+      : ""
+    const body = `${imgTag}${desc ? `<p>${desc}</p>` : ""}<p><a href="${link}">Read on subsurfaces.net →</a></p>`
+
+    return `
     <item>
       <title><![CDATA[${n.title}]]></title>
-      <link>${SITE_URL}/${n.slug}</link>
-      <guid isPermaLink="true">${SITE_URL}/${n.slug}</guid>
+      <link>${link}</link>
+      <guid isPermaLink="true">${link}</guid>
       <pubDate>${new Date(n.date!).toUTCString()}</pubDate>
-      ${n.excerpt ? `<description><![CDATA[${n.excerpt}]]></description>` : ""}
+      <description><![CDATA[${body}]]></description>
       ${n.tags.map((t) => `<category>${t}</category>`).join("")}
-    </item>`).join("")
+    </item>`
+  }
 
-  const rss = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  function buildFeed(title: string, description: string, feedUrl: string, baseUrl: string, items: NoteMeta[]): string {
+    const sorted = items
+      .filter((n) => n.date && !isNaN(new Date(n.date).getTime()))
+      .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
+      .slice(0, 40)
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
-    <title>Sub-Surface Territories</title>
-    <link>${SITE_URL}</link>
-    <description>Notes, essays, and explorations from subsurfaces.net</description>
+    <title>${title}</title>
+    <link>${baseUrl}</link>
+    <description>${description}</description>
     <language>en-us</language>
-    <atom:link href="${SITE_URL}/rss.xml" rel="self" type="application/rss+xml" />
-    ${rssItems}
+    <atom:link href="${feedUrl}" rel="self" type="application/rss+xml" />
+    ${sorted.map((n) => buildRssItem(n, baseUrl)).join("")}
   </channel>
-</rss>`
+</rss>`.trim()
+  }
 
-  fs.writeFileSync(path.join(PUBLIC_DIR, "rss.xml"), rss.trim())
-  console.log(`  rss.xml: ${datedNotes.length} items`)
+  const allNotes = Object.values(index)
+
+  // Main feed: Writing/ folder OR published: true, non-wiki
+  const mainFeedNotes = allNotes.filter((n) =>
+    !n.slug.toLowerCase().startsWith("wiki/") &&
+    (n.slug.toLowerCase().startsWith("writing/") || n.published === true)
+  )
+  fs.writeFileSync(
+    path.join(PUBLIC_DIR, "rss.xml"),
+    buildFeed("Sub-Surface Territories", "Writing and notes from subsurfaces.net", `${SITE_URL}/rss.xml`, SITE_URL, mainFeedNotes)
+  )
+  console.log(`  rss.xml: ${mainFeedNotes.filter(n => n.date).length} items`)
+
+  // Wiki feed: wiki/ notes with published: true
+  const wikiFeedNotes = allNotes.filter((n) =>
+    n.slug.toLowerCase().startsWith("wiki/") && n.published === true
+  )
+  fs.writeFileSync(
+    path.join(PUBLIC_DIR, "wiki-rss.xml"),
+    buildFeed("Philchat Wiki", "New articles and profiles from wiki.subsurfaces.net", `${WIKI_URL}/wiki-rss.xml`, WIKI_URL, wikiFeedNotes)
+  )
+  console.log(`  wiki-rss.xml: ${wikiFeedNotes.filter(n => n.date).length} items`)
 
   // Generate sitemap
   const sitemapUrls = Object.keys(index).map((slug) =>

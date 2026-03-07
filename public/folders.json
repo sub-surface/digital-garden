@@ -87,7 +87,6 @@
   ],
   "Wiki": [
     "Wiki/About",
-    "Wiki/Ape",
     "Wiki/Concepts",
     "Wiki/Movements",
     "Wiki/Philosophers",
@@ -97,8 +96,7 @@
     "Wiki/Submit"
   ],
   "Wiki/chatters": [
-    "Wiki/chatters/-hughchungus",
-    "Wiki/chatters/hughchungus",
+    "Wiki/chatters/Ape",
     "Wiki/chatters/ice_chicken"
   ],
   "Wiki/Philosophers": [
