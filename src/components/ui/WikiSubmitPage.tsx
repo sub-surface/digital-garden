@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 
-// VITE_TURNSTILE_SITE_KEY — set in .env.local for dev (use 0x4AAAAAAAAAA test key)
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? ""
+// VITE_TURNSTILE_SITE_KEY — set in .env.local for dev (use 1x00000000000000000000AA test key)
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
 
 // ── Survey question definitions ──
 
@@ -431,7 +431,7 @@ export function WikiSubmitForm() {
     const timer = setTimeout(() => {
       const el = document.getElementById("cf-turnstile")
       if (!el || el.childElementCount > 0) return
-      if (typeof window !== "undefined" && (window as any).turnstile) {
+      if (typeof window !== "undefined" && (window as any).turnstile && TURNSTILE_SITE_KEY) {
         ;(window as any).turnstile.render("#cf-turnstile", {
           sitekey: TURNSTILE_SITE_KEY,
           callback: (token: string) => setTurnstileToken(token),
