@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "thinking in public.md",
+                "file": "Wiki/chatters/myname1.md",
                 "mode": "source",
                 "source": true
               },
               "icon": "lucide-file",
-              "title": "thinking in public"
+              "title": "myname1"
             }
           }
         ],
@@ -184,10 +184,17 @@
   },
   "active": "3f87f10ff44213a5",
   "lastOpenFiles": [
-    "Writing/On-Attention.md",
-    "thinking in public.md",
-    "index.md",
     "Writing/Writing-Template.md",
+    "Wiki/chatters/seinzumtode.md",
+    "Media/Wiki/chatters/seinzumtode.png",
+    "Wiki/Style-Guide.md",
+    "Wiki/Style-Guide.md.tmp.30240.1772897695992",
+    "Wiki/chatters/Charlie(Willow).md",
+    "Wiki/chatters/Charlie(Willow) (1).mdx",
+    "Wiki/chatters/Charlie(Willow).mdx",
+    "thinking in public.md",
+    "Writing/On-Attention.md",
+    "index.md",
     "Photography.md",
     "Media/GITS-ARM1.gif",
     "Media/pepe-wave.gif",
