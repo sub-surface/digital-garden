@@ -2,6 +2,11 @@ import type { Root, Text } from "mdast"
 import { visit } from "unist-util-visit"
 import * as fs from "fs"
 import * as path from "path"
+import { fromMarkdown } from "mdast-util-from-markdown"
+import { gfmFromMarkdown } from "mdast-util-gfm"
+import { gfm } from "micromark-extension-gfm"
+import { toHast } from "mdast-util-to-hast"
+import { toHtml } from "hast-util-to-html"
 
 let slugMap: Record<string, string> | null = null
 
@@ -162,12 +167,19 @@ export function remarkWikilinks(opts: { embedDepth?: number } = {}) {
                   .replace(/!\[\[([^\]]+)\]\]/g, "")  // drop nested embeds
                   .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, t, a) => `[${a || t}](/${(map[t.toLowerCase().replace(/\s+/g, "-")] || t.replace(/\s+/g, "-"))})`)
 
+                const mdast = fromMarkdown(safeContent.trim().slice(0, 2000), {
+                  extensions: [gfm()],
+                  mdastExtensions: [gfmFromMarkdown()],
+                })
+                const hast = toHast(mdast)
+                const renderedHtml = hast ? toHtml(hast as any) : safeContent.trim().slice(0, 2000)
+
                 embedHtml = `<aside class="note-embed" data-slug="${escAttr(resolvedSlug)}">
   <div class="note-embed__header">
     <span class="note-embed__label">embedded</span>
     <a class="note-embed__title internal-link" href="${escAttr(href)}">${escAttr(displayTitle)}</a>
   </div>
-  <div class="note-embed__body">${safeContent.trim().slice(0, 2000)}</div>
+  <div class="note-embed__body">${renderedHtml}</div>
   <a class="note-embed__source internal-link" href="${escAttr(href)}">↗ open note</a>
 </aside>`
               } else {

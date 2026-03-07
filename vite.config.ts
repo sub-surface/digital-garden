@@ -13,7 +13,7 @@ import rehypeRaw from "rehype-raw"
 import { remarkWikilinks } from "./src/lib/remark-wikilinks"
 import { remarkTelescopic } from "./src/lib/remark-telescopic"
 import { remarkCallouts } from "./src/lib/remark-callouts"
-import { rehypeSidenotes } from "./src/lib/rehype-sidenotes"
+import { remarkSidenotes } from "./src/lib/remark-sidenotes"
 import { rehypeImagePaths } from "./src/lib/rehype-image-paths"
 
 export default defineConfig({
@@ -21,6 +21,8 @@ export default defineConfig({
     {
       enforce: 'pre',
       ...mdx({
+        mdExtensions: [],
+        mdxExtensions: ['.md', '.mdx'],
         remarkPlugins: [
           remarkFrontmatter,
           remarkMdxFrontmatter,
@@ -28,12 +30,12 @@ export default defineConfig({
           remarkWikilinks,
           remarkTelescopic,
           remarkCallouts,
+          remarkSidenotes,
         ],
         rehypePlugins: [
           rehypeSlug,
           [rehypeRaw, { passThrough: ['mdxjsEsm', 'mdxJsxFlowElement', 'mdxJsxTextElement'] }],
           rehypeImagePaths,
-          rehypeSidenotes,
         ],
         providerImportSource: "@mdx-js/react",
       })

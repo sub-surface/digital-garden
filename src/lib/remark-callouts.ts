@@ -13,7 +13,7 @@ import { visit, SKIP } from "unist-util-visit"
  *   </div>
  */
 
-const CALLOUT_REGEX = /^\[!(\w+)\]\s*(.*)?$/
+const CALLOUT_REGEX = /^\[!(\w+)\]\s*([^\n]*)?/
 
 export function remarkCallouts() {
   return (tree: Root) => {
@@ -34,19 +34,23 @@ export function remarkCallouts() {
       const type = match[1].toLowerCase()
       const title = match[2]?.trim() || type.charAt(0).toUpperCase() + type.slice(1)
 
-      // Remove the [!TYPE] line from the first paragraph
-      const remainingInline = firstChild.children.slice(1)
-      const remainingText = firstText.value.replace(CALLOUT_REGEX, "").trim()
+      // Content may arrive as one text node with \n separating title from body
+      // (remark-gfm collapses single-line blockquote continuations into one node)
+      const newlineIdx = firstText.value.indexOf("\n")
+      const bodyText = newlineIdx !== -1 ? firstText.value.slice(newlineIdx + 1).trim() : ""
 
-      // Build the content — everything after the callout marker
+      // Remaining inline nodes after the text node (e.g. bold, links)
+      const remainingInline = firstChild.children.slice(1)
+
+      // Build content: everything after the [!TYPE] line
       const contentChildren = node.children.slice(1)
-      if (remainingText || remainingInline.length > 0) {
+      if (bodyText || remainingInline.length > 0) {
         const restParagraph: Paragraph = {
           type: "paragraph",
           children: [],
         }
-        if (remainingText) {
-          restParagraph.children.push({ type: "text", value: remainingText })
+        if (bodyText) {
+          restParagraph.children.push({ type: "text", value: bodyText })
         }
         restParagraph.children.push(...remainingInline)
         if (restParagraph.children.length > 0) {

@@ -97,9 +97,15 @@
   ],
   "Wiki/chatters": [
     "Wiki/chatters/Ape",
-    "Wiki/chatters/ice_chicken"
+    "Wiki/chatters/hughchungus",
+    "Wiki/chatters/ice_chicken",
+    "Wiki/chatters/myname1"
   ],
   "Wiki/Philosophers": [
     "Wiki/Philosophers/Spinoza"
+  ],
+  "Writing": [
+    "Writing/On-Attention",
+    "Writing/Writing-Template"
   ]
 }

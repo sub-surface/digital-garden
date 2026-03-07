@@ -135,18 +135,22 @@
 .article-layout[data-dropcap] .article-body > p:first-of-type::first-letter,
 .dropcap > p:first-of-type::first-letter {
   float: left;
-  font-family: var(--font-header);
-  font-size: 3.8em;
-  line-height: 0.75;
-  padding-right: 0.08em;
-  padding-top: 0.05em;
+  font-family: "EB Garamond", "Garamond", "Georgia", serif;
+  font-size: 5.4em;
+  font-weight: 300;
+  font-style: normal;
+  line-height: 0.82;
+  margin-right: 0.12em;
+  margin-top: 0.04em;
+  position: relative;
+  z-index: 1;
   color: var(--color-primary);
-  font-weight: 700;
 }
 
 // ── Pull quotes — <blockquote class="pullquote"> ──
 .pullquote {
   float: right;
+  clear: right;
   width: 38%;
   margin: 0 -60px var(--space-8) var(--space-8);
   padding: var(--space-4) 0;

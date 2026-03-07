@@ -31,6 +31,7 @@ function resolveLayout(
   const type = (frontmatter.type as string) ?? meta?.type
   if (type && ["book", "movie", "chatter", "philosopher"].includes(type)) return "article"
   if (slug.toLowerCase() === "wiki" || slug.toLowerCase().startsWith("wiki/")) return "article"
+  if (slug.toLowerCase().startsWith("writing/")) return "article"
   if (slug.toLowerCase() === "chess") return "article"
   if (["graph", "photography", "bookshelf", "movieshelf", "music-library"].includes(slug.toLowerCase())) return "article"
 

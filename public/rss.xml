@@ -7,5 +7,21 @@
     <language>en-us</language>
     <atom:link href="https://subsurfaces.net/rss.xml" rel="self" type="application/rss+xml" />
     
+    <item>
+      <title><![CDATA[On Attention]]></title>
+      <link>https://subsurfaces.net/Writing/On-Attention</link>
+      <guid isPermaLink="true">https://subsurfaces.net/Writing/On-Attention</guid>
+      <pubDate>Sat, 07 Mar 2026 00:00:00 GMT</pubDate>
+      <description><![CDATA[<p>Atteeeeenn-tion!</p><p><a href="https://subsurfaces.net/Writing/On-Attention">Read on subsurfaces.net →</a></p>]]></description>
+      <category>philosophy</category><category>mind</category><category>essay</category>
+    </item>
+    <item>
+      <title><![CDATA[Writing Template]]></title>
+      <link>https://subsurfaces.net/Writing/Writing-Template</link>
+      <guid isPermaLink="true">https://subsurfaces.net/Writing/Writing-Template</guid>
+      <pubDate>Sat, 07 Mar 2026 00:00:00 GMT</pubDate>
+      <description><![CDATA[<p>A template and style reference for long-form notes in the Writing folder.</p><p><a href="https://subsurfaces.net/Writing/Writing-Template">Read on subsurfaces.net →</a></p>]]></description>
+      <category>meta</category><category>writing</category>
+    </item>
   </channel>
 </rss>

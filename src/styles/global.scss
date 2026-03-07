@@ -71,7 +71,7 @@
     text-decoration: underline;
   }
 
-  a[href]::after {
+  a[href^="http"]:not([href*="subsurfaces.net"])::after {
     content: " (" attr(href) ")";
     font-size: 0.75em;
     opacity: 0.6;

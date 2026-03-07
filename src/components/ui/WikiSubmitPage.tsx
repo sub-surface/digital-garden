@@ -8,58 +8,59 @@ const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x0000000
 interface Question {
   key: string
   label: string
+  tooltip?: string
   options: string[]
 }
 
 const METAPHYSICS_QUESTIONS: Question[] = [
-  { key: "apriori", label: "A priori knowledge", options: ["Yes", "No"] },
-  { key: "abstractObjects", label: "Abstract objects", options: ["Platonism", "Nominalism"] },
-  { key: "analyticSynthetic", label: "Analytic-synthetic distinction", options: ["Yes", "No"] },
-  { key: "epistemicJustification", label: "Epistemic justification", options: ["Internalism", "Externalism"] },
-  { key: "externalWorld", label: "External world", options: ["Idealism", "Skepticism", "Non-skeptical realism"] },
-  { key: "freeWill", label: "Free will", options: ["Compatibilism", "Libertarianism", "No free will"] },
-  { key: "knowledge", label: "Knowledge", options: ["Empiricism", "Rationalism"] },
-  { key: "knowledgeClaims", label: "Knowledge claims", options: ["Contextualism", "Invariantism", "Relativism"] },
-  { key: "mentalContent", label: "Mental content", options: ["Internalism", "Externalism"] },
-  { key: "mind", label: "Mind", options: ["Physicalism", "Non-physicalism"] },
-  { key: "perceptualExperience", label: "Perceptual experience", options: ["Disjunctivism", "Qualia theory", "Representationalism", "Sense-datum theory"] },
-  { key: "personalIdentity", label: "Personal identity", options: ["Biological view", "Psychological view", "Further-fact view"] },
-  { key: "teletransporter", label: "Teletransporter (Survival or Death?)", options: ["Survival", "Death"] },
-  { key: "time", label: "Time", options: ["A-theory", "B-theory"] },
-  { key: "truth", label: "Truth", options: ["Correspondence", "Deflationary", "Epistemic"] },
-  { key: "vagueness", label: "Vagueness", options: ["Epistemic", "Metaphysical", "Semantic"] },
+  { key: "apriori", label: "A priori knowledge", tooltip: "Knowledge that is independent of all experience (e.g., 2+2=4 or 'all bachelors are unmarried').", options: ["Yes", "No"] },
+  { key: "abstractObjects", label: "Abstract objects", tooltip: "Platonism: abstract objects (numbers, sets) exist. Nominalism: they are just names/labels.", options: ["Platonism", "Nominalism"] },
+  { key: "analyticSynthetic", label: "Analytic-synthetic distinction", tooltip: "Whether some truths are true by definition (analytic) or by facts about the world (synthetic).", options: ["Yes", "No"] },
+  { key: "epistemicJustification", label: "Epistemic justification", tooltip: "Internalism: justification depends on mental states. Externalism: it depends on external facts (like reliability).", options: ["Internalism", "Externalism"] },
+  { key: "externalWorld", label: "External world", tooltip: "Idealism: reality is mental. Skepticism: we can't know if an external world exists. Realism: it exists objectively.", options: ["Idealism", "Skepticism", "Non-skeptical realism"] },
+  { key: "freeWill", label: "Free will", tooltip: "Compatibilism: free will is compatible with determinism. Libertarianism: we have free choice in an indeterministic world.", options: ["Compatibilism", "Libertarianism", "No free will"] },
+  { key: "knowledge", label: "Knowledge", tooltip: "Empiricism: all knowledge comes from experience. Rationalism: some knowledge comes from pure reason.", options: ["Empiricism", "Rationalism"] },
+  { key: "knowledgeClaims", label: "Knowledge claims", tooltip: "Does the truth of 'S knows p' depend on the context (contextualism), the speaker's standards (relativism), or is it fixed (invariantism)?", options: ["Contextualism", "Invariantism", "Relativism"] },
+  { key: "mentalContent", label: "Mental content", tooltip: "Internalism: mental states are entirely 'in the head'. Externalism: they are partly determined by the environment.", options: ["Internalism", "Externalism"] },
+  { key: "mind", label: "Mind", tooltip: "Physicalism: everything is physical. Non-physicalism: there are non-physical mental properties or substances.", options: ["Physicalism", "Non-physicalism"] },
+  { key: "perceptualExperience", label: "Perceptual experience", tooltip: "The nature of perception: through sense-data, direct representation, or the presence of mind-independent objects.", options: ["Disjunctivism", "Qualia theory", "Representationalism", "Sense-datum theory"] },
+  { key: "personalIdentity", label: "Personal identity", tooltip: "What makes you the same person over time? Biological continuity, psychological continuity, or a 'further fact' (like a soul)?", options: ["Biological view", "Psychological view", "Further-fact view"] },
+  { key: "teletransporter", label: "Teletransporter (Survival or Death?)", tooltip: "If a machine scans and destroys your body to build a perfect replica elsewhere, do you survive or die?", options: ["Survival", "Death"] },
+  { key: "time", label: "Time", tooltip: "A-theory: there is an objective 'now' and time flows. B-theory: all moments in time are equally real in a 4D block.", options: ["A-theory", "B-theory"] },
+  { key: "truth", label: "Truth", tooltip: "Correspondence: truth matches reality. Deflationary: truth is just a linguistic tool. Epistemic: truth is what can be justified.", options: ["Correspondence", "Deflationary", "Epistemic"] },
+  { key: "vagueness", label: "Vagueness", tooltip: "Is vagueness a feature of our language (semantic), our knowledge (epistemic), or the world itself (metaphysical)?", options: ["Epistemic", "Metaphysical", "Semantic"] },
 ]
 
 const VALUE_QUESTIONS: Question[] = [
-  { key: "aestheticValue", label: "Aesthetic value", options: ["Objective", "Subjective"] },
-  { key: "eatingAnimals", label: "Eating animals", options: ["Omnivorism", "Vegetarianism", "Veganism"] },
-  { key: "experienceMachine", label: "Experience machine (Would you enter?)", options: ["Yes", "No"] },
-  { key: "footbridge", label: "Footbridge (Push or Don't Push?)", options: ["Push", "Don't push"] },
-  { key: "gender", label: "Gender", options: ["Biological", "Psychological", "Social", "Unreal"] },
-  { key: "meaningOfLife", label: "Meaning of life", options: ["Subjective", "Objective", "Nonexistent"] },
-  { key: "metaEthics", label: "Meta-ethics", options: ["Moral realism", "Moral anti-realism"] },
-  { key: "moralJudgment", label: "Moral judgment", options: ["Cognitivism", "Non-cognitivism"] },
-  { key: "moralMotivation", label: "Moral motivation", options: ["Internalism", "Externalism"] },
-  { key: "moralPrinciples", label: "Moral principles", options: ["Generalism", "Particularism"] },
-  { key: "normativeEthics", label: "Normative ethics", options: ["Consequentialism", "Deontology", "Virtue ethics"] },
-  { key: "politicalPhilosophy", label: "Political philosophy", options: ["Communitarianism", "Egalitarianism", "Libertarianism"] },
-  { key: "race", label: "Race", options: ["Biological", "Social", "Unreal"] },
-  { key: "trolleyProblem", label: "Trolley problem (Switch or Don't Switch?)", options: ["Switch", "Don't switch"] },
+  { key: "aestheticValue", label: "Aesthetic value", tooltip: "Objective: beauty and art have inherent worth. Subjective: beauty is in the eye of the beholder.", options: ["Objective", "Subjective"] },
+  { key: "eatingAnimals", label: "Eating animals", tooltip: "The ethical status of consuming animal products.", options: ["Omnivorism", "Vegetarianism", "Veganism"] },
+  { key: "experienceMachine", label: "Experience machine (Would you enter?)", tooltip: "If a machine could give you any experience you desired, but it wasn't real, would you plug in for life?", options: ["Yes", "No"] },
+  { key: "footbridge", label: "Footbridge (Push or Don't Push?)", tooltip: "To save five people from a trolley, would you push a large person off a bridge to stop it?", options: ["Push", "Don't push"] },
+  { key: "gender", label: "Gender", tooltip: "Whether gender is a biological, psychological, or social category, or is entirely unreal.", options: ["Biological", "Psychological", "Social", "Unreal"] },
+  { key: "meaningOfLife", label: "Meaning of life", tooltip: "Whether life has an objective purpose, a subjective meaning we create, or no meaning at all.", options: ["Subjective", "Objective", "Nonexistent"] },
+  { key: "metaEthics", label: "Meta-ethics", tooltip: "Moral realism: moral facts are objective. Anti-realism: moral facts are mind-dependent or non-existent.", options: ["Moral realism", "Moral anti-realism"] },
+  { key: "moralJudgment", label: "Moral judgment", tooltip: "Cognitivism: moral statements express beliefs (true/false). Non-cognitivism: they express emotions or commands.", options: ["Cognitivism", "Non-cognitivism"] },
+  { key: "moralMotivation", label: "Moral motivation", tooltip: "Internalism: moral beliefs are enough to motivate. Externalism: they require a separate desire to act on them.", options: ["Internalism", "Externalism"] },
+  { key: "moralPrinciples", label: "Moral principles", tooltip: "Generalism: ethics relies on universal rules. Particularism: ethics is context-dependent without fixed rules.", options: ["Generalism", "Particularism"] },
+  { key: "normativeEthics", label: "Normative ethics", tooltip: "The framework for right action: consequences (consequentialism), duties (deontology), or character (virtue ethics).", options: ["Consequentialism", "Deontology", "Virtue ethics"] },
+  { key: "politicalPhilosophy", label: "Political philosophy", tooltip: "Communitarianism (social bonds), egalitarianism (equality), or libertarianism (individual liberty).", options: ["Communitarianism", "Egalitarianism", "Libertarianism"] },
+  { key: "race", label: "Race", tooltip: "Whether race is a biological category, a social construct, or an illusion.", options: ["Biological", "Social", "Unreal"] },
+  { key: "trolleyProblem", label: "Trolley problem (Switch or Don't Switch?)", tooltip: "Would you flip a switch to divert a trolley, killing one person but saving five others?", options: ["Switch", "Don't switch"] },
 ]
 
 const LOGIC_QUESTIONS: Question[] = [
-  { key: "lawsOfNature", label: "Laws of nature", options: ["Humean", "Non-Humean"] },
-  { key: "logic", label: "Logic", options: ["Classical", "Non-classical"] },
-  { key: "newcomb", label: "Newcomb's problem", options: ["One box", "Two boxes"] },
-  { key: "properNames", label: "Proper names", options: ["Fregean", "Millian"] },
-  { key: "science", label: "Science", options: ["Scientific realism", "Scientific anti-realism"] },
+  { key: "lawsOfNature", label: "Laws of nature", tooltip: "Humean: laws are just patterns of events. Non-Humean: laws are necessary forces that govern the world.", options: ["Humean", "Non-Humean"] },
+  { key: "logic", label: "Logic", tooltip: "Classical: standard logic (laws of identity, non-contradiction). Non-classical: alternative systems (e.g., allowing contradictions or multiple truth values).", options: ["Classical", "Non-classical"] },
+  { key: "newcomb", label: "Newcomb's problem", tooltip: "A paradox of decision theory involving a predictor who knows your choice before you make it.", options: ["One box", "Two boxes"] },
+  { key: "properNames", label: "Proper names", tooltip: "Fregean: names refer via a description. Millian: names refer directly to the object itself.", options: ["Fregean", "Millian"] },
+  { key: "science", label: "Science", tooltip: "Scientific realism: science describes the real world. Anti-realism: science is just a tool for prediction and organizing observations.", options: ["Scientific realism", "Scientific anti-realism"] },
 ]
 
 const METAPHILOSOPHY_QUESTIONS: Question[] = [
-  { key: "aimOfPhilosophy", label: "Aim of philosophy", options: ["Truth/knowledge", "Understanding", "Wisdom", "Happiness"] },
-  { key: "god", label: "God", options: ["Theism", "Atheism"] },
-  { key: "philosophicalMethods", label: "Philosophical methods", options: ["Conceptual analysis", "Empirical philosophy", "Formal philosophy", "Intuition-based", "Phenomenology", "Thought experiments"] },
-  { key: "philosophicalProgress", label: "Philosophical progress", options: ["A lot", "A little", "None"] },
+  { key: "aimOfPhilosophy", label: "Aim of philosophy", tooltip: "What is the ultimate goal? Pure truth, deeper understanding, practical wisdom, or personal happiness?", options: ["Truth/knowledge", "Understanding", "Wisdom", "Happiness"] },
+  { key: "god", label: "God", tooltip: "The existence of a supreme being.", options: ["Theism", "Atheism"] },
+  { key: "philosophicalMethods", label: "Philosophical methods", tooltip: "The primary tools used: logic, intuition, empirical data, phenomenology, or thought experiments.", options: ["Conceptual analysis", "Empirical philosophy", "Formal philosophy", "Intuition-based", "Phenomenology", "Thought experiments"] },
+  { key: "philosophicalProgress", label: "Philosophical progress", tooltip: "Whether philosophy actually makes progress in solving its core problems.", options: ["A lot", "A little", "None"] },
 ]
 
 const ALL_QUESTIONS = [...METAPHYSICS_QUESTIONS, ...VALUE_QUESTIONS, ...LOGIC_QUESTIONS, ...METAPHILOSOPHY_QUESTIONS]
@@ -326,8 +327,9 @@ function SurveyQuestion({
 
   return (
     <div className="wiki-form-field">
-      <label htmlFor={question.key} className="wiki-form-label">
+      <label htmlFor={question.key} className="wiki-form-label" title={question.tooltip}>
         {question.label}
+        {question.tooltip && <span className="wiki-form-tooltip-icon">?</span>}
       </label>
       <select
         id={question.key}

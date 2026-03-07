@@ -92,6 +92,30 @@ a {
   }
 }
 
+// ── External links — subtle arrow suffix, muted colour ──
+// Targets href starting with http/https but NOT pointing to our own domains
+
+a[href^="http"]:not([href*="subsurfaces.net"]):not([class*="tag-pill"]):not([class*="shelf"]) {
+  color: var(--color-text-muted);
+
+  &::after {
+    content: "\2197"; // ↗ northeast arrow
+    font-size: 0.7em;
+    vertical-align: super;
+    margin-left: 1px;
+    opacity: 0.5;
+    transition: opacity var(--duration-fast) var(--ease-default);
+  }
+
+  &:hover {
+    color: var(--color-accent);
+
+    &::after {
+      opacity: 1;
+    }
+  }
+}
+
 // ── Blockquotes ──
 
 blockquote {

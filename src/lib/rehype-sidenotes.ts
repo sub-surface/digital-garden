@@ -38,22 +38,26 @@ export function rehypeSidenotes() {
 
     if (footnoteMap.size === 0) return
 
-    // 2. Inject sidenotes AFTER the <sup>
+    // Build a parent-map so we can walk up from <sup> → <p> → block container
+    const parentMap = new Map<Element, { parent: Element; index: number }>()
+
+    visit(tree, "element", (node, index, parent) => {
+      if (parent && index !== undefined) {
+        parentMap.set(node, { parent: parent as Element, index })
+      }
+    })
+
+    // 2. Inject sidenotes after the containing block of each <sup>
     visit(tree, "element", (node, index, parent) => {
       if (
-        node.tagName === "section" && 
-        node.properties?.className && 
+        node.tagName === "section" &&
+        node.properties?.className &&
         (node.properties.className as string[]).includes("footnotes-section")
       ) {
         return SKIP
       }
 
-      if (
-        node.tagName !== "sup" ||
-        !parent ||
-        index === undefined
-      )
-        return
+      if (node.tagName !== "sup" || !parent || index === undefined) return
 
       const refLink = node.children.find(
         (c): c is Element =>
@@ -76,32 +80,39 @@ export function rehypeSidenotes() {
       const checkbox: Element = {
         type: "element",
         tagName: "input",
-        properties: {
-          type: "checkbox",
-          id: sidenotId,
-          className: ["sidenote-checkbox"],
-        },
+        properties: { type: "checkbox", id: sidenotId, className: ["sidenote-checkbox"] },
         children: [],
       }
 
       const label: Element = {
         type: "element",
         tagName: "label",
-        properties: {
-          htmlFor: sidenotId,
-          className: ["sidenote-toggle"],
-        },
+        properties: { htmlFor: sidenotId, className: ["sidenote-toggle"] },
         children: [{ type: "text", value: num }],
       }
 
       const sidenote: Element = {
         type: "element",
-        tagName: "span",
-        properties: { className: ["sidenote"] },
+        tagName: "aside",
+        properties: { className: ["sidenote"], dataNumber: num },
         children: content,
       }
 
-      parent.children.splice(index + 1, 0, checkbox, label, sidenote)
+      // Walk up to find the nearest block-level ancestor (not <p> or <span>)
+      // and inject after the child that contains our <sup>
+      let inlineEl: Element = node
+      let blockParent = parent as Element
+      let blockIndex = index
+
+      while (["p", "span", "em", "strong", "a", "sup"].includes(blockParent.tagName)) {
+        const entry = parentMap.get(blockParent)
+        if (!entry) break
+        inlineEl = blockParent
+        blockParent = entry.parent
+        blockIndex = entry.index
+      }
+
+      blockParent.children.splice(blockIndex + 1, 0, checkbox, label, sidenote)
       return SKIP
     })
   }

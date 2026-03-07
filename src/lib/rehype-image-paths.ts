@@ -10,7 +10,8 @@ export function rehypeImagePaths() {
       if (node.tagName === "img" && node.properties) {
         const src = node.properties.src as string
         if (src && !src.startsWith("http") && !src.startsWith("/") && !src.startsWith("data:")) {
-          node.properties.src = `/content/Media/${src}`
+          const stripped = src.replace(/^[Mm]edia\//, "")
+          node.properties.src = `/content/Media/${stripped}`
         }
       }
     })
