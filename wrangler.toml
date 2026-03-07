@@ -11,7 +11,7 @@ binding = "ASSETS"
 NODE_VERSION = "20"
 
 [build]
-command = "npm run build"
+command = "VITE_SUPABASE_URL=https://jrvbmgeeneasrotdeqed.supabase.co VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpydmJtZ2VlbmVhc3JvdGRlcWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MzYwMzQsImV4cCI6MjA4ODQxMjAzNH0.LCNdzncyr18eWmg7DQ4x7r0oGT8-TYZ31yt1NqoTS9A npm run build"
 
 [[routes]]
 pattern = "subsurfaces.net"
