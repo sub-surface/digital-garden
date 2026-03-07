@@ -410,13 +410,40 @@ function SurveySection({
 
 // ── Main component (exported for route + MDX embed) ──
 
+const DRAFT_KEY = "wiki-submit-draft"
+
+function saveDraft(data: FormData) {
+  // Don't persist large base64 image in localStorage
+  const { imageBase64, ...rest } = data
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(rest))
+}
+
+function downloadDraft(data: FormData) {
+  const { imageBase64, ...rest } = data
+  const blob = new Blob([JSON.stringify(rest, null, 2)], { type: "application/json" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `wiki-draft-${rest.username || "profile"}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function WikiSubmitForm() {
   const [step, setStep] = useState(1)
-  const [formData, setFormData] = useState<FormData>(INITIAL_FORM)
+  const [formData, setFormData] = useState<FormData>(() => {
+    try {
+      const stored = localStorage.getItem(DRAFT_KEY)
+      if (stored) return { ...INITIAL_FORM, ...JSON.parse(stored) }
+    } catch {}
+    return INITIAL_FORM
+  })
   const [turnstileToken, setTurnstileToken] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<{ prUrl: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [draftSaved, setDraftSaved] = useState(false)
+  const uploadDraftRef = useRef<HTMLInputElement>(null)
 
   const STEPS = ["Basic Info", "Survey", "Page Content", "Review & Submit"]
   const TOTAL_STEPS = STEPS.length
@@ -767,10 +794,50 @@ export function WikiSubmitForm() {
             </div>
           )}
 
-          <div className="wiki-form-actions">
+          <div className="wiki-form-actions" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
             <button className="wiki-form-btn wiki-form-btn-secondary" type="button" onClick={() => setStep(3)}>
               ← Back
             </button>
+            <button
+              className="wiki-form-btn wiki-form-btn-secondary"
+              type="button"
+              onClick={() => { saveDraft(formData); setDraftSaved(true); setTimeout(() => setDraftSaved(false), 2000) }}
+            >
+              {draftSaved ? "Saved ✓" : "Save Draft"}
+            </button>
+            <button
+              className="wiki-form-btn wiki-form-btn-secondary"
+              type="button"
+              onClick={() => downloadDraft(formData)}
+            >
+              Download Draft
+            </button>
+            <button
+              className="wiki-form-btn wiki-form-btn-secondary"
+              type="button"
+              onClick={() => uploadDraftRef.current?.click()}
+            >
+              Upload Draft
+            </button>
+            <input
+              ref={uploadDraftRef}
+              type="file"
+              accept="application/json"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = (ev) => {
+                  try {
+                    const parsed = JSON.parse(ev.target?.result as string)
+                    setFormData((prev) => ({ ...prev, ...parsed }))
+                  } catch { setError("Invalid draft file.") }
+                }
+                reader.readAsText(file)
+                e.target.value = ""
+              }}
+            />
             <button
               className="wiki-form-btn"
               type="button"
