@@ -183,7 +183,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     // 1. Get latest SHA of main
     const refRes = await githubRequest(
-      "/repos/sub-surface/digital-garden/git/ref/heads/main",
+      "/repos/sub-surface/digital-garden/git/ref/heads/master",
       "GET",
       env.GITHUB_TOKEN,
     )
@@ -225,7 +225,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       if (!imgRes.ok) throw new Error(`Failed to commit image: ${imgRes.status}`)
 
       // Use the raw.githubusercontent.com URL — resolves once the PR is merged to main
-      resolvedImageUrl = `https://raw.githubusercontent.com/sub-surface/digital-garden/main/${imgPath}`
+      resolvedImageUrl = `https://raw.githubusercontent.com/sub-surface/digital-garden/master/${imgPath}`
     }
 
     // 3b. Commit the markdown file (with resolved image URL)
@@ -253,7 +253,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       {
         title: `Wiki profile: ${body.username}`,
         head: branchName,
-        base: "main",
+        base: "master",
         body: `New wiki profile submission for **${body.name}** (${body.username}).\n\nSubmitted via wiki.subsurfaces.net/wiki/submit`,
       },
     )
