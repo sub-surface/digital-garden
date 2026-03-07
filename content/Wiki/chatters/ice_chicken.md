@@ -5,6 +5,7 @@ tags: [wiki]
 type: chatter
 username: "Ice_chicken"
 pronouns: "Him"
+image: "https://subsurfaces.net/Media/jeh.jpg"
 tradition: "Other"
 aos: "Indian philosophy "
 influences: "Shankaracharya, Nagarjuna, Ramanuja, Bataille, Heidegger "
@@ -12,6 +13,9 @@ draft: true
 ---
 
 # Jeh's Profile
+
+Jeh is a well-known phil-chatter with a big heart for all things pakistan; he's a big fan of the Pakistani band Junoon, and is known for his love of Pakistani food. Jeh is also a big fan of Indian philosophy, and has a particular interest in the works of Shankaracharya, Nagarjuna, and Ramanuja. He is also influenced by the works of Bataille and Heidegger.
+
 
 ## Metaphysics & Epistemology
 * **A priori knowledge:** [no answer]
