@@ -45,8 +45,11 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
   }
 
   try {
-    const refRes = await gh("/repos/sub-surface/digital-garden/git/ref/heads/main", "GET")
-    if (!refRes.ok) throw new Error(`get ref: ${refRes.status}`)
+    const refRes = await gh("/repos/sub-surface/digital-garden/git/ref/heads/master", "GET")
+    if (!refRes.ok) {
+      const txt = await refRes.text()
+      throw new Error(`get ref: ${refRes.status} — ${txt}`)
+    }
     const { object: { sha: mainSha } } = await refRes.json<{ object: { sha: string } }>()
 
     const safeName = body.username.replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
@@ -55,7 +58,10 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
     const branchRes = await gh("/repos/sub-surface/digital-garden/git/refs", "POST", {
       ref: `refs/heads/${branchName}`, sha: mainSha,
     })
-    if (!branchRes.ok) throw new Error(`create branch: ${branchRes.status}`)
+    if (!branchRes.ok) {
+      const txt = await branchRes.text()
+      throw new Error(`create branch: ${branchRes.status} — ${txt}`)
+    }
 
     let resolvedImageUrl = body.imageUrl || ""
     if (body.imageBase64 && body.imageFilename) {
@@ -68,7 +74,7 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
         branch: branchName,
       })
       if (!imgRes.ok) throw new Error(`commit image: ${imgRes.status}`)
-      resolvedImageUrl = `https://raw.githubusercontent.com/sub-surface/digital-garden/main/${imgPath}`
+      resolvedImageUrl = `https://raw.githubusercontent.com/sub-surface/digital-garden/master/${imgPath}`
     }
 
     const fm = [
@@ -125,7 +131,7 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
 
     const prRes = await gh("/repos/sub-surface/digital-garden/pulls", "POST", {
       title: `Wiki profile: ${body.username}`,
-      head: branchName, base: "main",
+      head: branchName, base: "master",
       body: `New wiki profile submission for **${body.name}** (${body.username}).\n\nSubmitted via wiki.subsurfaces.net/wiki/submit`,
     })
     if (!prRes.ok) throw new Error(`create PR: ${prRes.status}`)

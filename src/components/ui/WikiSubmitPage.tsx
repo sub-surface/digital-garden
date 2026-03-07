@@ -567,6 +567,36 @@ export function WikiSubmitForm() {
       {/* Step 1 — Basic Info */}
       {step === 1 && (
         <div className="wiki-form-section">
+          <div className="wiki-form-field" style={{ marginBottom: "1rem" }}>
+            <label className="wiki-form-label">Have a saved draft?</label>
+            <button
+              className="wiki-form-btn wiki-form-btn-secondary"
+              type="button"
+              onClick={() => uploadDraftRef.current?.click()}
+            >
+              Upload Draft
+            </button>
+            <input
+              ref={uploadDraftRef}
+              type="file"
+              accept="application/json"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = (ev) => {
+                  try {
+                    const parsed = JSON.parse(ev.target?.result as string)
+                    setFormData((prev) => ({ ...prev, ...parsed }))
+                    setStep(4)
+                  } catch { setError("Invalid draft file.") }
+                }
+                reader.readAsText(file)
+                e.target.value = ""
+              }}
+            />
+          </div>
           <div className="wiki-form-field">
             <label className="wiki-form-label" htmlFor="name">Name <span className="wiki-form-required">*</span></label>
             <input
@@ -812,32 +842,6 @@ export function WikiSubmitForm() {
             >
               Download Draft
             </button>
-            <button
-              className="wiki-form-btn wiki-form-btn-secondary"
-              type="button"
-              onClick={() => uploadDraftRef.current?.click()}
-            >
-              Upload Draft
-            </button>
-            <input
-              ref={uploadDraftRef}
-              type="file"
-              accept="application/json"
-              style={{ display: "none" }}
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (!file) return
-                const reader = new FileReader()
-                reader.onload = (ev) => {
-                  try {
-                    const parsed = JSON.parse(ev.target?.result as string)
-                    setFormData((prev) => ({ ...prev, ...parsed }))
-                  } catch { setError("Invalid draft file.") }
-                }
-                reader.readAsText(file)
-                e.target.value = ""
-              }}
-            />
             <button
               className="wiki-form-btn"
               type="button"
