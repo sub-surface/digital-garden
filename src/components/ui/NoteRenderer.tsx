@@ -6,6 +6,8 @@ import { NoteFooter } from "./NoteFooter"
 import { NoteBody } from "./NoteBody"
 import { WikiInfobox } from "./WikiInfobox"
 import { resolveSlug } from "@/lib/content-loader"
+import { WikiEditButton } from "./WikiEditButton"
+import { useIsWiki } from "@/hooks/useIsWiki"
 import type { NoteMetadata } from "@/types/content"
 
 // Lazy system pages
@@ -78,6 +80,11 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
   const readingTime = meta?.readingTime
   const layout = resolveLayout(fm, meta, slug)
   const type = (fm.type as string) ?? meta?.type
+  const isWiki = useIsWiki()
+
+  // Show edit button on wiki article pages (not index, about, submit, admin, style-guide)
+  const editableWikiSlugs = isWiki && layout === "article" && slug.toLowerCase().startsWith("wiki/")
+    && !["wiki", "wiki/about", "wiki/submit", "wiki/style-guide"].includes(slug.toLowerCase())
 
   // Update global layout state
   const setActiveLayout = useStore((s) => s.setActiveLayout)
@@ -109,19 +116,24 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
 
   const header = (
     <div className="note-header" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: 'var(--space-12)' }}>
-      {breadcrumbParts.length > 0 && layout === "article" && (
-        <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.45, marginBottom: 'var(--space-2)', display: 'flex', gap: '0.4em', alignItems: 'center' }}>
-          {breadcrumbParts.map((part, i) => {
-            const href = "/" + breadcrumbParts.slice(0, i + 1).join("/")
-            return (
-              <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4em' }}>
-                {i > 0 && <span style={{ opacity: 0.5 }}>/</span>}
-                <a href={href} style={{ color: 'inherit', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {part.replace(/-/g, " ")}
-                </a>
-              </span>
-            )
-          })}
+      {(breadcrumbParts.length > 0 || editableWikiSlugs) && layout === "article" && (
+        <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.45, marginBottom: 'var(--space-2)', display: 'flex', gap: '0.4em', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '0.4em', alignItems: 'center' }}>
+            {editableWikiSlugs && <WikiEditButton slug={slug} />}
+          </div>
+          <div style={{ display: 'flex', gap: '0.4em', alignItems: 'center' }}>
+            {breadcrumbParts.map((part, i) => {
+              const href = "/" + breadcrumbParts.slice(0, i + 1).join("/")
+              return (
+                <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4em' }}>
+                  {i > 0 && <span style={{ opacity: 0.5 }}>/</span>}
+                  <a href={href} style={{ color: 'inherit', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {part.replace(/-/g, " ")}
+                  </a>
+                </span>
+              )
+            })}
+          </div>
         </div>
       )}
       {growth && (

@@ -14,6 +14,9 @@ import { TagPage } from "@/components/ui/TagPage"
 import { FolderPage } from "@/components/ui/FolderPage"
 import { RecentPage } from "@/components/ui/RecentPage"
 import { WikiSubmitPage } from "@/components/ui/WikiSubmitPage"
+import { WikiEditPage } from "@/components/ui/WikiEditPage"
+import { WikiNewPage } from "@/components/ui/WikiNewPage"
+import { WikiAdminPage } from "@/components/ui/WikiAdminPage"
 
 // Lazy load heavy components
 const GraphView = lazy(() => import("@/components/ui/GraphView").then(m => ({ default: m.GraphView })))
@@ -101,6 +104,31 @@ const submitRoute = createRoute({
   component: WikiSubmitPage,
 })
 
+// Wiki new article route
+const newRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/new",
+  component: WikiNewPage,
+})
+
+// Wiki admin route
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin",
+  component: WikiAdminPage,
+})
+
+// Wiki edit route — catch-all for /edit/*
+const editRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/edit/$",
+  component: function EditRoutePage() {
+    const params = editRoute.useParams()
+    const rawSlug = (params as Record<string, string>)["_splat"] || ""
+    return <WikiEditPage slug={rawSlug} />
+  },
+})
+
 // Catch-all note route — handles /Books/foo, /Movies/bar, etc.
 const noteRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -133,6 +161,9 @@ const routeTree = rootRoute.addChildren([
   folderRoute,
   recentRoute,
   submitRoute,
+  newRoute,
+  adminRoute,
+  editRoute,
   noteRoute,
 ])
 

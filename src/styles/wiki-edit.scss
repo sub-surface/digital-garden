@@ -1,0 +1,287 @@
+// Wiki editing system — auth modal, edit button, admin panel, new page
+// Imported in global.scss
+
+// ── Auth Modal ──
+
+.wiki-auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.wiki-auth-modal {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: var(--space-8);
+  max-width: 400px;
+  width: 90vw;
+  position: relative;
+}
+
+.wiki-auth-close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  line-height: 1;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+// ── Edit Button ──
+
+.wiki-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.wiki-edit-btn-locked {
+  cursor: default;
+  opacity: 0.5;
+
+  &:hover {
+    border-color: var(--color-border) !important;
+    color: var(--color-text-muted) !important;
+  }
+}
+
+// ── Style Guide Panel (inside editor) ──
+
+.wiki-editor-guide {
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-4);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.wiki-editor-guide-content {
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+
+  h4 {
+    font-size: 0.8rem;
+    color: var(--color-heading);
+    margin: 0 0 var(--space-2);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: var(--space-3);
+
+    td {
+      padding: 2px var(--space-2);
+      border-bottom: 1px solid var(--color-border-light);
+      vertical-align: top;
+
+      &:first-child {
+        white-space: nowrap;
+        width: 180px;
+      }
+    }
+
+    code {
+      background: var(--color-bg);
+      padding: 1px 4px;
+      border-radius: 2px;
+      font-size: 0.72rem;
+    }
+  }
+
+  p {
+    margin: var(--space-2) 0 0;
+    opacity: 0.7;
+  }
+}
+
+// ── New Article Type Grid ──
+
+.wiki-new-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.wiki-new-type-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-color: var(--color-accent);
+  }
+}
+
+.wiki-new-type-card-active {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-bg-surface) 85%, var(--color-accent) 15%);
+}
+
+.wiki-new-type-label {
+  font-family: var(--font-code);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-heading);
+}
+
+.wiki-new-type-desc {
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+// ── Admin Panel ──
+
+.wiki-admin-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.wiki-admin-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+.wiki-admin-tab-active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.wiki-admin-filter {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.wiki-admin-table-wrap {
+  overflow-x: auto;
+  margin-top: var(--space-4);
+}
+
+.wiki-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-code);
+  font-size: 0.78rem;
+
+  th, td {
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  th {
+    color: var(--color-text-muted);
+    font-weight: 500;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  td {
+    color: var(--color-text);
+  }
+
+  code {
+    background: var(--color-bg-surface);
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 0.74rem;
+  }
+}
+
+.wiki-admin-role {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wiki-admin-role-pending {
+  background: color-mix(in srgb, var(--color-bg-surface) 60%, #b49442 40%);
+  color: #b49442;
+}
+
+.wiki-admin-role-editor {
+  background: color-mix(in srgb, var(--color-bg-surface) 60%, #42b464 40%);
+  color: #42b464;
+}
+
+.wiki-admin-role-admin {
+  background: color-mix(in srgb, var(--color-bg-surface) 60%, var(--color-accent) 40%);
+  color: var(--color-accent);
+}
+
+.wiki-admin-role-none {
+  background: var(--color-bg-surface);
+  color: var(--color-text-muted);
+  opacity: 0.5;
+}
+
+.wiki-admin-lock-form {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-end;
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}

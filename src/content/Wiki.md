@@ -28,9 +28,11 @@ A shared knowledge base by and for the philchat community — profiles, position
 
 ## Contribute
 
-Want to add your profile or an article? [[Wiki/Submit|Submit your profile →]]
+Want to add your profile? [[Wiki/Submit|Submit your profile →]]
 
-All submissions are reviewed before publishing. See the [[Wiki/Philsurvey Template|Philsurvey Template]] for the question format.
+Want to write an article? [Add Article →](/new)
+
+All submissions are reviewed before publishing. See the [[Wiki/Style-Guide|Style Guide]] for formatting conventions and the [[Wiki/Philsurvey Template|Philsurvey Template]] for the survey format.
 
 [[Wiki/About|About this wiki →]]
 
