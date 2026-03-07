@@ -73,7 +73,7 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
         onLoad({ 
           frontmatter: { 
             title: systemTitle, 
-            layout: (slug.toLowerCase() === "chess" || isTagPage || isFolderPage) ? "article" : "note" 
+            layout: slug.toLowerCase() === "chess" ? "article" : "note"
           } 
         })
       }

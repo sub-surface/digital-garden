@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { useStore } from "@/store"
 import { useMusic } from "./MusicContext"
+import { useIsWiki } from "@/hooks/useIsWiki"
+import { useNavigate } from "@tanstack/react-router"
 import { Document } from "flexsearch"
 import styles from "./SearchOverlay.module.scss"
 
@@ -19,6 +21,8 @@ export function SearchOverlay() {
   const [activeIndex, setActiveIndex] = useState(0)
   const contentIndex = useStore((s) => s.contentIndex)
   const pushCard = useStore((s) => s.pushCard)
+  const isWiki = useIsWiki()
+  const navigate = useNavigate()
   
   const searchIndexRef = useRef<Document<SearchResult> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -106,11 +110,14 @@ export function SearchOverlay() {
   }, [query])
 
   const handleSelect = (result: SearchResult) => {
-    // Open in panel
-    pushCard(
-      { url: `/${result.id}`, slug: result.id, title: result.title, html: `<div class="note-loading">Loading...</div>` },
-      -1 // from main body
-    )
+    if (isWiki) {
+      navigate({ to: `/${result.id}` })
+    } else {
+      pushCard(
+        { url: `/${result.id}`, slug: result.id, title: result.title, html: `<div class="note-loading">Loading...</div>` },
+        -1 // from main body
+      )
+    }
     setIsOpen(false)
   }
 

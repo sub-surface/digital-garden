@@ -216,7 +216,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
         await sleep(1200)
         if (!ac.signal.aborted) {
           setLine(settledText)
-          setTooltip(isWiki ? "← subsurfaces.net" : "Go to homepage")
+          setTooltip(isWiki ? "Wiki home" : "Go to homepage")
         }
         scheduleIdle()
       }
@@ -245,7 +245,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
 
   const handleClick = async () => {
     if (isWiki) {
-      window.location.href = "https://subsurfaces.net"
+      window.location.href = "/"
       return
     }
 
@@ -277,7 +277,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
   }
 
   const displayText = (isHovered && booted && !isAnimating) ? settledText : line
-  const titleTooltip = isWiki ? "← subsurfaces.net" : tooltip
+  const titleTooltip = isWiki ? "Wiki home" : tooltip
 
   const titleContent = (
     <>
@@ -293,7 +293,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
       {isWiki ? (
         <a
           className={styles.title}
-          href="https://subsurfaces.net"
+          href="/"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           aria-label={titleTooltip}

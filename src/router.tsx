@@ -13,6 +13,7 @@ import { useIsWiki } from "@/hooks/useIsWiki"
 import { TagPage } from "@/components/ui/TagPage"
 import { FolderPage } from "@/components/ui/FolderPage"
 import { RecentPage } from "@/components/ui/RecentPage"
+import { WikiSubmitPage } from "@/components/ui/WikiSubmitPage"
 
 // Lazy load heavy components
 const GraphView = lazy(() => import("@/components/ui/GraphView").then(m => ({ default: m.GraphView })))
@@ -93,6 +94,13 @@ const recentRoute = createRoute({
   component: RecentPage,
 })
 
+// Wiki submit route — must be before catch-all
+const submitRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/submit",
+  component: WikiSubmitPage,
+})
+
 // Catch-all note route — handles /Books/foo, /Movies/bar, etc.
 const noteRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -124,6 +132,7 @@ const routeTree = rootRoute.addChildren([
   foldersRoute,
   folderRoute,
   recentRoute,
+  submitRoute,
   noteRoute,
 ])
 

@@ -1,7 +1,7 @@
 ---
 title: "Jeh's Profile"
 description: "Philchat wiki profile for Jeh"
-tags: [wiki]
+tags: [wiki, chatter]
 type: chatter
 username: "Ice_chicken"
 pronouns: "Him"
@@ -14,7 +14,9 @@ draft: true
 
 # Jeh's Profile
 
-Jeh is a well-known phil-chatter with a big heart for all things pakistan; he's a big fan of the Pakistani band Junoon, and is known for his love of Pakistani food. Jeh is also a big fan of Indian philosophy, and has a particular interest in the works of Shankaracharya, Nagarjuna, and Ramanuja. He is also influenced by the works of Bataille and Heidegger.
+Jeh is a well-known phil-chatter with a big heart for all things India; he's a big fan of the Indian band Ravi Shankar, and is known for his love of indian food. Jeh is also a big fan of Indian philosophy, and has a particular interest in the works of Shankaracharya, Nagarjuna, and Ramanuja. He is also influenced by the works of Bataille and Heidegger.
+
+![superpower](https://res.cloudinary.com/jerrick/image/upload/v1613368675/602a0d63df1d24001d35b1ea.png)
 
 
 ## Metaphysics & Epistemology
