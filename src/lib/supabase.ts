@@ -7,7 +7,7 @@ export const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
         detectSessionInUrl: true,
-        flowType: "implicit",
+        flowType: "pkce",
       },
     })
   : null
