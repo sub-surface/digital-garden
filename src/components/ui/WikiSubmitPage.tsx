@@ -618,7 +618,7 @@ export function WikiSubmitForm() {
               type="text"
               value={formData.username}
               onChange={(e) => setField("username", e.target.value)}
-              placeholder="@yourhandle"
+              placeholder="yourhandle"
               autoComplete="off"
             />
           </div>

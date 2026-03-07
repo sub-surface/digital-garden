@@ -52,7 +52,7 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
     }
     const { object: { sha: mainSha } } = await refRes.json<{ object: { sha: string } }>()
 
-    const safeName = body.username.replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
+    const safeName = body.username.replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
     const branchName = `submit/${safeName}-${Date.now()}-${Math.floor(Math.random() * 0xffff).toString(16).padStart(4, "0")}`
 
     const branchRes = await gh("/repos/sub-surface/digital-garden/git/refs", "POST", {
