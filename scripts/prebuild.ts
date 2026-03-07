@@ -419,7 +419,8 @@ function main() {
     const imgTag = n.image
       ? `<img src="${n.image.startsWith("http") ? n.image : `${baseUrl}${n.image}`}" alt="${n.title}" style="max-width:100%;margin-bottom:1em;" />`
       : ""
-    const body = `${imgTag}${desc ? `<p>${desc}</p>` : ""}<p><a href="${link}">Read on subsurfaces.net →</a></p>`
+    const siteName = baseUrl.includes("wiki") ? "wiki.subsurfaces.net" : "subsurfaces.net"
+    const body = `${imgTag}${desc ? `<p>${desc}</p>` : ""}<p><a href="${link}">Read on ${siteName} →</a></p>`
 
     return `
     <item>

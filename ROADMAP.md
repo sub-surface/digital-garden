@@ -75,6 +75,8 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **Tag/folder pages unconstrained width in wiki**: removed `tags`/`folder` from article slug list in `resolveLayout`; also fixed `NoteBody` frontmatter override to not force article layout for tag/folder pages
 - [x] **Search overlay links broken in wiki**: `handleSelect` now uses `navigate()` in wiki mode instead of `pushCard` (which requires PanelStack)
 - [x] **TerminalTitle home button**: wiki logo now links to `/` (wiki root) instead of `https://subsurfaces.net`
+- [x] **Tag/folder links not navigating in wiki**: `usePanelClick` was intercepting all clicks (hooks run before conditional shell return) — added `isWiki` bail-out so wiki lets links navigate normally
+- [x] **Cross-domain backlinks broken in wiki**: backlinks to non-wiki slugs now link to `https://subsurfaces.net/{slug}` instead of `/{slug}`, preventing the wiki router from swallowing them
 
 ### Styling & UX Fixes
 - [x] **TOC hash link fix**: `usePanelClick` intercepts `#hash` clicks — add early return for anchor links so TOC smooth-scrolls in both layouts
@@ -118,18 +120,69 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [ ] **Pre-render SSG**: build-time HTML generation for all notes
 - [ ] **Image optimisation**: sharp WebP variants + `<picture>` srcsets
 - [ ] **Lighthouse CI**: GitHub Actions target 95+ desktop
-- [ ] **Auto-deploy on merge**: GitHub Actions workflow — `npm ci && npm run build && npx wrangler deploy` triggered on push to `master`, using `CLOUDFLARE_API_TOKEN` secret
+- [x] **Auto-deploy on merge**: CF Workers auto-builds on push via `wrangler.toml` `[build]` command — no GitHub Actions needed
 
 ### Content & SEO
 - [x] **Sitemap** in prebuild (sitemap.xml → public/)
 - [x] **`image` field in content-index**: extracted from frontmatter (`image`/`cover`/`poster`) for OG and meta use
-- [ ] **RSS feeds (two, opt-in)** — replace current shotgun RSS with curated feeds:
-  - `public/rss.xml` — main site feed (`subsurfaces.net`): includes notes from `content/Writing/` OR with `published: true` frontmatter; requires `date` field; stable `<guid>` per URL so readers don't re-notify on rebuild; rich item format (styled excerpt, image if available, link back)
-  - `public/wiki-rss.xml` — wiki feed (`wiki.subsurfaces.net`): includes wiki notes with `published: true` and `date`
-  - `published` field extracted into content-index at prebuild
-  - `content/Writing/` folder — dedicated home for complete long-form works; no index page needed, `/folder/Writing` (FolderPage) serves as listing
-  - Undated notes never appear in either feed; existing undated notes can be surfaced by adding `date:` + `published: true` when ready
+- [x] **RSS feeds (two, opt-in)**: `public/rss.xml` (Writing/ or `published: true`, non-wiki) + `public/wiki-rss.xml` (wiki/ + `published: true`); both generated in prebuild; `published` extracted into content-index; undated notes excluded; fixed wiki feed link text to say `wiki.subsurfaces.net`. `content/Writing/` folder ready — add notes there or set `published: true` + `date` on any note to include it.
 - [ ] **Detailed documentation**: comprehensive docs for the codebase (delegate to worker agent)
+
+---
+
+## Comments System
+
+Opt-in per-note comments. Turnstile-gated, no login required. Pseudonymous (name only). Stored in Cloudflare D1 via the existing Worker. Hierarchical replies, upvote/downvote. Available site-wide (wiki + main), styled to match the active shell.
+
+### D1 Database Setup
+- [ ] Create D1 database via Wrangler: `npx wrangler d1 create digital-garden-comments`
+- [ ] Add `[[d1_databases]]` binding to `wrangler.toml`: `binding = "DB", database_name = "digital-garden-comments"`
+- [ ] Add `DB: D1Database` to `Env` interface in `src/worker.ts`
+- [ ] Run schema migration via `wrangler d1 execute`:
+  ```sql
+  CREATE TABLE comments (
+    id TEXT PRIMARY KEY,
+    slug TEXT NOT NULL,
+    parent_id TEXT,
+    author TEXT NOT NULL,
+    body TEXT NOT NULL,
+    upvotes INTEGER DEFAULT 0,
+    downvotes INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX idx_comments_slug ON comments(slug);
+  ```
+
+### Worker API Endpoints (src/worker.ts)
+- [ ] `GET /api/comments?slug=...` — fetch all comments for a slug (ordered by created_at, tree structure assembled client-side)
+- [ ] `POST /api/comments` — submit a new comment: validate Turnstile token, validate name + body (non-empty, length limits), insert into D1, return created comment
+- [ ] `POST /api/comments/:id/vote` — body `{ dir: 1 | -1 }`: increment upvotes or downvotes on a comment row
+- [ ] `DELETE /api/comments/:id` — admin-only delete: requires `Authorization: Bearer <ADMIN_SECRET>` header; add `ADMIN_SECRET` to Worker secrets
+- [ ] Add `ADMIN_SECRET` to Worker runtime secrets in CF dashboard
+
+### Frontend — CommentSection Component
+- [ ] Create `src/components/ui/CommentSection.tsx`:
+  - Fetches comments on mount via `GET /api/comments?slug={slug}`
+  - Assembles flat list into tree (parent_id → children) client-side
+  - Renders top-level comments first (oldest first, LessWrong style)
+  - Each comment shows: author, relative timestamp, body, upvote/downvote buttons, reply button
+  - Upvote/downvote calls `POST /api/comments/:id/vote` and updates count optimistically
+  - Reply button opens inline reply form below the comment
+  - Submit form at the bottom of the comment list (top-level new comment)
+- [ ] Create `src/components/ui/CommentSection.module.scss` — styled to CSS variables, works in both dark/light, both shells
+- [ ] Submit form fields: Name (text, required), Comment (textarea, required), Turnstile widget, Submit button
+- [ ] Inline reply form: same fields, nested visually under parent
+- [ ] Loading + error states
+
+### Integration
+- [ ] Add `comments?: boolean` to `NoteMetadata` in `src/types/content.ts`
+- [ ] Extract `comments` field in `scripts/prebuild.ts` (add to `NoteMeta`, write to content-index)
+- [ ] In `NoteRenderer.tsx`: if `meta?.comments` is true, render `<CommentSection slug={slug} />` below `<NoteFooter>`
+- [ ] `CommentSection` uses `useIsWiki()` to determine which domain's API to call (both domains share the same Worker, so `/api/comments` works on both)
+
+### Opt-in
+- [ ] Add `comments: true` to any note frontmatter to enable the section
+- [ ] Suggested initial candidates: `content/Wiki/index.md`, chatter profiles
 
 ---
 

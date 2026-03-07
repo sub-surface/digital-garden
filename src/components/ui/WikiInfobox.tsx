@@ -1,3 +1,4 @@
+import { useState } from "react"
 import styles from "./WikiInfobox.module.scss"
 
 interface Props {
@@ -30,6 +31,7 @@ function resolveAvatarPath(path?: string): string | undefined {
 }
 
 export function WikiInfobox({ type, data }: Props) {
+  const [expanded, setExpanded] = useState(false)
   const {
     title,
     image,
@@ -49,11 +51,19 @@ export function WikiInfobox({ type, data }: Props) {
 
   return (
     <aside className={styles.infobox} data-type={type} data-panel-ignore>
+      {expanded && avatar && (
+        <div className={styles.lightbox} onClick={() => setExpanded(false)}>
+          <img src={avatar} alt={title} className={styles.lightboxImg} />
+        </div>
+      )}
       <div className={styles.header}>
         {avatar && (
-          <div className={styles.avatarWrap}>
+          <div
+            className={styles.avatarWrap}
+            onClick={() => setExpanded(true)}
+            title="Click to expand"
+          >
             <img src={avatar} alt={title} className={styles.avatar} onError={(e) => {
-              // Fallback for broken images
               (e.target as HTMLImageElement).style.display = 'none'
             }} />
           </div>

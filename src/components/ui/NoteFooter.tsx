@@ -2,6 +2,7 @@ import { useStore } from "@/store"
 import type { NoteMetadata } from "@/types/content"
 import styles from "./NoteFooter.module.scss"
 import { lazy, Suspense, useState, useEffect } from "react"
+import { useIsWiki } from "@/hooks/useIsWiki"
 
 // Lazy load the local graph
 const LocalGraph = lazy(() => import("./LocalGraph").then(m => ({ default: m.LocalGraph })))
@@ -13,6 +14,7 @@ interface Props {
 
 export function NoteFooter({ slug, meta }: Props) {
   const contentIndex = useStore((s) => s.contentIndex)
+  const isWiki = useIsWiki()
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 800)
 
   useEffect(() => {
@@ -30,13 +32,20 @@ export function NoteFooter({ slug, meta }: Props) {
           <h3>Backlinks</h3>
           {meta?.backlinks && meta.backlinks.length > 0 ? (
             <ul className={styles.backlinksList}>
-              {meta.backlinks.map((bl) => (
-                <li key={bl}>
-                  <a href={`/${bl.replace(/\s+/g, "-")}`} className="internal-link">
-                    {contentIndex?.[bl]?.title ?? bl}
-                  </a>
-                </li>
-              ))}
+              {meta.backlinks.map((bl) => {
+                const blSlug = bl.replace(/\s+/g, "-")
+                const isWikiNote = blSlug === "wiki" || blSlug.toLowerCase().startsWith("wiki/")
+                const href = isWiki && !isWikiNote
+                  ? `https://subsurfaces.net/${blSlug}`
+                  : `/${blSlug}`
+                return (
+                  <li key={bl}>
+                    <a href={href} className="internal-link">
+                      {contentIndex?.[bl]?.title ?? bl}
+                    </a>
+                  </li>
+                )
+              })}
             </ul>
           ) : (
             <p className={styles.empty}>No notes link here yet.</p>
