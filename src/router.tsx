@@ -101,7 +101,7 @@ const noteRoute = createRoute({
     const params = noteRoute.useParams()
     const isWiki = useIsWiki()
     const rawSlug = (params as Record<string, string>)["_splat"] || "index"
-    const slug = rawSlug === "index" && isWiki ? "wiki/index" : rawSlug
+    const slug = rawSlug === "index" && isWiki ? "wiki" : rawSlug
 
     const setActiveGraphSlug = useStore((s) => s.setActiveGraphSlug)
     useEffect(() => {

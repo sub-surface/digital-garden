@@ -5,6 +5,7 @@ import { NoteLayout } from "./NoteLayout"
 import { NoteFooter } from "./NoteFooter"
 import { NoteBody } from "./NoteBody"
 import { WikiInfobox } from "./WikiInfobox"
+import { resolveSlug } from "@/lib/content-loader"
 import type { NoteMetadata } from "@/types/content"
 
 // Lazy system pages
@@ -29,7 +30,7 @@ function resolveLayout(
 
   const type = (frontmatter.type as string) ?? meta?.type
   if (type && ["book", "movie", "chatter", "philosopher"].includes(type)) return "article"
-  if (slug.toLowerCase().startsWith("wiki/")) return "article"
+  if (slug.toLowerCase() === "wiki" || slug.toLowerCase().startsWith("wiki/")) return "article"
   if (slug.toLowerCase() === "chess") return "article"
   if (["graph", "photography", "bookshelf", "movieshelf", "music-library", "tags", "folder"].includes(slug.toLowerCase())) return "article"
 
@@ -64,7 +65,8 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
     }))
   }
 
-  const meta = contentIndex?.[slug]
+  const resolvedKey = contentIndex ? (resolveSlug(slug, contentIndex) ?? slug) : slug
+  const meta = contentIndex?.[resolvedKey]
   const override = sessionOverrides[slug] || {}
   const fm = { ...data.frontmatter, ...override }
   
