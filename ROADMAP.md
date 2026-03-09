@@ -134,6 +134,14 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [ ] **Image optimisation**: sharp WebP variants + `<picture>` srcsets
 - [ ] **Lighthouse CI**: GitHub Actions target 95+ desktop
 - [x] **Auto-deploy on merge**: CF Workers auto-builds on push via `wrangler.toml` `[build]` command — no GitHub Actions needed
+- [ ] **OG gen: SVG image support**: satori cannot load `.svg` images from Wikipedia/external sources — throws "Unsupported image type: unknown". Affects any note whose `image`/`cover` frontmatter points to an SVG URL. Fix: detect SVG URLs in `og-gen.ts` and skip the image, or rasterise via `sharp` before passing to satori. Currently crashes silently and falls back to text-only OG card. Affected note: any using `https://upload.wikimedia.org/...svg` cover images.
+- [ ] **OG gen: external image fetch failures**: `https://covers.openlibrary.org/...` fetch fails in CF build environment (likely blocked). Fix: catch fetch errors per-image and fall back gracefully rather than crashing the OG generator. Both SVG and fetch-failure cases should be handled together.
+- [ ] **OG caching not working**: build log shows `132 image(s) to generate (0 cached)` on every build — cache is never hit. OG images are being regenerated from scratch each deploy (~90s added to build time). Investigate cache key / hash logic in `og-gen.ts` and ensure the cache directory persists between CF builds (may need to use CF build output cache or commit generated images).
+- [ ] **Prebuild runs twice per CF deploy**: build log shows prebuild running once standalone (for OG gen) and again as part of `npm run build`. Combined with `wrangler deploy` triggering its own `npm run build`, this means prebuild runs 3× total per deploy. Investigate deduplication — consider splitting OG gen into a separate script not called by `prebuild`.
+- [ ] **`_template` compiled as MDX chunk**: `dist/assets/_template-c5OcOr94.js` appears in the bundle — `content/Photos/_template.md` is being picked up by `import.meta.glob` and compiled. Add `_template` to the MDX glob exclusion pattern in `vite.config.ts` or rename to avoid the glob.
+- [ ] **Static/dynamic import conflict (5 warnings)**: `BookshelfPage`, `MovieshelfPage`, `MusicPage`, `ChessPage`, `GraphView` are both lazy-imported in `NoteRenderer`/`router.tsx` and statically imported in `NoteBody`/`GraphOverlay`. Vite cannot split them into separate chunks. Fix: remove static imports from `NoteBody` and `GraphOverlay`, convert to lazy/dynamic imports to restore code-splitting benefits.
+- [ ] **Main bundle 1.13MB (350KB gzip)**: the primary `index-*.js` chunk remains very large. Further splitting needed — likely caused by the static/dynamic import conflicts above pulling heavy modules into the main chunk.
+- [ ] **`glob@11` deprecation warning**: `npm warn deprecated glob@11.1.0` on every install. Not a breaking issue but should be tracked — update when a direct or transitive dependency releases a fix.
 
 ### Desktop Performance (Lighthouse score: 37 — critical)
 > Measured on desktop. FCP 3.6s, LCP 6.8s, TBT 130ms, CLS 0.353. Total payload 7.2MB. Same root causes as mobile — sourcemaps shipping to clients, no code splitting.
@@ -166,6 +174,14 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **BgCanvas: skip graph.json fetch unless in graph mode**: `graph.json` (18KB) now only fetched when `bgMode === "graph"` — saves a network request on every other background mode
 - [ ] **`<main>` landmark**: wrap main content area in `<main>` element — missing, flagged by Lighthouse for accessibility + SEO
 
+### Content Housekeeping
+- [ ] **37 broken wikilinks**: build log reports 37 unresolved `[[wikilinks]]` across 14 notes. Highest priority clusters:
+  - `Moltbook` → 10 broken links (private/draft notes not in repo: `[[OpenClaw]]`, `[[Hyperstition]]`, `[[The-Claude-Bliss-Attractor]]`, etc.) — consider either creating stub notes or removing links
+  - `Writing/On-Attention` → 5 broken links (`[[Philosophy-of-Mind]]`, `[[Wittgenstein]]`, `[[Wiki/Concepts/index]]`) — create stubs or fix slugs
+  - `index` → `[[Music]]`, `[[Tags]]` — slug mismatch; likely should be `music-library` and `tags`
+  - `Wiki/Concepts`, `Wiki/Movements` → `[[Sample-Article]]` — placeholder link from wiki template, remove or replace
+  - One-offs: `[[Walter-Benjamin]]`, `[[Kodachrome]]`, `[[Lars-von-Trier]]`, `[[Abbas]]`, `[[08-11-25]]`, `[[Thomas-Sauvin]]`, `[[Rabbit-Holes]]`, `[[Narrative-hooks]]`, `[[Literary-orientations]]`, `[[Rosi-Braidotti]]` — create stubs or fix slugs
+
 ### Content & SEO
 - [x] **Sitemap** in prebuild (sitemap.xml → public/)
 - [x] **`image` field in content-index**: extracted from frontmatter (`image`/`cover`/`poster`) for OG and meta use
@@ -174,6 +190,11 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **Meta descriptions**: already injected by `src/worker.ts` `injectMetaTags()` using `description` ?? `excerpt` frontmatter fields
 - [ ] **`description` field in content-index**: extract `description` frontmatter in `scripts/prebuild.ts`, add to `NoteMetadata` type, use in worker OG injection and meta description tag
 - [ ] **Detailed documentation**: comprehensive docs for the codebase (delegate to worker agent)
+
+### Photography Albums
+- [x] **Album system**: `content/Photos/*.md` frontmatter-driven albums → `public/albums.json`; `<PhotoAlbums />` MDX component renders album grid → drill-in masonry → lightbox with keyboard nav
+- [x] **`_template.md`**: album template in `content/Photos/` for adding new albums without code changes
+- [x] **Photography.md restored**: written content now renders normally; `<PhotoAlbums />` appended below prose
 
 ### Bug Fixes
 - [x] **`class` → `className` in MDX content**: raw HTML in `.md` files compiled as JSX — `class=` attribute causes React warnings. Fixed in: `Chess.md`, `Photography.md`, `Writing/Writing-Template.md`, `Writing/On-Attention.md`, `Wiki/chatters/hughchungus.md`, `thinking in public.md`, `Wiki/Philsurvey Template.md`
