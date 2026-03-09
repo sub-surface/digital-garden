@@ -3,7 +3,8 @@
     "allow": [
       "Bash(node:*)",
       "Bash(npx wrangler:*)",
-      "WebFetch(domain:supabase.com)"
+      "WebFetch(domain:supabase.com)",
+      "Bash(curl:*)"
     ]
   }
 }

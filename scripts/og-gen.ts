@@ -1,5 +1,6 @@
 import * as fs from "fs"
 import * as path from "path"
+import * as crypto from "crypto"
 import { fileURLToPath } from "url"
 import satori from "satori"
 import { Resvg } from "@resvg/resvg-js"
@@ -7,6 +8,20 @@ import { Resvg } from "@resvg/resvg-js"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PUBLIC_DIR = path.resolve(__dirname, "../public")
 const OG_DIR = path.join(PUBLIC_DIR, "og")
+const CACHE_PATH = path.join(OG_DIR, ".cache.json")
+
+function hashNote(note: Record<string, unknown>): string {
+  const relevant = JSON.stringify({
+    title: note.title,
+    description: note.description,
+    excerpt: note.excerpt,
+    tags: note.tags,
+    image: note.image,
+    cover: note.cover,
+    poster: note.poster,
+  })
+  return crypto.createHash("md5").update(relevant).digest("hex")
+}
 
 function cleanDescription(text: string): string {
   return text
@@ -24,17 +39,36 @@ function cleanDescription(text: string): string {
 
 async function main() {
   console.log("Generating OG images...")
-  
+
   if (!fs.existsSync(OG_DIR)) {
     fs.mkdirSync(OG_DIR, { recursive: true })
   }
 
   const index = JSON.parse(fs.readFileSync(path.join(PUBLIC_DIR, "content-index.json"), "utf-8"))
-  
+
+  // Load cache
+  const cache: Record<string, string> = fs.existsSync(CACHE_PATH)
+    ? JSON.parse(fs.readFileSync(CACHE_PATH, "utf-8"))
+    : {}
+
+  // Determine which slugs need (re)generation
+  const slugsToGenerate = Object.keys(index).filter((slug) => {
+    const hash = hashNote(index[slug])
+    const outPath = path.join(OG_DIR, `${slug.replace(/\//g, "-")}.png`)
+    return cache[slug] !== hash || !fs.existsSync(outPath)
+  })
+
+  if (slugsToGenerate.length === 0) {
+    console.log("OG images up to date — nothing to generate.")
+    return
+  }
+
+  console.log(`  ${slugsToGenerate.length} image(s) to generate (${Object.keys(index).length - slugsToGenerate.length} cached)`)
+
   // Load font
   const fontData = await fetch("https://github.com/google/fonts/raw/main/ofl/ibmplexmono/IBMPlexMono-Medium.ttf").then(res => res.arrayBuffer())
 
-  for (const slug in index) {
+  for (const slug of slugsToGenerate) {
     const note = index[slug]
     const outPath = path.join(OG_DIR, `${slug.replace(/\//g, "-")}.png`)
 
@@ -57,7 +91,8 @@ async function main() {
     const textMaxWidth = thumbnailUrl ? '680px' : '900px'
 
     const svg = await satori(
-      {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ({
         type: 'div',
         props: {
           style: {
@@ -144,7 +179,7 @@ async function main() {
             }] : []),
           ],
         },
-      },
+      }) as any,
       {
         width: 1200,
         height: 630,
@@ -164,9 +199,16 @@ async function main() {
     const pngBuffer = pngData.asPng()
 
     fs.writeFileSync(outPath, pngBuffer)
+    cache[slug] = hashNote(note)
   }
 
-  console.log(`Successfully generated ${Object.keys(index).length} OG images in public/og/`)
+  // Prune stale cache entries for deleted slugs
+  for (const slug of Object.keys(cache)) {
+    if (!index[slug]) delete cache[slug]
+  }
+
+  fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2))
+  console.log(`Successfully generated ${slugsToGenerate.length} OG image(s) in public/og/ (${Object.keys(index).length} total)`)
 }
 
 main().catch(console.error)
