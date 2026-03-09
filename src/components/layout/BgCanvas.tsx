@@ -54,12 +54,37 @@ const TERMINAL_ANIMATIONS = [
   { frames: ["◢", "◣", "◤", "◥"] },
   { frames: ["[    ]", "[=   ]", "[==  ]", "[=== ]", "[====]", "[ ===]", "[  ==]", "[   =]", "[    ]"] },
   { frames: ["* . .", ". * .", ". . *", ". * ."] },
-  { frames: ["<o>", "(o)", " o ", "   "] }
+  { frames: ["<o>", "(o)", " o ", "   "] },
+  // additional variance
+  { frames: ["▖", "▗", "▘", "▝", "▞", "▟", "▙", "▛"] },
+  { frames: ["╔═╗", "║ ║", "╚═╝", "   "] },
+  { frames: ["·", "•", "●", "◉", "●", "•", "·", " "] },
+  { frames: ["∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙"] },
+  { frames: ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"] },
+  { frames: ["⟨ ⟩", "⟨·⟩", "⟨●⟩", "⟨·⟩", "⟨ ⟩"] },
+  { frames: ["≡", "≢", "≣", "≡", " "] },
+  { frames: ["○", "◌", "◍", "◎", "●", "◎", "◍", "◌"] },
+  { frames: ["┌─┐", "│ │", "└─┘"] },
+  { frames: ["···", "━━━", "───", "···"] },
+  { frames: ["⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"] },
+  { frames: ["∅", "∈", "∉", "∋", "∞", "∝", "∂", "∆"] },
+  { frames: ["α", "β", "γ", "δ", "ε", "ζ", "η", "θ"] },
+  { frames: ["⌛", "⌚", "⊕", "⊗", "⊙", "⊚"] },
+  { frames: ["◇", "◆", "◈", "◇"] },
+  { frames: ["✦", "✧", "⋆", "·", "⋆", "✧", "✦"] },
+  { frames: ["{  }", "{ ·}", "{··}", "{···}", "{··}", "{ ·}", "{  }"] },
+  { frames: ["0", "1", "0", "0", "1", "1", "0", "1"] },
 ]
 
-const GLYPH_POOL = '░▒▓█─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬■□●○◘▄▀▌▐«»¶§±≡≈∞ΩαβπΣφ♠♣♥♦☺☻♪♫►◄▲▼'
+const GLYPH_POOL = '░▒▓█─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬■□●○◘▄▀▌▐«»¶§±≡≈∞ΩαβπΣφψχρλμνξ♠♣♥♦☺☻♪♫►◄▲▼◇◆◈✦✧⋆∂∆∅∈∝⟨⟩⊕⊗⊙↑↗→↘↓↙←↖⁰¹²³⁴⁵⁶⁷⁸⁹αβγδεζηθ'
 
 export function BgCanvas() {
+  // Skip entirely on mobile — canvas is CSS-hidden at ≤800px, no point running it
+  if (typeof window !== "undefined" && window.innerWidth <= 800) return null
+  return <BgCanvasInner />
+}
+
+function BgCanvasInner() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bgMode = useStore((s) => s.bgMode)
   const bgStyle = useStore((s) => s.bgStyle)
@@ -151,25 +176,27 @@ export function BgCanvas() {
     window.addEventListener("mousemove", mouseMove)
     resize()
 
-    // Fetch nodes once
-    fetch("/graph.json")
-      .then(res => res.json())
-      .then(data => {
-        const nodes = data.nodes ? data.nodes.map((n: any) => ({
-          ...n,
-          x: Math.random() * window.innerWidth,
-          y: Math.random() * window.innerHeight,
-          vx: (Math.random() - 0.5) * 0.2,
-          vy: (Math.random() - 0.5) * 0.2
-        })) : []
-        stateRef.current.nodes = nodes
-        stateRef.current.links = data.links || []
-        
-        const map = new Map()
-        nodes.forEach((n: any) => map.set(n.id, n))
-        stateRef.current.nodeMap = map
-      })
-      .catch(() => {})
+    // Fetch graph nodes only when graph background mode is active
+    if (bgMode === "graph") {
+      fetch("/graph.json")
+        .then(res => res.json())
+        .then(data => {
+          const nodes = data.nodes ? data.nodes.map((n: any) => ({
+            ...n,
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            vx: (Math.random() - 0.5) * 0.2,
+            vy: (Math.random() - 0.5) * 0.2
+          })) : []
+          stateRef.current.nodes = nodes
+          stateRef.current.links = data.links || []
+
+          const map = new Map()
+          nodes.forEach((n: any) => map.set(n.id, n))
+          stateRef.current.nodeMap = map
+        })
+        .catch(() => {})
+    }
 
     let animationId: number
     const frame = () => {

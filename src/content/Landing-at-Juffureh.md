@@ -1,5 +1,5 @@
 ---
-title: On Philosophy
+title: Landing at Juffureh
 tags:
   - Philosophy
   - thoughts
@@ -8,6 +8,9 @@ id: blog
 created: 2026-02-07
 ---
 ![[Landing at Juffureh.jpg]]
+
+> *Landing at Juffureh*, Gambia.  
+> *January 2019.*
 
 ```telescopic
 This image 

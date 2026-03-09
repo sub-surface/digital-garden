@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from "@tanstack/react-router"
+import { useEffect, Suspense, lazy } from "react"
 import { useStore } from "@/store"
 import { PanelStack } from "@/components/panel/PanelStack"
 import { usePanelClick } from "@/components/panel/usePanelClick"
@@ -16,9 +17,10 @@ import { MobileMusicBar } from "@/components/ui/MobileMusicBar"
 import { SearchOverlay } from "@/components/ui/SearchOverlay"
 import { GraphOverlay } from "@/components/ui/GraphOverlay"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
-import { LocalGraph } from "@/components/ui/LocalGraph"
-import { Suspense, lazy } from "react"
 import styles from "./AppShell.module.scss"
+
+// Lazy-load LocalGraph — pulls in D3 + PixiJS (~570KB), only needed on desktop
+const LocalGraph = lazy(() => import("@/components/ui/LocalGraph").then(m => ({ default: m.LocalGraph })))
 
 export function AppShell() {
   const isWiki = useIsWiki()
@@ -26,6 +28,15 @@ export function AppShell() {
   const activeSlug = useStore((s) => s.activeGraphSlug)
   const activeLayout = useStore((s) => s.activeLayout)
   const location = useLocation()
+  const setContentIndex = useStore((s) => s.setContentIndex)
+
+  // Defer content-index fetch until after first render — doesn't block paint
+  useEffect(() => {
+    fetch("/content-index.json")
+      .then((r) => r.json())
+      .then(setContentIndex)
+      .catch(() => console.warn("Content index not found — run prebuild first"))
+  }, [])
 
   usePanelClick()
   useHotkeys()

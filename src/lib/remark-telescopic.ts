@@ -27,14 +27,14 @@ function applyInlineFormatting(text: string): string {
   s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
   s = s.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "<em>$1</em>")
   s = s.replace(/~~(.+?)~~/g, "<del>$1</del>")
-  // Wikilinks
+  // Wikilinks — slugify target (lowercase, spaces→hyphens)
   s = s.replace(
     /\[\[([^\]|]+)\|([^\]]+)\]\]/g,
-    '<a href="/$1" class="internal-link">$2</a>',
+    (_, target, alias) => `<a href="/${target.toLowerCase().replace(/\s+/g, "-")}" class="internal-link">${alias}</a>`,
   )
   s = s.replace(
     /\[\[([^\]]+)\]\]/g,
-    '<a href="/$1" class="internal-link">$1</a>',
+    (_, target) => `<a href="/${target.toLowerCase().replace(/\s+/g, "-")}" class="internal-link">${target}</a>`,
   )
   // Standard markdown links
   s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')

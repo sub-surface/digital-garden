@@ -40,6 +40,9 @@ export function remarkSidenotes() {
     )
 
     // 3. Replace each footnoteReference with raw HTML sidenote markup
+    // Track insertion order for the footnotes-section
+    const ordered: string[] = []
+
     visit(tree, "footnoteReference", (node: FootnoteReference, index, parent) => {
       if (!parent || index === undefined) return
 
@@ -47,12 +50,17 @@ export function remarkSidenotes() {
       const content = defs.get(num)
       if (!content) return
 
+      if (!ordered.includes(num)) ordered.push(num)
+
       const id = `sn-${num}`
 
       // Inline: superscript marker + checkbox toggle for narrow viewports
       // Wide: the <aside> floats into the right margin via CSS
+      // Strip tags from content for the tooltip (plain text only)
+      const plainContent = content.replace(/<[^>]*>/g, "").replace(/"/g, "&quot;").trim()
+
       const html = [
-        `<sup class="footnote-marker">${num}</sup>`,
+        `<sup class="footnote-marker" data-content="${plainContent}"><a href="#fn-${num}">${num}</a></sup>`,
         `<input type="checkbox" id="${id}" class="sidenote-checkbox" />`,
         `<label for="${id}" class="sidenote-toggle">${num}</label>`,
         `<aside class="sidenote" data-number="${num}">${content}</aside>`,
@@ -64,5 +72,19 @@ export function remarkSidenotes() {
       parent.children.splice(index, 1, htmlNode)
       return SKIP
     })
+
+    // 4. Append a .footnotes-section for note layout (CSS hides it in article layout)
+    if (ordered.length > 0) {
+      const items = ordered
+        .map((num) => `<li id="fn-${num}">${defs.get(num)}</li>`)
+        .join("")
+      const footnotesHtml = [
+        `<section class="footnotes-section">`,
+        `<h2 id="footnote-label">Footnotes</h2>`,
+        `<ol>${items}</ol>`,
+        `</section>`,
+      ].join("")
+      tree.children.push({ type: "html", value: footnotesHtml } as any)
+    }
   }
 }

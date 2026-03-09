@@ -13,7 +13,6 @@ import type { NoteMetadata } from "@/types/content"
 // Lazy system pages
 const GraphView = lazy(() => import("./GraphView").then(m => ({ default: m.GraphView })))
 const ChessPage = lazy(() => import("./ChessPage").then(m => ({ default: m.ChessPage })))
-const PhotographyPage = lazy(() => import("./PhotographyPage").then(m => ({ default: m.PhotographyPage })))
 const BookshelfPage = lazy(() => import("./BookshelfPage").then(m => ({ default: m.BookshelfPage })))
 const MovieshelfPage = lazy(() => import("./MovieshelfPage").then(m => ({ default: m.MovieshelfPage })))
 const MusicPage = lazy(() => import("./MusicPage").then(m => ({ default: m.MusicPage })))
@@ -35,7 +34,7 @@ function resolveLayout(
   if (slug.toLowerCase() === "wiki" || slug.toLowerCase().startsWith("wiki/")) return "article"
   if (slug.toLowerCase().startsWith("writing/")) return "article"
   if (slug.toLowerCase() === "chess") return "article"
-  if (["graph", "photography", "bookshelf", "movieshelf", "music-library"].includes(slug.toLowerCase())) return "article"
+  if (["graph", "bookshelf", "movieshelf", "music-library"].includes(slug.toLowerCase())) return "article"
 
   return "note"
 }
@@ -97,7 +96,7 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
     const s = slug.toLowerCase()
     if (s === "graph") return <Suspense fallback={<div>Loading map...</div>}><GraphView /></Suspense>
     if (s === "chess") return <Suspense fallback={<div>Loading board...</div>}><ChessPage /></Suspense>
-    if (s === "photography") return <Suspense fallback={<div>Loading gallery...</div>}><PhotographyPage /></Suspense>
+    // photography is no longer a system page — Photography.md renders normally with <PhotoAlbums />
     if (s === "bookshelf") return <Suspense fallback={<div>Loading shelf...</div>}><BookshelfPage /></Suspense>
     if (s === "movieshelf") return <Suspense fallback={<div>Loading shelf...</div>}><MovieshelfPage /></Suspense>
     if (s === "music-library") return <Suspense fallback={<div>Loading library...</div>}><MusicPage /></Suspense>
@@ -142,7 +141,7 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
       <h1 style={{ margin: 'var(--space-2) 0' }}>{title}</h1>
       {(date || readingTime) && (
         <div className="note-date" style={{ fontFamily: 'var(--font-code)', fontSize: '0.8rem', opacity: 0.6, display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
-          {date && <span>{date}</span>}
+          {date && <span>{new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>}
           {readingTime && <span>{readingTime} min read</span>}
         </div>
       )}

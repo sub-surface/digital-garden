@@ -1,73 +1,131 @@
 import { useState, useEffect } from "react"
 import styles from "./Collections.module.scss"
 
-interface Photo {
-  src: string
-  alt: string
-  noteSlug: string
-  noteTitle: string
+interface AlbumPhoto {
+  file: string
+  caption?: string
 }
 
-export function PhotographyPage() {
-  const [photos, setPhotos] = useState<Photo[]>([])
+interface Album {
+  slug: string
+  title: string
+  description?: string
+  date?: string
+  cover?: string
+  photos: AlbumPhoto[]
+}
+
+function photoSrc(file: string) {
+  return `/content/Media/${file}`
+}
+
+export function PhotoAlbums() {
+  const [albums, setAlbums] = useState<Album[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
+  const [activeAlbum, setActiveAlbum] = useState<Album | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   useEffect(() => {
-    fetch("/photography.json")
-      .then((res) => res.json())
-      .then((data) => {
-        setPhotos(data)
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error("Failed to load photography manifest:", err)
-        setLoading(false)
-      })
+    fetch("/albums.json")
+      .then((r) => r.json())
+      .then((data) => { setAlbums(data); setLoading(false) })
+      .catch(() => setLoading(false))
   }, [])
 
-  if (loading) return <div className={styles.collectionPage}>Loading photos...</div>
+  // Lightbox keyboard nav
+  useEffect(() => {
+    if (lightboxIndex === null || !activeAlbum) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") setLightboxIndex(i => Math.min((i ?? 0) + 1, activeAlbum.photos.length - 1))
+      if (e.key === "ArrowLeft")  setLightboxIndex(i => Math.max((i ?? 0) - 1, 0))
+      if (e.key === "Escape") setLightboxIndex(null)
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [lightboxIndex, activeAlbum])
 
-  return (
-    <div className={styles.collectionPage}>
-      <header className={styles.header}>
-        <h1>Photography</h1>
-        <p>Capturing the world as it is.</p>
-      </header>
+  if (loading) return <div className={styles.albumsLoading}>loading albums...</div>
+  if (albums.length === 0) return <p>No albums yet.</p>
 
-      <div className={styles.photoGrid}>
-        {photos.length === 0 ? (
-          <p>No photos found in the garden yet.</p>
-        ) : (
-          photos.map((photo, i) => (
-            <div 
-              key={`${photo.src}-${i}`} 
-              className={styles.photoItem}
-              onClick={() => setSelectedPhoto(photo)}
-            >
-              <img src={photo.src} alt={photo.alt} loading="lazy" />
-              <div className={styles.photoOverlay}>
-                <span>{photo.noteTitle}</span>
+  // ── Album drill-in view ──
+  if (activeAlbum) {
+    const photo = lightboxIndex !== null ? activeAlbum.photos[lightboxIndex] : null
+    return (
+      <div className={styles.albumView}>
+        <button className={styles.albumBack} onClick={() => setActiveAlbum(null)}>
+          ← all albums
+        </button>
+        <div className={styles.albumViewHeader}>
+          <h2>{activeAlbum.title}</h2>
+          {activeAlbum.description && <p>{activeAlbum.description}</p>}
+          {activeAlbum.date && (
+            <span className={styles.albumDate}>
+              {new Date(activeAlbum.date).toLocaleDateString("en-GB", { year: "numeric", month: "long" })}
+            </span>
+          )}
+        </div>
+        <div className={styles.photoGrid}>
+          {activeAlbum.photos.map((p, i) => (
+            <div key={i} className={styles.photoItem} onClick={() => setLightboxIndex(i)}>
+              <img src={photoSrc(p.file)} alt={p.caption ?? p.file} loading="lazy" />
+              {p.caption && (
+                <div className={styles.photoOverlay}><span>{p.caption}</span></div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {photo && (
+          <div className={styles.lightbox} onClick={() => setLightboxIndex(null)}>
+            <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
+              <img src={photoSrc(photo.file)} alt={photo.caption ?? photo.file} />
+              {photo.caption && (
+                <div className={styles.lightboxMeta}><p>{photo.caption}</p></div>
+              )}
+              <div className={styles.lightboxNav}>
+                <button
+                  disabled={lightboxIndex === 0}
+                  onClick={() => setLightboxIndex(i => Math.max((i ?? 0) - 1, 0))}
+                >←</button>
+                <span>{(lightboxIndex ?? 0) + 1} / {activeAlbum.photos.length}</span>
+                <button
+                  disabled={lightboxIndex === activeAlbum.photos.length - 1}
+                  onClick={() => setLightboxIndex(i => Math.min((i ?? 0) + 1, activeAlbum.photos.length - 1))}
+                >→</button>
               </div>
             </div>
-          ))
+            <button className={styles.closeLightbox} onClick={() => setLightboxIndex(null)}>&times;</button>
+          </div>
         )}
       </div>
+    )
+  }
 
-      {selectedPhoto && (
-        <div className={styles.lightbox} onClick={() => setSelectedPhoto(null)}>
-          <div className={styles.lightboxContent}>
-            <img src={selectedPhoto.src} alt={selectedPhoto.alt} />
-            <div className={styles.lightboxMeta}>
-              <h3>{selectedPhoto.noteTitle}</h3>
-              <a href={`/${selectedPhoto.noteSlug}`} onClick={(e) => e.stopPropagation()}>
-                View Note →
-              </a>
+  // ── Album grid ──
+  return (
+    <div className={styles.albumGrid}>
+      {albums.map((album) => (
+        <div key={album.slug} className={styles.albumCard} onClick={() => setActiveAlbum(album)}>
+          <div className={styles.albumCover}>
+            {album.cover
+              ? <img src={photoSrc(album.cover)} alt={album.title} loading="lazy" />
+              : <div className={styles.albumCoverPlaceholder} />
+            }
+            <div className={styles.albumCoverOverlay}>
+              <span>{album.photos.length} photo{album.photos.length !== 1 ? "s" : ""}</span>
             </div>
           </div>
-          <button className={styles.closeLightbox}>&times;</button>
+          <div className={styles.albumMeta}>
+            <h3>{album.title}</h3>
+            {album.description && <p>{album.description}</p>}
+            {album.date && (
+              <span className={styles.albumDate}>
+                {new Date(album.date).toLocaleDateString("en-GB", { year: "numeric", month: "long" })}
+              </span>
+            )}
+          </div>
         </div>
-      )}
+      ))}
     </div>
   )
 }

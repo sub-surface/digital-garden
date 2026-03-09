@@ -1,5 +1,10 @@
 // Reset + base typography
 
+@keyframes glorp-quip-fade {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 0.75; transform: translateY(0); }
+}
+
 *,
 *::before,
 *::after {

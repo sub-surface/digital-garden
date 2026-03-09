@@ -5,7 +5,20 @@ tags: [wiki]
 layout: article
 ---
 
-A shared knowledge base by and for the philchat community — profiles, positions, and debates.
+A shared knowledge base by and for the philchat community — chatters, philosophers. memes and more.  
+Submit an article at the link below, or explore the sections and recent additions to find something interesting to read. You can find a repository of philosophical texts at the [Philchat Library](https://github.com/sub-surface/philchat-papers).
+
+---
+
+## Contribute
+
+Want to add your profile? [[Wiki/Submit|Submit your profile →]]
+
+Want to write an article? [Add Article →](/new)
+
+All submissions are reviewed before publishing. See the [[Wiki/Style-Guide|Style Guide]] for formatting conventions and the [[Wiki/Philsurvey Template|Philsurvey Template]] for the survey format.
+
+[[Wiki/About|About this wiki →]]
 
 ---
 
@@ -23,18 +36,6 @@ A shared knowledge base by and for the philchat community — profiles, position
 ## Recent Additions
 
 <Query filter="folder=Wiki" sort="-date" limit="8" display="list" />
-
----
-
-## Contribute
-
-Want to add your profile? [[Wiki/Submit|Submit your profile →]]
-
-Want to write an article? [Add Article →](/new)
-
-All submissions are reviewed before publishing. See the [[Wiki/Style-Guide|Style Guide]] for formatting conventions and the [[Wiki/Philsurvey Template|Philsurvey Template]] for the survey format.
-
-[[Wiki/About|About this wiki →]]
 
 ---
 

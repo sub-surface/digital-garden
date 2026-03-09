@@ -135,11 +135,60 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [ ] **Lighthouse CI**: GitHub Actions target 95+ desktop
 - [x] **Auto-deploy on merge**: CF Workers auto-builds on push via `wrangler.toml` `[build]` command — no GitHub Actions needed
 
+### Desktop Performance (Lighthouse score: 37 — critical)
+> Measured on desktop. FCP 3.6s, LCP 6.8s, TBT 130ms, CLS 0.353. Total payload 7.2MB. Same root causes as mobile — sourcemaps shipping to clients, no code splitting.
+
+- [x] **Disable production sourcemaps**: `sourcemap: true` in `vite.config.ts` is shipping `.map` files to the browser — 4MB+ of the 7.2MB payload. Set `sourcemap: false` for production.
+- [x] **Code splitting**: add `build.rollupOptions.output.manualChunks` to split `d3`, `pixi.js`, `flexsearch`, `chess.js` into separate chunks — prevents all heavy libs loading on initial page paint
+- [x] **Create robots.txt**: `public/robots.txt` is missing entirely — Lighthouse logged 25 errors. Add a valid file.
+- [ ] **Font display swap**: Google Fonts URL already has `display=swap` — verify it's being applied; add `font-display: swap` in local SCSS `@font-face` rules if any exist
+- [ ] **`<main>` landmark**: wrap main content in `<main>` element for accessibility + SEO (currently missing, flagged by both Lighthouse runs)
+- [ ] **Heading order**: audit `h1`→`h2`→`h3` sequence — Lighthouse flagged non-sequential headings
+
+### Mobile Performance (Lighthouse score: 12 — critical)
+> Measured on mobile. FCP 21.4s, LCP 43.6s, TBT 1,270ms, CLS 0.399. Total payload 7.2MB. Root cause: enormous unminified/unused JS bundle and eager loading of heavy libraries.
+
+- [x] **Enable Vite minification**: `sourcemap: false` + no disabled minify — fixed alongside sourcemap removal
+- [x] **Reduce unused JS**: split vendor chunks done — `d3`, `pixi.js`, `flexsearch`, `chess.js` in own chunks
+- [x] **BgCanvas: skip on mobile**: early return added — canvas never mounts on `≤800px`
+- [ ] **Fix CLS**: web fonts loading without size fallbacks cause layout shift. Add `size-adjust` descriptors to font fallbacks in `base.scss`; ensure all `<img>` have explicit `width`/`height`
+- [ ] **Fix render-blocking requests** (est. 300ms savings): Google Fonts stylesheet is render-blocking — use `<link rel="preload">` + `onload` swap trick, or self-host fonts
+- [ ] **Cache lifetimes** (est. 122KB savings): set long `Cache-Control` on `/content/Media/` and `/og/` in `wrangler.toml` `[assets]` headers config
+
+### Bundle & Loading Optimisations (identified via deep audit)
+> LocalGraph imports D3 + PixiJS at module level — 570KB loaded on every desktop page even when the graph widget isn't visible. content-index.json (81KB) fetched before first render. chess.js in manualChunks forces a separate request even though ChessPage is already lazy-loaded.
+
+- [x] **chess.js removed from manualChunks**: was creating a separate chunk that loaded independently; now co-bundled with lazy ChessPage
+- [x] **LocalGraph: lazy import D3 + PixiJS**: moved to dynamic `import()` in AppShell — 570KB (D3 + PixiJS) no longer in the initial bundle
+- [x] **content-index.json deferred**: moved fetch out of `main.tsx` startup into AppShell `useEffect` — no longer blocks initial React render
+- [x] **Trim Google Font weights**: removed unused variants — EB Garamond down to 1 variant (was 6), Playfair down to 4 (was 5), IBM Plex Mono down to 2 (was 3); saves ~30-40KB of font data
+- [x] **FlexSearch index: defer to first search open**: index now only built on first `isOpen=true` — no CPU cost if user never searches
+- [x] **BgCanvas: skip graph.json fetch unless in graph mode**: `graph.json` (18KB) now only fetched when `bgMode === "graph"` — saves a network request on every other background mode
+- [ ] **`<main>` landmark**: wrap main content area in `<main>` element — missing, flagged by Lighthouse for accessibility + SEO
+
 ### Content & SEO
 - [x] **Sitemap** in prebuild (sitemap.xml → public/)
 - [x] **`image` field in content-index**: extracted from frontmatter (`image`/`cover`/`poster`) for OG and meta use
 - [x] **RSS feeds (two, opt-in)**: `public/rss.xml` (Writing/ or `published: true`, non-wiki) + `public/wiki-rss.xml` (wiki/ + `published: true`); both generated in prebuild; `published` extracted into content-index; undated notes excluded; fixed wiki feed link text to say `wiki.subsurfaces.net`. `content/Writing/` folder ready — add notes there or set `published: true` + `date` on any note to include it.
+- [x] **robots.txt created**: `public/robots.txt` was missing entirely — created with `Allow: /` + sitemap reference; fixes 25 Lighthouse SEO errors
+- [x] **Meta descriptions**: already injected by `src/worker.ts` `injectMetaTags()` using `description` ?? `excerpt` frontmatter fields
+- [ ] **`description` field in content-index**: extract `description` frontmatter in `scripts/prebuild.ts`, add to `NoteMetadata` type, use in worker OG injection and meta description tag
 - [ ] **Detailed documentation**: comprehensive docs for the codebase (delegate to worker agent)
+
+### Bug Fixes
+- [x] **`class` → `className` in MDX content**: raw HTML in `.md` files compiled as JSX — `class=` attribute causes React warnings. Fixed in: `Chess.md`, `Photography.md`, `Writing/Writing-Template.md`, `Writing/On-Attention.md`, `Wiki/chatters/hughchungus.md`, `thinking in public.md`, `Wiki/Philsurvey Template.md`
+- [x] **Telescopic wikilink slugs**: `[[Note Name]]` inside telescopic blocks was generating `href="/Note Name"` (spaces, not hyphens) — now slugified to `href="/note-name"` matching runtime resolver
+- [x] **`usePanelClick` stale `tracks` closure**: music link handler closed over empty `tracks` array (before `music.json` loaded) — `tracks` added to `useEffect` deps
+- [x] **`music:` link handler matching**: `NoteBody` was calling `playTrack(slug)` but `playTrack` matches by `t.slug` (`"Music/Eden"`) not by name — now matches by `t.title` (case-insensitive), consistent with `usePanelClick`; also opens music player if closed
+- [x] **Panel card top padding**: note body in panel cards was overlapping QuickControls — top padding increased to `4rem`
+- [x] **`usePanelClick` slug normalisation**: slug extracted from clicked URL now normalises spaces → hyphens before passing to panel/store
+
+### Security Headers (Best Practices score: 77)
+- [ ] **CSP (Content Security Policy)**: add `Content-Security-Policy` header in `src/worker.ts` response — scope to own origins, Google Fonts, Supabase, Turnstile; blocks XSS
+- [ ] **HSTS**: add `Strict-Transport-Security: max-age=31536000; includeSubDomains` header — CF likely handles this but verify it's present
+- [ ] **COOP**: add `Cross-Origin-Opener-Policy: same-origin` to prevent cross-origin window attacks
+- [ ] **XFO / framing**: add `X-Frame-Options: DENY` or CSP `frame-ancestors 'none'`
+- [ ] **Trusted Types**: evaluate `require-trusted-types-for 'script'` — may conflict with PixiJS/D3 dynamic DOM writes, audit first
 
 ---
 

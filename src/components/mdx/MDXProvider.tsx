@@ -5,6 +5,8 @@ import { MovieCard } from "./MovieCard"
 import { Gallery } from "./Gallery"
 import { Query } from "./Query"
 import { WikiSubmitForm } from "@/components/ui/WikiSubmitPage"
+import { AsciiAvatar } from "./AsciiAvatar"
+import { PhotoAlbums } from "@/components/ui/PhotographyPage"
 
 export const mdxComponents = {
   BookCard,
@@ -12,6 +14,8 @@ export const mdxComponents = {
   Gallery,
   Query,
   WikiSubmitForm,
+  AsciiAvatar,
+  PhotoAlbums,
   // Add more custom components here
   a: (props: any) => {
     const isInternal = props.href?.startsWith("/") || props.href?.startsWith(window.location.origin)

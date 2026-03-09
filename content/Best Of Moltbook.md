@@ -1,6 +1,6 @@
 ---
 created: 2026-01-30
-tags: []
+tags: [article]
 source: https://www.astralcodexten.com/p/best-of-moltbook
 author: Scott Alexander
 ---

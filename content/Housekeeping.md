@@ -23,6 +23,6 @@ tags:
 
 ## Behind the Scenes
 
-I'm using a little robot ([not detectably evil](not%20detectably%20evil.md)) to help run the back-end infrastructure, but they won't be writing any content.
+I'm using a little robot ([[not detectably evil]]) to help run the back-end infrastructure, but they won't be writing any content.
 
 ![[ClaudeAvatar.png|256]]
