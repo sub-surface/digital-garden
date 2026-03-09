@@ -2,9 +2,10 @@
 title: "My Git Commits Mog Your Git Commits"
 description: "Greentexts about getting git-mogged"
 tags: [wiki]
-image: "https://pbs.twimg.com/media/HC8JIOhXMAAXBlr"
 ---
 # My Git Commits Mog Your Git Commits
+
+![Git-mogged](https://pbs.twimg.com/media/HC8JIOhXMAAXBlr?format=png)
 
 >be me
 
