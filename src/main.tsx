@@ -14,12 +14,6 @@ import "./styles/global.scss"
 const theme = useStore.getState().theme
 document.documentElement.setAttribute("data-theme", theme)
 
-// Load content index on startup
-fetch("/content-index.json")
-  .then((r) => r.json())
-  .then((index) => useStore.getState().setContentIndex(index))
-  .catch(() => console.warn("Content index not found — run prebuild first"))
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <MusicProvider>

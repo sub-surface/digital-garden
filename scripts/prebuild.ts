@@ -325,30 +325,40 @@ function main() {
   )
   console.log(`  folders.json: ${Object.keys(folders).length} folders`)
 
-  // Generate photography manifest
-  const photography: { src: string; alt: string; noteSlug: string; noteTitle: string }[] = []
-  for (const meta of Object.values(index)) {
-    if (meta.tags.includes("Photography")) {
-      const file = files.find((f) => slugify(f) === meta.slug)!
-      const content = fs.readFileSync(file, "utf-8")
-      const regex = /!\[\[([^\]]+)\]\]/g
-      let match: RegExpExecArray | null
-      while ((match = regex.exec(content)) !== null) {
-        const fileName = match[1].trim()
-        photography.push({
-          src: `/content/Media/${fileName}`,
-          alt: fileName,
-          noteSlug: meta.slug,
-          noteTitle: meta.title,
-        })
-      }
+  // Generate albums manifest from content/Photos/*.md
+  const PHOTOS_DIR = path.join(CONTENT_DIR, "Photos")
+  interface AlbumPhoto { file: string; caption?: string }
+  interface Album {
+    slug: string
+    title: string
+    description?: string
+    date?: string
+    cover?: string
+    photos: AlbumPhoto[]
+  }
+  const albums: Album[] = []
+  if (fs.existsSync(PHOTOS_DIR)) {
+    const albumFiles = fs.readdirSync(PHOTOS_DIR)
+      .filter((f) => f.endsWith(".md") && !f.startsWith("_"))
+    for (const albumFile of albumFiles) {
+      const raw = fs.readFileSync(path.join(PHOTOS_DIR, albumFile), "utf-8")
+      const { data } = matter(raw)
+      albums.push({
+        slug: albumFile.replace(/\.md$/, "").toLowerCase().replace(/\s+/g, "-"),
+        title: data.title ?? albumFile.replace(/\.md$/, ""),
+        description: data.description,
+        date: data.date ? String(data.date) : undefined,
+        cover: data.cover,
+        photos: Array.isArray(data.photos) ? data.photos : [],
+      })
     }
+    albums.sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
   }
   fs.writeFileSync(
-    path.join(PUBLIC_DIR, "photography.json"),
-    JSON.stringify(photography, null, 2),
+    path.join(PUBLIC_DIR, "albums.json"),
+    JSON.stringify(albums, null, 2),
   )
-  console.log(`  photography.json: ${photography.length} photos`)
+  console.log(`  albums.json: ${albums.length} albums`)
 
   // Copy markdown files to public/content/ for potential runtime fallback
   const publicContent = path.join(PUBLIC_DIR, "content")

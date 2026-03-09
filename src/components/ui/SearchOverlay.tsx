@@ -27,9 +27,9 @@ export function SearchOverlay() {
   const searchIndexRef = useRef<Document<SearchResult> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Initialize index
+  // Build index lazily — only when search opens for the first time
   useEffect(() => {
-    if (!contentIndex) return
+    if (!isOpen || !contentIndex || searchIndexRef.current) return
 
     const index = new Document<SearchResult>({
       document: {
@@ -49,7 +49,7 @@ export function SearchOverlay() {
     })
 
     searchIndexRef.current = index
-  }, [contentIndex])
+  }, [isOpen, contentIndex])
 
   // Ctrl+K handler
   useEffect(() => {

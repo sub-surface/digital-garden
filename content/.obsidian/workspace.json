@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Wiki/chatters/myname1.md",
+                "file": "Photography.md",
                 "mode": "source",
-                "source": true
+                "source": false
               },
               "icon": "lucide-file",
-              "title": "myname1"
+              "title": "Photography"
             }
           }
         ],
@@ -184,6 +184,21 @@
   },
   "active": "3f87f10ff44213a5",
   "lastOpenFiles": [
+    "Photos/_template.md",
+    "Photos/lancaster.md",
+    "Photos/lancaster.md.tmp.11092.1773084162986",
+    "Photos",
+    "index.md",
+    "Bookshelf.md",
+    "Landing at Juffureh.md",
+    "Action & Voice.md",
+    "a place to start writing.md",
+    "history.md",
+    "agent.md",
+    "Wiki/chatters/ice_chicken.md",
+    "index.md.tmp.11092.1773081845551",
+    "Media/ClaudeAvatar.png",
+    "Wiki/chatters/myname1.md",
     "Media/myname.png",
     "Writing/Writing-Template.md",
     "Wiki/chatters/seinzumtode.md",
@@ -195,26 +210,18 @@
     "Wiki/chatters/Charlie(Willow).mdx",
     "thinking in public.md",
     "Writing/On-Attention.md",
-    "index.md",
     "Photography.md",
     "Media/GITS-ARM1.gif",
     "Media/pepe-wave.gif",
     "Untitled.md",
     "Housekeeping.md",
-    "Wiki/chatters/myname1.md",
     "Wiki/index.md",
     "Writing/Writing-Template.md.tmp.30240.1772884098988",
     "Writing/Writing-Template.md.tmp.30240.1772883885377",
-    "Bookshelf.md",
     "Chess.md",
     "getting lost.md",
     "m0rvidd.md",
     "Daily/11-02-26.md",
-    "Daily/07-02-26.md",
-    "Daily/06-02-26.md",
-    "ESA POSTER.md",
-    "Movieshelf.md",
-    "a place I'll always call home.md",
-    "Best Of Moltbook.md"
+    "Daily/07-02-26.md"
   ]
 }

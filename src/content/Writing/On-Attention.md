@@ -11,7 +11,7 @@ growth: actual
 
 # On Attention
 
-<div class="dropcap">
+<div className="dropcap">
 
 There is something strange about the contemporary obsession with attention. We speak of it as a resource — scarce, depletable, under siege. Entire industries have been built around its capture; entire counter-industries around its defence. And yet the philosophical tradition, which has had centuries to think carefully about what attention *is*, has largely treated it as a side note to consciousness rather than a central concern in its own right.
 

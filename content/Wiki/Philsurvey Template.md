@@ -3,7 +3,7 @@ title: Philchat Wiki User Template
 description: User Description Here
 tags: [wiki, chatter]
 type: chatter
-username: "@YourUsername"
+username: "YourUsername"
 pronouns: "Your Pronouns"
 image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Greek_uc_phi_icon.svg/150px-Greek_uc_phi_icon.svg.png"
 tradition: "Analytic / Continental / Other"
@@ -13,7 +13,7 @@ influences: "e.g., Aristotle, Hume, Kant, Wittgenstein, Lewis"
 
 # [Username]'s Profile
 
-  <div class="dropcap">
+  <div className="dropcap">
 
 The first letter of this paragraph is a drop cap using `<div class="dropcap">`. The rest of the paragraph is a brief introduction to the user, their philosophical interests, and any other relevant information.
 
@@ -22,11 +22,10 @@ The first letter of this paragraph is a drop cap using `<div class="dropcap">`. 
 
   </div>
 
+Here's a more detailed overview of the user's philosophical positions, formatted according to the Philsurvey template for consistency across profiles.
 
 
-
-
-
+```markdown
 ## Metaphysics & Epistemology
 * **A priori knowledge:** [Yes / No]
 * **Abstract objects:** [Platonism / Nominalism]
@@ -73,6 +72,7 @@ The first letter of this paragraph is a drop cap using `<div class="dropcap">`. 
 * **God:** [Theism / Atheism]
 * **Philosophical methods:** [Conceptual analysis / Empirical philosophy / Formal philosophy / Intuition-based / Phenomenology / Thought experiments]
 * **Philosophical progress:** [A lot / A little / None]
+```
 
 ---
 ## Additional Notes / Nuance

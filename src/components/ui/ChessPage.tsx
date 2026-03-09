@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { Chess } from "chess.js"
 import { Chessboard } from "react-chessboard"
 import { useStore } from "@/store"
@@ -111,6 +111,20 @@ export function ChessPage() {
     return isPlayerTurn ? `${turn}'s Turn (You)` : "Machine is thinking..."
   }, [game, playerColor])
 
+  // Read CSS variable colours so the board matches the current theme + accent
+  const boardRef = useRef<HTMLDivElement>(null)
+  const accentBase = useStore((s) => s.accentBase)
+  const theme = useStore((s) => s.theme)
+
+  const boardColors = useMemo(() => {
+    const el = boardRef.current ?? document.documentElement
+    const accent = getComputedStyle(el).getPropertyValue("--color-accent-base").trim() || accentBase
+    const bg = getComputedStyle(el).getPropertyValue("--color-bg-surface").trim()
+    const border = getComputedStyle(el).getPropertyValue("--color-border").trim()
+    return { accent, bg, border }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accentBase, theme])
+
   return (
     <div className={styles.chessContainer}>
       <header className={styles.header}>
@@ -119,19 +133,20 @@ export function ChessPage() {
       </header>
 
       <div className={styles.gameLayout}>
-        <div className={styles.boardWrapper}>
-          <Chessboard 
+        <div className={styles.boardWrapper} ref={boardRef}>
+          <Chessboard
             options={{
-              position: game.fen(), 
-              onPieceDrop: onDrop, 
+              position: game.fen(),
+              onPieceDrop: onDrop,
               boardOrientation: boardOrientation,
               animationDurationInMs: 300,
               boardStyle: {
                 borderRadius: "4px",
-                boxShadow: "0 5px 15px rgba(0, 0, 0, 0.5)"
+                boxShadow: "0 5px 15px rgba(0, 0, 0, 0.5)",
+                border: `1px solid ${boardColors.border}`,
               },
-              darkSquareStyle: { backgroundColor: "#779556" },
-              lightSquareStyle: { backgroundColor: "#ebecd0" }
+              darkSquareStyle: { backgroundColor: boardColors.accent },
+              lightSquareStyle: { backgroundColor: boardColors.bg }
             }}
           />
         </div>

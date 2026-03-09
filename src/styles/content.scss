@@ -367,5 +367,10 @@
 }
 
 .note-body {
-  text-align: justify;
+  text-align: left;
+
+  // Short nav-style headings shouldn't wrap — they're designed to fit one line
+  h4 {
+    white-space: nowrap;
+  }
 }

@@ -10,9 +10,9 @@ growth: larval
 
 # Title Here
 
-<div class="dropcap">
+<div className="dropcap">
 
-Opening paragraph goes here. The first letter will render as a large drop cap. Keep this paragraph substantive — it sets the tone. The dropcap only applies to the first paragraph inside the `<div class="dropcap">` block.
+Opening paragraph goes here. The first letter will render as a large drop cap. Keep this paragraph substantive — it sets the tone. The dropcap only applies to the first paragraph inside the `<div className="dropcap">` block.
 
 </div>
 

@@ -15,7 +15,7 @@ layout: article
 > Hi chat ![[pepe-wave.gif]]
 
 
-<div class="dropcap">
+<div className="dropcap">
 
 Sometimes, it's not enough to be a recluse, misanthropic, solipsistic demon of hatred.   
 Sometimes, it's just worth letting go of things.

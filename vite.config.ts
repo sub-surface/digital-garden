@@ -57,7 +57,17 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
-    sourcemap: true,
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom"],
+          "vendor-mdx": ["@mdx-js/react"],
+          // d3, pixi.js, flexsearch, chess.js intentionally NOT listed here —
+          // they co-bundle with their lazy-loaded pages (GraphView, ChessPage, SearchOverlay)
+        },
+      },
+    },
   },
   publicDir: "public",
 })

@@ -1,4 +1,11 @@
-You read it right pearl- fuck you :’( I hope this has shown you the error of your ways. 
+---
+title: "This site has been created to mog Pearls High School webdev"
+description: "I hope things live up to your standards now pearl"
+tags: [webdev, reflections]
+draft: true
+---
+
+
 # Remember:
 
 🔒 Message has been hidden.

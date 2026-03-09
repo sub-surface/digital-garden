@@ -17,8 +17,10 @@ const DEV_PORTS = [5173, 3000] // Vite default, then fallback
 
 // ── Singleton guard ───────────────────────────────────────────────────
 const guard = udpSocket("udp4")
-guard.bind(SINGLETON_PORT, "127.0.0.1", () => {})
-guard.on("error", () => { console.error("dash is already running"); process.exit(1) })
+await new Promise((res, rej) => {
+  guard.once("error", rej)
+  guard.bind(SINGLETON_PORT, "127.0.0.1", () => { guard.removeListener("error", rej); res() })
+}).catch(() => { console.error("dash is already running"); process.exit(1) })
 
 // ── ANSI ─────────────────────────────────────────────────────────────
 const g = "\x1b[92m", y = "\x1b[33m", c = "\x1b[36m", r = "\x1b[31m"
@@ -67,19 +69,21 @@ function getStats() {
 }
 
 function checkPort(port) {
-  return new Promise(ok => {
-    const s = createConnection({ port, host: "127.0.0.1" })
-    s.on("connect", () => { s.destroy(); ok(true) })
-    s.on("error", () => ok(false))
-    setTimeout(() => { s.destroy(); ok(false) }, 300)
-  })
+  // Try both IPv4 and IPv6 localhost — Vite on Windows may bind to either
+  const hosts = ["127.0.0.1", "::1"]
+  return Promise.any(
+    hosts.map(host => new Promise((ok, fail) => {
+      const s = createConnection({ port, host })
+      s.on("connect", () => { s.destroy(); ok(port) })
+      s.on("error", () => fail())
+      setTimeout(() => { s.destroy(); fail() }, 500)
+    }))
+  ).catch(() => null)
 }
 
 async function checkServer() {
-  for (const port of DEV_PORTS) {
-    if (await checkPort(port)) return port
-  }
-  return null
+  const results = await Promise.all(DEV_PORTS.map(checkPort))
+  return results.find(p => p !== null) ?? null
 }
 
 // ── Render ────────────────────────────────────────────────────────────

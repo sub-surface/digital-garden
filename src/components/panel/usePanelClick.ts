@@ -77,8 +77,8 @@ export function usePanelClick() {
         event.preventDefault()
         event.stopPropagation()
 
-        // Extract slug from URL path
-        const slug = decodeURIComponent(url.pathname.replace(/^\//, "")).replace(/\/$/, "")
+        // Extract slug from URL path, normalise spaces→hyphens
+        const slug = decodeURIComponent(url.pathname.replace(/^\//, "")).replace(/\/$/, "").replace(/\s+/g, "-")
         if (!slug) return
 
         // Update active graph target
@@ -112,7 +112,7 @@ export function usePanelClick() {
     return () => {
       document.removeEventListener("click", handleClick, true)
     }
-  }, [pushCard, contentIndex])
+  }, [pushCard, contentIndex, tracks])
 
   // Escape key: pop rightmost card
   useEffect(() => {

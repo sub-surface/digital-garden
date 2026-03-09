@@ -16,7 +16,7 @@ draft: true
 
 
 
-<div class="dropcap">
+<div className="dropcap">
 
 **Hugh Chungus** joined the server in 2019 and has been an active chatter since mid 2024, engaging in discourse ranging from philosophy of mind, artificial intelligence, and cosmology. Hugh is studying Documentary Photography in Wales.
 

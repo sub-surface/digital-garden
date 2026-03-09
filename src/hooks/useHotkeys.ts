@@ -6,15 +6,20 @@ import { useMusic } from "@/components/ui/MusicContext"
  * Global hotkey listener for:
  * - \ (backslash) to open theme menu
  * - b to change background
- * - k to play/pause music
+ * - m to play/pause music
+ * All hotkeys are disabled while search is open.
  */
 export function useHotkeys() {
   const toggleThemePanel = useStore((s) => s.toggleThemePanel)
   const cycleBgMode = useStore((s) => s.cycleBgMode)
+  const isSearchOpen = useStore((s) => s.isSearchOpen)
   const { togglePlay } = useMusic()
 
   useEffect(() => {
     function handleKeydown(e: KeyboardEvent) {
+      // Don't trigger if search is open
+      if (isSearchOpen) return
+
       // Don't trigger if user is typing in an input or textarea
       const target = e.target as HTMLElement
       if (
@@ -34,7 +39,7 @@ export function useHotkeys() {
           e.preventDefault()
           cycleBgMode()
           break
-        case "k":
+        case "m":
           e.preventDefault()
           togglePlay()
           break
@@ -45,5 +50,5 @@ export function useHotkeys() {
     return () => {
       document.removeEventListener("keydown", handleKeydown)
     }
-  }, [toggleThemePanel, cycleBgMode, togglePlay])
+  }, [toggleThemePanel, cycleBgMode, togglePlay, isSearchOpen])
 }

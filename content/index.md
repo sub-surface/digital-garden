@@ -6,8 +6,11 @@ tags:
 id: blog
 ---
 
-#### [[a place to start writing|Enter the garden]] ~ [[Bookshelf]] ~ [[Movieshelf]] ~ [[Music|Musicshelf]] ~ [[Photography|Photos]] ~ [[Chess]] ~ [[Wiki]] ~ [[Tags]] ~ **[AVATAR Visualiser](https://avatar.subsurfaces.net)** ~ [[Housekeeping]]
+#### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ [[Housekeeping]]
 
+> [[Bookshelf]] ~ [[Movieshelf]] ~ [[Music|Musicshelf]] ~ [[Photography|Photos]] ~ [[Chess]] ~ [[Wiki]] ~ [[Tags]]
+
+<AsciiAvatar label="glorp" align="right" interval={1500} />
 
 ```telescopic
 Welcome to a node in the subsurface network.  

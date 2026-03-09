@@ -23,29 +23,69 @@
   display: none;
 }
 
+// ── Footnote marker — clickable superscript with hover tooltip ──
+
+.footnote-marker {
+  position: relative;
+  display: inline;
+
+  a {
+    font-family: var(--font-code);
+    font-size: 0.72em;
+    font-weight: 600;
+    color: var(--color-primary);
+    vertical-align: super;
+    line-height: 0;
+    padding: 0 1px;
+    text-decoration: none;
+    border-bottom: none;
+    box-shadow: none;
+    transition: color var(--duration-fast) var(--ease-default);
+
+    &:hover {
+      color: var(--color-accent);
+      box-shadow: none;
+    }
+  }
+
+  // Hover tooltip — shows plain-text footnote content
+  &[data-content]::after {
+    content: attr(data-content);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-bg-surface);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 0.4em 0.6em;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.4;
+    white-space: normal;
+    width: max-content;
+    max-width: 260px;
+    vertical-align: baseline;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 100;
+  }
+
+  &[data-content]:hover::after {
+    opacity: 1;
+  }
+}
+
 // ── Article Layout (Wide) ──
 
 .article-layout {
   @media (min-width: 1101px) {
-    .footnote-marker {
-      display: inline;
-      position: relative;
-      
-      // The actual sup/number
-      sup {
-        font-family: var(--font-code);
-        font-weight: 600;
-        color: var(--color-primary);
-        font-size: 0.75em;
-        opacity: 0.8;
-      }
-
-      // Hide the default anchor link inside
-      a {
-        pointer-events: none;
-        text-decoration: none;
-        color: inherit;
-      }
+    // In wide article layout, the sidenote floats right so the tooltip is redundant
+    .footnote-marker[data-content]::after {
+      display: none;
     }
 
     .sidenote {
@@ -120,10 +160,6 @@
   .sidenote-checkbox {
     display: none !important;
   }
-  
-  .footnote-marker {
-    display: inline;
-  }
 
   .footnotes-section {
     display: block;
@@ -162,10 +198,6 @@
 
 @media (max-width: 1100px) {
   .article-layout {
-    .footnote-marker {
-      display: inline;
-    }
-    
     .sidenote {
       display: none;
       float: none;

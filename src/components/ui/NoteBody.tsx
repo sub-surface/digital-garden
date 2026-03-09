@@ -2,13 +2,13 @@ import React, { useEffect, useRef, useState, Suspense } from "react"
 import { useTelescopicHandlers } from "./TelescopicHandler"
 import { NotFound } from "./NotFound"
 import { useMusic } from "./MusicContext"
+import { useStore } from "@/store"
 import { mdxComponents } from "@/components/mdx/MDXProvider"
 
 // Import shelf components for panel usage
 import { BookshelfPage } from "./BookshelfPage"
 import { MovieshelfPage } from "./MovieshelfPage"
 import { MusicPage } from "./MusicPage"
-import { PhotographyPage } from "./PhotographyPage"
 import { ChessPage } from "./ChessPage"
 import { TagPage } from "./TagPage"
 import { FolderPage } from "./FolderPage"
@@ -30,32 +30,38 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
   const [notFound, setNotFound] = useState(false)
   
   const contentRef = useRef<HTMLDivElement>(null)
-  const { playTrack } = useMusic()
+  const { playTrack, tracks } = useMusic()
   useTelescopicHandlers(contentRef)
 
   // Intercept music: links
   useEffect(() => {
     if (!contentRef.current) return
-    
+
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       const link = target.closest("a")
       if (link && link.getAttribute("href")?.startsWith("music:")) {
         e.preventDefault()
-        const trackSlug = link.getAttribute("href")?.replace("music:", "")
-        if (trackSlug) playTrack(trackSlug)
+        const trackName = link.getAttribute("href")!.slice(6)
+        // Match by title (case-insensitive) — what authors write in links
+        const idx = tracks.findIndex(t => t.title.toLowerCase() === trackName.toLowerCase())
+        if (idx !== -1) {
+          playTrack(idx)
+          const state = useStore.getState() as any
+          if (!state.isMusicOpen) state.toggleMusic()
+        }
       }
     }
 
     const el = contentRef.current
     el.addEventListener("click", handleClick)
     return () => el.removeEventListener("click", handleClick)
-  }, [playTrack, MDXComponent])
+  }, [playTrack, tracks, MDXComponent])
 
   // Handle "System" pages that aren't MDX files
   const isTagPage = slug.toLowerCase() === "tags" || slug.toLowerCase().startsWith("tags/")
   const isFolderPage = slug.toLowerCase() === "folder" || slug.toLowerCase().startsWith("folder/")
-  const isSystemPage = isTagPage || isFolderPage || ["bookshelf", "movieshelf", "music", "photography", "chess"].includes(slug.toLowerCase())
+  const isSystemPage = isTagPage || isFolderPage || ["bookshelf", "movieshelf", "music", "chess"].includes(slug.toLowerCase())
 
   useEffect(() => {
     if (isSystemPage) {
@@ -162,7 +168,6 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
         {s === "bookshelf" && <BookshelfPage />}
         {s === "movieshelf" && <MovieshelfPage />}
         {s === "music" && <MusicPage />}
-        {s === "photography" && <PhotographyPage />}
         {s === "chess" && <ChessPage />}
       </div>
     )

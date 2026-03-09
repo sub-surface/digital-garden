@@ -85,13 +85,17 @@
     "Music/Sweden",
     "Music/Ultrakilla"
   ],
+  "Photos": [
+    "Photos/lancaster",
+    "Photos/_template"
+  ],
   "Wiki": [
     "Wiki/About",
     "Wiki/Concepts",
     "Wiki/Movements",
+    "Wiki/My-Git-Commits-Mog-Your-Git-Commits",
     "Wiki/Philosophers",
     "Wiki/Philsurvey-Template",
-    "Wiki/Sample-Article",
     "Wiki/Shut-the-fuck-up-Don",
     "Wiki/Style-Guide",
     "Wiki/Submit"
