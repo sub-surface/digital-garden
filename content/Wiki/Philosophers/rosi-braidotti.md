@@ -25,9 +25,14 @@ image: "https://upload.wikimedia.org/wikipedia/commons/9/93/Braidotti.jpg"
 ---
 
 ## Biography Summary
-Rosi Braidotti (born 1954 in Latisana, Italy) is a contemporary continental philosopher best known for her contributions to feminist theory and posthumanist philosophy. She grew up in Australia after her family emigrated there and later pursued higher education in Europe. Braidotti completed her PhD at the **Sorbonne (Université Paris)** in 1981, where she was strongly influenced by French continental thinkers, particularly **Gilles Deleuze** and **Michel Foucault**. She later became Professor of Humanities at **Utrecht University** in the Netherlands and founded the Centre for the Humanities there.
 
-Braidotti's work emerged in the context of late twentieth-century feminist theory and post-structuralism. She sought to move beyond both classical humanism and certain strands of postmodern relativism. Drawing on **Baruch Spinoza**, Deleuzian philosophy, feminist epistemology, and science studies, she developed a philosophical framework that addresses contemporary transformations in technology, ecology, globalization, and identity. Her work is often associated with the development of critical posthumanism and new materialist thought.
+<div className="dropcap">
+
+Rosi Braidotti (born 1954 in Latisana, Italy) is a contemporary continental philosopher best known for her contributions to feminist theory and posthumanist philosophy. She grew up in Australia after her family emigrated there and later pursued higher education in Europe. Braidotti completed her PhD at the **Sorbonne (Université Paris)** in 1981, where she was strongly influenced by French continental thinkers, particularly **[[Gilles Deleuze]]** and **[[Michel Foucault]]**. She later became Professor of Humanities at **Utrecht University** in the Netherlands and founded the Centre for the Humanities there.
+
+Braidotti's work emerged in the context of late twentieth-century feminist theory and post-structuralism. She sought to move beyond both classical humanism and certain strands of postmodern relativism. Drawing on **[[Baruch Spinoza]]**, Deleuzian philosophy, feminist epistemology, and science studies, she developed a philosophical framework that addresses contemporary transformations in technology, ecology, globalization, and identity. Her work is often associated with the development of critical posthumanism and new materialist thought.
+
+</div>
 
 ---
 

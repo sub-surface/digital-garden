@@ -24,7 +24,12 @@ notable_ideas: "Substance Monism, Deus sive Natura, Determinism, Conatus"
 ---
 
 ## Biography Summary
+
+<div className="dropcap">
+
 Baruch Spinoza was a 17th-century Dutch philosopher who lived from 1632 to 1677. Born in Amsterdam to a Portuguese Jewish family, he was excommunicated from the Jewish community at age 23 for his unorthodox views. Spinoza's life was largely spent in quiet contemplation and writing, often working as a lens grinder to support himself. His philosophical work emerged during a time of great intellectual ferment in Europe, influenced by the scientific revolution and Cartesian philosophy.
+
+</div>
 
 ## Key Philosophical Contributions
 ### Substance Monism
