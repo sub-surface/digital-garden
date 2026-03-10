@@ -8,6 +8,14 @@
     <atom:link href="https://subsurfaces.net/rss.xml" rel="self" type="application/rss+xml" />
     
     <item>
+      <title><![CDATA[Photography]]></title>
+      <link>https://subsurfaces.net/Photography</link>
+      <guid isPermaLink="true">https://subsurfaces.net/Photography</guid>
+      <pubDate>Sat, 07 Mar 2026 00:00:00 GMT</pubDate>
+      <description><![CDATA[<p>History's Mirror; The Art of Seeing</p><p><a href="https://subsurfaces.net/Photography">Read on subsurfaces.net →</a></p>]]></description>
+      <category>thoughts</category><category>Photography</category>
+    </item>
+    <item>
       <title><![CDATA[On Attention]]></title>
       <link>https://subsurfaces.net/Writing/On-Attention</link>
       <guid isPermaLink="true">https://subsurfaces.net/Writing/On-Attention</guid>
