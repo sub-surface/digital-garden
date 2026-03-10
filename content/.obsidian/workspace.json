@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Photography.md",
+                "file": "Landing at Juffureh.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Photography"
+              "title": "Landing at Juffureh"
             }
           }
         ],
@@ -184,12 +184,14 @@
   },
   "active": "3f87f10ff44213a5",
   "lastOpenFiles": [
+    "index.md",
+    "Photography.md",
+    "Wiki/Logic of Sense.md",
     "Wiki/Logic of Sense - Architecture Map.md",
     "Photos/_template.md",
     "Photos/lancaster.md",
     "Photos/lancaster.md.tmp.11092.1773084162986",
     "Photos",
-    "index.md",
     "Bookshelf.md",
     "Landing at Juffureh.md",
     "Action & Voice.md",
@@ -211,7 +213,6 @@
     "Wiki/chatters/Charlie(Willow).mdx",
     "thinking in public.md",
     "Writing/On-Attention.md",
-    "Photography.md",
     "Media/GITS-ARM1.gif",
     "Media/pepe-wave.gif",
     "Untitled.md",
@@ -221,7 +222,6 @@
     "Writing/Writing-Template.md.tmp.30240.1772883885377",
     "Chess.md",
     "getting lost.md",
-    "m0rvidd.md",
-    "Daily/11-02-26.md"
+    "m0rvidd.md"
   ]
 }

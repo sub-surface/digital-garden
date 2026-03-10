@@ -25,6 +25,7 @@ export function GraphView() {
   const appRef = useRef<PIXI.Application | null>(null)
   const [loading, setLoading] = useState(true)
   const pushCard = useStore((s) => s.pushCard)
+  const setGraphOpen = useStore((s) => s.setGraphOpen)
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -179,6 +180,7 @@ export function GraphView() {
               title: dragTarget.title,
               html: `<div class="note-loading">Loading...</div>`
             }, -1)
+            setGraphOpen(false)
           }
           dragTarget.fx = null
           dragTarget.fy = null
@@ -282,7 +284,7 @@ export function GraphView() {
       mounted = false
       cleanup.then(fn => fn?.())
     }
-  }, [pushCard])
+  }, [pushCard, setGraphOpen])
 
   return (
     <div className={styles.graphContainer}>

@@ -5,8 +5,12 @@ tags: [wiki]
 layout: article
 ---
 
+
+<div className="dropcap">
 A shared knowledge base by and for the philchat community — chatters, philosophers. memes and more.  
 Submit an article at the link below, or explore the sections and recent additions to find something interesting to read. You can find a repository of philosophical texts at the [Philchat Library](https://github.com/sub-surface/philchat-papers).
+
+</div>
 
 ---
 

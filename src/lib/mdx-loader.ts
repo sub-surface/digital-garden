@@ -1,7 +1,7 @@
 import React, { lazy } from "react"
 
 // Use Vite's glob import to create a map of all MDX/MD components
-const notes = import.meta.glob("/src/content/**/*.{md,mdx}")
+const notes = import.meta.glob(["/src/content/**/*.{md,mdx}", "!/src/content/**/_template.{md,mdx}"])
 
 export interface MDXNoteModule {
   default: React.ComponentType<any>

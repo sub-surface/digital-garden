@@ -1,17 +1,17 @@
-import React, { useEffect, useRef, useState, Suspense } from "react"
+import React, { useEffect, useRef, useState, Suspense, lazy } from "react"
 import { useTelescopicHandlers } from "./TelescopicHandler"
 import { NotFound } from "./NotFound"
 import { useMusic } from "./MusicContext"
 import { useStore } from "@/store"
 import { mdxComponents } from "@/components/mdx/MDXProvider"
 
-// Import shelf components for panel usage
-import { BookshelfPage } from "./BookshelfPage"
-import { MovieshelfPage } from "./MovieshelfPage"
-import { MusicPage } from "./MusicPage"
-import { ChessPage } from "./ChessPage"
-import { TagPage } from "./TagPage"
-import { FolderPage } from "./FolderPage"
+// Lazy-load system page components — avoids pulling heavy deps (D3, chess.js, etc.) into the main chunk
+const BookshelfPage = lazy(() => import("./BookshelfPage").then(m => ({ default: m.BookshelfPage })))
+const MovieshelfPage = lazy(() => import("./MovieshelfPage").then(m => ({ default: m.MovieshelfPage })))
+const MusicPage = lazy(() => import("./MusicPage").then(m => ({ default: m.MusicPage })))
+const ChessPage = lazy(() => import("./ChessPage").then(m => ({ default: m.ChessPage })))
+const TagPage = lazy(() => import("./TagPage").then(m => ({ default: m.TagPage })))
+const FolderPage = lazy(() => import("./FolderPage").then(m => ({ default: m.FolderPage })))
 
 interface Props {
   slug: string
@@ -100,7 +100,7 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
           `/src/content/${slug}/index.mdx`
         ].map(p => p.toLowerCase())
         
-        const notes = import.meta.glob("/src/content/**/*.{md,mdx}")
+        const notes = import.meta.glob(["/src/content/**/*.{md,mdx}", "!/src/content/**/_template.{md,mdx}"])
         let match = ""
         
         // Case-insensitive match
@@ -163,12 +163,14 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
 
     return (
       <div ref={contentRef} className="note-content">
-        {isTagPage && <TagPage tag={tagPart} />}
-        {isFolderPage && <FolderPage folderPath={folderPart} />}
-        {s === "bookshelf" && <BookshelfPage />}
-        {s === "movieshelf" && <MovieshelfPage />}
-        {s === "music" && <MusicPage />}
-        {s === "chess" && <ChessPage />}
+        <Suspense fallback={<div className="note-loading">Loading...</div>}>
+          {isTagPage && <TagPage tag={tagPart} />}
+          {isFolderPage && <FolderPage folderPath={folderPart} />}
+          {s === "bookshelf" && <BookshelfPage />}
+          {s === "movieshelf" && <MovieshelfPage />}
+          {s === "music" && <MusicPage />}
+          {s === "chess" && <ChessPage />}
+        </Suspense>
       </div>
     )
   }

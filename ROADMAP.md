@@ -127,6 +127,7 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **Note embed HTML rendering**: embed body now parsed via `mdast-util-from-markdown` + `hast-util-to-html` — was injecting raw markdown as text
 - [x] **EB Garamond dropcap**: loaded via Google Fonts; upright 400, `5.4em`, `clear: right` on pullquote prevents sidenote overlap; `z-index: 1` prevents text overlap
 - [x] **`Query` filter key fix**: filter key is `tag=` not `tags=`; fixed in template and On-Attention
+- [x] **`Query` date formatting**: raw `Date.toString()` output (e.g. `Sat Mar 07 2026 00:00:00 GMT+0000 (Greenwich Mean Time)`) now formatted to short date (`Sat, 07 Mar 2026`) or with short timezone (`Sat, 07 Mar 2026, 12:00 GMT`) when time is specified
 
 ### Performance & Build
 - [ ] **Chess performance**: investigate Stockfish WASM latency on local builds
@@ -138,9 +139,9 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [ ] **OG gen: external image fetch failures**: `https://covers.openlibrary.org/...` fetch fails in CF build environment (likely blocked). Fix: catch fetch errors per-image and fall back gracefully rather than crashing the OG generator. Both SVG and fetch-failure cases should be handled together.
 - [ ] **OG caching not working**: build log shows `132 image(s) to generate (0 cached)` on every build — cache is never hit. OG images are being regenerated from scratch each deploy (~90s added to build time). Investigate cache key / hash logic in `og-gen.ts` and ensure the cache directory persists between CF builds (may need to use CF build output cache or commit generated images).
 - [ ] **Prebuild runs twice per CF deploy**: build log shows prebuild running once standalone (for OG gen) and again as part of `npm run build`. Combined with `wrangler deploy` triggering its own `npm run build`, this means prebuild runs 3× total per deploy. Investigate deduplication — consider splitting OG gen into a separate script not called by `prebuild`.
-- [ ] **`_template` compiled as MDX chunk**: `dist/assets/_template-c5OcOr94.js` appears in the bundle — `content/Photos/_template.md` is being picked up by `import.meta.glob` and compiled. Add `_template` to the MDX glob exclusion pattern in `vite.config.ts` or rename to avoid the glob.
-- [ ] **Static/dynamic import conflict (5 warnings)**: `BookshelfPage`, `MovieshelfPage`, `MusicPage`, `ChessPage`, `GraphView` are both lazy-imported in `NoteRenderer`/`router.tsx` and statically imported in `NoteBody`/`GraphOverlay`. Vite cannot split them into separate chunks. Fix: remove static imports from `NoteBody` and `GraphOverlay`, convert to lazy/dynamic imports to restore code-splitting benefits.
-- [ ] **Main bundle 1.13MB (350KB gzip)**: the primary `index-*.js` chunk remains very large. Further splitting needed — likely caused by the static/dynamic import conflicts above pulling heavy modules into the main chunk.
+- [x] **`_template` compiled as MDX chunk**: `dist/assets/_template-c5OcOr94.js` appears in the bundle — `content/Photos/_template.md` is being picked up by `import.meta.glob` and compiled. Add `_template` to the MDX glob exclusion pattern in `vite.config.ts` or rename to avoid the glob.
+- [x] **Static/dynamic import conflict (5→2 warnings)**: `BookshelfPage`, `MovieshelfPage`, `MusicPage`, `ChessPage`, `GraphView` converted to lazy imports in `NoteBody` and `GraphOverlay`. 2 remaining warnings are `TagPage`/`FolderPage` (lightweight, statically imported in router — no perf impact).
+- [x] **Main bundle 698KB (212KB gzip)**: reduced from 1.13MB/350KB by fixing static/dynamic import conflicts — heavy modules (chess.js, D3, PixiJS) now properly split into lazy chunks.
 - [ ] **`glob@11` deprecation warning**: `npm warn deprecated glob@11.1.0` on every install. Not a breaking issue but should be tracked — update when a direct or transitive dependency releases a fix.
 
 ### Desktop Performance (Lighthouse score: 37 — critical)
@@ -149,8 +150,8 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **Disable production sourcemaps**: `sourcemap: true` in `vite.config.ts` is shipping `.map` files to the browser — 4MB+ of the 7.2MB payload. Set `sourcemap: false` for production.
 - [x] **Code splitting**: add `build.rollupOptions.output.manualChunks` to split `d3`, `pixi.js`, `flexsearch`, `chess.js` into separate chunks — prevents all heavy libs loading on initial page paint
 - [x] **Create robots.txt**: `public/robots.txt` is missing entirely — Lighthouse logged 25 errors. Add a valid file.
-- [ ] **Font display swap**: Google Fonts URL already has `display=swap` — verify it's being applied; add `font-display: swap` in local SCSS `@font-face` rules if any exist
-- [ ] **`<main>` landmark**: wrap main content in `<main>` element for accessibility + SEO (currently missing, flagged by both Lighthouse runs)
+- [x] **Font display swap**: verified — Google Fonts URL has `display=swap`; no local `@font-face` rules exist in SCSS
+- [x] **`<main>` landmark**: wrap main content in `<main>` element for accessibility + SEO (currently missing, flagged by both Lighthouse runs)
 - [ ] **Heading order**: audit `h1`→`h2`→`h3` sequence — Lighthouse flagged non-sequential headings
 
 ### Mobile Performance (Lighthouse score: 12 — critical)
@@ -172,7 +173,7 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **Trim Google Font weights**: removed unused variants — EB Garamond down to 1 variant (was 6), Playfair down to 4 (was 5), IBM Plex Mono down to 2 (was 3); saves ~30-40KB of font data
 - [x] **FlexSearch index: defer to first search open**: index now only built on first `isOpen=true` — no CPU cost if user never searches
 - [x] **BgCanvas: skip graph.json fetch unless in graph mode**: `graph.json` (18KB) now only fetched when `bgMode === "graph"` — saves a network request on every other background mode
-- [ ] **`<main>` landmark**: wrap main content area in `<main>` element — missing, flagged by Lighthouse for accessibility + SEO
+- [x] **`<main>` landmark**: wrap main content area in `<main>` element — missing, flagged by Lighthouse for accessibility + SEO
 
 ### Content Housekeeping
 - [ ] **37 broken wikilinks**: build log reports 37 unresolved `[[wikilinks]]` across 14 notes. Highest priority clusters:
@@ -188,7 +189,7 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **RSS feeds (two, opt-in)**: `public/rss.xml` (Writing/ or `published: true`, non-wiki) + `public/wiki-rss.xml` (wiki/ + `published: true`); both generated in prebuild; `published` extracted into content-index; undated notes excluded; fixed wiki feed link text to say `wiki.subsurfaces.net`. `content/Writing/` folder ready — add notes there or set `published: true` + `date` on any note to include it.
 - [x] **robots.txt created**: `public/robots.txt` was missing entirely — created with `Allow: /` + sitemap reference; fixes 25 Lighthouse SEO errors
 - [x] **Meta descriptions**: already injected by `src/worker.ts` `injectMetaTags()` using `description` ?? `excerpt` frontmatter fields
-- [ ] **`description` field in content-index**: extract `description` frontmatter in `scripts/prebuild.ts`, add to `NoteMetadata` type, use in worker OG injection and meta description tag
+- [x] **`description` field in content-index**: already extracted in `prebuild.ts`, present in `NoteMetadata` type, used by worker's `injectMetaTags()` for OG + meta description
 - [ ] **Detailed documentation**: comprehensive docs for the codebase (delegate to worker agent)
 
 ### Photography Albums
@@ -203,12 +204,14 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **`music:` link handler matching**: `NoteBody` was calling `playTrack(slug)` but `playTrack` matches by `t.slug` (`"Music/Eden"`) not by name — now matches by `t.title` (case-insensitive), consistent with `usePanelClick`; also opens music player if closed
 - [x] **Panel card top padding**: note body in panel cards was overlapping QuickControls — top padding increased to `4rem`
 - [x] **`usePanelClick` slug normalisation**: slug extracted from clicked URL now normalises spaces → hyphens before passing to panel/store
+- [x] **Graph overlay close on node click**: clicking a node in the GraphOverlay now closes the overlay before opening the panel card
 
 ### Security Headers (Best Practices score: 77)
-- [ ] **CSP (Content Security Policy)**: add `Content-Security-Policy` header in `src/worker.ts` response — scope to own origins, Google Fonts, Supabase, Turnstile; blocks XSS
-- [ ] **HSTS**: add `Strict-Transport-Security: max-age=31536000; includeSubDomains` header — CF likely handles this but verify it's present
-- [ ] **COOP**: add `Cross-Origin-Opener-Policy: same-origin` to prevent cross-origin window attacks
-- [ ] **XFO / framing**: add `X-Frame-Options: DENY` or CSP `frame-ancestors 'none'`
+- [x] **CSP (Content Security Policy)**: `addSecurityHeaders()` in `src/worker.ts` — scoped to own origins, Google Fonts, Supabase, Turnstile, external image CDNs; `frame-ancestors 'none'`
+- [x] **HSTS**: `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- [x] **COOP**: `Cross-Origin-Opener-Policy: same-origin`
+- [x] **XFO / framing**: `X-Frame-Options: DENY` + CSP `frame-ancestors 'none'`
+- [x] **Additional**: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`
 - [ ] **Trusted Types**: evaluate `require-trusted-types-for 'script'` — may conflict with PixiJS/D3 dynamic DOM writes, audit first
 
 ---

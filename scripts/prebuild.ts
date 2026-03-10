@@ -142,7 +142,7 @@ function main() {
     return
   }
 
-  const files = walkDir(CONTENT_DIR).filter((f) => !shouldIgnore(f))
+  const files = walkDir(CONTENT_DIR).filter((f) => !shouldIgnore(f) && !path.basename(f).startsWith("_"))
   const index: ContentIndex = {}
   const linkMap: Map<string, string[]> = new Map() // slug → raw link targets
 

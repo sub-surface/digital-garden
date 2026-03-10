@@ -68,11 +68,11 @@ export function AppShell() {
 
         {/* Horizontal workspace: main pane + panel cards */}
         <div className={styles.workspace} data-testid="workspace">
-          <div className={styles.mainPane} data-testid="main-pane">
+          <main className={styles.mainPane} data-testid="main-pane">
             <div className={styles.mainContent}>
               <Outlet />
             </div>
-          </div>
+          </main>
           <PanelStack />
         </div>
 

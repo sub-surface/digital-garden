@@ -2,9 +2,16 @@
 title: The Logic of Sense
 description: An output made by claude and charlie after reading the logic of sense
 layout: article
-tags: [wiki]
+tags: [wiki, claude]
 ---
 
+<div className="dropcap">
+
+*This is an output made by claude and charlie after reading the logic of sense*
+
+</div>
+
+---
 
 # The Logic of Sense — Complete Propositional Architecture
 

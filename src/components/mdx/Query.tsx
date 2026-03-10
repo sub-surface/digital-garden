@@ -50,6 +50,17 @@ function applySort(notes: NoteMetadata[], sort: string): NoteMetadata[] {
   })
 }
 
+function formatDate(raw: string): string {
+  const d = new Date(raw)
+  if (isNaN(d.getTime())) return raw
+  // If the raw string contains a time component (e.g. "T12:00"), show it
+  const hasTime = /T\d{2}:\d{2}/.test(raw)
+  if (hasTime) {
+    return d.toLocaleString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZoneName: "short" })
+  }
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })
+}
+
 export function Query({ filter, sort = "-date", limit = 10, display = "list" }: QueryProps) {
   const contentIndex = useStore(s => s.contentIndex)
 
@@ -78,7 +89,7 @@ export function Query({ filter, sort = "-date", limit = 10, display = "list" }: 
           {results.map(n => (
             <tr key={n.slug}>
               <td><a href={`/${n.slug}`} className="internal-link">{n.title}</a></td>
-              <td style={{ fontFamily: 'var(--font-code)', fontSize: '0.8rem', opacity: 0.6 }}>{n.date ?? "—"}</td>
+              <td style={{ fontFamily: 'var(--font-code)', fontSize: '0.8rem', opacity: 0.6 }}>{n.date ? formatDate(n.date) : "—"}</td>
               <td style={{ fontSize: '0.8rem' }}>{n.tags.join(", ")}</td>
             </tr>
           ))}
@@ -93,7 +104,7 @@ export function Query({ filter, sort = "-date", limit = 10, display = "list" }: 
         {results.map(n => (
           <a key={n.slug} href={`/${n.slug}`} className="internal-link" style={{ display: 'block', padding: 'var(--space-4)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'inherit' }}>
             <div style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>{n.title}</div>
-            {n.date && <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.5 }}>{n.date}</div>}
+            {n.date && <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.5 }}>{formatDate(n.date)}</div>}
           </a>
         ))}
       </div>
@@ -106,7 +117,7 @@ export function Query({ filter, sort = "-date", limit = 10, display = "list" }: 
       {results.map(n => (
         <li key={n.slug} style={{ marginBottom: 'var(--space-3)', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 'var(--space-4)' }}>
           <a href={`/${n.slug}`} className="internal-link">{n.title}</a>
-          {n.date && <span style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.4, flexShrink: 0 }}>{n.date}</span>}
+          {n.date && <span style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.4, flexShrink: 0 }}>{formatDate(n.date)}</span>}
         </li>
       ))}
     </ul>

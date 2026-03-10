@@ -86,13 +86,12 @@
     "Music/Ultrakilla"
   ],
   "Photos": [
-    "Photos/lancaster",
-    "Photos/_template"
+    "Photos/lancaster"
   ],
   "Wiki": [
     "Wiki/About",
     "Wiki/Concepts",
-    "Wiki/Logic-of-Sense---Architecture-Map",
+    "Wiki/Logic-of-Sense",
     "Wiki/Movements",
     "Wiki/My-Git-Commits-Mog-Your-Git-Commits",
     "Wiki/Philosophers",

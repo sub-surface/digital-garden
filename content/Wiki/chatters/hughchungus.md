@@ -18,7 +18,8 @@ draft: true
 
 <div className="dropcap">
 
-**Hugh Chungus** joined the server in 2019 and has been an active chatter since mid 2024, engaging in discourse ranging from philosophy of mind, artificial intelligence, and cosmology. Hugh is studying Documentary Photography in Wales.
+**Hugh Chungus** joined the server in 2019 and has been an active chatter since mid 2024, engaging in discourse ranging from philosophy of mind, artificial intelligence, and cosmology. Hugh is studying Documentary Photography in Wales.  
+
 
  > *Hugh* is a Discord user known for *"being perpetually online and also knowing a little bit about every subject, the Jack of all Trades of Phil Chat"*
  —Pearl

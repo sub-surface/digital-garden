@@ -583,6 +583,27 @@ async function handleAdmin(request: Request, env: Env, pathname: string): Promis
   return jsonResponse({ error: "Not found" }, 404)
 }
 
+function addSecurityHeaders(headers: Headers) {
+  // CSP: allow own origin, Google Fonts, Turnstile, Supabase, external images
+  headers.set("Content-Security-Policy", [
+    "default-src 'self'",
+    "script-src 'self' https://challenges.cloudflare.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com",
+    "frame-src https://challenges.cloudflare.com",
+    "media-src 'self' blob:",
+    "worker-src 'self' blob:",
+    "frame-ancestors 'none'",
+  ].join("; "))
+  headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+  headers.set("Cross-Origin-Opener-Policy", "same-origin")
+  headers.set("X-Frame-Options", "DENY")
+  headers.set("X-Content-Type-Options", "nosniff")
+  headers.set("Referrer-Policy", "strict-origin-when-cross-origin")
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
@@ -625,17 +646,13 @@ export default {
     const index = await getContentIndex(env.ASSETS)
     const meta = resolveMetaCaseInsensitive(index, slug)
 
-    if (!meta) {
-      // No entry found — still inject default tags
-      return new Response(
-        injectMetaTags(html, {}, slug, url.origin),
-        { status: response.status, headers: response.headers }
-      )
-    }
+    const injected = meta
+      ? injectMetaTags(html, meta, slug, url.origin)
+      : injectMetaTags(html, {}, slug, url.origin)
 
-    return new Response(
-      injectMetaTags(html, meta, slug, url.origin),
-      { status: response.status, headers: response.headers }
-    )
+    const headers = new Headers(response.headers)
+    addSecurityHeaders(headers)
+
+    return new Response(injected, { status: response.status, headers })
   },
 } satisfies ExportedHandler<Env>

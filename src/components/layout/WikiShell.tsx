@@ -45,11 +45,11 @@ export function WikiShell() {
           </nav>
         )}
 
-        <div className={styles.mainPane} data-testid="main-pane">
+        <main className={styles.mainPane} data-testid="main-pane">
           <div className={styles.mainContent}>
             <Outlet />
           </div>
-        </div>
+        </main>
 
         <CornerMenu variant="wiki" />
       </div>

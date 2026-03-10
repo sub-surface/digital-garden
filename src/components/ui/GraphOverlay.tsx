@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, lazy, Suspense } from "react"
 import { useStore } from "@/store"
-import { GraphView } from "./GraphView"
 import styles from "./GraphOverlay.module.scss"
+
+const GraphView = lazy(() => import("./GraphView").then(m => ({ default: m.GraphView })))
 
 export function GraphOverlay() {
   const isOpen = useStore((s) => s.isGraphOpen)
@@ -31,7 +32,9 @@ export function GraphOverlay() {
           </button>
         </div>
         <div className={styles.content}>
-          <GraphView />
+          <Suspense fallback={<div>Loading map...</div>}>
+            <GraphView />
+          </Suspense>
         </div>
       </div>
     </div>
