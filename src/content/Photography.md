@@ -5,7 +5,8 @@ tags:
   - thoughts
   - Photography
 date: 2026-03-07
-published: false
+published: true
+layout: article
 ---
 
 # The Pencil of Nature; History's Mirror; The art of Seeing; Painting with Light...
