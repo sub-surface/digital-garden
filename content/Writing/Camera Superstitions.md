@@ -70,7 +70,7 @@ It turns out, most of the superstitious claims about photography dont come from 
 
 Nothing makes this clearer than the genre of "*Spirit Photography*" - A practice of supposedly communing with the dead through the production of images.[^5]
 
-[^5]: See: [Spirit Photography](https://en.wikipedia.org/wiki/Spirit_photography) for more background on this ![[Mumler.jpg]]
+[^5]: See: [Spirit Photography](https://en.wikipedia.org/wiki/Spirit_photography) for more background on this ![[Media/Mumler.jpg]]
 
 One famous proponent of Spirit Photography was a man by the name of William Hope. Born in 1863, England, Hope was an early member of the Spiritualism movement which sprang up in the mid-1800s, with Hope taking up the camera around 1905 - by which time, much of the credibility had been eroded by accusations of fraud, exposés of so-called mediums, and admissions of hoaxes by those involved. Hope mirrored a previous occurance in america, the famous case of William Mumler who 
 
