@@ -1,7 +1,6 @@
 import { useRef, useState, lazy, Suspense } from "react"
 
 const Markdown = lazy(() => import("react-markdown"))
-const remarkGfm = lazy(() => import("remark-gfm").then((m) => ({ default: m.default })))
 
 interface ToolbarAction {
   label: string

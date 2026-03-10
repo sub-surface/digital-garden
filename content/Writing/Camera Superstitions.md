@@ -52,7 +52,7 @@ or perhaps
 
 [^3]: See [here](https://www.thesunmagazine.org/articles/23456-stealing-souls)
 
-Though, in the last decade we've seen more push back on this claim, highlighting nuanced interpretations of these cultural clashes with imaging technologies, it shouldn't be hard to see how "the camera steals your soul" acts as both a reductive dismissal of inigenous cultural practice and ignorant belittling of the diverse media interpretations found across less economically developed nations and indigenous cultures.
+Though, in the last decade we've seen more push back on this claim, highlighting nuanced interpretations of these cultural clashes with imaging technologies, it shouldn't be hard to see how "the camera steals your soul" acts as both a reductive dismissal of indigenous cultural practice, and ignorant belittling of the diverse media interpretations found across less economically developed nations and indigenous cultures.
 
 As the sun magazine article continues:[^4]
 
@@ -72,10 +72,26 @@ Nothing makes this clearer than the genre of "*Spirit Photography*" - A practice
 
 [^5]: See: [Spirit Photography](https://en.wikipedia.org/wiki/Spirit_photography) for more background on this ![[Media/Mumler.jpg]]
 
-One famous proponent of Spirit Photography was a man by the name of William Hope. Born in 1863, England, Hope was an early member of the Spiritualism movement which sprang up in the mid-1800s, with Hope taking up the camera around 1905 - by which time, much of the credibility had been eroded by accusations of fraud, exposés of so-called mediums, and admissions of hoaxes by those involved. Hope mirrored a previous occurance in america, the famous case of William Mumler who 
+One famous proponent of Spirit Photography was a man by the name of William Hope. Born in 1863, England, Hope was an early member of the Spiritualism movement which sprang up in the mid-nineteenth-century, with Hope taking up the camera around 1905 - by which time, much of the credibility had been eroded by accusations of fraud, exposés of so-called mediums, and admissions of hoaxes by those involved. Hope mirrored the case of William Mumler in the US, who was acquitted of charges of fraud after the prosecution failed to ascertain how Mumler's 'Spirit Photographs' were produced. Scholarship in the ensueing century has shown that the woman Mumler married was a professed medium and spiritualist who seemed to be the real brains behind the operation. 
 
+![Hope](https://upload.wikimedia.org/wikipedia/commons/c/c6/Williamhopehoax2.jpg)
 
-I tend to find Hope's story to be quite interesting because of his striking images, and because of the associations with Arthur Conan-Doyle and other prominent figures of his day.
-It seems many people at the time seriously considered the "spirit images" 
+Back on my side of the Pond, and almost 30 years after Mumler was acquitted, we get the case of William Hope producing images using a similar technique, and as you can see above with fairly striking results.[^6] I tend to find Hope's story to be quite interesting because of the particular darkness of his images, and because of the associations with Arthur Conan-Doyle and other prominent figures of his day. It seems many people at the time seriously considered the "spirits" in these photos to be real communions with the dead.
 
+[^6]: Imagine being a humble chimney-sweep in 1920 finally feeling represented in photography, only for these guys to claim you're a "ghost" or "dead husband" - No wonder these guys got debunked and prosecuted hard.
 
+According to [Massimo Polidoro](https://skepticalinquirer.org/2011/07/photos-of-ghosts-the-burden-of-believing-the-unbelievable/) (2011), 
+
+> However, in February 1922, psychic researcher Harry Price (1881–1948) of the Society for Psychical Research (SPR), along with a magician named Seymour, conducted an investigation into the methods of the Crewe Circle. Along with fellow SPR researcher Eric J. Dingwall and magician William S. Marriott, they devised a plan that consisted of presenting Hope with a set of glass negatives that had been *secretly marked with X-rays*. The trap worked: when Hope returned the plates, the onecontaining the “extra” spirit imageshowed no sign of the markings; this meant that Hope had switched a prepared plate for the secretly marked one.  
+
+> “In the above case,” began the Price accusation that appeared in the Journal ofthe Society for Psychical Research, “it can, we think, hardly be denied that Mr William Hope has been found guilty of deliberately substituting his own plates for those of a sitter…. It implies that the medium brings to the sitting a duplicate slide and faked plates for fraudulent purposes.”
+
+Sir Arthur Conan-Doyle wasn't completely swayed by this expert debunking,
+
+> The Hope case is more intricate than any Holmes case I ever invented. I am sure now that there was trickery on the part of the investigators and that the marked plates were not in the packet when taken to the dark room. One of them was returned by post anonymously undeveloped to the S.P.R. Now, since Hope and the College people knew nothing of the test until four months later, how could they return an undeveloped plate, for how could they pick it out as a marked one, since the marking only shows on development?
+
+> Clearly it was done by one of the conspirators, and he could not have picked it out of all the other plates in the dark room, even if he had access to it. It is clear to me therefore that it never went to the dark room at all, but was taken out before. My pamphlet is ready, but I hold it back in the hope of learning who the rascal was.
+
+Isn't is it just fascinating? "The Hope case is more intricate than any Holmes case I ever invented" really speaks to the technological wonder of photography, and its ability to stump even some of the brightest minds in a generation. It should invite us to wonder: Are we, here from our cosmic vantage-point, immune to such mesmerisation? 
+
+The answer of course, is no. 
