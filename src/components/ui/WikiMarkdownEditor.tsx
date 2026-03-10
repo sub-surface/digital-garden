@@ -1,4 +1,7 @@
-import { useRef, useState } from "react"
+import { useRef, useState, lazy, Suspense } from "react"
+
+const Markdown = lazy(() => import("react-markdown"))
+const remarkGfm = lazy(() => import("remark-gfm").then((m) => ({ default: m.default })))
 
 interface ToolbarAction {
   label: string
@@ -60,6 +63,19 @@ function applyAction(
   })
 }
 
+/** Strip frontmatter (--- ... ---) from content for preview */
+function stripFrontmatter(text: string): string {
+  const match = text.match(/^---\n[\s\S]*?\n---\n?/)
+  return match ? text.slice(match[0].length) : text
+}
+
+/** Convert wikilinks [[Page Name]] and [[Page|Display]] to markdown links */
+function convertWikilinks(text: string): string {
+  return text
+    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "[$2]($1)")
+    .replace(/\[\[([^\]]+)\]\]/g, "[$1]($1)")
+}
+
 interface Props {
   value: string
   onChange: (v: string) => void
@@ -70,13 +86,34 @@ interface Props {
 export function WikiMarkdownEditor({ value, onChange, placeholder, minHeight = 400 }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [showGuide, setShowGuide] = useState(false)
+  const [mode, setMode] = useState<"edit" | "preview">("edit")
+  const [remarkPlugins, setRemarkPlugins] = useState<any[] | null>(null)
 
   const wordCount = value ? value.split(/\s+/).filter(Boolean).length : 0
+
+  // Lazy-load remark-gfm on first preview
+  const handlePreviewToggle = async () => {
+    if (mode === "edit") {
+      if (!remarkPlugins) {
+        try {
+          const gfm = await import("remark-gfm")
+          setRemarkPlugins([gfm.default])
+        } catch {
+          setRemarkPlugins([])
+        }
+      }
+      setMode("preview")
+    } else {
+      setMode("edit")
+    }
+  }
+
+  const previewContent = convertWikilinks(stripFrontmatter(value))
 
   return (
     <div className="wiki-form-md-editor">
       <div className="wiki-form-md-toolbar" role="toolbar" aria-label="Markdown formatting">
-        {TOOLBAR_ACTIONS.map((action) => (
+        {mode === "edit" && TOOLBAR_ACTIONS.map((action) => (
           <button
             key={action.title}
             type="button"
@@ -96,18 +133,32 @@ export function WikiMarkdownEditor({ value, onChange, placeholder, minHeight = 4
         <button
           type="button"
           className="wiki-form-md-tool"
-          title="Toggle style guide reference"
+          title="Toggle preview"
           onMouseDown={(e) => {
             e.preventDefault()
-            setShowGuide((v) => !v)
+            handlePreviewToggle()
           }}
-          style={showGuide ? { color: 'var(--color-accent)', borderColor: 'var(--color-accent)' } : undefined}
+          style={mode === "preview" ? { color: 'var(--color-accent)', borderColor: 'var(--color-accent)' } : undefined}
         >
-          ?
+          {mode === "preview" ? "Edit" : "Preview"}
         </button>
+        {mode === "edit" && (
+          <button
+            type="button"
+            className="wiki-form-md-tool"
+            title="Toggle style guide reference"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              setShowGuide((v) => !v)
+            }}
+            style={showGuide ? { color: 'var(--color-accent)', borderColor: 'var(--color-accent)' } : undefined}
+          >
+            ?
+          </button>
+        )}
       </div>
 
-      {showGuide && (
+      {showGuide && mode === "edit" && (
         <div className="wiki-editor-guide">
           <div className="wiki-editor-guide-content">
             <h4>Quick Style Reference</h4>
@@ -134,15 +185,29 @@ export function WikiMarkdownEditor({ value, onChange, placeholder, minHeight = 4
         </div>
       )}
 
-      <textarea
-        ref={textareaRef}
-        className="wiki-form-textarea wiki-form-md-textarea"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder || "Write your content in Markdown..."}
-        style={{ minHeight: `${minHeight}px` }}
-        spellCheck
-      />
+      {mode === "edit" ? (
+        <textarea
+          ref={textareaRef}
+          className="wiki-form-textarea wiki-form-md-textarea"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder || "Write your content in Markdown..."}
+          style={{ minHeight: `${minHeight}px` }}
+          spellCheck
+        />
+      ) : (
+        <div className="wiki-preview-container" style={{ minHeight: `${minHeight}px` }}>
+          <div className="wiki-preview-banner">Preview — final rendering may differ slightly</div>
+          <div className="wiki-preview-content">
+            <Suspense fallback={<p>Loading preview...</p>}>
+              {remarkPlugins !== null && (
+                <Markdown remarkPlugins={remarkPlugins}>{previewContent}</Markdown>
+              )}
+            </Suspense>
+          </div>
+        </div>
+      )}
+
       <div className="wiki-form-md-hint">
         {wordCount > 0 && <span>{wordCount} words</span>}
       </div>

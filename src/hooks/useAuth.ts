@@ -1,10 +1,17 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import type { Session } from "@supabase/supabase-js"
 
 export type UserRole = "pending" | "editor" | "admin" | null
 
-interface AuthState {
+interface ProfileFields {
+  username: string | null
+  bio: string | null
+  avatar_url: string | null
+  created_at: string | null
+}
+
+interface AuthState extends ProfileFields {
   session: Session | null
   role: UserRole
   loading: boolean
@@ -12,11 +19,17 @@ interface AuthState {
 
 export function useAuth(): AuthState & {
   signIn: (email: string) => Promise<{ error: string | null }>
+  signUp: (email: string, username: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  updateProfile: (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url">>) => Promise<{ error: string | null }>
 } {
   const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<UserRole>(null)
   const [loading, setLoading] = useState(true)
+  const [username, setUsername] = useState<string | null>(null)
+  const [bio, setBio] = useState<string | null>(null)
+  const [avatar_url, setAvatarUrl] = useState<string | null>(null)
+  const [created_at, setCreatedAt] = useState<string | null>(null)
 
   useEffect(() => {
     if (!supabase) {
@@ -24,22 +37,23 @@ export function useAuth(): AuthState & {
       return
     }
 
-    // onAuthStateChange fires for both initial session detection (from localStorage
-    // or URL hash fragments) and subsequent changes. It's the primary mechanism.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
-      if (session) fetchRole(session.access_token)
+      if (session) fetchProfile(session.access_token)
       else {
         setRole(null)
+        setUsername(null)
+        setBio(null)
+        setAvatarUrl(null)
+        setCreatedAt(null)
         setLoading(false)
       }
     })
 
-    // Also check for existing session (covers page refresh with valid localStorage token)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setSession(session)
-        fetchRole(session.access_token)
+        fetchProfile(session.access_token)
       } else {
         setLoading(false)
       }
@@ -48,14 +62,39 @@ export function useAuth(): AuthState & {
     return () => subscription.unsubscribe()
   }, [])
 
-  async function fetchRole(accessToken: string) {
+  async function fetchProfile(accessToken: string) {
     try {
       const res = await fetch("/api/auth/me", {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       if (res.ok) {
-        const data = await res.json() as { role: string }
+        const data = await res.json() as {
+          role: string
+          username: string | null
+          bio: string | null
+          avatar_url: string | null
+          created_at: string | null
+        }
         setRole(data.role as UserRole)
+        setUsername(data.username)
+        setBio(data.bio)
+        setAvatarUrl(data.avatar_url)
+        setCreatedAt(data.created_at)
+
+        // If we have a pending username from signup, set it now
+        const pendingUsername = localStorage.getItem("wiki_pending_username")
+        if (pendingUsername && !data.username) {
+          localStorage.removeItem("wiki_pending_username")
+          const updateRes = await fetch("/api/auth/profile", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ username: pendingUsername }),
+          })
+          if (updateRes.ok) setUsername(pendingUsername)
+        }
       } else {
         setRole("pending")
       }
@@ -70,9 +109,32 @@ export function useAuth(): AuthState & {
     if (!supabase) return { error: "Auth not configured" }
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
+      options: { emailRedirectTo: window.location.origin },
+    })
+    return { error: error?.message ?? null }
+  }
+
+  async function signUp(email: string, usernameVal: string) {
+    if (!supabase) return { error: "Auth not configured" }
+
+    // Validate & check uniqueness server-side
+    const regRes = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, username: usernameVal }),
+    })
+    if (!regRes.ok) {
+      const data = await regRes.json() as { error?: string }
+      return { error: data.error ?? "Registration failed" }
+    }
+
+    // Store username for post-magic-link profile setup
+    localStorage.setItem("wiki_pending_username", usernameVal)
+
+    // Trigger magic link
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin },
     })
     return { error: error?.message ?? null }
   }
@@ -82,7 +144,32 @@ export function useAuth(): AuthState & {
     await supabase.auth.signOut()
     setSession(null)
     setRole(null)
+    setUsername(null)
+    setBio(null)
+    setAvatarUrl(null)
+    setCreatedAt(null)
   }
 
-  return { session, role, loading, signIn, signOut }
+  const updateProfile = useCallback(async (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url">>) => {
+    if (!session) return { error: "Not authenticated" }
+    const res = await fetch("/api/auth/profile", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const body = await res.json() as { error?: string }
+      return { error: body.error ?? "Update failed" }
+    }
+    // Update local state
+    if (data.username !== undefined) setUsername(data.username)
+    if (data.bio !== undefined) setBio(data.bio)
+    if (data.avatar_url !== undefined) setAvatarUrl(data.avatar_url)
+    return { error: null }
+  }, [session])
+
+  return { session, role, loading, username, bio, avatar_url, created_at, signIn, signUp, signOut, updateProfile }
 }
