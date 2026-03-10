@@ -100,6 +100,7 @@ export function WikiNewPage() {
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<{ prUrl: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [editSummary, setEditSummary] = useState("")
 
   // Generate filename slug from title
   const fileSlug = title
@@ -134,7 +135,7 @@ export function WikiNewPage() {
   }, [step, session])
 
   const handleSubmit = async () => {
-    if (!session || !turnstileToken) return
+    if (!session || !turnstileToken || !editSummary.trim()) return
     setSubmitting(true)
     setError(null)
     try {
@@ -153,6 +154,7 @@ export function WikiNewPage() {
           content,
           articleType,
           turnstileToken,
+          editSummary: editSummary.trim(),
         }),
       })
       const data = await res.json() as { prUrl?: string; error?: string }
@@ -304,6 +306,23 @@ export function WikiNewPage() {
             minHeight={500}
           />
 
+          <div className="wiki-form-field" style={{ marginTop: "var(--space-4)" }}>
+            <label className="wiki-form-label" htmlFor="new-summary">
+              Edit summary <span className="wiki-form-required">*</span>
+            </label>
+            <input
+              id="new-summary"
+              className="wiki-form-input"
+              type="text"
+              value={editSummary}
+              onChange={(e) => setEditSummary(e.target.value.slice(0, 200))}
+              placeholder="Briefly describe this article..."
+              maxLength={200}
+              required
+            />
+            <span className="wiki-form-field-hint">{editSummary.length}/200</span>
+          </div>
+
           <div className="wiki-form-turnstile">
             <div id="cf-turnstile-new" />
           </div>
@@ -317,7 +336,7 @@ export function WikiNewPage() {
             <button
               className="wiki-form-btn"
               onClick={handleSubmit}
-              disabled={submitting || !turnstileToken || !content.trim()}
+              disabled={submitting || !turnstileToken || !content.trim() || !editSummary.trim()}
             >
               {submitting ? "Submitting..." : "Submit Article"}
             </button>

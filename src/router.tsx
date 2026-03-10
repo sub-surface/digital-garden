@@ -17,6 +17,7 @@ import { WikiSubmitPage } from "@/components/ui/WikiSubmitPage"
 import { WikiEditPage } from "@/components/ui/WikiEditPage"
 import { WikiNewPage } from "@/components/ui/WikiNewPage"
 import { WikiAdminPage } from "@/components/ui/WikiAdminPage"
+import { WikiProfilePage } from "@/components/ui/WikiProfilePage"
 
 // Lazy load heavy components
 const GraphView = lazy(() => import("@/components/ui/GraphView").then(m => ({ default: m.GraphView })))
@@ -118,6 +119,23 @@ const adminRoute = createRoute({
   component: WikiAdminPage,
 })
 
+// Profile routes
+const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/profile",
+  component: WikiProfilePage,
+})
+
+const userRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/user/$",
+  component: function UserRoutePage() {
+    const params = userRoute.useParams()
+    const username = (params as Record<string, string>)["_splat"] || ""
+    return <WikiProfilePage username={username} />
+  },
+})
+
 // Wiki edit route — catch-all for /edit/*
 const editRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -163,6 +181,8 @@ const routeTree = rootRoute.addChildren([
   submitRoute,
   newRoute,
   adminRoute,
+  profileRoute,
+  userRoute,
   editRoute,
   noteRoute,
 ])

@@ -285,3 +285,227 @@
   margin-bottom: var(--space-4);
   flex-wrap: wrap;
 }
+
+// ── Auth Modal Tabs ──
+
+.wiki-auth-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.wiki-auth-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+.wiki-auth-tab-active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+// ── Field hint (validation messages) ──
+
+.wiki-form-field-hint {
+  display: block;
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  opacity: 0.7;
+}
+
+// ── Markdown Preview ──
+
+.wiki-preview-container {
+  border: 1px solid var(--color-border);
+  border-radius: 0 0 6px 6px;
+  background: var(--color-bg);
+  overflow-y: auto;
+}
+
+.wiki-preview-banner {
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 4px;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+  opacity: 0.7;
+}
+
+.wiki-preview-content {
+  padding: var(--space-6);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--color-text);
+  text-align: justify;
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-header);
+    color: var(--color-heading);
+    margin: 1.5em 0 0.5em;
+    line-height: 1.3;
+  }
+
+  h1 { font-size: 1.8rem; }
+  h2 { font-size: 1.4rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.3em; }
+  h3 { font-size: 1.15rem; }
+
+  p { margin: 0.8em 0; }
+
+  a { color: var(--color-accent); text-decoration: underline; }
+
+  code {
+    background: var(--color-bg-surface);
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-family: var(--font-code);
+    font-size: 0.85em;
+  }
+
+  pre {
+    background: var(--color-bg-surface);
+    padding: var(--space-4);
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.85em;
+
+    code {
+      background: none;
+      padding: 0;
+    }
+  }
+
+  blockquote {
+    border-left: 3px solid var(--color-accent);
+    margin: 1em 0;
+    padding: 0.5em 1em;
+    color: var(--color-text-muted);
+  }
+
+  ul, ol {
+    margin: 0.8em 0;
+    padding-left: 1.5em;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+
+    th, td {
+      padding: 6px 12px;
+      border: 1px solid var(--color-border);
+      text-align: left;
+    }
+
+    th {
+      background: var(--color-bg-surface);
+      font-weight: 600;
+    }
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 1.5em 0;
+  }
+
+  img {
+    max-width: 100%;
+    border-radius: 4px;
+  }
+}
+
+// ── Change Summary ──
+
+.wiki-change-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-3);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.wiki-change-added {
+  color: #42b464;
+}
+
+.wiki-change-removed {
+  color: #b44242;
+}
+
+.wiki-change-note {
+  color: var(--color-text-muted);
+  opacity: 0.7;
+  font-size: 0.7rem;
+}
+
+// ── Profile Page ──
+
+.wiki-profile-header {
+  margin-bottom: var(--space-6);
+}
+
+.wiki-profile-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.wiki-profile-joined {
+  opacity: 0.7;
+}
+
+.wiki-profile-edits {
+  opacity: 0.7;
+}
+
+.wiki-profile-section {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.wiki-profile-section-title {
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--space-3);
+}
+
+.wiki-profile-bio {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--color-text);
+  line-height: 1.6;
+  opacity: 0.85;
+}

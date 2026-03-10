@@ -11,6 +11,22 @@ interface Props {
   slug: string
 }
 
+function computeChangeSummary(original: string, current: string): { added: number; removed: number } {
+  const origLines = original.split("\n")
+  const currLines = current.split("\n")
+  const origSet = new Set(origLines)
+  const currSet = new Set(currLines)
+  let added = 0
+  let removed = 0
+  for (const line of currLines) {
+    if (!origSet.has(line)) added++
+  }
+  for (const line of origLines) {
+    if (!currSet.has(line)) removed++
+  }
+  return { added, removed }
+}
+
 export function WikiEditPage({ slug }: Props) {
   const { session, role, loading } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
@@ -22,16 +38,15 @@ export function WikiEditPage({ slug }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<{ prUrl: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [editSummary, setEditSummary] = useState("")
 
   const contentIndex = useStore((s) => s.contentIndex)
 
-  // Fetch the existing file content
   useEffect(() => {
     async function fetchContent() {
       setLoadingContent(true)
       setLoadError(null)
       try {
-        // Resolve the actual content path from the index
         const resolvedKey = contentIndex ? (resolveSlug(slug, contentIndex) ?? slug) : slug
         const meta = contentIndex?.[resolvedKey]
         const contentPath = meta?.contentPath || `${resolvedKey}.md`
@@ -52,7 +67,6 @@ export function WikiEditPage({ slug }: Props) {
     fetchContent()
   }, [slug, contentIndex])
 
-  // Load Turnstile when ready to submit
   useEffect(() => {
     if (!session || role === "pending") return
     const timer = setTimeout(() => {
@@ -70,7 +84,7 @@ export function WikiEditPage({ slug }: Props) {
   }, [session, role])
 
   const handleSubmit = async () => {
-    if (!session || !turnstileToken) return
+    if (!session || !turnstileToken || !editSummary.trim()) return
     setSubmitting(true)
     setError(null)
     try {
@@ -84,6 +98,7 @@ export function WikiEditPage({ slug }: Props) {
           slug,
           content,
           turnstileToken,
+          editSummary: editSummary.trim(),
         }),
       })
       const data = await res.json() as { prUrl?: string; error?: string }
@@ -100,8 +115,8 @@ export function WikiEditPage({ slug }: Props) {
   }
 
   const hasChanges = content !== originalContent
+  const changeSummary = hasChanges ? computeChangeSummary(originalContent, content) : null
 
-  // Auth gate
   if (!loading && !session) {
     return (
       <div className="wiki-form-page">
@@ -163,6 +178,31 @@ export function WikiEditPage({ slug }: Props) {
             minHeight={500}
           />
 
+          {hasChanges && changeSummary && (
+            <div className="wiki-change-summary">
+              <span className="wiki-change-added">+{changeSummary.added} line{changeSummary.added !== 1 ? "s" : ""} added</span>
+              <span className="wiki-change-removed">-{changeSummary.removed} line{changeSummary.removed !== 1 ? "s" : ""} removed</span>
+              <span className="wiki-change-note">Review your changes above before submitting.</span>
+            </div>
+          )}
+
+          <div className="wiki-form-field" style={{ marginTop: "var(--space-4)" }}>
+            <label className="wiki-form-label" htmlFor="edit-summary">
+              Edit summary <span className="wiki-form-required">*</span>
+            </label>
+            <input
+              id="edit-summary"
+              className="wiki-form-input"
+              type="text"
+              value={editSummary}
+              onChange={(e) => setEditSummary(e.target.value.slice(0, 200))}
+              placeholder="Briefly describe your changes..."
+              maxLength={200}
+              required
+            />
+            <span className="wiki-form-field-hint">{editSummary.length}/200</span>
+          </div>
+
           <div className="wiki-form-turnstile">
             <div id="cf-turnstile-edit" />
           </div>
@@ -173,7 +213,7 @@ export function WikiEditPage({ slug }: Props) {
             <button
               className="wiki-form-btn"
               onClick={handleSubmit}
-              disabled={submitting || !turnstileToken || !hasChanges}
+              disabled={submitting || !turnstileToken || !hasChanges || !editSummary.trim()}
             >
               {submitting ? "Submitting..." : "Submit Edit"}
             </button>

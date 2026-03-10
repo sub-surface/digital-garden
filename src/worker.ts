@@ -226,7 +226,25 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
 
 // ── Supabase auth helper ──
 
-async function verifyAuth(request: Request, env: Env): Promise<{ id: string; role: string; email: string } | null> {
+interface ProfileData {
+  role: string
+  username: string | null
+  bio: string | null
+  avatar_url: string | null
+  created_at: string | null
+}
+
+interface AuthUser {
+  id: string
+  role: string
+  email: string
+  username: string | null
+  bio: string | null
+  avatar_url: string | null
+  created_at: string | null
+}
+
+async function verifyAuth(request: Request, env: Env): Promise<AuthUser | null> {
   const authHeader = request.headers.get("Authorization")
   if (!authHeader?.startsWith("Bearer ") || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return null
 
@@ -239,9 +257,9 @@ async function verifyAuth(request: Request, env: Env): Promise<{ id: string; rol
   if (!userRes.ok) return null
   const user = await userRes.json<{ id: string; email: string }>()
 
-  // Fetch role from profiles table
+  // Fetch profile from profiles table
   const profileRes = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=role`,
+    `${env.SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=role,username,bio,avatar_url,created_at`,
     {
       headers: {
         apikey: env.SUPABASE_SERVICE_KEY,
@@ -250,16 +268,32 @@ async function verifyAuth(request: Request, env: Env): Promise<{ id: string; rol
     }
   )
   if (!profileRes.ok) return null
-  const profiles = await profileRes.json<{ role: string }[]>()
-  const role = profiles?.[0]?.role ?? "pending"
+  const profiles = await profileRes.json<ProfileData[]>()
+  const profile = profiles?.[0]
 
-  return { id: user.id, role, email: user.email }
+  // Auto-create profile if none exists (first login after magic link)
+  if (!profile) {
+    await supabaseRest(env, "profiles", "POST", {
+      id: user.id, email: user.email, role: "pending",
+    })
+    return { id: user.id, role: "pending", email: user.email, username: null, bio: null, avatar_url: null, created_at: null }
+  }
+
+  return {
+    id: user.id,
+    role: profile.role ?? "pending",
+    email: user.email,
+    username: profile.username,
+    bio: profile.bio,
+    avatar_url: profile.avatar_url,
+    created_at: profile.created_at,
+  }
 }
 
 function corsHeaders(): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   }
 }
@@ -305,7 +339,113 @@ function supabaseRest(env: Env, path: string, method = "GET", body?: unknown) {
 async function handleAuthMe(request: Request, env: Env): Promise<Response> {
   const auth = await verifyAuth(request, env)
   if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
-  return jsonResponse({ role: auth.role, email: auth.email })
+  return jsonResponse({
+    role: auth.role,
+    email: auth.email,
+    username: auth.username,
+    bio: auth.bio,
+    avatar_url: auth.avatar_url,
+    created_at: auth.created_at,
+  })
+}
+
+// ── PUT /api/auth/profile ──
+
+async function handleUpdateProfile(request: Request, env: Env): Promise<Response> {
+  const auth = await verifyAuth(request, env)
+  if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+
+  let body: Record<string, any>
+  try { body = await request.json() } catch {
+    return jsonResponse({ error: "Invalid request body" }, 400)
+  }
+
+  const updates: Record<string, string> = {}
+  if (typeof body.username === "string") {
+    const username = body.username.trim()
+    if (username && !/^[a-zA-Z0-9-]{3,30}$/.test(username)) {
+      return jsonResponse({ error: "Username must be 3-30 chars, alphanumeric and hyphens only" }, 400)
+    }
+    if (username) {
+      // Check uniqueness
+      const checkRes = await supabaseRest(env, `profiles?username=eq.${encodeURIComponent(username)}&id=neq.${auth.id}&select=id`)
+      if (checkRes.ok) {
+        const existing = await checkRes.json<{ id: string }[]>()
+        if (existing.length > 0) return jsonResponse({ error: "Username already taken" }, 409)
+      }
+      updates.username = username
+    }
+  }
+  if (typeof body.bio === "string") updates.bio = body.bio.slice(0, 500)
+  if (typeof body.avatar_url === "string") updates.avatar_url = body.avatar_url.slice(0, 500)
+
+  if (Object.keys(updates).length === 0) return jsonResponse({ error: "No fields to update" }, 400)
+
+  const res = await supabaseRest(env, `profiles?id=eq.${auth.id}`, "PATCH", updates)
+  if (!res.ok) return jsonResponse({ error: "Failed to update profile" }, 500)
+
+  return jsonResponse({ ok: true, ...updates })
+}
+
+// ── POST /api/auth/register ──
+
+async function handleRegister(request: Request, env: Env): Promise<Response> {
+  let body: Record<string, any>
+  try { body = await request.json() } catch {
+    return jsonResponse({ error: "Invalid request body" }, 400)
+  }
+
+  const email = (body.email as string)?.trim()
+  const username = (body.username as string)?.trim()
+
+  if (!email) return jsonResponse({ error: "Email is required" }, 400)
+  if (!username || !/^[a-zA-Z0-9-]{3,30}$/.test(username)) {
+    return jsonResponse({ error: "Username must be 3-30 chars, alphanumeric and hyphens only" }, 400)
+  }
+
+  // Check username uniqueness
+  const checkRes = await supabaseRest(env, `profiles?username=eq.${encodeURIComponent(username)}&select=id`)
+  if (checkRes.ok) {
+    const existing = await checkRes.json<{ id: string }[]>()
+    if (existing.length > 0) return jsonResponse({ error: "Username already taken" }, 409)
+  }
+
+  // Return success — client will trigger magic link and store username in localStorage
+  // On first /api/auth/me call after login, the profile is auto-created.
+  // The username will be set via /api/auth/profile after the magic link confirms.
+  return jsonResponse({ ok: true })
+}
+
+// ── GET /api/user/:username ──
+
+async function handleUserProfile(env: Env, username: string): Promise<Response> {
+  // Fetch profile by username
+  const profileRes = await supabaseRest(
+    env,
+    `profiles?username=eq.${encodeURIComponent(username)}&select=id,username,role,bio,avatar_url,created_at`
+  )
+  if (!profileRes.ok) return jsonResponse({ error: "Failed to fetch profile" }, 500)
+  const profiles = await profileRes.json<(ProfileData & { id: string })[]>()
+  if (!profiles.length) return jsonResponse({ error: "User not found" }, 404)
+
+  const profile = profiles[0]
+
+  // Fetch edit history
+  const logRes = await supabaseRest(
+    env,
+    `edit_log?user_id=eq.${profile.id}&select=slug,pr_url,edit_summary,created_at&order=created_at.desc&limit=50`
+  )
+  const edits = logRes.ok ? await logRes.json<{ slug: string; pr_url: string; edit_summary: string | null; created_at: string }[]>() : []
+
+  return jsonResponse({
+    username: profile.username,
+    role: profile.role,
+    bio: profile.bio,
+    avatar_url: profile.avatar_url,
+    created_at: profile.created_at,
+    edits,
+    editCount: edits.length,
+  })
 }
 
 // ── POST /api/edit ──
@@ -358,10 +498,10 @@ async function handleEdit(request: Request, env: Env): Promise<Response> {
         return jsonResponse({ error: "Could not find the source file on GitHub" }, 404)
       }
       const altData = await altRes.json<{ sha: string; path: string }>()
-      return await createEditPR(gh, env, auth, altData.path, altData.sha, body.content, slug)
+      return await createEditPR(gh, env, auth, altData.path, altData.sha, body.content, slug, body.editSummary)
     }
     const fileData = await fileRes.json<{ sha: string; path: string }>()
-    return await createEditPR(gh, env, auth, fileData.path, fileData.sha, body.content, slug)
+    return await createEditPR(gh, env, auth, fileData.path, fileData.sha, body.content, slug, body.editSummary)
   } catch (err) {
     console.error("Edit error:", err)
     return jsonResponse({ error: "Failed to create edit" }, 500)
@@ -376,6 +516,7 @@ async function createEditPR(
   fileSha: string,
   content: string,
   slug: string,
+  editSummary?: string,
 ) {
   // Get master SHA
   const refRes = await gh("/repos/sub-surface/digital-garden/git/ref/heads/master", "GET")
@@ -393,7 +534,7 @@ async function createEditPR(
 
   // Commit updated file
   const commitRes = await gh(`/repos/sub-surface/digital-garden/contents/${filePath}`, "PUT", {
-    message: `wiki: edit ${slug}`,
+    message: editSummary ? `wiki: edit ${slug} — ${editSummary}` : `wiki: edit ${slug}`,
     content: btoa(unescape(encodeURIComponent(content))),
     sha: fileSha,
     branch: branchName,
@@ -405,14 +546,14 @@ async function createEditPR(
     title: `Wiki edit: ${slug.split("/").pop()?.replace(/-/g, " ")}`,
     head: branchName,
     base: "master",
-    body: `Edit to **${slug}** by ${auth.email}.\n\nSubmitted via wiki editor.`,
+    body: `Edit to **${slug}** by ${auth.email}.${editSummary ? `\n\n**Summary:** ${editSummary}` : ""}\n\nSubmitted via wiki editor.`,
   })
   if (!prRes.ok) throw new Error(`create PR: ${prRes.status}`)
   const { html_url } = await prRes.json<{ html_url: string }>()
 
   // Log the edit
   await supabaseRest(env, "edit_log", "POST", {
-    slug, user_id: auth.id, pr_url: html_url,
+    slug, user_id: auth.id, pr_url: html_url, edit_summary: editSummary || null,
   })
 
   return jsonResponse({ prUrl: html_url })
@@ -480,7 +621,7 @@ async function handleNew(request: Request, env: Env): Promise<Response> {
       title: `Wiki new: ${body.title}`,
       head: branchName,
       base: "master",
-      body: `New wiki article: **${body.title}** (${body.articleType || "misc"}) by ${auth.email}.\n\nSubmitted via wiki editor.`,
+      body: `New wiki article: **${body.title}** (${body.articleType || "misc"}) by ${auth.email}.${body.editSummary ? `\n\n**Summary:** ${body.editSummary}` : ""}\n\nSubmitted via wiki editor.`,
     })
     if (!prRes.ok) throw new Error(`create PR: ${prRes.status}`)
     const { html_url } = await prRes.json<{ html_url: string }>()
@@ -488,7 +629,7 @@ async function handleNew(request: Request, env: Env): Promise<Response> {
     // Log the creation
     const slug = filePath.replace(/^content\//, "").replace(/\.md$/, "")
     await supabaseRest(env, "edit_log", "POST", {
-      slug, user_id: auth.id, pr_url: html_url,
+      slug, user_id: auth.id, pr_url: html_url, edit_summary: body.editSummary || null,
     })
 
     return jsonResponse({ prUrl: html_url })
@@ -619,6 +760,16 @@ export default {
     }
     if (url.pathname === "/api/auth/me" && request.method === "GET") {
       return handleAuthMe(request, env)
+    }
+    if (url.pathname === "/api/auth/profile" && request.method === "PUT") {
+      return handleUpdateProfile(request, env)
+    }
+    if (url.pathname === "/api/auth/register" && request.method === "POST") {
+      return handleRegister(request, env)
+    }
+    if (url.pathname.startsWith("/api/user/") && request.method === "GET") {
+      const username = decodeURIComponent(url.pathname.slice("/api/user/".length))
+      return handleUserProfile(env, username)
     }
     if (url.pathname === "/api/edit" && request.method === "POST") {
       return handleEdit(request, env)
