@@ -90,6 +90,7 @@
   ],
   "Wiki": [
     "Wiki/About",
+    "Wiki/AI_Infrastructure_Economics_Report",
     "Wiki/Concepts",
     "Wiki/Logic-of-Sense",
     "Wiki/Movements",
@@ -105,7 +106,8 @@
     "Wiki/chatters/Charlie(Willow)",
     "Wiki/chatters/hughchungus",
     "Wiki/chatters/ice_chicken",
-    "Wiki/chatters/myname1"
+    "Wiki/chatters/myname1",
+    "Wiki/chatters/papagaio"
   ],
   "Wiki/Philosophers": [
     "Wiki/Philosophers/Spinoza"
