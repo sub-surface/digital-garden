@@ -66,9 +66,9 @@ This notion of looking without judgement, pure observation, its what drives and 
 
 # Who Really Belives This S*%!#?
 
-It turns out, most of the superstitious claims about photography dont come from aboriginals, nor the un-contacted tribes of north sentinal island. Indeed, I'm sure you'll be shocked and awed to hear that it is those exact western audiences who belittle imagined cultures for their own self-satisfaction that perpetuate mystic claims around photography.
+It turns out, most of the superstitious claims about photography dont come from aboriginals, nor the un-contacted tribes of north sentinal island. Indeed, I'm sure you'll be shocked and awed to hear that it is those exact western audiences who belittle imagined cultures for their own self-satisfaction that perpetuate mystic claims around photography the most.
 
-Nothing makes this clearer than the genre of "*Spirit Photography*" - A practice of supposedly communing with the dead through the production of images.[^5]
+Nothing makes this clearer than the emergence of "*Spirit Photography*" in the late 1800s - A practice of supposedly communing with the dead through the production of images.[^5]
 
 [^5]: See: [Spirit Photography](https://en.wikipedia.org/wiki/Spirit_photography) for more background on this ![[Media/Mumler.jpg]]
 
