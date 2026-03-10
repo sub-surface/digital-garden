@@ -1,5 +1,6 @@
 ---
 title: Monkey needs to chill
+image: "punch-nazi.gif"
 ---
 # Listen here, proto-neo-fascist.
 You have some real issues okay, you want a login page? here:
