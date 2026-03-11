@@ -816,9 +816,12 @@ async function checkBanStatus(env: Env, userId: string): Promise<{ banned: boole
 
 async function handleChatRooms(request: Request, env: Env): Promise<Response> {
   if (request.method === "GET") {
+    const auth = await verifyAuth(request, env)
+    if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
     const res = await supabaseRest(env, "rooms?archived=eq.false&select=id,name,slug,created_at,created_by&order=name.asc")
     if (!res.ok) return jsonResponse({ error: "Failed to fetch rooms" }, 500)
-    return jsonResponse(await res.json())
+    const rooms = await res.json<unknown[]>()
+    return jsonResponse({ rooms })
   }
 
   if (request.method === "POST") {
