@@ -16,7 +16,12 @@ import { remarkCallouts } from "./src/lib/remark-callouts"
 import { remarkSidenotes } from "./src/lib/remark-sidenotes"
 import { rehypeImagePaths } from "./src/lib/rehype-image-paths"
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  server: {
+    proxy: command === "serve" ? {
+      "/api": "http://localhost:8787",
+    } : undefined,
+  },
   plugins: [
     {
       enforce: 'pre',
@@ -70,4 +75,4 @@ export default defineConfig({
     },
   },
   publicDir: "public",
-})
+}))

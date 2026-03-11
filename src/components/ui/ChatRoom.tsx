@@ -12,9 +12,11 @@ interface Props {
   roomName: string
   accessToken: string
   currentUserId: string
+  currentUsername: string | null
+  currentAvatarUrl: string | null
 }
 
-export function ChatRoom({ roomId, roomName, accessToken, currentUserId }: Props) {
+export function ChatRoom({ roomId, roomName, accessToken, currentUserId, currentUsername, currentAvatarUrl }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [hasMore, setHasMore] = useState(false)
@@ -109,12 +111,33 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId }: Props
           table: "messages",
           filter: `room_id=eq.${roomId}`,
         },
-        (payload) => {
+        async (payload) => {
           const newMsg = payload.new as ChatMessage
+          // Realtime payloads don't include joined profiles — enrich before inserting
+          let enriched: ChatMessage
+          if (newMsg.user_id === currentUserId) {
+            // Own message — we have the profile already
+            enriched = { ...newMsg, profiles: { username: currentUsername ?? "unknown", avatar_url: currentAvatarUrl }, reactions: [] }
+          } else {
+            // Other user — fetch full enriched row from API
+            try {
+              const res = await fetch(`/api/chat/messages?room=${roomId}&limit=1&before=${encodeURIComponent(new Date(new Date(newMsg.created_at).getTime() + 1000).toISOString())}`, {
+                headers: { Authorization: `Bearer ${accessToken}` },
+              })
+              if (res.ok) {
+                const data = await res.json() as { messages: ChatMessage[] }
+                const found = data.messages.find(m => m.id === newMsg.id)
+                enriched = found ?? { ...newMsg, profiles: null, reactions: [] }
+              } else {
+                enriched = { ...newMsg, profiles: null, reactions: [] }
+              }
+            } catch {
+              enriched = { ...newMsg, profiles: null, reactions: [] }
+            }
+          }
           setMessages((prev) => {
-            // Avoid duplicates (optimistic inserts)
-            if (prev.some((m) => m.id === newMsg.id)) return prev
-            return [...prev, newMsg]
+            if (prev.some((m) => m.id === enriched.id)) return prev
+            return [...prev, enriched]
           })
         }
       )

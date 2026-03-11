@@ -1,5 +1,5 @@
 interface Env {
-  ASSETS: Fetcher
+  ASSETS?: Fetcher
   TURNSTILE_SECRET_KEY: string
   GITHUB_TOKEN: string
   SUPABASE_URL: string
@@ -874,6 +874,26 @@ async function handleChatMessages(request: Request, env: Env, url: URL): Promise
     return jsonResponse({ ok: true })
   }
 
+  // POST /api/chat/messages — send a message
+  if (request.method === "POST") {
+    const ban = await checkBanStatus(env, auth.id)
+    if (ban.banned) return jsonResponse({ error: ban.reason ?? "You are banned" }, 403)
+
+    let body: { room_id?: string; body?: string; reply_to?: string | null }
+    try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
+    if (!body.room_id?.trim() || !body.body?.trim()) return jsonResponse({ error: "room_id and body required" }, 400)
+    if (body.body.trim().length > 2000) return jsonResponse({ error: "Message too long" }, 400)
+
+    const res = await supabaseRest(env, "messages", "POST", {
+      room_id: body.room_id.trim(),
+      user_id: auth.id,
+      body: body.body.trim(),
+      reply_to: body.reply_to ?? null,
+    })
+    if (!res.ok) return jsonResponse({ error: "Failed to send message" }, 500)
+    return jsonResponse({ ok: true }, 201)
+  }
+
   if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405)
 
   const room = url.searchParams.get("room")
@@ -887,7 +907,7 @@ async function handleChatMessages(request: Request, env: Env, url: URL): Promise
   if (before) filter += `&created_at=lt.${encodeURIComponent(before)}`
   filter += `&order=created_at.desc&limit=${limit}`
 
-  const res = await supabaseRest(env, `messages?${filter}&select=*,profiles(username,avatar_url)`)
+  const res = await supabaseRest(env, `messages?${filter}&select=*,profiles!messages_user_id_fkey(username,avatar_url)`)
   if (!res.ok) return jsonResponse({ error: "Failed to fetch messages" }, 500)
   const messages = await res.json<ChatMessage[]>()
 
@@ -896,7 +916,7 @@ async function handleChatMessages(request: Request, env: Env, url: URL): Promise
   let replyMap: Record<string, Pick<ChatMessage, "id" | "body" | "profiles">> = {}
   if (replyIds.length > 0) {
     const idsFilter = replyIds.map(id => encodeURIComponent(id)).join(",")
-    const replyRes = await supabaseRest(env, `messages?id=in.(${idsFilter})&select=id,body,profiles(username,avatar_url)`)
+    const replyRes = await supabaseRest(env, `messages?id=in.(${idsFilter})&select=id,body,profiles!messages_user_id_fkey(username,avatar_url)`)
     if (replyRes.ok) {
       const replyRows = await replyRes.json<Pick<ChatMessage, "id" | "body" | "profiles">[]>()
       for (const r of replyRows) replyMap[r.id] = r
@@ -1012,7 +1032,7 @@ async function handleChatSearch(request: Request, env: Env, url: URL): Promise<R
   // PostgREST can filter on embedded resources with a special syntax:
   if (user) filter += `&profiles.username=eq.${encodeURIComponent(user)}`
 
-  const res = await supabaseRest(env, `messages?${filter}&select=*,profiles(username,avatar_url)`)
+  const res = await supabaseRest(env, `messages?${filter}&select=*,profiles!messages_user_id_fkey(username,avatar_url)`)
   if (!res.ok) return jsonResponse({ error: "Search failed" }, 500)
   const messages = await res.json<ChatMessage[]>()
 
@@ -1187,6 +1207,11 @@ export default {
     }
     if (url.pathname.startsWith("/api/admin/")) {
       return handleAdmin(request, env, url.pathname)
+    }
+
+    // In local dev (wrangler.dev.toml), ASSETS is not bound — Vite serves static files
+    if (!env.ASSETS) {
+      return new Response("Not found (no ASSETS binding in dev)", { status: 404 })
     }
 
     const response = await env.ASSETS.fetch(request)

@@ -74,14 +74,17 @@ export function GifPicker({ onSelect, onClose }: Props) {
 
   return (
     <div className={styles.gifPicker} ref={ref}>
-      <input
-        className={styles.gifPickerSearch}
-        type="text"
-        placeholder="search GIFs…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        autoFocus
-      />
+      <div className={styles.gifPickerHeader}>
+        <input
+          className={styles.gifPickerSearch}
+          type="text"
+          placeholder="search GIFs…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          autoFocus
+        />
+        <img src="/brand/powered-by-klipy.svg" alt="Powered by KLIPY" className={styles.gifPickerBrand} />
+      </div>
       {loading && (
         <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)", padding: "4px 0" }}>
           loading…
@@ -105,11 +108,8 @@ export function GifPicker({ onSelect, onClose }: Props) {
               }}
               type="button"
             >
-              <img
-                src={gif.preview}
-                alt={gif.title}
-                className={styles.gifImg}
-              />
+              <img src={gif.preview} alt={gif.title} className={styles.gifImg} />
+              <img src="/brand/klipy-watermark.svg" alt="" className={styles.gifWatermark} aria-hidden />
             </button>
           ))}
         </div>

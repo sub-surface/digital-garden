@@ -13,3 +13,6 @@ public/music.json
 public/search-index.json
 public/content/
 public/og/
+
+.dev.vars
+.wrangler/
