@@ -27,6 +27,11 @@ interface NoteMeta {
   image?: string
   cover?: string
   poster?: string
+  author?: string
+  director?: string
+  year?: number
+  rating?: number
+  status?: string
   links: string[]
   backlinks: string[]
   folder?: string
@@ -178,6 +183,11 @@ function main() {
       image: (data.image || data.cover || data.poster) as string | undefined,
       cover: (data.cover || data.poster) as string | undefined,
       poster: (data.poster || data.cover) as string | undefined,
+      author: data.author as string | undefined,
+      director: data.director as string | undefined,
+      year: data.year != null ? Number(data.year) : undefined,
+      rating: data.rating != null ? Number(data.rating) : undefined,
+      status: data.status as string | undefined,
       links: [], // resolved in pass 2
       backlinks: [],
       folder,

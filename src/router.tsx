@@ -18,6 +18,7 @@ import { WikiEditPage } from "@/components/ui/WikiEditPage"
 import { WikiNewPage } from "@/components/ui/WikiNewPage"
 import { WikiAdminPage } from "@/components/ui/WikiAdminPage"
 import { WikiProfilePage } from "@/components/ui/WikiProfilePage"
+import { ChatPage } from "@/components/ui/ChatPage"
 
 // Lazy load heavy components
 const GraphView = lazy(() => import("@/components/ui/GraphView").then(m => ({ default: m.GraphView })))
@@ -148,6 +149,7 @@ const editRoute = createRoute({
 })
 
 // Catch-all note route — handles /Books/foo, /Movies/bar, etc.
+// On the chat shell this renders ChatPage regardless of path.
 const noteRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "$",
@@ -161,6 +163,10 @@ const noteRoute = createRoute({
     useEffect(() => {
       setActiveGraphSlug(slug)
     }, [slug, setActiveGraphSlug])
+
+    if (shell === "chat") {
+      return <ChatPage />
+    }
 
     return (
       <Suspense fallback={<div className="loading-shimmer">Loading note...</div>}>

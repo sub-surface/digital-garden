@@ -15,6 +15,11 @@ export interface NoteMetadata {
   image?: string
   cover?: string
   poster?: string
+  author?: string
+  director?: string
+  year?: number
+  rating?: number
+  status?: string
   links: string[]       // slugs this note links to
   backlinks: string[]   // slugs that link to this note
   folder?: string       // parent folder path

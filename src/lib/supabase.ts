@@ -56,6 +56,9 @@ export const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
         detectSessionInUrl: true,
         flowType: "pkce",
         storage: makeCookieStorage(COOKIE_DOMAIN) ?? undefined,
+        // Disable Web Locks API — causes orphaned lock warnings in React Strict Mode
+        // (double-mount unmounts the lock holder before release). Safe in browser SPA.
+        lock: (_name, _acquireTimeout, fn) => fn(),
       },
     })
   : null

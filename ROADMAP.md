@@ -303,6 +303,10 @@ Opt-in per-note comments. Turnstile-gated, no login required. Pseudonymous (name
 - [ ] Watchlist (get notified when bookmarked pages are edited) — needs Supabase `watchlist` table
 - [ ] Page metadata editing (description, tags) from wiki editor UI
 - [ ] **Bookmarks: move off AppShell** — `AppShell` currently imports Supabase client for bookmarks, violating the "garden has no Supabase dependency" rule. Bookmarks should live entirely on `wiki.subsurfaces.net`; remove Supabase import from `AppShell` and `useBookmarks` hook from the main site
+- [ ] **Supabase RLS audit**: `bookmarks`, `edit_log`, `page_locks` tables have no RLS policies. Acceptable for now (trusted editors only). Before public launch: own-row-only for bookmarks; insert-only for edit_log; admin-only lock management.
+- [x] **`signInWithPassword()`** added to `useAuth` — ready for password auth UI
+- [ ] **Password auth UI**: update `WikiAuthModal` to show email + password fields with "Forgot password?" magic link fallback. Requires Supabase Authentication > Providers > Email (enabled by default).
+- [x] **Dev auto-login**: `VITE_DEV_AUTH_EMAIL` + `VITE_DEV_AUTH_PASSWORD` in `.env.local` — `useAuth` silently calls `signInWithPassword` on mount in dev when no session. Fill in credentials in `.env.local`. Never committed.
 
 ---
 
@@ -348,49 +352,51 @@ Nothing flows upward. A chat outage must not affect the wiki. A wiki outage must
 - [ ] **Verify shared cookie auth in production** — deploy and run test matrix before proceeding to Supabase schema
 
 #### Supabase Schema
-- [ ] Create `rooms` table: `id TEXT PRIMARY KEY, name TEXT NOT NULL, slug TEXT UNIQUE NOT NULL, created_by UUID REFERENCES profiles, created_at TIMESTAMPTZ, archived BOOLEAN DEFAULT false`
-- [ ] Seed initial rooms: `#general` (slug: `general`), `#philosophy` (slug: `philosophy`)
-- [ ] Create `messages` table: `id UUID PRIMARY KEY, room_id TEXT REFERENCES rooms, user_id UUID REFERENCES profiles, body TEXT NOT NULL, reply_to UUID REFERENCES messages, created_at TIMESTAMPTZ NOT NULL, deleted_at TIMESTAMPTZ, deleted_by UUID REFERENCES profiles`
-  - Index: `(room_id, created_at DESC)`
-  - `reply_to` is nullable — NULL means top-level message, non-null means reply to that message ID
-- [ ] Create `reactions` table: `message_id UUID REFERENCES messages, user_id UUID REFERENCES profiles, emote TEXT NOT NULL, PRIMARY KEY (message_id, user_id, emote)` — composite PK enforces one-per-emote-per-user-per-message
-- [ ] Enable Supabase Realtime on `messages` and `reactions` tables
-- [ ] Enable Supabase Realtime **Presence** channel per room (for typing indicators)
-- [ ] Add GIN full-text index on `messages.body`: `CREATE INDEX idx_messages_fts ON messages USING GIN (to_tsvector('english', body))` — enables fast `GET /api/chat/search` queries
-- [ ] RLS policies: authenticated users can insert own messages; users can soft-delete own messages (`deleted_at = now(), deleted_by = auth.uid()` where `user_id = auth.uid()`); admins can soft-delete any message; read is public to authenticated users; hard delete reserved for permaban cleanup only
+- [x] `rooms` table created + seeded (`general`, `philosophy`)
+- [x] `messages` table created with FTS index + `(room_id, created_at DESC)` index
+- [x] `reactions` table with composite PK `(message_id, user_id, emote)`
+- [x] Ban fields added to `profiles`: `ban_type`, `ban_expires_at`, `ban_reason`
+- [x] RLS policies on `messages`, `reactions`, `rooms` (authenticated read; own insert; own delete for reactions)
+- [x] Supabase Realtime enabled on `messages` and `reactions` tables — Dashboard path: **Database → Publications → supabase_realtime → toggle table**. Alternatively via SQL: `alter publication supabase_realtime add table messages; alter publication supabase_realtime add table reactions;`
+- [ ] Enable Supabase Realtime **Presence** channel per room (for typing indicators — Phase 1 future)
 
 #### Worker API Endpoints (`src/worker.ts`)
-- [ ] `GET /api/chat/rooms` — list all non-archived rooms
-- [ ] `POST /api/chat/rooms` — admin only: create a new room (`name`, `slug`); returns created room
-- [ ] `GET /api/chat/messages?room=<slug>&before=<cursor>&limit=50` — paginated history, excludes hard-deleted rows, returns `[message deleted]` placeholder for soft-deleted; includes `reply_to` message snapshot (id + username + body truncated) for reply preview rendering
-- [ ] `DELETE /api/chat/messages/:id` — soft delete: sets `deleted_at` + `deleted_by`; user can only delete own; admin can delete any
-- [ ] `POST /api/chat/reactions` — body `{ message_id, emote }`: upsert reaction row; Supabase unique PK handles idempotency
-- [ ] `DELETE /api/chat/reactions` — body `{ message_id, emote }`: remove own reaction
-- [ ] `GET /api/chat/search?room=<slug>&q=<text>&user=<username>&media=<bool>&from=<date>&to=<date>&limit=50&before=<cursor>` — full-text search across message history; filters: room, author username, media-only (messages containing image URLs or GIFs), date range; results ordered by `created_at DESC`; Postgres `ILIKE` or `to_tsvector` full-text search on `body`
-- [ ] `GET /api/users/:username/mini` — returns `{ username, avatar_url, role, stonk_balance, bio, created_at }` for mini profile popup
+- [x] `GET /api/chat/rooms` — non-archived rooms ordered by name
+- [x] `POST /api/chat/rooms` — admin only: create room
+- [x] `GET /api/chat/messages?room=&before=&limit=` — paginated history with `profiles` embed + reply_to snapshots
+- [x] `DELETE /api/chat/messages/:id` — soft delete (own or admin)
+- [x] `POST /api/chat/reactions` — upsert reaction
+- [x] `DELETE /api/chat/reactions` — remove own reaction
+- [x] `GET /api/chat/search?q=&room=&user=&before=&after=&limit=` — ilike full-text search
+- [x] `GET /api/chat/users/:username/mini` — public mini profile
+- [x] `POST /api/chat/ban` + `POST /api/chat/unban` — admin only
+- [x] `checkBanStatus()` helper — checked on all authenticated chat writes
 
 #### Admin: Bans
-- [ ] Add `ban_status` to `profiles`: `ban_type TEXT` (`none` | `temporary` | `permanent`), `ban_expires_at TIMESTAMPTZ`, `ban_reason TEXT`
-- [ ] Worker middleware: on any authenticated chat write, check `ban_type` — if `temporary` and `ban_expires_at > now()`, or `permanent`, reject with 403
-- [ ] `POST /api/admin/ban` — body `{ user_id, type: "temporary"|"permanent", duration_hours?, reason? }`; default `duration_hours = 24`
-- [ ] `POST /api/admin/unban` — body `{ user_id }`
-- [ ] On permanent ban: hard-delete all message rows for that user (data hygiene), anonymise profile
+- [x] `ban_type`, `ban_expires_at`, `ban_reason` on `profiles`
+- [x] Ban check in worker on all authenticated chat writes (messages, reactions)
+- [x] `POST /api/chat/ban` / `POST /api/chat/unban` endpoints (admin only)
+- [ ] On permanent ban: hard-delete all message rows + anonymise profile (deferred)
 
 #### Frontend — ChatShell & UI
-- [ ] `ChatShell.tsx`: room list sidebar (from `GET /api/chat/rooms`), active room view, header with room name + user count
-- [ ] `ChatRoom.tsx`: Supabase Realtime subscription on `messages` channel filtered by `room_id`; renders `MessageList` + `MessageInput`
-- [ ] `MessageList.tsx`: paginated scroll, loads 50 messages on mount, loads earlier messages on scroll-to-top; renders soft-deleted as `[message deleted]`
-- [ ] `MessageInput.tsx`: textarea (Enter to send, Shift+Enter for newline), emote picker button, GIF picker button, character limit; when replying shows a dismiss-able "Replying to X: …" banner above input and sets `reply_to` on submit
-- [ ] `MessageRow.tsx`: avatar, username (clickable → mini profile popup), timestamp, body, reaction strip, delete button (own messages only); if `reply_to` set, renders a quoted reply preview bar above the message body (truncated, clickable to scroll to original); image URLs in body auto-detected and rendered as inline preview images (no upload — link only, images may die over time by design); GIF URLs similarly rendered inline
-- [ ] `MiniProfilePopup.tsx`: appears on username click — avatar, username, role badge, stonk balance + sparkline (placeholder in Phase 1), bio, "joined {date}", link to full profile; dismiss on outside click
-- [ ] `TypingIndicator.tsx`: subscribes to Supabase Presence on current room channel; shows `"X is typing…"` or `"X and Y are typing…"`; broadcasts presence on keydown with 3s debounce clear
-- [ ] `EmotePicker.tsx`: grid of available emotes from `public/emotes/`; filter by name; insert `:emote-name:` into message input
-- [ ] `GifPicker.tsx`: search field → calls KLIPY REST API (`fetch()` only, no SDK) → renders GIF grid; selecting a GIF inserts `![](url)` markdown image syntax into the message body (not bare URL — unambiguous signal for renderer); KLIPY API key stored as CF Worker secret + proxied via `GET /api/chat/gif-search?q=<query>` to keep key server-side
-- [ ] `ChatSearch.tsx`: slide-in panel (or modal) — text query, user filter (username input), media-only toggle, date range pickers; calls `GET /api/chat/search`; results rendered as `MessageRow` instances with room + timestamp context; clicking a result scrolls to that message in the main view (or links to a permalink)
-- [ ] Search trigger: magnifying glass icon in room header; keyboard shortcut (Ctrl+F within chat)
-- [ ] Emote rendering: parse `:emote-name:` in message body → replace with `<img src="/emotes/{name}.gif" />` client-side
-- [ ] Commit initial emote set to `public/emotes/` (sourced from emoji.gg)
-- [ ] `ChatShell.module.scss`: IRC-aesthetic styling — monospace font, minimal chrome, CSS variable tokens for dark/light
+- [x] `ChatShell.tsx` + `ChatShell.module.scss` — IRC-aesthetic shell, auth menu, TerminalTitle "Philchat"
+- [x] `ChatPage.tsx` — two-column layout (sidebar + main), room list, login prompt, auto-selects first room
+- [x] `ChatRoom.tsx` — Supabase Realtime subscription, pagination, scroll-to-bottom, send handler
+- [x] `MessageList.tsx` — grouped consecutive messages, forwardRef scroll, compact rows
+- [x] `MessageInput.tsx` — Enter-to-send, char limit, reply preview banner
+- [x] `MessageRow.tsx` — avatar, username, timestamp, reply-to bar, deleted state, hover reply button
+- [x] `parseMessageBody.ts` — tokeniser: text/emote/image/youtube/url tokens, one-embed guard
+- [x] `MessageBodyRenderer` in `MessageRow` — renders tokens: inline images, YouTube click-to-load, links, emotes
+- [x] `src/types/chat.ts` — shared `ChatMessage` + `ChatRoom` types
+- [x] Router: catch-all `noteRoute` returns `<ChatPage />` when `shell === "chat"`
+- [ ] `MiniProfilePopup.tsx` — username click → profile popup (stonk balance placeholder)
+- [ ] `TypingIndicator.tsx` — Supabase Presence per room
+- [ ] `EmotePicker.tsx` — grid from `public/emotes/`, insert `:name:` into input
+- [ ] `GifPicker.tsx` — KLIPY API proxied via `GET /api/chat/gif-search`
+- [ ] `ChatSearch.tsx` — slide-in search panel (Ctrl+F)
+- [ ] Reaction strip on `MessageRow` (emote reactions from `reactions` table)
+- [ ] Delete button on own messages in `MessageRow`
+- [ ] Commit initial emote set to `public/emotes/`
 
 #### Rich Media Rendering (`MessageRow.tsx` + `parseMessageBody.ts`)
 
@@ -500,3 +506,5 @@ All message body rendering goes through a shared `parseMessageBody(text)` utilit
 - `BgCanvas` at z-index 0 — all layout containers must be `background: transparent`
 - MDX custom components (`Query`, `WikiSubmitForm`, `BookCard`, etc.) must be passed via `components` prop on `<MDXComponent>` in `NoteBody` as well as registered in `MDXProvider` — context alone is insufficient
 - `contentPath` in content-index preserves original filename casing for `public/content/` fetches on CF's Linux filesystem
+
+

@@ -779,6 +779,277 @@ async function handleAdmin(request: Request, env: Env, pathname: string): Promis
   return jsonResponse({ error: "Not found" }, 404)
 }
 
+// ── Chat helpers ──
+
+interface ChatMessage {
+  id: string
+  room_id: string
+  user_id: string
+  body: string
+  reply_to: string | null
+  created_at: string
+  deleted_at: string | null
+  deleted_by: string | null
+  profiles: { username: string | null; avatar_url: string | null } | null
+}
+
+interface BanProfile {
+  ban_type: string | null
+  ban_expires_at: string | null
+  ban_reason: string | null
+}
+
+async function checkBanStatus(env: Env, userId: string): Promise<{ banned: boolean; reason?: string }> {
+  const res = await supabaseRest(env, `profiles?id=eq.${userId}&select=ban_type,ban_expires_at,ban_reason`)
+  if (!res.ok) return { banned: false }
+  const rows = await res.json<BanProfile[]>()
+  const profile = rows[0]
+  if (!profile || !profile.ban_type || profile.ban_type === "none") return { banned: false }
+  if (profile.ban_type === "temporary" && profile.ban_expires_at) {
+    if (new Date(profile.ban_expires_at) <= new Date()) return { banned: false }
+  }
+  return { banned: true, reason: profile.ban_reason ?? undefined }
+}
+
+// ── GET/POST /api/chat/rooms ──
+
+async function handleChatRooms(request: Request, env: Env): Promise<Response> {
+  if (request.method === "GET") {
+    const res = await supabaseRest(env, "rooms?archived=eq.false&select=id,name,slug,created_at,created_by&order=name.asc")
+    if (!res.ok) return jsonResponse({ error: "Failed to fetch rooms" }, 500)
+    return jsonResponse(await res.json())
+  }
+
+  if (request.method === "POST") {
+    const auth = await verifyAuth(request, env)
+    if (!auth || auth.role !== "admin") return jsonResponse({ error: "Admin access required" }, 403)
+
+    let body: { name?: string; slug?: string }
+    try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
+    if (!body.name?.trim() || !body.slug?.trim()) return jsonResponse({ error: "name and slug required" }, 400)
+
+    const res = await supabaseRest(env, "rooms", "POST", {
+      id: body.slug.trim(),
+      name: body.name.trim(),
+      slug: body.slug.trim(),
+      created_by: auth.id,
+    })
+    if (!res.ok) return jsonResponse({ error: "Failed to create room" }, 500)
+    return jsonResponse(await res.json(), 201)
+  }
+
+  return jsonResponse({ error: "Method not allowed" }, 405)
+}
+
+// ── GET /api/chat/messages — list, DELETE /api/chat/messages/:id — soft delete ──
+
+async function handleChatMessages(request: Request, env: Env, url: URL): Promise<Response> {
+  const auth = await verifyAuth(request, env)
+  if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+
+  // DELETE /api/chat/messages/:id
+  if (request.method === "DELETE") {
+    const id = url.pathname.split("/").pop()
+    if (!id) return jsonResponse({ error: "Message ID required" }, 400)
+
+    const fetchRes = await supabaseRest(env, `messages?id=eq.${id}&select=id,user_id,deleted_at`)
+    if (!fetchRes.ok) return jsonResponse({ error: "Failed to fetch message" }, 500)
+    const rows = await fetchRes.json<{ id: string; user_id: string; deleted_at: string | null }[]>()
+    if (!rows.length) return jsonResponse({ error: "Message not found" }, 404)
+    const msg = rows[0]
+    if (msg.deleted_at) return jsonResponse({ error: "Already deleted" }, 409)
+    if (msg.user_id !== auth.id && auth.role !== "admin") {
+      return jsonResponse({ error: "Forbidden" }, 403)
+    }
+
+    const delRes = await supabaseRest(env, `messages?id=eq.${id}`, "PATCH", {
+      deleted_at: new Date().toISOString(),
+      deleted_by: auth.id,
+    })
+    if (!delRes.ok) return jsonResponse({ error: "Failed to delete message" }, 500)
+    return jsonResponse({ ok: true })
+  }
+
+  if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405)
+
+  const room = url.searchParams.get("room")
+  if (!room) return jsonResponse({ error: "room parameter required" }, 400)
+
+  const before = url.searchParams.get("before")
+  const rawLimit = parseInt(url.searchParams.get("limit") ?? "50", 10)
+  const limit = Math.min(isNaN(rawLimit) ? 50 : rawLimit, 100)
+
+  let filter = `room_id=eq.${encodeURIComponent(room)}&deleted_at=is.null`
+  if (before) filter += `&created_at=lt.${encodeURIComponent(before)}`
+  filter += `&order=created_at.desc&limit=${limit}`
+
+  const res = await supabaseRest(env, `messages?${filter}&select=*,profiles(username,avatar_url)`)
+  if (!res.ok) return jsonResponse({ error: "Failed to fetch messages" }, 500)
+  const messages = await res.json<ChatMessage[]>()
+
+  // Fetch reply_to snapshots for any messages that reference another
+  const replyIds = [...new Set(messages.map(m => m.reply_to).filter((id): id is string => id !== null))]
+  let replyMap: Record<string, Pick<ChatMessage, "id" | "body" | "profiles">> = {}
+  if (replyIds.length > 0) {
+    const idsFilter = replyIds.map(id => encodeURIComponent(id)).join(",")
+    const replyRes = await supabaseRest(env, `messages?id=in.(${idsFilter})&select=id,body,profiles(username,avatar_url)`)
+    if (replyRes.ok) {
+      const replyRows = await replyRes.json<Pick<ChatMessage, "id" | "body" | "profiles">[]>()
+      for (const r of replyRows) replyMap[r.id] = r
+    }
+  }
+
+  const enriched = messages.map(m => ({
+    ...m,
+    reply_to_message: m.reply_to ? (replyMap[m.reply_to] ?? null) : null,
+  }))
+
+  return jsonResponse({ messages: enriched, hasMore: messages.length === limit })
+}
+
+// ── POST/DELETE /api/chat/reactions ──
+
+async function handleChatReactions(request: Request, env: Env): Promise<Response> {
+  const auth = await verifyAuth(request, env)
+  if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+
+  let body: { message_id?: string; emote?: string }
+  try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
+  if (!body.message_id?.trim() || !body.emote?.trim()) {
+    return jsonResponse({ error: "message_id and emote required" }, 400)
+  }
+
+  if (request.method === "POST") {
+    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/reactions`, {
+      method: "POST",
+      headers: {
+        apikey: env.SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify({ message_id: body.message_id.trim(), user_id: auth.id, emote: body.emote.trim() }),
+    })
+    if (!res.ok) return jsonResponse({ error: "Failed to add reaction" }, 500)
+    return jsonResponse({ ok: true })
+  }
+
+  if (request.method === "DELETE") {
+    const res = await supabaseRest(
+      env,
+      `reactions?message_id=eq.${encodeURIComponent(body.message_id.trim())}&user_id=eq.${auth.id}&emote=eq.${encodeURIComponent(body.emote.trim())}`,
+      "DELETE",
+    )
+    if (!res.ok) return jsonResponse({ error: "Failed to remove reaction" }, 500)
+    return jsonResponse({ ok: true })
+  }
+
+  return jsonResponse({ error: "Method not allowed" }, 405)
+}
+
+// ── GET /api/chat/search ──
+
+async function handleChatSearch(request: Request, env: Env, url: URL): Promise<Response> {
+  if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405)
+
+  const auth = await verifyAuth(request, env)
+  if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+
+  const q = url.searchParams.get("q")?.trim()
+  if (!q) return jsonResponse({ error: "q parameter required" }, 400)
+
+  const room = url.searchParams.get("room")
+  const user = url.searchParams.get("user")
+  const before = url.searchParams.get("before")
+  const after = url.searchParams.get("after")
+  const rawLimit = parseInt(url.searchParams.get("limit") ?? "50", 10)
+  const limit = Math.min(isNaN(rawLimit) ? 50 : rawLimit, 100)
+
+  const parts: string[] = [
+    `body=ilike.*${encodeURIComponent(q)}*`,
+    "deleted_at=is.null",
+    `order=created_at.desc`,
+    `limit=${limit}`,
+  ]
+  if (room) parts.push(`room_id=eq.${encodeURIComponent(room)}`)
+  if (before) parts.push(`created_at=lt.${encodeURIComponent(before)}`)
+  if (after) parts.push(`created_at=gt.${encodeURIComponent(after)}`)
+
+  let filter = parts.join("&")
+
+  // If filtering by username, we need a different approach: join and filter
+  // PostgREST can filter on embedded resources with a special syntax:
+  if (user) filter += `&profiles.username=eq.${encodeURIComponent(user)}`
+
+  const res = await supabaseRest(env, `messages?${filter}&select=*,profiles(username,avatar_url)`)
+  if (!res.ok) return jsonResponse({ error: "Search failed" }, 500)
+  const messages = await res.json<ChatMessage[]>()
+
+  // If user filter was applied, PostgREST doesn't filter by embedded resource natively in all versions,
+  // so additionally filter client-side for safety
+  const filtered = user
+    ? messages.filter(m => m.profiles?.username?.toLowerCase() === user.toLowerCase())
+    : messages
+
+  return jsonResponse({ messages: filtered })
+}
+
+// ── GET /api/chat/users/:username/mini ──
+
+async function handleChatUserMini(request: Request, env: Env, username: string): Promise<Response> {
+  if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405)
+
+  const res = await supabaseRest(
+    env,
+    `profiles?username=eq.${encodeURIComponent(username)}&select=username,avatar_url,role,bio,created_at`,
+  )
+  if (!res.ok) return jsonResponse({ error: "Failed to fetch user" }, 500)
+  const rows = await res.json<{ username: string; avatar_url: string | null; role: string; bio: string | null; created_at: string | null }[]>()
+  if (!rows.length) return jsonResponse({ error: "User not found" }, 404)
+  return jsonResponse(rows[0])
+}
+
+// ── POST /api/chat/ban — POST /api/chat/unban ──
+
+async function handleChatBan(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405)
+
+  const auth = await verifyAuth(request, env)
+  if (!auth || auth.role !== "admin") return jsonResponse({ error: "Admin access required" }, 403)
+
+  const url = new URL(request.url)
+  const isBan = url.pathname === "/api/chat/ban"
+
+  let body: { user_id?: string; type?: string; duration_hours?: number; reason?: string }
+  try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
+  if (!body.user_id?.trim()) return jsonResponse({ error: "user_id required" }, 400)
+
+  if (isBan) {
+    if (!body.type || (body.type !== "temporary" && body.type !== "permanent")) {
+      return jsonResponse({ error: "type must be 'temporary' or 'permanent'" }, 400)
+    }
+    const ban_expires_at = body.type === "temporary" && body.duration_hours
+      ? new Date(Date.now() + body.duration_hours * 3600000).toISOString()
+      : null
+    const res = await supabaseRest(env, `profiles?id=eq.${body.user_id.trim()}`, "PATCH", {
+      ban_type: body.type,
+      ban_expires_at,
+      ban_reason: body.reason ?? null,
+    })
+    if (!res.ok) return jsonResponse({ error: "Failed to ban user" }, 500)
+    return jsonResponse({ ok: true })
+  }
+
+  // unban
+  const res = await supabaseRest(env, `profiles?id=eq.${body.user_id.trim()}`, "PATCH", {
+    ban_type: "none",
+    ban_expires_at: null,
+    ban_reason: null,
+  })
+  if (!res.ok) return jsonResponse({ error: "Failed to unban user" }, 500)
+  return jsonResponse({ ok: true })
+}
+
 function addSecurityHeaders(headers: Headers) {
   // CSP: allow own origin, Google Fonts, Turnstile, Supabase, external images
   headers.set("Content-Security-Policy", [
@@ -814,12 +1085,18 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders() })
     }
 
-    // Chat API — Phase 1 stubs (not yet implemented)
-    if (url.pathname.startsWith("/api/chat/")) {
-      return Response.json(
-        { error: "Chat API not yet available" },
-        { status: 501, headers: corsHeaders() },
-      )
+    // Chat API
+    if (url.pathname === "/api/chat/rooms") return handleChatRooms(request, env)
+    if (url.pathname === "/api/chat/messages") return handleChatMessages(request, env, url)
+    if (url.pathname.match(/^\/api\/chat\/messages\/[^/]+$/)) return handleChatMessages(request, env, url)
+    if (url.pathname === "/api/chat/reactions") return handleChatReactions(request, env)
+    if (url.pathname === "/api/chat/search") return handleChatSearch(request, env, url)
+    if (url.pathname.match(/^\/api\/chat\/users\/[^/]+\/mini$/)) {
+      const username = decodeURIComponent(url.pathname.split("/")[4])
+      return handleChatUserMini(request, env, username)
+    }
+    if (url.pathname === "/api/chat/ban" || url.pathname === "/api/chat/unban") {
+      return handleChatBan(request, env)
     }
 
     // API routes

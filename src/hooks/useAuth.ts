@@ -19,6 +19,7 @@ interface AuthState extends ProfileFields {
 
 export function useAuth(): AuthState & {
   signIn: (email: string) => Promise<{ error: string | null }>
+  signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, username: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   updateProfile: (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url">>) => Promise<{ error: string | null }>
@@ -60,6 +61,23 @@ export function useAuth(): AuthState & {
     })
 
     return () => subscription.unsubscribe()
+  }, [])
+
+  // Dev auto-login — only in development, only when VITE_DEV_AUTH_EMAIL + VITE_DEV_AUTH_PASSWORD set
+  useEffect(() => {
+    if (!supabase) return
+    if (import.meta.env.PROD) return
+    const email = import.meta.env.VITE_DEV_AUTH_EMAIL as string | undefined
+    const password = import.meta.env.VITE_DEV_AUTH_PASSWORD as string | undefined
+    if (!email || !password) return
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) return // already logged in
+      supabase!.auth.signInWithPassword({ email, password }).catch(() => {
+        // Silently fail — dev convenience only
+      })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function fetchProfile(accessToken: string) {
@@ -111,6 +129,12 @@ export function useAuth(): AuthState & {
       email,
       options: { emailRedirectTo: window.location.origin },
     })
+    return { error: error?.message ?? null }
+  }
+
+  async function signInWithPassword(email: string, password: string) {
+    if (!supabase) return { error: "Auth not configured" }
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error?.message ?? null }
   }
 
@@ -171,5 +195,5 @@ export function useAuth(): AuthState & {
     return { error: null }
   }, [session])
 
-  return { session, role, loading, username, bio, avatar_url, created_at, signIn, signUp, signOut, updateProfile }
+  return { session, role, loading, username, bio, avatar_url, created_at, signIn, signInWithPassword, signUp, signOut, updateProfile }
 }
