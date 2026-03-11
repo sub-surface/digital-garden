@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import type { ChatMessage } from "@/types/chat"
 import { EmotePicker } from "./EmotePicker"
-import { GifPicker } from "./GifPicker"
 import styles from "./Chat.module.scss"
 
 const CHAR_LIMIT = 2000
@@ -18,7 +17,6 @@ interface Props {
 export function MessageInput({ onSend, replyTo, onCancelReply, onTyping }: Props) {
   const [body, setBody] = useState("")
   const [showEmotePicker, setShowEmotePicker] = useState(false)
-  const [showGifPicker, setShowGifPicker] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -98,25 +96,11 @@ export function MessageInput({ onSend, replyTo, onCancelReply, onTyping }: Props
         />
         <button
           className={`${styles.pickerBtn} ${showEmotePicker ? styles.pickerBtnActive : ""}`}
-          onClick={() => {
-            setShowGifPicker(false)
-            setShowEmotePicker((v) => !v)
-          }}
+          onClick={() => setShowEmotePicker((v) => !v)}
           type="button"
           aria-label="Emote picker"
         >
           emote
-        </button>
-        <button
-          className={`${styles.pickerBtn} ${showGifPicker ? styles.pickerBtnActive : ""}`}
-          onClick={() => {
-            setShowEmotePicker(false)
-            setShowGifPicker((v) => !v)
-          }}
-          type="button"
-          aria-label="GIF picker"
-        >
-          gif
         </button>
         <button
           className={styles.sendBtn}
@@ -137,15 +121,6 @@ export function MessageInput({ onSend, replyTo, onCancelReply, onTyping }: Props
         />
       )}
 
-      {showGifPicker && (
-        <GifPicker
-          onSelect={(md) => {
-            appendText(md)
-            setShowGifPicker(false)
-          }}
-          onClose={() => setShowGifPicker(false)}
-        />
-      )}
 
       {showCounter && (
         <div className={`${styles.charCount} ${remaining < 100 ? styles.charCountWarn : ""}`}>

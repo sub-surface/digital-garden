@@ -348,8 +348,8 @@ Nothing flows upward. A chat outage must not affect the wiki. A wiki outage must
 - [x] **Cross-subdomain auth (shared cookie)**: cookie `storage` adapter in `src/lib/supabase.ts` — `VITE_COOKIE_DOMAIN` controls domain scope; `cookieOptions` field on browser client doesn't work (SSR-only), so custom `storage` adapter used instead
 - [x] `VITE_CHAT_MODE=true` env var support in `useShell()`; commented out in `.env.local` with instructions
 - [x] `usePanelClick` updated: `isWiki` bail-out replaced with `shell !== "main"` — also bails on chat
-- [ ] **Supabase: add `chat.subsurfaces.net` to Auth redirect URLs** — Authentication → URL Configuration → Redirect URLs → add `https://chat.subsurfaces.net/**` and `https://chat.subsurfaces.net`
-- [ ] **Verify shared cookie auth in production** — deploy and run test matrix before proceeding to Supabase schema
+- [x] **Supabase: add `chat.subsurfaces.net` to Auth redirect URLs** — Authentication → URL Configuration → Redirect URLs
+- [x] **Verify shared cookie auth in production** — login on wiki → navigate to chat → still logged in; confirmed working
 
 #### Supabase Schema
 - [x] `rooms` table created + seeded (`general`, `philosophy`)
@@ -358,7 +358,7 @@ Nothing flows upward. A chat outage must not affect the wiki. A wiki outage must
 - [x] Ban fields added to `profiles`: `ban_type`, `ban_expires_at`, `ban_reason`
 - [x] RLS policies on `messages`, `reactions`, `rooms` (authenticated read; own insert; own delete for reactions)
 - [x] Supabase Realtime enabled on `messages` and `reactions` tables — Dashboard path: **Database → Publications → supabase_realtime → toggle table**. Alternatively via SQL: `alter publication supabase_realtime add table messages; alter publication supabase_realtime add table reactions;`
-- [ ] Enable Supabase Realtime **Presence** channel per room (for typing indicators — Phase 1 future)
+- [x] Enable Supabase Realtime **Presence** channel per room (for typing indicators — Phase 1 future)
 
 #### Worker API Endpoints (`src/worker.ts`)
 - [x] `GET /api/chat/rooms` — non-archived rooms ordered by name
@@ -399,7 +399,7 @@ Nothing flows upward. A chat outage must not affect the wiki. A wiki outage must
 - [x] `GET /api/chat/gif-search` worker endpoint — proxies KLIPY API (requires `KLIPY_API_KEY` CF secret)
 - [x] Commit initial emote set to `public/emotes/` + create `public/emotes/index.json` (55 emotes: 28 GIF + 27 PNG; `{name,ext}[]` format)
 - [x] Wire `onReact` / `onDelete` callbacks in `ChatRoom` — optimistic toggle (POST/DELETE), reactions embedded in messages response from worker
-- [ ] Add `KLIPY_API_KEY` as CF Worker secret in dashboard
+- [x] Add `KLIPY_API_KEY` as CF Worker secret in dashboard (test mode — production pending KLIPY activation)
 
 #### Rich Media Rendering (`MessageRow.tsx` + `parseMessageBody.ts`)
 
@@ -487,6 +487,12 @@ All message body rendering goes through a shared `parseMessageBody(text)` utilit
 
 #### Idle Game (deferred — design note)
 > Cookie-clicker / Universal Paperclips style idle mechanic. Idle rate scales with stonk level. Points calculated on login from `last_login` delta, capped at 24h accumulation. Avatar "collects" while away — client-side presentation of the delta. Full design TBD.
+
+---
+
+## Legal & Compliance
+- [ ] **GDPR cookie consent**: cookie consent banner for EU users — required since we set a cross-domain session cookie (`domain=.subsurfaces.net`). Minimal UI: bottom bar with "Accept" / "Reject" buttons; reject disables Supabase auth cookie (localStorage fallback only). Store consent in `localStorage`. Only show on first visit.
+- [ ] **Privacy policy page**: document what data is stored (Supabase auth, profiles, messages, bookmarks), cookie usage, and contact info. Link from footer of all three shells.
 
 ---
 
