@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { WikiAuthModal } from "./WikiAuthModal"
 import { ChatRoom } from "./ChatRoom"
+import { ChatSearch } from "./ChatSearch"
 import type { ChatRoom as ChatRoomType } from "@/types/chat"
 import styles from "./Chat.module.scss"
 
@@ -11,6 +12,7 @@ export function ChatPage() {
   const [roomsLoading, setRoomsLoading] = useState(false)
   const [activeRoom, setActiveRoom] = useState<ChatRoomType | null>(null)
   const [showAuth, setShowAuth] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
 
   useEffect(() => {
     if (!session) return
@@ -61,7 +63,17 @@ export function ChatPage() {
   return (
     <div className={styles.chatLayout}>
       <aside className={styles.sidebar}>
-        <div className={styles.sidebarHeader}>channels</div>
+        <div className={styles.sidebarHeader}>
+          channels
+          {" · "}
+          <button
+            className={styles.sidebarSearchBtn}
+            onClick={() => setShowSearch(true)}
+            aria-label="Search messages"
+          >
+            search
+          </button>
+        </div>
         {roomsLoading ? (
           <div style={{ padding: "6px 16px", fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
             loading…
@@ -95,9 +107,17 @@ export function ChatPage() {
             roomId={activeRoom.id}
             roomName={activeRoom.name}
             accessToken={session.access_token}
+            currentUserId={session.user.id}
           />
         )}
       </div>
+
+      {showSearch && (
+        <ChatSearch
+          onClose={() => setShowSearch(false)}
+          accessToken={session.access_token}
+        />
+      )}
     </div>
   )
 }

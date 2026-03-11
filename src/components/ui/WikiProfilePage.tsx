@@ -34,6 +34,14 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
   const [savingUsername, setSavingUsername] = useState(false)
   const [usernameError, setUsernameError] = useState<string | null>(null)
 
+  // Password change
+  const [editingPassword, setEditingPassword] = useState(false)
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
+
   const isOwnProfile = !viewUsername
   const usernameValid = /^[a-zA-Z0-9-]{3,30}$/.test(usernameValue)
 
@@ -93,6 +101,23 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
     if (!error) {
       setEditingBio(false)
       if (profile) setProfile({ ...profile, bio: bioValue })
+    }
+  }
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 8) { setPasswordError("Password must be at least 8 characters"); return }
+    if (newPassword !== confirmPassword) { setPasswordError("Passwords do not match"); return }
+    setSavingPassword(true)
+    setPasswordError(null)
+    const { error } = await auth.changePassword(newPassword)
+    setSavingPassword(false)
+    if (error) {
+      setPasswordError(error)
+    } else {
+      setPasswordSuccess(true)
+      setEditingPassword(false)
+      setNewPassword("")
+      setConfirmPassword("")
     }
   }
 
@@ -243,6 +268,73 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
           </div>
         )}
       </div>
+
+      {/* Password — own profile only */}
+      {isOwnProfile && (
+        <div className="wiki-profile-section">
+          <h3 className="wiki-profile-section-title">Password</h3>
+          {editingPassword ? (
+            <div>
+              <div className="wiki-form-field">
+                <label className="wiki-form-label" htmlFor="new-password">New password</label>
+                <input
+                  id="new-password"
+                  className="wiki-form-input"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => { setNewPassword(e.target.value); setPasswordError(null) }}
+                  placeholder="minimum 8 characters"
+                  autoFocus
+                  minLength={8}
+                />
+              </div>
+              <div className="wiki-form-field">
+                <label className="wiki-form-label" htmlFor="confirm-password">Confirm password</label>
+                <input
+                  id="confirm-password"
+                  className="wiki-form-input"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(null) }}
+                  placeholder="repeat new password"
+                />
+              </div>
+              {passwordError && <div className="wiki-form-error">&gt; {passwordError}</div>}
+              <div className="wiki-form-actions" style={{ marginTop: "var(--space-2)" }}>
+                <button
+                  className="wiki-form-btn"
+                  onClick={handleChangePassword}
+                  disabled={savingPassword || !newPassword || !confirmPassword}
+                >
+                  {savingPassword ? "Saving..." : "Set password"}
+                </button>
+                <button
+                  className="wiki-form-btn wiki-form-btn-secondary"
+                  onClick={() => { setEditingPassword(false); setNewPassword(""); setConfirmPassword(""); setPasswordError(null) }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              {passwordSuccess && (
+                <p className="wiki-form-hint" style={{ color: "var(--color-accent)", marginBottom: "var(--space-2)" }}>
+                  Password updated successfully.
+                </p>
+              )}
+              <p className="wiki-profile-bio" style={{ opacity: 0.6 }}>••••••••</p>
+              <button
+                className="wiki-edit-btn"
+                onClick={() => { setEditingPassword(true); setPasswordSuccess(false) }}
+                style={{ marginTop: "var(--space-2)" }}
+              >
+                Change password
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Bookmarks — own profile only */}
       {isOwnProfile && (

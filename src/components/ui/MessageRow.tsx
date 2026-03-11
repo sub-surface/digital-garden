@@ -1,5 +1,5 @@
 import { useState } from "react"
-import type { ChatMessage } from "@/types/chat"
+import type { ChatMessage, ChatReaction } from "@/types/chat"
 import { parseMessageBody } from "@/lib/parseMessageBody"
 import styles from "./Chat.module.scss"
 
@@ -7,6 +7,10 @@ interface Props {
   msg: ChatMessage
   compact?: boolean
   onReply: (msg: ChatMessage) => void
+  onReact?: (messageId: string, emote: string) => void
+  onDelete?: (messageId: string) => void
+  isOwn?: boolean
+  reactions?: ChatReaction[]
 }
 
 function formatRelativeTime(iso: string): string {
@@ -67,7 +71,15 @@ function MessageBodyRenderer({ body }: { body: string }) {
         if (tok.type === "text") return <span key={i}>{tok.value}</span>
         if (tok.type === "emote") return (
           <img key={i} src={`/emotes/${tok.name}.gif`} alt={`:${tok.name}:`} className={styles.emote}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).replaceWith(document.createTextNode(`:${tok.name}:`)) }}
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement
+              if (!img.dataset.pngFallback) {
+                img.dataset.pngFallback = "1"
+                img.src = `/emotes/${tok.name}.png`
+              } else {
+                img.replaceWith(document.createTextNode(`:${tok.name}:`))
+              }
+            }}
           />
         )
         if (tok.type === "image") return (
@@ -87,7 +99,7 @@ function MessageBodyRenderer({ body }: { body: string }) {
   )
 }
 
-export function MessageRow({ msg, compact = false, onReply }: Props) {
+export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, isOwn, reactions, onUsernameClick }: Props & { onUsernameClick?: (username: string, el: HTMLElement) => void }) {
   const username = msg.profiles?.username ?? "unknown"
   const avatarUrl = msg.profiles?.avatar_url ?? null
 
@@ -108,7 +120,12 @@ export function MessageRow({ msg, compact = false, onReply }: Props) {
       <div className={styles.messageContent}>
         {!compact && (
           <div className={styles.messageHeader}>
-            <span className={styles.username}>{username}</span>
+            <button
+              className={styles.username}
+              onClick={(e) => onUsernameClick?.(username, e.currentTarget)}
+            >
+              {username}
+            </button>
             <span className={styles.timestamp}>{formatRelativeTime(msg.created_at)}</span>
           </div>
         )}
@@ -128,16 +145,33 @@ export function MessageRow({ msg, compact = false, onReply }: Props) {
             <MessageBodyRenderer body={msg.body} />
           </div>
         )}
+
+        {reactions && reactions.length > 0 && (
+          <div className={styles.reactionStrip}>
+            {reactions.map((r) => (
+              <button
+                key={r.emote}
+                className={`${styles.reactionBtn} ${r.reacted ? styles.reactionBtnActive : ""}`}
+                onClick={() => onReact?.(msg.id, r.emote)}
+                title={r.emote}
+              >
+                <img src={`/emotes/${r.emote}.gif`} alt={r.emote} className={styles.reactionEmote}
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+                />
+                <span>{r.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {!msg.deleted_at && (
-        <button
-          className={styles.replyBtn}
-          onClick={() => onReply(msg)}
-          aria-label="Reply"
-        >
-          reply
-        </button>
+        <div className={styles.msgActions}>
+          <button className={styles.replyBtn} onClick={() => onReply(msg)} aria-label="Reply">reply</button>
+          {isOwn && (
+            <button className={styles.deleteBtn} onClick={() => onDelete?.(msg.id)} aria-label="Delete">del</button>
+          )}
+        </div>
       )}
     </div>
   )

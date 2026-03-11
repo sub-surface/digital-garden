@@ -1,3 +1,9 @@
+export interface ChatReaction {
+  emote: string
+  count: number
+  reacted: boolean  // current user has reacted with this emote
+}
+
 export interface ChatMessage {
   id: string
   room_id: string
@@ -8,6 +14,7 @@ export interface ChatMessage {
   deleted_at: string | null
   profiles: { username: string; avatar_url: string | null } | null
   reply_to_message?: { id: string; body: string; profiles: { username: string } | null } | null
+  reactions?: ChatReaction[]
 }
 
 export interface ChatRoom {

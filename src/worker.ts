@@ -4,6 +4,7 @@ interface Env {
   GITHUB_TOKEN: string
   SUPABASE_URL: string
   SUPABASE_SERVICE_KEY: string
+  KLIPY_API_KEY?: string
 }
 
 interface NoteMeta {
@@ -899,12 +900,39 @@ async function handleChatMessages(request: Request, env: Env, url: URL): Promise
     }
   }
 
-  const enriched = messages.map(m => ({
-    ...m,
-    reply_to_message: m.reply_to ? (replyMap[m.reply_to] ?? null) : null,
-  }))
+  // Fetch reactions for all messages in one query
+  const msgIds = messages.map(m => m.id)
+  let reactionsMap: Record<string, { emote: string; user_id: string }[]> = {}
+  if (msgIds.length > 0) {
+    const idsFilter = msgIds.map(id => encodeURIComponent(id)).join(",")
+    const reactRes = await supabaseRest(env, `reactions?message_id=in.(${idsFilter})&select=message_id,emote,user_id`)
+    if (reactRes.ok) {
+      const reactRows = await reactRes.json<{ message_id: string; emote: string; user_id: string }[]>()
+      for (const r of reactRows) {
+        if (!reactionsMap[r.message_id]) reactionsMap[r.message_id] = []
+        reactionsMap[r.message_id].push({ emote: r.emote, user_id: r.user_id })
+      }
+    }
+  }
 
-  return jsonResponse({ messages: enriched, hasMore: messages.length === limit })
+  const enriched = messages.map(m => {
+    const rawReacts = reactionsMap[m.id] ?? []
+    // Group by emote, count, mark if current user reacted
+    const byEmote: Record<string, { count: number; reacted: boolean }> = {}
+    for (const r of rawReacts) {
+      if (!byEmote[r.emote]) byEmote[r.emote] = { count: 0, reacted: false }
+      byEmote[r.emote].count++
+      if (r.user_id === auth.id) byEmote[r.emote].reacted = true
+    }
+    const reactions = Object.entries(byEmote).map(([emote, v]) => ({ emote, ...v }))
+    return {
+      ...m,
+      reply_to_message: m.reply_to ? (replyMap[m.reply_to] ?? null) : null,
+      reactions,
+    }
+  })
+
+  return jsonResponse({ messages: enriched, has_more: messages.length === limit })
 }
 
 // ── POST/DELETE /api/chat/reactions ──
@@ -1050,6 +1078,29 @@ async function handleChatBan(request: Request, env: Env): Promise<Response> {
   return jsonResponse({ ok: true })
 }
 
+async function handleGifSearch(request: Request, env: Env, url: URL): Promise<Response> {
+  if (!env.KLIPY_API_KEY) {
+    return jsonResponse({ error: "GIF search not configured" }, 503)
+  }
+  const q = url.searchParams.get("q") || "trending"
+  const klipyUrl = `https://api.klipy.co/api/v1/gifs/search?q=${encodeURIComponent(q)}&limit=20`
+  try {
+    const res = await fetch(klipyUrl, {
+      headers: { Authorization: `Bearer ${env.KLIPY_API_KEY}` },
+    })
+    if (!res.ok) return jsonResponse({ error: "GIF search failed" }, 502)
+    const data = await res.json<{ data?: Array<{ id: string; url: string; preview_url?: string; title?: string }> }>()
+    const results = (data.data ?? []).map((g) => ({
+      url: g.url,
+      preview: g.preview_url ?? g.url,
+      title: g.title ?? "",
+    }))
+    return jsonResponse({ results }, 200)
+  } catch {
+    return jsonResponse({ error: "GIF search unavailable" }, 502)
+  }
+}
+
 function addSecurityHeaders(headers: Headers) {
   // CSP: allow own origin, Google Fonts, Turnstile, Supabase, external images
   headers.set("Content-Security-Policy", [
@@ -1097,6 +1148,9 @@ export default {
     }
     if (url.pathname === "/api/chat/ban" || url.pathname === "/api/chat/unban") {
       return handleChatBan(request, env)
+    }
+    if (url.pathname === "/api/chat/gif-search" && request.method === "GET") {
+      return handleGifSearch(request, env, url)
     }
 
     // API routes

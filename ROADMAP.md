@@ -305,7 +305,7 @@ Opt-in per-note comments. Turnstile-gated, no login required. Pseudonymous (name
 - [ ] **Bookmarks: move off AppShell** — `AppShell` currently imports Supabase client for bookmarks, violating the "garden has no Supabase dependency" rule. Bookmarks should live entirely on `wiki.subsurfaces.net`; remove Supabase import from `AppShell` and `useBookmarks` hook from the main site
 - [ ] **Supabase RLS audit**: `bookmarks`, `edit_log`, `page_locks` tables have no RLS policies. Acceptable for now (trusted editors only). Before public launch: own-row-only for bookmarks; insert-only for edit_log; admin-only lock management.
 - [x] **`signInWithPassword()`** added to `useAuth` — ready for password auth UI
-- [ ] **Password auth UI**: update `WikiAuthModal` to show email + password fields with "Forgot password?" magic link fallback. Requires Supabase Authentication > Providers > Email (enabled by default).
+- [x] **Password auth UI**: `WikiAuthModal` login tab now shows email + password fields → `signInWithPassword`; signup still uses magic link for email verification.
 - [x] **Dev auto-login**: `VITE_DEV_AUTH_EMAIL` + `VITE_DEV_AUTH_PASSWORD` in `.env.local` — `useAuth` silently calls `signInWithPassword` on mount in dev when no session. Fill in credentials in `.env.local`. Never committed.
 
 ---
@@ -389,14 +389,17 @@ Nothing flows upward. A chat outage must not affect the wiki. A wiki outage must
 - [x] `MessageBodyRenderer` in `MessageRow` — renders tokens: inline images, YouTube click-to-load, links, emotes
 - [x] `src/types/chat.ts` — shared `ChatMessage` + `ChatRoom` types
 - [x] Router: catch-all `noteRoute` returns `<ChatPage />` when `shell === "chat"`
-- [ ] `MiniProfilePopup.tsx` — username click → profile popup (stonk balance placeholder)
-- [ ] `TypingIndicator.tsx` — Supabase Presence per room
-- [ ] `EmotePicker.tsx` — grid from `public/emotes/`, insert `:name:` into input
-- [ ] `GifPicker.tsx` — KLIPY API proxied via `GET /api/chat/gif-search`
-- [ ] `ChatSearch.tsx` — slide-in search panel (Ctrl+F)
-- [ ] Reaction strip on `MessageRow` (emote reactions from `reactions` table)
-- [ ] Delete button on own messages in `MessageRow`
-- [ ] Commit initial emote set to `public/emotes/`
+- [x] `MiniProfilePopup.tsx` — fixed-position popup on username click; avatar, role badge, bio, joined date, stonk placeholder, link to wiki profile
+- [x] `TypingIndicator.tsx` — Supabase Presence per room; shared channel via module-level Map; `useTypingBroadcast()` hook for MessageInput integration
+- [x] `EmotePicker.tsx` — fetches `/emotes/index.json`, falls back to 8 hardcoded names; filterable grid; inserts `:name:` into input
+- [x] `GifPicker.tsx` — debounced search via `GET /api/chat/gif-search`; 2-column preview grid; inserts `![](url)` on select
+- [x] `ChatSearch.tsx` — right-panel overlay; query/room/date/media-only filters; calls `GET /api/chat/search`; result list with room+author+body+timestamp
+- [x] Reaction strip on `MessageRow` — emote+count buttons, own-highlighted, calls `onReact`
+- [x] Delete button on own messages in `MessageRow` — hover-reveal, calls `onDelete`
+- [x] `GET /api/chat/gif-search` worker endpoint — proxies KLIPY API (requires `KLIPY_API_KEY` CF secret)
+- [x] Commit initial emote set to `public/emotes/` + create `public/emotes/index.json` (55 emotes: 28 GIF + 27 PNG; `{name,ext}[]` format)
+- [x] Wire `onReact` / `onDelete` callbacks in `ChatRoom` — optimistic toggle (POST/DELETE), reactions embedded in messages response from worker
+- [ ] Add `KLIPY_API_KEY` as CF Worker secret in dashboard
 
 #### Rich Media Rendering (`MessageRow.tsx` + `parseMessageBody.ts`)
 

@@ -3,22 +3,28 @@ import { supabase } from "@/lib/supabase"
 import type { ChatMessage } from "@/types/chat"
 import { MessageList } from "./MessageList"
 import { MessageInput } from "./MessageInput"
+import { TypingIndicator, useTypingBroadcast } from "./TypingIndicator"
+import { MiniProfilePopup } from "./MiniProfilePopup"
 import styles from "./Chat.module.scss"
 
 interface Props {
   roomId: string
   roomName: string
   accessToken: string
+  currentUserId: string
 }
 
-export function ChatRoom({ roomId, roomName, accessToken }: Props) {
+export function ChatRoom({ roomId, roomName, accessToken, currentUserId }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
+  const [popup, setPopup] = useState<{ username: string; anchor: HTMLElement } | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const atBottomRef = useRef(true)
+
+  const broadcastTyping = useTypingBroadcast(roomId, currentUserId)
 
   // Track scroll position to determine if user is near bottom
   function handleScroll() {
@@ -119,6 +125,49 @@ export function ChatRoom({ roomId, roomName, accessToken }: Props) {
     }
   }, [roomId])
 
+  async function handleReact(messageId: string, emote: string) {
+    // Determine toggle direction from current local state
+    const msg = messages.find(m => m.id === messageId)
+    const alreadyReacted = msg?.reactions?.find(r => r.emote === emote)?.reacted ?? false
+    const method = alreadyReacted ? "DELETE" : "POST"
+
+    // Optimistic update
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId) return m
+      const reactions = [...(m.reactions ?? [])]
+      const idx = reactions.findIndex(r => r.emote === emote)
+      if (alreadyReacted) {
+        if (idx === -1) return m
+        const updated = { ...reactions[idx], count: reactions[idx].count - 1, reacted: false }
+        return { ...m, reactions: updated.count <= 0 ? reactions.filter((_, i) => i !== idx) : reactions.map((r, i) => i === idx ? updated : r) }
+      } else {
+        if (idx === -1) return { ...m, reactions: [...reactions, { emote, count: 1, reacted: true }] }
+        return { ...m, reactions: reactions.map((r, i) => i === idx ? { ...r, count: r.count + 1, reacted: true } : r) }
+      }
+    }))
+
+    try {
+      await fetch("/api/chat/reactions", {
+        method,
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ message_id: messageId, emote }),
+      })
+    } catch { /* ignore */ }
+  }
+
+  async function handleDelete(messageId: string) {
+    try {
+      await fetch(`/api/chat/messages/${messageId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      // Soft-delete: mark locally so UI updates immediately
+      setMessages((prev) =>
+        prev.map((m) => m.id === messageId ? { ...m, deleted_at: new Date().toISOString() } : m)
+      )
+    } catch { /* ignore */ }
+  }
+
   async function handleSend(body: string, replyToId?: string) {
     try {
       await fetch("/api/chat/messages", {
@@ -154,6 +203,18 @@ export function ChatRoom({ roomId, roomName, accessToken }: Props) {
           messages={messages}
           onReply={setReplyTo}
           onScroll={handleScroll}
+          onReact={handleReact}
+          onDelete={handleDelete}
+          currentUserId={currentUserId}
+          onUsernameClick={(username, el) => setPopup({ username, anchor: el })}
+        />
+      )}
+
+      {popup && (
+        <MiniProfilePopup
+          username={popup.username}
+          anchorEl={popup.anchor}
+          onClose={() => setPopup(null)}
         />
       )}
 
@@ -169,11 +230,14 @@ export function ChatRoom({ roomId, roomName, accessToken }: Props) {
         </div>
       )}
 
+      <TypingIndicator roomId={roomId} currentUserId={currentUserId} />
+
       <MessageInput
         roomId={roomId}
         onSend={handleSend}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
+        onTyping={broadcastTyping}
       />
     </>
   )

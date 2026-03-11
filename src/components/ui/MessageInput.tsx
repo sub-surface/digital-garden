@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import type { ChatMessage } from "@/types/chat"
+import { EmotePicker } from "./EmotePicker"
+import { GifPicker } from "./GifPicker"
 import styles from "./Chat.module.scss"
 
 const CHAR_LIMIT = 2000
@@ -10,11 +12,15 @@ interface Props {
   onSend: (body: string, replyTo?: string) => void
   replyTo?: ChatMessage | null
   onCancelReply?: () => void
+  onTyping?: (typing: boolean) => void
 }
 
-export function MessageInput({ onSend, replyTo, onCancelReply }: Props) {
+export function MessageInput({ onSend, replyTo, onCancelReply, onTyping }: Props) {
   const [body, setBody] = useState("")
+  const [showEmotePicker, setShowEmotePicker] = useState(false)
+  const [showGifPicker, setShowGifPicker] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Focus textarea when replyTo changes
   useEffect(() => {
@@ -22,6 +28,15 @@ export function MessageInput({ onSend, replyTo, onCancelReply }: Props) {
       textareaRef.current?.focus()
     }
   }, [replyTo])
+
+  function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setBody(e.target.value)
+    if (onTyping) {
+      onTyping(true)
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      typingTimeoutRef.current = setTimeout(() => onTyping(false), 3000)
+    }
+  }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -35,13 +50,25 @@ export function MessageInput({ onSend, replyTo, onCancelReply }: Props) {
     if (!trimmed || trimmed.length > CHAR_LIMIT) return
     onSend(trimmed, replyTo?.id ?? undefined)
     setBody("")
+    if (onTyping) {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      onTyping(false)
+    }
+  }
+
+  function appendText(text: string) {
+    setBody((prev) => {
+      const needsSpace = prev.length > 0 && !prev.endsWith(" ")
+      return needsSpace ? `${prev} ${text}` : `${prev}${text}`
+    })
+    textareaRef.current?.focus()
   }
 
   const remaining = CHAR_LIMIT - body.length
   const showCounter = body.length > CHAR_WARN
 
   return (
-    <div className={styles.inputArea}>
+    <div className={styles.inputArea} style={{ position: "relative" }}>
       {replyTo && (
         <div className={styles.replyPreview}>
           <span>
@@ -63,12 +90,34 @@ export function MessageInput({ onSend, replyTo, onCancelReply }: Props) {
           ref={textareaRef}
           className={styles.textarea}
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="Message…"
           rows={1}
           maxLength={CHAR_LIMIT}
         />
+        <button
+          className={`${styles.pickerBtn} ${showEmotePicker ? styles.pickerBtnActive : ""}`}
+          onClick={() => {
+            setShowGifPicker(false)
+            setShowEmotePicker((v) => !v)
+          }}
+          type="button"
+          aria-label="Emote picker"
+        >
+          emote
+        </button>
+        <button
+          className={`${styles.pickerBtn} ${showGifPicker ? styles.pickerBtnActive : ""}`}
+          onClick={() => {
+            setShowEmotePicker(false)
+            setShowGifPicker((v) => !v)
+          }}
+          type="button"
+          aria-label="GIF picker"
+        >
+          gif
+        </button>
         <button
           className={styles.sendBtn}
           onClick={handleSubmit}
@@ -77,6 +126,26 @@ export function MessageInput({ onSend, replyTo, onCancelReply }: Props) {
           Send
         </button>
       </div>
+
+      {showEmotePicker && (
+        <EmotePicker
+          onSelect={(code) => {
+            appendText(code)
+            setShowEmotePicker(false)
+          }}
+          onClose={() => setShowEmotePicker(false)}
+        />
+      )}
+
+      {showGifPicker && (
+        <GifPicker
+          onSelect={(md) => {
+            appendText(md)
+            setShowGifPicker(false)
+          }}
+          onClose={() => setShowGifPicker(false)}
+        />
+      )}
 
       {showCounter && (
         <div className={`${styles.charCount} ${remaining < 100 ? styles.charCountWarn : ""}`}>

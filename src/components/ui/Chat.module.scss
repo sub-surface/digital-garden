@@ -439,3 +439,550 @@
   width: 28px;
   min-width: 28px;
 }
+
+// ── MiniProfilePopup ──
+
+.miniProfilePopup {
+  position: fixed;
+  z-index: 500;
+  min-width: 200px;
+  max-width: 260px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  padding: 1rem;
+  font-family: var(--font-code);
+  font-size: 0.78rem;
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.miniProfileLoading,
+.miniProfileError {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.miniProfileTop {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.miniProfileAvatar {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 50%;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.miniProfileMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.miniProfileUsername {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.miniProfileRole {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 3px;
+  padding: 1px 5px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.roleAdmin {
+  background: color-mix(in srgb, var(--color-accent-base) 20%, transparent);
+  color: var(--color-accent);
+  border: 1px solid color-mix(in srgb, var(--color-accent-base) 40%, transparent);
+}
+
+.roleEditor {
+  background: rgba(80, 160, 80, 0.15);
+  color: #6dbf6d;
+  border: 1px solid rgba(80, 160, 80, 0.35);
+}
+
+.rolePending {
+  background: rgba(180, 130, 40, 0.15);
+  color: #c8a24a;
+  border: 1px solid rgba(180, 130, 40, 0.35);
+}
+
+.miniProfileBio {
+  color: var(--color-text-muted);
+  line-height: 1.45;
+  font-size: 0.75rem;
+}
+
+.miniProfileFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.4rem;
+  margin-top: 0.1rem;
+}
+
+.miniProfileStonk {
+  opacity: 0.6;
+}
+
+.miniProfileJoined {
+  opacity: 0.6;
+}
+
+.miniProfileLink {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-size: 0.72rem;
+  align-self: flex-start;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// ── TypingIndicator ──
+
+.typingIndicator {
+  height: 1.4rem;
+  padding: 0 1rem;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+}
+
+// ── Reactions ──
+
+.reactionStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.reactionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 1px 6px;
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: border-color 0.1s, background 0.1s;
+
+  &:hover {
+    border-color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-bg-surface) 80%, var(--color-accent) 20%);
+  }
+}
+
+.reactionBtnActive {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-bg-surface) 70%, var(--color-accent) 30%);
+  color: var(--color-accent);
+}
+
+.reactionEmote {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+// ── Message actions (reply + delete) ──
+
+.msgActions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.messageRow:hover .msgActions {
+  opacity: 1;
+}
+
+.deleteBtn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-family: var(--font-code);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 1px 6px;
+  transition: color 0.1s, border-color 0.1s;
+
+  &:hover {
+    color: #e05555;
+    border-color: #e05555;
+  }
+}
+
+// ── Room header ──
+
+.chatRoomHeader {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+
+  &::before {
+    content: "#";
+    margin-right: 2px;
+    color: var(--color-accent);
+  }
+}
+
+.loadMoreBtn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  padding: 3px 12px;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+
+  &:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+// ── Emote picker ──
+
+.emotePicker {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  width: 240px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 300;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.emotePickerSearch {
+  width: 100%;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  margin-bottom: 0.5rem;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+}
+
+.emoteGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.emoteBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+
+  &:hover {
+    background: var(--color-bg);
+  }
+}
+
+.emoteImg {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+// ── GIF picker ──
+
+.gifPicker {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  width: 320px;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 300;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.gifPickerSearch {
+  width: 100%;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  margin-bottom: 0.5rem;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+}
+
+.gifGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.gifBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  transition: opacity 0.1s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+.gifImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// ── Picker toggle buttons (inside input row) ──
+
+.pickerBtn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  padding: 0 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.1s, color 0.1s;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+}
+
+.pickerBtnActive {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+// ── Chat search overlay ──
+
+.searchOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 400;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.searchPanel {
+  width: 380px;
+  height: 100vh;
+  background: var(--color-bg-surface);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-code);
+}
+
+.searchPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.8rem;
+}
+
+.searchForm {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.searchInput {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: var(--font-code);
+  font-size: 0.78rem;
+  padding: 6px 10px;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+}
+
+.searchLabel {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.searchBtn {
+  background: var(--color-accent);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  padding: 6px 16px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: opacity 0.15s;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.searchResults {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 1rem;
+}
+
+.searchResult {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.75rem;
+  cursor: default;
+}
+
+.searchResultMeta {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  margin-bottom: 2px;
+}
+
+.searchResultBody {
+  color: var(--color-text);
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  font-family: var(--font-code);
+  padding: 2px 6px;
+
+  &:hover {
+    color: var(--color-text);
+  }
+}
+
+// ── Search trigger button in sidebar ──
+
+.sidebarSearchBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.65rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.1s;
+
+  &:hover {
+    color: var(--color-accent);
+  }
+}

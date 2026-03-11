@@ -23,6 +23,7 @@ export function useAuth(): AuthState & {
   signUp: (email: string, username: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   updateProfile: (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url">>) => Promise<{ error: string | null }>
+  changePassword: (newPassword: string) => Promise<{ error: string | null }>
 } {
   const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<UserRole>(null)
@@ -163,6 +164,12 @@ export function useAuth(): AuthState & {
     return { error: error?.message ?? null }
   }
 
+  async function changePassword(newPassword: string) {
+    if (!supabase) return { error: "Auth not configured" }
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    return { error: error?.message ?? null }
+  }
+
   async function signOut() {
     if (!supabase) return
     await supabase.auth.signOut()
@@ -195,5 +202,5 @@ export function useAuth(): AuthState & {
     return { error: null }
   }, [session])
 
-  return { session, role, loading, username, bio, avatar_url, created_at, signIn, signInWithPassword, signUp, signOut, updateProfile }
+  return { session, role, loading, username, bio, avatar_url, created_at, signIn, signInWithPassword, signUp, signOut, updateProfile, changePassword }
 }

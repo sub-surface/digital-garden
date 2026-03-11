@@ -7,16 +7,16 @@ interface Props {
 }
 
 export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
-  const { signIn, signUp } = useAuth()
+  const { signInWithPassword, signUp } = useAuth()
   const [tab, setTab] = useState<"login" | "signup">(defaultTab)
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [username, setUsername] = useState("")
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const isSignup = tab === "signup"
-
   const usernameValid = /^[a-zA-Z0-9-]{3,30}$/.test(username)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,13 +26,18 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
     setSubmitting(true)
     setError(null)
 
-    const result = isSignup
-      ? await signUp(email.trim(), username.trim())
-      : await signIn(email.trim())
-
-    setSubmitting(false)
-    if (result.error) setError(result.error)
-    else setSent(true)
+    if (isSignup) {
+      const result = await signUp(email.trim(), username.trim())
+      setSubmitting(false)
+      if (result.error) setError(result.error)
+      else setSent(true)
+    } else {
+      if (!password) { setSubmitting(false); return }
+      const result = await signInWithPassword(email.trim(), password)
+      setSubmitting(false)
+      if (result.error) setError(result.error)
+      else onClose()
+    }
   }
 
   return (
@@ -42,10 +47,9 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
 
         {sent ? (
           <div className="wiki-auth-sent">
-            <p className="wiki-form-prompt">&gt; magic link sent.</p>
+            <p className="wiki-form-prompt">&gt; check your email.</p>
             <p className="wiki-form-hint">
-              Check your email for a login link.
-              {isSignup && " After confirming, your account will need admin approval before you can edit."}
+              A confirmation link has been sent. After confirming, your account will need admin approval before you can edit.
             </p>
           </div>
         ) : (
@@ -67,13 +71,7 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
               </button>
             </div>
 
-            <p className="wiki-form-hint" style={{ marginTop: "var(--space-2)", marginBottom: "var(--space-4)" }}>
-              {isSignup
-                ? "Create an account. New accounts require admin approval before editing."
-                : "Enter your email to receive a magic link."}
-            </p>
-
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} style={{ marginTop: "var(--space-4)" }}>
               {isSignup && (
                 <div className="wiki-form-field">
                   <label className="wiki-form-label" htmlFor="auth-username">
@@ -93,7 +91,7 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
                     pattern="[a-zA-Z0-9-]{3,30}"
                   />
                   {username && !usernameValid && (
-                    <span className="wiki-form-field-hint">3-30 chars, letters, numbers, hyphens only</span>
+                    <span className="wiki-form-field-hint">3–30 chars, letters, numbers, hyphens only</span>
                   )}
                 </div>
               )}
@@ -114,15 +112,38 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
                 />
               </div>
 
+              {!isSignup && (
+                <div className="wiki-form-field">
+                  <label className="wiki-form-label" htmlFor="auth-password">
+                    Password <span className="wiki-form-required">*</span>
+                  </label>
+                  <input
+                    id="auth-password"
+                    className="wiki-form-input"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              )}
+
+              {isSignup && (
+                <p className="wiki-form-hint" style={{ marginBottom: "var(--space-3)" }}>
+                  New accounts require admin approval before editing.
+                </p>
+              )}
+
               {error && <div className="wiki-form-error">&gt; {error}</div>}
 
               <div className="wiki-form-actions" style={{ marginTop: "var(--space-4)" }}>
                 <button
                   className="wiki-form-btn"
                   type="submit"
-                  disabled={submitting || !email.trim() || (isSignup && !usernameValid)}
+                  disabled={submitting || !email.trim() || (!isSignup && !password) || (isSignup && !usernameValid)}
                 >
-                  {submitting ? "Sending..." : isSignup ? "Create Account" : "Send Magic Link"}
+                  {submitting ? "Please wait…" : isSignup ? "Create Account" : "Log in"}
                 </button>
                 <button className="wiki-form-btn wiki-form-btn-secondary" type="button" onClick={onClose}>
                   Cancel

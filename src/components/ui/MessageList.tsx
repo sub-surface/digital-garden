@@ -7,6 +7,10 @@ interface Props {
   messages: ChatMessage[]
   onReply: (msg: ChatMessage) => void
   onScroll?: UIEventHandler<HTMLDivElement>
+  onUsernameClick?: (username: string, el: HTMLElement) => void
+  onReact?: (messageId: string, emote: string) => void
+  onDelete?: (messageId: string) => void
+  currentUserId?: string
 }
 
 // Two messages are in the same group if same user_id and within 5 minutes
@@ -17,7 +21,7 @@ function isSameGroup(a: ChatMessage, b: ChatMessage): boolean {
 }
 
 export const MessageList = forwardRef<HTMLDivElement, Props>(function MessageList(
-  { messages, onReply, onScroll },
+  { messages, onReply, onScroll, onUsernameClick, onReact, onDelete, currentUserId },
   ref
 ) {
   return (
@@ -31,6 +35,11 @@ export const MessageList = forwardRef<HTMLDivElement, Props>(function MessageLis
             msg={msg}
             compact={compact}
             onReply={onReply}
+            onUsernameClick={onUsernameClick}
+            onReact={onReact}
+            onDelete={onDelete}
+            isOwn={currentUserId ? msg.user_id === currentUserId : false}
+            reactions={msg.reactions}
           />
         )
       })}
