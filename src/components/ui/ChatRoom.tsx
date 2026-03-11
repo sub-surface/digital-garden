@@ -49,7 +49,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       })
       if (!res.ok) return
       const data = await res.json() as { messages: ChatMessage[]; has_more: boolean }
-      setMessages(data.messages ?? [])
+      setMessages((data.messages ?? []).reverse())
       setHasMore(data.has_more ?? false)
     } catch {
       // Fetch failure — leave empty state
@@ -69,7 +69,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       )
       if (!res.ok) return
       const data = await res.json() as { messages: ChatMessage[]; has_more: boolean }
-      setMessages((prev) => [...(data.messages ?? []), ...prev])
+      setMessages((prev) => [...(data.messages ?? []).reverse(), ...prev])
       setHasMore(data.has_more ?? false)
     } catch {
       // Silently ignore load-more failure
@@ -215,7 +215,9 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
   return (
     <>
       <div className={styles.chatRoomHeader}>
-        <span>{roomName}</span>
+        <div className={styles.chatContentWrapper}>
+          <span>{roomName}</span>
+        </div>
       </div>
 
       {loading ? (

@@ -28,7 +28,11 @@ function formatDateTime(): string {
   return `${dayName}, ${monthName} ${getOrdinal(day)} ${year} | ${time}`
 }
 
-export function QuickControls() {
+interface QuickControlsProps {
+  variant?: "full" | "chat"
+}
+
+export function QuickControls({ variant = "full" }: QuickControlsProps) {
   const [time, setTime] = useState(() => formatDateTime())
   const theme = useStore((s) => s.theme)
   const accentBase = useStore((s) => s.accentBase)
@@ -42,33 +46,30 @@ export function QuickControls() {
 
   return (
     <div className={styles.quickControls} data-panel-ignore>
-      {/* 1. Music Player */}
-      <MusicBar />
+      {variant === "full" && <MusicBar />}
 
-      {/* 2. Search */}
-      <SearchButton />
+      {variant === "full" && <SearchButton />}
 
-      {/* 3. Day/Night Toggle */}
-      <button 
-        className={styles.iconBtn} 
+      {/* Day/Night Toggle */}
+      <button
+        className={styles.iconBtn}
         onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
       >
         {theme === "dark" ? "\u263C" : "\u263E"}
       </button>
 
-      {/* 4. Theme Cycle Dot (ROYGBIV) */}
-      <button 
-        className={styles.themeDot} 
+      {/* Theme Cycle Dot (ROYGBIV) */}
+      <button
+        className={styles.themeDot}
         onClick={cycleAccent}
         style={{ backgroundColor: accentBase }}
         title="Cycle accent color"
       />
 
-      {/* 5. Background Mode */}
-      <BgModeToggle />
+      {variant === "full" && <BgModeToggle />}
 
-      {/* 6. Clock */}
+      {/* Clock */}
       <div className={styles.clockGroup}>
         <span className={styles.clock}>{time}</span>
       </div>

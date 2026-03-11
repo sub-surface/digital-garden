@@ -27,6 +27,7 @@ interface NoteMeta {
   image?: string
   cover?: string
   poster?: string
+  username?: string
   author?: string
   director?: string
   year?: number
@@ -183,6 +184,7 @@ function main() {
       image: (data.image || data.cover || data.poster) as string | undefined,
       cover: (data.cover || data.poster) as string | undefined,
       poster: (data.poster || data.cover) as string | undefined,
+      username: data.username as string | undefined,
       author: data.author as string | undefined,
       director: data.director as string | undefined,
       year: data.year != null ? Number(data.year) : undefined,
