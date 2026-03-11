@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "prebuild": "tsx scripts/prebuild.ts",
-    "dev": "npm run prebuild && concurrently -n vite,watch -c cyan,yellow \"vite\" \"nodemon --watch content -e md,mdx,yaml --exec npm run prebuild\"",
+    "dev": "npm run prebuild && concurrently -n worker,vite,watch -c magenta,cyan,yellow \"wrangler dev --config wrangler.dev.toml --port 8787\" \"vite\" \"nodemon --watch content -e md,mdx,yaml --exec npm run prebuild\"",
     "build": "npm run prebuild && tsc --noEmit && vite build",
     "preview": "vite preview",
     "dash": "node dash.mjs"

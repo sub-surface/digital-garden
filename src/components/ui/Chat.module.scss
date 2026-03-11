@@ -774,8 +774,15 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
+.gifPickerHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
 .gifPickerSearch {
-  width: 100%;
+  flex: 1;
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 4px;
@@ -783,13 +790,19 @@
   font-family: var(--font-code);
   font-size: 0.75rem;
   padding: 4px 8px;
-  margin-bottom: 0.5rem;
   box-sizing: border-box;
 
   &:focus {
     outline: none;
     border-color: var(--color-accent);
   }
+}
+
+.gifPickerBrand {
+  height: 14px;
+  width: auto;
+  flex-shrink: 0;
+  opacity: 0.9;
 }
 
 .gifGrid {
@@ -799,6 +812,7 @@
 }
 
 .gifBtn {
+  position: relative;
   background: none;
   border: none;
   cursor: pointer;
@@ -811,6 +825,16 @@
   &:hover {
     opacity: 0.85;
   }
+}
+
+.gifWatermark {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  height: 14px;
+  width: auto;
+  opacity: 0.75;
+  pointer-events: none;
 }
 
 .gifImg {

@@ -1,0 +1,7 @@
+# Wrangler config for local dev — overrides wrangler.toml
+# Assets are served by Vite; this worker only handles /api/* routes
+name = "digital-garden-v2"
+compatibility_date = "2024-04-03"
+main = "src/worker.ts"
+
+# No [assets] block — Vite serves static files, worker handles /api/*

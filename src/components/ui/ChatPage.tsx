@@ -7,7 +7,7 @@ import type { ChatRoom as ChatRoomType } from "@/types/chat"
 import styles from "./Chat.module.scss"
 
 export function ChatPage() {
-  const { session, loading } = useAuth()
+  const { session, loading, username, avatar_url } = useAuth()
   const [rooms, setRooms] = useState<ChatRoomType[]>([])
   const [roomsLoading, setRoomsLoading] = useState(false)
   const [activeRoom, setActiveRoom] = useState<ChatRoomType | null>(null)
@@ -108,6 +108,8 @@ export function ChatPage() {
             roomName={activeRoom.name}
             accessToken={session.access_token}
             currentUserId={session.user.id}
+            currentUsername={username}
+            currentAvatarUrl={avatar_url}
           />
         )}
       </div>
