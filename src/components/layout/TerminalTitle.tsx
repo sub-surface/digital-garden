@@ -321,6 +321,20 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
           <a className={styles.chatNavLink} href="https://subsurfaces.net" title="Notes" rel="noopener">notes</a>
         </nav>
       )}
+      {isWiki && (
+        <nav className={styles.chatNav}>
+          <a className={styles.chatNavLink} href="https://subsurfaces.net" title="Notes" rel="noopener">notes</a>
+          <span className={styles.chatNavDivider} />
+          <a className={styles.chatNavLink} href="https://chat.subsurfaces.net" title="Chat" rel="noopener">chat</a>
+        </nav>
+      )}
+      {!isWiki && !isChat && (
+        <nav className={styles.chatNav}>
+          <a className={styles.chatNavLink} href="https://wiki.subsurfaces.net" title="Wiki" rel="noopener">wiki</a>
+          <span className={styles.chatNavDivider} />
+          <a className={styles.chatNavLink} href="https://chat.subsurfaces.net" title="Chat" rel="noopener">chat</a>
+        </nav>
+      )}
     </div>
   )
 }
