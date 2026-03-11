@@ -66,6 +66,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, onTyping }: Props
   const showCounter = body.length > CHAR_WARN
 
   return (
+    <div className={styles.inputAreaOuter}>
     <div className={styles.inputArea} style={{ position: "relative" }}>
       {replyTo && (
         <div className={styles.replyPreview}>
@@ -127,6 +128,7 @@ export function MessageInput({ onSend, replyTo, onCancelReply, onTyping }: Props
           {remaining} remaining
         </div>
       )}
+    </div>
     </div>
   )
 }

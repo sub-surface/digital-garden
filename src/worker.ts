@@ -14,6 +14,7 @@ interface NoteMeta {
   image?: string
   cover?: string
   poster?: string
+  username?: string  // chatter pages carry the chat username
 }
 
 // In-memory cache — survives for the lifetime of the Worker instance
@@ -27,6 +28,17 @@ async function getContentIndex(assetsFetcher: Fetcher | undefined): Promise<Reco
     if (res.ok) contentIndexCache = await res.json()
   } catch {}
   return contentIndexCache ?? {}
+}
+
+// Look up a chatter page image by username (case-insensitive match on frontmatter `username`)
+function chatterImageForUsername(index: Record<string, NoteMeta>, username: string): string | null {
+  const lower = username.toLowerCase()
+  for (const meta of Object.values(index)) {
+    if (meta.username?.toLowerCase() === lower && meta.image) {
+      return meta.image
+    }
+  }
+  return null
 }
 
 function slugFromPathname(pathname: string): string {
@@ -341,12 +353,20 @@ function supabaseRest(env: Env, path: string, method = "GET", body?: unknown) {
 async function handleAuthMe(request: Request, env: Env): Promise<Response> {
   const auth = await verifyAuth(request, env)
   if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+
+  // Chatter image fallback: if no avatar_url set, check for a wiki chatter page
+  let avatar_url = auth.avatar_url
+  if (!avatar_url && auth.username) {
+    const index = await getContentIndex(env.ASSETS)
+    avatar_url = chatterImageForUsername(index, auth.username)
+  }
+
   return jsonResponse({
     role: auth.role,
     email: auth.email,
     username: auth.username,
     bio: auth.bio,
-    avatar_url: auth.avatar_url,
+    avatar_url,
     created_at: auth.created_at,
   })
 }
@@ -387,6 +407,60 @@ async function handleUpdateProfile(request: Request, env: Env): Promise<Response
   if (!res.ok) return jsonResponse({ error: "Failed to update profile" }, 500)
 
   return jsonResponse({ ok: true, ...updates })
+}
+
+// ── POST /api/profile/avatar ──
+
+async function handleAvatarUpload(request: Request, env: Env): Promise<Response> {
+  const auth = await verifyAuth(request, env)
+  if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+
+  const contentType = request.headers.get("Content-Type") ?? ""
+  if (!contentType.startsWith("image/")) {
+    return jsonResponse({ error: "File must be an image" }, 400)
+  }
+
+  const allowed = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+  const mimeType = contentType.split(";")[0].trim()
+  if (!allowed.includes(mimeType)) {
+    return jsonResponse({ error: "Allowed types: JPEG, PNG, WebP, GIF" }, 400)
+  }
+
+  const body = await request.arrayBuffer()
+  if (body.byteLength > 2 * 1024 * 1024) {
+    return jsonResponse({ error: "File too large — maximum 2 MB" }, 413)
+  }
+
+  const ext = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "gif"
+  const path = `${auth.id}.${ext}`
+
+  // Upload to Supabase Storage (upsert — replaces any previous avatar)
+  const uploadRes = await fetch(
+    `${env.SUPABASE_URL}/storage/v1/object/avatars/${path}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+        apikey: env.SUPABASE_SERVICE_KEY,
+        "Content-Type": mimeType,
+        "x-upsert": "true",
+      },
+      body,
+    }
+  )
+  if (!uploadRes.ok) {
+    const err = await uploadRes.text()
+    console.error("Avatar upload error:", err)
+    return jsonResponse({ error: "Failed to upload image" }, 500)
+  }
+
+  const publicUrl = `${env.SUPABASE_URL}/storage/v1/object/public/avatars/${path}`
+
+  // Persist URL to profile
+  const patchRes = await supabaseRest(env, `profiles?id=eq.${auth.id}`, "PATCH", { avatar_url: publicUrl })
+  if (!patchRes.ok) return jsonResponse({ error: "Failed to save avatar URL" }, 500)
+
+  return jsonResponse({ ok: true, avatar_url: publicUrl })
 }
 
 // ── POST /api/auth/register ──
@@ -432,6 +506,13 @@ async function handleUserProfile(env: Env, username: string): Promise<Response> 
 
   const profile = profiles[0]
 
+  // Chatter image fallback
+  let avatar_url = profile.avatar_url
+  if (!avatar_url) {
+    const index = await getContentIndex(env.ASSETS)
+    avatar_url = chatterImageForUsername(index, username)
+  }
+
   // Fetch edit history
   const logRes = await supabaseRest(
     env,
@@ -443,7 +524,7 @@ async function handleUserProfile(env: Env, username: string): Promise<Response> 
     username: profile.username,
     role: profile.role,
     bio: profile.bio,
-    avatar_url: profile.avatar_url,
+    avatar_url,
     created_at: profile.created_at,
     edits,
     editCount: edits.length,
@@ -1058,7 +1139,12 @@ async function handleChatUserMini(request: Request, env: Env, username: string):
   if (!res.ok) return jsonResponse({ error: "Failed to fetch user" }, 500)
   const rows = await res.json<{ username: string; avatar_url: string | null; role: string; bio: string | null; created_at: string | null }[]>()
   if (!rows.length) return jsonResponse({ error: "User not found" }, 404)
-  return jsonResponse(rows[0])
+  const row = rows[0]
+  if (!row.avatar_url) {
+    const index = await getContentIndex(env.ASSETS)
+    row.avatar_url = chatterImageForUsername(index, username)
+  }
+  return jsonResponse(row)
 }
 
 // ── POST /api/chat/ban — POST /api/chat/unban ──
@@ -1186,6 +1272,9 @@ export default {
     }
     if (url.pathname === "/api/auth/profile" && request.method === "PUT") {
       return handleUpdateProfile(request, env)
+    }
+    if (url.pathname === "/api/profile/avatar" && request.method === "POST") {
+      return handleAvatarUpload(request, env)
     }
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
       return handleRegister(request, env)

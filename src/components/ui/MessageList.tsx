@@ -26,23 +26,25 @@ export const MessageList = forwardRef<HTMLDivElement, Props>(function MessageLis
 ) {
   return (
     <div className={styles.messageList} ref={ref} onScroll={onScroll}>
-      {messages.map((msg, idx) => {
-        const prev = idx > 0 ? messages[idx - 1] : null
-        const compact = prev !== null && isSameGroup(prev, msg) && !msg.reply_to_message
-        return (
-          <MessageRow
-            key={msg.id}
-            msg={msg}
-            compact={compact}
-            onReply={onReply}
-            onUsernameClick={onUsernameClick}
-            onReact={onReact}
-            onDelete={onDelete}
-            isOwn={currentUserId ? msg.user_id === currentUserId : false}
-            reactions={msg.reactions}
-          />
-        )
-      })}
+      <div className={styles.messageListInner}>
+        {messages.map((msg, idx) => {
+          const prev = idx > 0 ? messages[idx - 1] : null
+          const compact = prev !== null && isSameGroup(prev, msg) && !msg.reply_to_message
+          return (
+            <MessageRow
+              key={msg.id}
+              msg={msg}
+              compact={compact}
+              onReply={onReply}
+              onUsernameClick={onUsernameClick}
+              onReact={onReact}
+              onDelete={onDelete}
+              isOwn={currentUserId ? msg.user_id === currentUserId : false}
+              reactions={msg.reactions}
+            />
+          )
+        })}
+      </div>
     </div>
   )
 })

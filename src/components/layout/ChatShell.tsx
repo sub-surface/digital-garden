@@ -4,6 +4,7 @@ import { useStore } from "@/store"
 import { ThemePanel } from "./ThemePanel"
 import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
+import { QuickControls } from "./QuickControls"
 import { WikiAuthModal } from "@/components/ui/WikiAuthModal"
 import { useAuth } from "@/hooks/useAuth"
 import styles from "./ChatShell.module.scss"
@@ -105,6 +106,7 @@ export function ChatShell() {
       <ThemePanel />
 
       <TerminalTitle context="chat" />
+      <QuickControls variant="chat" />
       <ChatUserMenu />
 
       <main className={styles.mainPane} data-testid="main-pane">

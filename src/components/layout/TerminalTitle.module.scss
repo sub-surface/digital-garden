@@ -4,21 +4,22 @@
   left: 16px;
   z-index: 200;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: baseline;
+  gap: 0;
   pointer-events: auto;
 }
 
 .title {
   background: none;
   border: none;
-  padding: 4px 0;
+  padding: 0;
   cursor: pointer;
   font-family: var(--font-code);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
   white-space: pre;
   letter-spacing: 0.5px;
+  line-height: 1;
   transition: color var(--duration-normal) var(--ease-default);
 
   &:hover {
@@ -48,6 +49,40 @@
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
+}
+
+.chatNav {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-left: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--color-border-light);
+}
+
+.chatNavDivider {
+  display: inline-block;
+  width: 1px;
+  height: 0.75em;
+  background: var(--color-border-light);
+  opacity: 0.5;
+  align-self: center;
+}
+
+.chatNavLink {
+  font-family: var(--font-code);
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  opacity: 0.6;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  transition: opacity 0.15s, color 0.15s;
+
+  &:hover {
+    opacity: 1;
+    color: var(--color-accent);
+  }
 }
 
 .clockWrap {

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import type { ChatMessage, ChatReaction } from "@/types/chat"
 import { parseMessageBody } from "@/lib/parseMessageBody"
 import styles from "./Chat.module.scss"
@@ -63,40 +63,63 @@ function YouTubeThumbnail({ videoId, url }: { videoId: string; url: string }) {
   )
 }
 
+function renderInlineTokens(text: string, keyPrefix: string) {
+  const tokens = parseMessageBody(text)
+  return tokens.map((tok, i) => {
+    const key = `${keyPrefix}-${i}`
+    if (tok.type === "text") return <span key={key}>{tok.value}</span>
+    if (tok.type === "emote") return (
+      <img key={key} src={`/emotes/${tok.name}.gif`} alt={`:${tok.name}:`} className={styles.emote}
+        onError={(e) => {
+          const img = e.currentTarget as HTMLImageElement
+          if (!img.dataset.pngFallback) {
+            img.dataset.pngFallback = "1"
+            img.src = `/emotes/${tok.name}.png`
+          } else {
+            img.replaceWith(document.createTextNode(`:${tok.name}:`))
+          }
+        }}
+      />
+    )
+    if (tok.type === "image") return (
+      <img key={key} src={tok.url} alt="" className={styles.embedImg}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+      />
+    )
+    if (tok.type === "youtube") return <YouTubeThumbnail key={key} videoId={tok.videoId} url={tok.url} />
+    if (tok.type === "url") return (
+      <a key={key} href={tok.url} target="_blank" rel="noopener noreferrer" className={styles.msgLink}>
+        {tok.label}
+      </a>
+    )
+    return null
+  })
+}
+
 function MessageBodyRenderer({ body }: { body: string }) {
-  const tokens = parseMessageBody(body)
-  return (
-    <>
-      {tokens.map((tok, i) => {
-        if (tok.type === "text") return <span key={i}>{tok.value}</span>
-        if (tok.type === "emote") return (
-          <img key={i} src={`/emotes/${tok.name}.gif`} alt={`:${tok.name}:`} className={styles.emote}
-            onError={(e) => {
-              const img = e.currentTarget as HTMLImageElement
-              if (!img.dataset.pngFallback) {
-                img.dataset.pngFallback = "1"
-                img.src = `/emotes/${tok.name}.png`
-              } else {
-                img.replaceWith(document.createTextNode(`:${tok.name}:`))
-              }
-            }}
-          />
-        )
-        if (tok.type === "image") return (
-          <img key={i} src={tok.url} alt="" className={styles.embedImg}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
-          />
-        )
-        if (tok.type === "youtube") return <YouTubeThumbnail key={i} videoId={tok.videoId} url={tok.url} />
-        if (tok.type === "url") return (
-          <a key={i} href={tok.url} target="_blank" rel="noopener noreferrer" className={styles.msgLink}>
-            {tok.label}
-          </a>
-        )
-        return null
-      })}
-    </>
-  )
+  const lines = body.split("\n")
+  const nodes: ReactNode[] = []
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
+    const h1 = line.match(/^# (.+)/)
+    const h2 = line.match(/^## (.+)/)
+    const h3 = line.match(/^### (.+)/)
+    const bq = line.match(/^> (.*)/)
+    if (h1) {
+      nodes.push(<h1 key={i}>{h1[1]}</h1>)
+    } else if (h2) {
+      nodes.push(<h2 key={i}>{h2[1]}</h2>)
+    } else if (h3) {
+      nodes.push(<h3 key={i}>{h3[1]}</h3>)
+    } else if (bq) {
+      nodes.push(<blockquote key={i}>{bq[1]}</blockquote>)
+    } else {
+      nodes.push(<span key={i}>{renderInlineTokens(line, String(i))}{i < lines.length - 1 ? "\n" : ""}</span>)
+    }
+    i++
+  }
+  return <>{nodes}</>
 }
 
 export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, isOwn, reactions, onUsernameClick }: Props & { onUsernameClick?: (username: string, el: HTMLElement) => void }) {
@@ -167,6 +190,7 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, i
 
       {!msg.deleted_at && (
         <div className={styles.msgActions}>
+          <button className={styles.stonkBtn} onClick={() => onReact?.(msg.id, "stonk")} aria-label="Stonk">▲</button>
           <button className={styles.replyBtn} onClick={() => onReply(msg)} aria-label="Reply">reply</button>
           {isOwn && (
             <button className={styles.deleteBtn} onClick={() => onDelete?.(msg.id)} aria-label="Delete">del</button>

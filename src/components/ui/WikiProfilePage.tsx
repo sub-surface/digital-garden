@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { useBookmarks } from "@/hooks/useBookmarks"
 
@@ -33,6 +33,11 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
   const [usernameValue, setUsernameValue] = useState("")
   const [savingUsername, setSavingUsername] = useState(false)
   const [usernameError, setUsernameError] = useState<string | null>(null)
+
+  // Avatar upload
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   // Password change
   const [editingPassword, setEditingPassword] = useState(false)
@@ -135,6 +140,35 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
     }
   }
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !auth.session) return
+    setAvatarError(null)
+    setUploadingAvatar(true)
+    try {
+      const res = await fetch("/api/profile/avatar", {
+        method: "POST",
+        headers: {
+          "Content-Type": file.type,
+          Authorization: `Bearer ${auth.session.access_token}`,
+        },
+        body: file,
+      })
+      const data = await res.json() as { ok?: boolean; avatar_url?: string; error?: string }
+      if (!res.ok || !data.ok) {
+        setAvatarError(data.error ?? "Upload failed")
+      } else {
+        await auth.updateProfile({ avatar_url: data.avatar_url! })
+        if (profile) setProfile({ ...profile, avatar_url: data.avatar_url! })
+      }
+    } catch {
+      setAvatarError("Upload failed")
+    } finally {
+      setUploadingAvatar(false)
+      if (avatarInputRef.current) avatarInputRef.current.value = ""
+    }
+  }
+
   if (loading || auth.loading) {
     return <div className="wiki-form-page"><p className="wiki-form-hint">Loading profile...</p></div>
   }
@@ -171,6 +205,41 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
 
   return (
     <div className="wiki-form-page" style={{ maxWidth: "800px" }}>
+
+      {/* Avatar */}
+      <div className="wiki-profile-avatar-row">
+        <div className="wiki-profile-avatar-wrap">
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt={profile.username} className="wiki-profile-avatar-img" />
+          ) : (
+            <div className="wiki-profile-avatar-placeholder">
+              {profile.username.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          {isOwnProfile && (
+            <button
+              className="wiki-profile-avatar-btn"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={uploadingAvatar}
+              title="Upload profile picture"
+            >
+              {uploadingAvatar ? "…" : "↑"}
+            </button>
+          )}
+        </div>
+        {isOwnProfile && (
+          <>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              style={{ display: "none" }}
+              onChange={handleAvatarChange}
+            />
+            {avatarError && <span className="wiki-form-field-hint" style={{ color: "var(--color-accent)" }}>{avatarError}</span>}
+          </>
+        )}
+      </div>
 
       {/* Header */}
       <div className="wiki-profile-header">
