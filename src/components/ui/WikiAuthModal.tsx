@@ -49,7 +49,10 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
           <div className="wiki-auth-sent">
             <p className="wiki-form-prompt">&gt; check your email.</p>
             <p className="wiki-form-hint">
-              A confirmation link has been sent. After confirming, your account will need admin approval before you can edit.
+              A confirmation link has been sent to <strong>{email}</strong>. Clicking it will bring you to your profile where you can set a password — then you can log in normally.
+            </p>
+            <p className="wiki-form-hint" style={{ marginTop: "var(--space-2)", opacity: 0.6 }}>
+              New accounts require admin approval before editing.
             </p>
           </div>
         ) : (

@@ -50,6 +50,12 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
   const isOwnProfile = !viewUsername
   const usernameValid = /^[a-zA-Z0-9-]{3,30}$/.test(usernameValue)
 
+  // Detect fresh magic-link session — AMR contains "otp" but not "password"
+  const amr = (auth.session?.user as any)?.amr as { method: string }[] | undefined
+  const isOtpOnly = Array.isArray(amr)
+    ? amr.some(a => a.method === "otp") && !amr.some(a => a.method === "password")
+    : false
+
   useEffect(() => {
     async function fetchProfile() {
       setLoading(true)
@@ -205,6 +211,20 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
 
   return (
     <div className="wiki-form-page" style={{ maxWidth: "800px" }}>
+
+      {/* Password prompt for fresh magic-link accounts */}
+      {isOwnProfile && isOtpOnly && !editingPassword && !passwordSuccess && (
+        <div className="wiki-form-notice" style={{ marginBottom: "var(--space-6)" }}>
+          <p className="wiki-form-prompt">&gt; set a password to log in without email next time.</p>
+          <button
+            className="wiki-form-btn"
+            style={{ marginTop: "var(--space-3)" }}
+            onClick={() => setEditingPassword(true)}
+          >
+            Set password
+          </button>
+        </div>
+      )}
 
       {/* Avatar */}
       <div className="wiki-profile-avatar-row">

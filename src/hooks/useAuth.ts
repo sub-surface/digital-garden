@@ -156,10 +156,10 @@ export function useAuth(): AuthState & {
     // Store username for post-magic-link profile setup
     localStorage.setItem("wiki_pending_username", usernameVal)
 
-    // Trigger magic link
+    // Trigger magic link — redirect to /profile so they're prompted to set a password
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: `${window.location.origin}/profile` },
     })
     return { error: error?.message ?? null }
   }

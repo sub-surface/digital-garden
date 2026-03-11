@@ -285,6 +285,17 @@
   }
 }
 
+// ── Notice (e.g. set-password prompt) ──
+
+.wiki-form-notice {
+  font-family: var(--font-code);
+  font-size: 0.85rem;
+  background: color-mix(in srgb, var(--color-bg-surface) 85%, var(--color-accent-base) 15%);
+  border: 1px solid color-mix(in srgb, var(--color-border) 50%, var(--color-accent-base) 50%);
+  border-radius: 4px;
+  padding: var(--space-4);
+}
+
 // ── Error ──
 
 .wiki-form-error {
