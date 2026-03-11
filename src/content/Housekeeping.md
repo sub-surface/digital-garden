@@ -10,7 +10,7 @@ tags:
 
 ## How to Use This Site
 
-- **Play some music while you browse**: Use the compact music player at the bottom of your screen. Click the expand arrow to see the full player with cover art, progress bar, and volume control. [Start with this track](music:Eden) or `Press K to Play`.
+- **Play some music while you browse**: Use the compact music player at the bottom of your screen. Click the expand arrow to see the full player with cover art, progress bar, and volume control. [Start with this track](music:Eden) or `Press M to Play`.
 
 - **Search for topics**: Press `Ctrl+K` to open the search dialog. Or explore connections in the graph view panel on the right.
 

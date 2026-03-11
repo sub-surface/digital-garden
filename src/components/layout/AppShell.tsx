@@ -4,8 +4,9 @@ import { useStore } from "@/store"
 import { PanelStack } from "@/components/panel/PanelStack"
 import { usePanelClick } from "@/components/panel/usePanelClick"
 import { useHotkeys } from "@/hooks/useHotkeys"
-import { useIsWiki } from "@/hooks/useIsWiki"
+import { useShell } from "@/hooks/useShell"
 import { WikiShell } from "./WikiShell"
+import { ChatShell } from "./ChatShell"
 import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
 import { BgCanvas } from "./BgCanvas"
@@ -23,25 +24,27 @@ import styles from "./AppShell.module.scss"
 const LocalGraph = lazy(() => import("@/components/ui/LocalGraph").then(m => ({ default: m.LocalGraph })))
 
 export function AppShell() {
-  const isWiki = useIsWiki()
+  const shell = useShell()
   const isReaderMode = useStore((s) => s.isReaderMode)
   const activeSlug = useStore((s) => s.activeGraphSlug)
   const activeLayout = useStore((s) => s.activeLayout)
   const location = useLocation()
   const setContentIndex = useStore((s) => s.setContentIndex)
 
-  // Defer content-index fetch until after first render — doesn't block paint
+  // Defer content-index fetch — only needed on main garden (not wiki/chat)
   useEffect(() => {
+    if (shell !== "main") return
     fetch("/content-index.json")
       .then((r) => r.json())
       .then(setContentIndex)
       .catch(() => console.warn("Content index not found — run prebuild first"))
-  }, [])
+  }, [shell])
 
   usePanelClick()
   useHotkeys()
 
-  if (isWiki) return <WikiShell />
+  if (shell === "wiki") return <WikiShell />
+  if (shell === "chat") return <ChatShell />
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 800
   const showFloatingGraph = !isMobile

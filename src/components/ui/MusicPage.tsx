@@ -39,7 +39,7 @@ export function MusicPage() {
                 </button>
               </div>
               <div className={styles.musicInfo}>
-                <h3>{track.title}</h3>
+                <h2>{track.title}</h2>
                 <p>{track.artist}</p>
                 <a href={`/${track.slug}`} className={styles.noteLink}>View Note →</a>
               </div>

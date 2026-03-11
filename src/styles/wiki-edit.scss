@@ -509,3 +509,64 @@
   line-height: 1.6;
   opacity: 0.85;
 }
+
+// ── Bookmark list (profile page) ──
+
+.wiki-bookmark-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wiki-bookmark-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: 4px;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--color-bg-surface);
+  }
+}
+
+.wiki-bookmark-title {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wiki-bookmark-slug {
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  flex-shrink: 0;
+
+  @media (max-width: 600px) {
+    display: none;
+  }
+}
+
+.wiki-bookmark-remove {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 2px 4px;
+  opacity: 0.4;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+    color: #b44242;
+  }
+}

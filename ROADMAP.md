@@ -152,7 +152,7 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **Create robots.txt**: `public/robots.txt` is missing entirely — Lighthouse logged 25 errors. Add a valid file.
 - [x] **Font display swap**: verified — Google Fonts URL has `display=swap`; no local `@font-face` rules exist in SCSS
 - [x] **`<main>` landmark**: wrap main content in `<main>` element for accessibility + SEO (currently missing, flagged by both Lighthouse runs)
-- [ ] **Heading order**: audit `h1`→`h2`→`h3` sequence — Lighthouse flagged non-sequential headings
+- [x] **Heading order**: fixed `h1`→`h2`→`h3` sequence — ChessPage `h4`→`h2`, MusicPage `h3`→`h2`, NoteFooter `h3`→`h2`, TableOfContents `h3`→`<span>` (non-semantic label)
 
 ### Mobile Performance (Lighthouse score: 12 — critical)
 > Measured on mobile. FCP 21.4s, LCP 43.6s, TBT 1,270ms, CLS 0.399. Total payload 7.2MB. Root cause: enormous unminified/unused JS bundle and eager loading of heavy libraries.
@@ -160,9 +160,9 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **Enable Vite minification**: `sourcemap: false` + no disabled minify — fixed alongside sourcemap removal
 - [x] **Reduce unused JS**: split vendor chunks done — `d3`, `pixi.js`, `flexsearch`, `chess.js` in own chunks
 - [x] **BgCanvas: skip on mobile**: early return added — canvas never mounts on `≤800px`
-- [ ] **Fix CLS**: web fonts loading without size fallbacks cause layout shift. Add `size-adjust` descriptors to font fallbacks in `base.scss`; ensure all `<img>` have explicit `width`/`height`
-- [ ] **Fix render-blocking requests** (est. 300ms savings): Google Fonts stylesheet is render-blocking — use `<link rel="preload">` + `onload` swap trick, or self-host fonts
-- [ ] **Cache lifetimes** (est. 122KB savings): set long `Cache-Control` on `/content/Media/` and `/og/` in `wrangler.toml` `[assets]` headers config
+- [x] **Fix CLS (partial)**: added `@font-face` fallbacks with `size-adjust`, `ascent-override`, `descent-override` in `base.scss` for all three fonts; updated `--font-*` tokens to include fallbacks. Image `width`/`height` attributes remain TODO (affects Gallery, sidenotes, link preview, lightbox)
+- [x] **Fix render-blocking requests** (est. 300ms savings): `index.html` Google Fonts now use `rel="preload"` + `onload` swap + `<noscript>` fallback
+- [x] **Cache lifetimes** (est. 122KB savings): `public/_headers` sets 1-year immutable cache on `/content/Media/*` and `/assets/*`, 7-day cache on `/og/*`
 
 ### Bundle & Loading Optimisations (identified via deep audit)
 > LocalGraph imports D3 + PixiJS at module level — 570KB loaded on every desktop page even when the graph widget isn't visible. content-index.json (81KB) fetched before first render. chess.js in manualChunks forces a separate request even though ChessPage is already lazy-loaded.
@@ -272,10 +272,219 @@ Opt-in per-note comments. Turnstile-gated, no login required. Pseudonymous (name
 
 ---
 
+## Wiki Contributor Experience
+
+### Phase 1: Visible Auth & Signup ✓
+- [x] Auth controls in WikiShell header (bottom-left): "Log in / Sign up" when logged out, username + role badge + dropdown when logged in
+- [x] WikiAuthModal: Login + Signup tabs; signup validates username (3-30 chars) + checks uniqueness
+- [x] `useAuth` exposes `username`, `bio`, `avatar_url`, `created_at`; adds `signUp()` and `updateProfile()` methods
+- [x] Worker: `GET /api/auth/me` returns full profile fields; `PUT /api/auth/profile`; `POST /api/auth/register`; auto-creates profile row on first login
+
+### Phase 2: User Profile Pages ✓
+- [x] `WikiProfilePage` — username, role badge, join date ("joined {date}" from `profiles.created_at`), contribution count, bio (inline-editable), edit history table, bookmarks list
+- [x] Username change from own profile page (validated, uniqueness-checked server-side)
+- [x] Routes: `/profile` (own) and `/user/:username` (public)
+
+### Phase 3: Editor Improvements ✓
+- [x] Markdown preview toggle in `WikiMarkdownEditor` (react-markdown + remark-gfm, lazy-loaded)
+- [x] Required edit summary field (max 200 chars) on both WikiEditPage and WikiNewPage
+- [x] Change summary box: "+N lines added, -M removed" shown before submit in WikiEditPage
+
+### Bookmarks ✓
+- [x] `useBookmarks` hook — Supabase-backed when logged in, localStorage fallback when logged out
+- [x] Auto-migrates localStorage bookmarks to Supabase on first login
+- [x] Bookmark button on all article pages (wiki + main site) in note header
+- [x] Bookmarks list on own profile page with remove button
+- [x] Worker endpoints: `GET/POST/DELETE /api/bookmarks`, `POST /api/bookmarks/migrate`
+- [x] Supabase `bookmarks` table with `UNIQUE(user_id, slug)` constraint
+
+### Future
+- [ ] Contributor dashboard (recent activity, stats)
+- [ ] Watchlist (get notified when bookmarked pages are edited) — needs Supabase `watchlist` table
+- [ ] Page metadata editing (description, tags) from wiki editor UI
+- [ ] **Bookmarks: move off AppShell** — `AppShell` currently imports Supabase client for bookmarks, violating the "garden has no Supabase dependency" rule. Bookmarks should live entirely on `wiki.subsurfaces.net`; remove Supabase import from `AppShell` and `useBookmarks` hook from the main site
+
+---
+
+## Chatter Community Platform
+
+Three interlocking systems: **Chat** (Phase 1), **Stonks** (Phase 2), **Identity & Avatar** (Phase 3). All share the existing Supabase auth and `profiles` table.
+
+**Phase order is strict — do not skip ahead:**
+`shared cookie auth` → `chat` → `stonks` → `identity`. Stonks UI must not be built before chat reactions exist to feed it.
+
+**Strict layering — dependencies flow one way only:**
+```
+subsurfaces.net        (no Supabase dependency — must load if Supabase is down)
+       ↓
+wiki.subsurfaces.net   (Supabase auth + GitHub API)
+       ↓
+chat.subsurfaces.net   (Supabase Realtime + stonks ledger)
+```
+Nothing flows upward. A chat outage must not affect the wiki. A wiki outage must not affect the garden.
+
+**`src/worker.ts` domain routing** — one Worker serves all three domains intentionally. Keep a clear partition comment at the top of the routing block:
+```
+// garden:  subsurfaces.net        → static assets + OG meta injection
+// wiki:    wiki.subsurfaces.net   → auth, editing, profiles, bookmarks
+// chat:    chat.subsurfaces.net   → realtime, stonks, bans, GIF search
+```
+
+---
+
+### Phase 1: Chat (`chat.subsurfaces.net`)
+
+#### Infrastructure
+- [x] **Shared cookie auth first** — cookie-based `storage` adapter in `src/lib/supabase.ts` writes session to `document.cookie` with `domain=.subsurfaces.net`; falls back to default (localStorage) when `VITE_COOKIE_DOMAIN` unset. Deploy + verify test matrix before building chat UI: login on `wiki.*` → navigate to `chat.*` → still logged in; logout on `chat.*` → `wiki.*` also logged out
+- [x] Add `VITE_COOKIE_DOMAIN` env var (`.subsurfaces.net` in `.env`, unset in `.env.local` for localhost dev)
+- [x] Add `chat.subsurfaces.net` as a custom domain in `wrangler.toml` (CF dashboard custom domain already added by user)
+- [x] `useShell()` hook returning `"main" | "wiki" | "chat"` in `src/hooks/useShell.ts`; `useIsWiki()` and `useIsChat()` are thin wrappers; `src/hooks/useIsWiki.ts` re-exports from `useShell`
+- [x] Create `ChatShell.tsx` — lean skeleton shell (no BgCanvas, no panels, no music); `ChatUserMenu` with auth modal; `TerminalTitle context="chat"`
+- [x] Add chat shell detection in `AppShell.tsx` — `if (shell === "chat") return <ChatShell />`; content-index fetch guarded to `shell === "main"` only
+- [x] **Cross-subdomain auth (shared cookie)**: cookie `storage` adapter in `src/lib/supabase.ts` — `VITE_COOKIE_DOMAIN` controls domain scope; `cookieOptions` field on browser client doesn't work (SSR-only), so custom `storage` adapter used instead
+- [x] `VITE_CHAT_MODE=true` env var support in `useShell()`; commented out in `.env.local` with instructions
+- [x] `usePanelClick` updated: `isWiki` bail-out replaced with `shell !== "main"` — also bails on chat
+- [ ] **Supabase: add `chat.subsurfaces.net` to Auth redirect URLs** — Authentication → URL Configuration → Redirect URLs → add `https://chat.subsurfaces.net/**` and `https://chat.subsurfaces.net`
+- [ ] **Verify shared cookie auth in production** — deploy and run test matrix before proceeding to Supabase schema
+
+#### Supabase Schema
+- [ ] Create `rooms` table: `id TEXT PRIMARY KEY, name TEXT NOT NULL, slug TEXT UNIQUE NOT NULL, created_by UUID REFERENCES profiles, created_at TIMESTAMPTZ, archived BOOLEAN DEFAULT false`
+- [ ] Seed initial rooms: `#general` (slug: `general`), `#philosophy` (slug: `philosophy`)
+- [ ] Create `messages` table: `id UUID PRIMARY KEY, room_id TEXT REFERENCES rooms, user_id UUID REFERENCES profiles, body TEXT NOT NULL, reply_to UUID REFERENCES messages, created_at TIMESTAMPTZ NOT NULL, deleted_at TIMESTAMPTZ, deleted_by UUID REFERENCES profiles`
+  - Index: `(room_id, created_at DESC)`
+  - `reply_to` is nullable — NULL means top-level message, non-null means reply to that message ID
+- [ ] Create `reactions` table: `message_id UUID REFERENCES messages, user_id UUID REFERENCES profiles, emote TEXT NOT NULL, PRIMARY KEY (message_id, user_id, emote)` — composite PK enforces one-per-emote-per-user-per-message
+- [ ] Enable Supabase Realtime on `messages` and `reactions` tables
+- [ ] Enable Supabase Realtime **Presence** channel per room (for typing indicators)
+- [ ] Add GIN full-text index on `messages.body`: `CREATE INDEX idx_messages_fts ON messages USING GIN (to_tsvector('english', body))` — enables fast `GET /api/chat/search` queries
+- [ ] RLS policies: authenticated users can insert own messages; users can soft-delete own messages (`deleted_at = now(), deleted_by = auth.uid()` where `user_id = auth.uid()`); admins can soft-delete any message; read is public to authenticated users; hard delete reserved for permaban cleanup only
+
+#### Worker API Endpoints (`src/worker.ts`)
+- [ ] `GET /api/chat/rooms` — list all non-archived rooms
+- [ ] `POST /api/chat/rooms` — admin only: create a new room (`name`, `slug`); returns created room
+- [ ] `GET /api/chat/messages?room=<slug>&before=<cursor>&limit=50` — paginated history, excludes hard-deleted rows, returns `[message deleted]` placeholder for soft-deleted; includes `reply_to` message snapshot (id + username + body truncated) for reply preview rendering
+- [ ] `DELETE /api/chat/messages/:id` — soft delete: sets `deleted_at` + `deleted_by`; user can only delete own; admin can delete any
+- [ ] `POST /api/chat/reactions` — body `{ message_id, emote }`: upsert reaction row; Supabase unique PK handles idempotency
+- [ ] `DELETE /api/chat/reactions` — body `{ message_id, emote }`: remove own reaction
+- [ ] `GET /api/chat/search?room=<slug>&q=<text>&user=<username>&media=<bool>&from=<date>&to=<date>&limit=50&before=<cursor>` — full-text search across message history; filters: room, author username, media-only (messages containing image URLs or GIFs), date range; results ordered by `created_at DESC`; Postgres `ILIKE` or `to_tsvector` full-text search on `body`
+- [ ] `GET /api/users/:username/mini` — returns `{ username, avatar_url, role, stonk_balance, bio, created_at }` for mini profile popup
+
+#### Admin: Bans
+- [ ] Add `ban_status` to `profiles`: `ban_type TEXT` (`none` | `temporary` | `permanent`), `ban_expires_at TIMESTAMPTZ`, `ban_reason TEXT`
+- [ ] Worker middleware: on any authenticated chat write, check `ban_type` — if `temporary` and `ban_expires_at > now()`, or `permanent`, reject with 403
+- [ ] `POST /api/admin/ban` — body `{ user_id, type: "temporary"|"permanent", duration_hours?, reason? }`; default `duration_hours = 24`
+- [ ] `POST /api/admin/unban` — body `{ user_id }`
+- [ ] On permanent ban: hard-delete all message rows for that user (data hygiene), anonymise profile
+
+#### Frontend — ChatShell & UI
+- [ ] `ChatShell.tsx`: room list sidebar (from `GET /api/chat/rooms`), active room view, header with room name + user count
+- [ ] `ChatRoom.tsx`: Supabase Realtime subscription on `messages` channel filtered by `room_id`; renders `MessageList` + `MessageInput`
+- [ ] `MessageList.tsx`: paginated scroll, loads 50 messages on mount, loads earlier messages on scroll-to-top; renders soft-deleted as `[message deleted]`
+- [ ] `MessageInput.tsx`: textarea (Enter to send, Shift+Enter for newline), emote picker button, GIF picker button, character limit; when replying shows a dismiss-able "Replying to X: …" banner above input and sets `reply_to` on submit
+- [ ] `MessageRow.tsx`: avatar, username (clickable → mini profile popup), timestamp, body, reaction strip, delete button (own messages only); if `reply_to` set, renders a quoted reply preview bar above the message body (truncated, clickable to scroll to original); image URLs in body auto-detected and rendered as inline preview images (no upload — link only, images may die over time by design); GIF URLs similarly rendered inline
+- [ ] `MiniProfilePopup.tsx`: appears on username click — avatar, username, role badge, stonk balance + sparkline (placeholder in Phase 1), bio, "joined {date}", link to full profile; dismiss on outside click
+- [ ] `TypingIndicator.tsx`: subscribes to Supabase Presence on current room channel; shows `"X is typing…"` or `"X and Y are typing…"`; broadcasts presence on keydown with 3s debounce clear
+- [ ] `EmotePicker.tsx`: grid of available emotes from `public/emotes/`; filter by name; insert `:emote-name:` into message input
+- [ ] `GifPicker.tsx`: search field → calls KLIPY REST API (`fetch()` only, no SDK) → renders GIF grid; selecting a GIF inserts `![](url)` markdown image syntax into the message body (not bare URL — unambiguous signal for renderer); KLIPY API key stored as CF Worker secret + proxied via `GET /api/chat/gif-search?q=<query>` to keep key server-side
+- [ ] `ChatSearch.tsx`: slide-in panel (or modal) — text query, user filter (username input), media-only toggle, date range pickers; calls `GET /api/chat/search`; results rendered as `MessageRow` instances with room + timestamp context; clicking a result scrolls to that message in the main view (or links to a permalink)
+- [ ] Search trigger: magnifying glass icon in room header; keyboard shortcut (Ctrl+F within chat)
+- [ ] Emote rendering: parse `:emote-name:` in message body → replace with `<img src="/emotes/{name}.gif" />` client-side
+- [ ] Commit initial emote set to `public/emotes/` (sourced from emoji.gg)
+- [ ] `ChatShell.module.scss`: IRC-aesthetic styling — monospace font, minimal chrome, CSS variable tokens for dark/light
+
+#### Rich Media Rendering (`MessageRow.tsx` + `parseMessageBody.ts`)
+
+All message body rendering goes through a shared `parseMessageBody(text)` utility that splits the body into typed tokens before render. No `dangerouslySetInnerHTML` — tokens map to React components.
+
+**Token types and render rules:**
+
+| Token | Detection | Renders as |
+|---|---|---|
+| `![](url)` | Markdown image syntax (inserted by GIF picker) | `<img>` inline, `max-height: 300px` |
+| Image URL | Bare URL ending in `.jpg .jpeg .png .gif .webp` or from known image CDNs (`i.imgur.com`, `pbs.twimg.com`, etc.) | `<img>` inline, `max-height: 300px` |
+| YouTube URL | `youtube.com/watch?v=` or `youtu.be/` | Lazy `<iframe>` embed (click-to-load thumbnail first to avoid autoload) |
+| Twitter/X URL | `twitter.com/` or `x.com/` + `/status/` | `<blockquote>` placeholder + link; optionally lazy-load Twitter embed script |
+| Plain URL | Any other `https?://` URL | `<a target="_blank" rel="noopener noreferrer">` with URL as label |
+| `:emote-name:` | Colon-wrapped token matching a known emote name | `<img src="/emotes/{name}.gif" class="emote">` |
+| Plain text | Everything else | Text node |
+
+**Rules:**
+- [ ] Create `src/lib/parseMessageBody.ts` — tokeniser returning typed token array
+- [ ] GIF picker inserts `![](url)` syntax (not bare URL) — unambiguous signal, no extension sniffing needed for GIFs
+- [ ] Image embeds are ephemeral by design — raw user-provided links, no proxying, no caching; broken images show nothing (CSS `img:error { display: none }` or `onError` handler)
+- [ ] YouTube: render a static thumbnail (`https://img.youtube.com/vi/{id}/0.jpg`) with a play button overlay; clicking loads the actual `<iframe>` — avoids autoplaying iframes on load
+- [ ] Twitter/X: render as a styled link card (username + tweet text if extractable) — avoid loading Twitter's JS embed script by default; optional "load embed" button
+- [ ] Max one embed per message to prevent spam walls of iframes
+- [ ] All embeds lazy — nothing loads until the message is in the viewport (`IntersectionObserver`)
+- [ ] `onError` on all `<img>` tags — hide broken images silently, never show broken image icon in chat
+
+#### Admin Room Management UI
+- [ ] Admin-only "+" button in room sidebar → inline form: room name + slug → `POST /api/chat/rooms`
+- [ ] Admin can archive a room (removes from sidebar, preserves history)
+
+---
+
+### Phase 2: Stonks
+
+#### Supabase Schema
+- [ ] Create `stonk_ledger` table: `id UUID PRIMARY KEY, user_id UUID REFERENCES profiles, amount INTEGER NOT NULL, reason TEXT NOT NULL, source_type TEXT NOT NULL` (e.g. `reaction_received`, `reaction_given`, `profile_created`, `wiki_edit`, `nahh_given`), `source_id TEXT, created_at TIMESTAMPTZ NOT NULL`
+  - Index: `(user_id, created_at DESC)`
+  - Balance = `SUM(amount) WHERE user_id = ?` — pure ledger, no cached balance needed at current scale (~500k rows before performance consideration, years away at community scale)
+  - Add `created_at` index at schema creation time — enables clean range-based archiving later without schema changes: `CREATE INDEX idx_stonk_ledger_created ON stonk_ledger(created_at)`
+- [ ] `stonk_balance` Postgres view: `SELECT user_id, SUM(amount) AS balance FROM stonk_ledger GROUP BY user_id`
+- [ ] Add `stonk_balance` to `GET /api/auth/me` and `GET /api/users/:username/mini` responses (query the view)
+- [ ] Add `chat_launched: false` to `stonk_config` as a feature flag — stonks display components check this flag and render nothing (not zero) until chat is live; flip to `true` when Phase 1 ships to avoid misleading zeroes on wiki profiles before the economy exists
+
+#### Point Events (all instant, all write to `stonk_ledger`)
+- [ ] Profile created: +50
+- [ ] Wiki edit submitted (PR merged): +10
+- [ ] Wiki page created: +25
+- [ ] Received a kek reaction: +5
+- [ ] Received a nahh reaction: -3 (floor: 0 — clamp in Worker before insert)
+- [ ] Gave a nahh reaction: -1 to giver (configurable, default -1 — cost disincentivises spam)
+- [ ] Gave a kek: +0 (giving keks is free, costs nothing)
+- [ ] Other reaction emotes: configurable per-emote value (default 0, admins can set per emote)
+- [ ] All values admin-configurable via a `stonk_config` table: `key TEXT PRIMARY KEY, value INTEGER`
+
+#### `stonk_config` table
+- [ ] Seed default values for all point events above
+- [ ] `GET /api/admin/stonk-config` — returns all config rows
+- [ ] `PUT /api/admin/stonk-config` — body `{ key, value }`: update a config value; admin only
+
+#### Frontend — Stonks Display
+- [ ] Stonk balance + sparkline on `WikiProfilePage` (own profile) and public `/user/:username` page
+- [ ] Stonk balance + small number on `MiniProfilePopup`
+- [ ] Sparkline chart: lightweight SVG (uPlot or hand-rolled with D3 — D3 already in bundle) showing balance over time from `stonk_ledger` grouped by day
+- [ ] `GET /api/users/:username/stonk-history` — returns daily balance snapshots (aggregate ledger by day) for charting
+- [ ] Easter egg reactions: configurable per-emote `effect` field in `stonk_config` (e.g. `confetti`) — client reads effect from emote config and triggers animation; confetti via `canvas-confetti` (tiny, ~3KB)
+
+> **Future note:** Secondary stonks market (users investing in other users' stonks, prediction-market style) — deliberately deferred. The ledger schema supports it without changes.
+
+---
+
+### Phase 3: Identity & Avatar
+
+#### Wiki Profile Claiming (Supabase-backed)
+- [ ] Create `chatter_claims` table: `user_id UUID REFERENCES profiles PRIMARY KEY, wiki_slug TEXT NOT NULL UNIQUE, claimed_at TIMESTAMPTZ`
+- [ ] `POST /api/chat/claim` — body `{ wiki_slug }`: verifies `username` frontmatter on the markdown file matches the authenticated user's username (fetch from `content-index.json`); inserts into `chatter_claims`; returns claim record
+- [ ] `GET /api/users/:username/claim` — returns claimed wiki slug if exists
+- [ ] On `WikiProfilePage` and public profile: show linked chatter wiki page if claim exists; show "Claim this wiki page" button if a matching `username` frontmatter exists but no claim yet
+- [ ] On chatter wiki profile pages (`type: chatter`): show linked user account if claim exists; show "Is this you? Claim this page" button otherwise
+- [ ] Logged-in users without a claim and without a matching wiki profile: show "Create your chatter profile" button → opens submit form (`/submit`) pre-filled with their username; submission still creates a PR (GitHub App token deferred)
+
+#### Avatar Customisation
+- [ ] Avatar customisation panel on `WikiProfilePage` — upload image or paste URL; stored in Supabase Storage bucket `avatars` (or URL stored in `profiles.avatar_url`)
+- [ ] Avatar displayed in: chat `MessageRow`, `MiniProfilePopup`, wiki profile infobox (if claimed), `WikiShell` auth header
+
+#### Idle Game (deferred — design note)
+> Cookie-clicker / Universal Paperclips style idle mechanic. Idle rate scales with stonk level. Points calculated on login from `last_login` delta, capped at 24h accumulation. Avatar "collects" while away — client-side presentation of the delta. Full design TBD.
+
+---
+
 ## Future / Low Priority
 - [ ] Improve chess UI to match site themes, optimise WASM performance, public leaderboard (Stockfish has built-in support for this)
 - [x] Typography: dropcaps (`.dropcap` / `data-dropcap`), pull quotes (`.pullquote` blockquote)
-- [ ] GitHub App token for non-expiring wiki submissions
+- [ ] GitHub App token for non-expiring wiki submissions — until then, add a Worker startup preflight: verify token validity on boot, return clear "wiki submissions temporarily unavailable" error to users rather than a silent 500 if token is expired
 - [ ] Wiki community features (comments, reactions)
 
 ---

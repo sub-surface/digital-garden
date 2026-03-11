@@ -39,7 +39,7 @@ All submissions are reviewed before publishing. See the [[Wiki/Style-Guide|Style
 
 ## Recent Additions
 
-<Query filter="folder=Wiki" sort="-date" limit="8" display="list" />
+<Query filter="folder=Wiki" sort="date" limit="8" display="table" />
 
 ---
 

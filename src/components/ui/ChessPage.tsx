@@ -203,7 +203,7 @@ export function ChessPage() {
           </div>
 
           <div className={styles.history}>
-            <h4>History</h4>
+            <h2>History</h2>
             <div className={styles.moveList}>
               {game.history().map((m, i) => (
                 <span key={i} className={styles.moveItem}>{m}</span>

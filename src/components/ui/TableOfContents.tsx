@@ -20,7 +20,7 @@ export function TableOfContents({ headings, className }: Props) {
         alignItems: 'center',
         marginBottom: isMinimised ? 0 : 'var(--space-2)'
       }}>
-        <h3 style={{ margin: 0 }}>Contents</h3>
+        <span style={{ margin: 0, fontWeight: 600, fontSize: '1.05rem' }}>Contents</span>
         <button 
           className="minimise-btn" 
           onClick={() => setIsMinimised(!isMinimised)}

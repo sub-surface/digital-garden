@@ -1,61 +1,25 @@
+// IRC-aesthetic shell — monospace throughout, minimal chrome
+// Full-viewport fixed layout: sidebar (rooms) + main (messages + input)
+
 .shell {
   width: 100vw;
   height: 100vh;
   background: transparent;
   overflow: hidden;
+  font-family: var(--font-code);
 }
 
 .mainPane {
   width: 100%;
   height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.mainContent {
-  padding: 2rem 3rem;
-  // Give space for fixed TerminalTitle at top
-  padding-top: 4rem;
-
-  @media (max-width: 800px) {
-    padding: 1.5rem;
-    padding-top: 3.5rem;
-  }
-}
-
-.breadcrumb {
-  position: fixed;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 199;
+  overflow: hidden;
   display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-family: var(--font-code);
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-  opacity: 0.5;
-  pointer-events: none;
-  user-select: none;
-
-  @media (max-width: 800px) {
-    display: none;
-  }
+  flex-direction: column;
+  // Reserve top for TerminalTitle
+  padding-top: 3.5rem;
 }
 
-.breadcrumbSegment {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.breadcrumbSep {
-  opacity: 0.4;
-  margin: 0 0.1rem;
-}
-
-// ── Auth Controls (header right) ──
+// ── Auth Controls (bottom-left, same position as wiki) ──
 
 .authControls {
   position: fixed;

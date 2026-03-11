@@ -3,9 +3,9 @@
 
 :root {
   // ── Fonts ──
-  --font-header: "Playfair Display", serif;
-  --font-body: "IBM Plex Sans", sans-serif;
-  --font-code: "IBM Plex Mono", monospace;
+  --font-header: "Playfair Display", "Playfair Display Fallback", serif;
+  --font-body: "IBM Plex Sans", "IBM Plex Sans Fallback", sans-serif;
+  --font-code: "IBM Plex Mono", "IBM Plex Mono Fallback", monospace;
 
   // ── Spacing (4px base) ──
   --space-1: 0.25rem;

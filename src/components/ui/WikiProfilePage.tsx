@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/useAuth"
+import { useBookmarks } from "@/hooks/useBookmarks"
 
 interface ProfileData {
   username: string
@@ -12,20 +13,29 @@ interface ProfileData {
 }
 
 interface Props {
-  /** If provided, show a public profile for this username. Otherwise show own profile. */
   username?: string
 }
 
 export function WikiProfilePage({ username: viewUsername }: Props) {
   const auth = useAuth()
+  const { bookmarks, removeBookmark } = useBookmarks()
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Bio editing
   const [editingBio, setEditingBio] = useState(false)
   const [bioValue, setBioValue] = useState("")
-  const [saving, setSaving] = useState(false)
+  const [savingBio, setSavingBio] = useState(false)
+
+  // Username editing
+  const [editingUsername, setEditingUsername] = useState(false)
+  const [usernameValue, setUsernameValue] = useState("")
+  const [savingUsername, setSavingUsername] = useState(false)
+  const [usernameError, setUsernameError] = useState<string | null>(null)
 
   const isOwnProfile = !viewUsername
+  const usernameValid = /^[a-zA-Z0-9-]{3,30}$/.test(usernameValue)
 
   useEffect(() => {
     async function fetchProfile() {
@@ -33,11 +43,7 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
       setError(null)
       try {
         if (isOwnProfile) {
-          // Show own profile using auth state + fetch edits
-          if (!auth.session) {
-            setLoading(false)
-            return
-          }
+          if (!auth.session) { setLoading(false); return }
           const username = auth.username
           if (!username) {
             setProfile({
@@ -56,7 +62,6 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
           if (res.ok) {
             setProfile(await res.json() as ProfileData)
           } else {
-            // Fallback to auth state
             setProfile({
               username,
               role: auth.role || "pending",
@@ -69,11 +74,7 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
           }
         } else {
           const res = await fetch(`/api/user/${encodeURIComponent(viewUsername)}`)
-          if (!res.ok) {
-            setError("User not found")
-            setLoading(false)
-            return
-          }
+          if (!res.ok) { setError("User not found"); setLoading(false); return }
           setProfile(await res.json() as ProfileData)
         }
       } catch {
@@ -86,21 +87,31 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
   }, [auth.loading, auth.session, auth.username, viewUsername])
 
   const handleSaveBio = async () => {
-    setSaving(true)
+    setSavingBio(true)
     const { error } = await auth.updateProfile({ bio: bioValue })
-    setSaving(false)
+    setSavingBio(false)
     if (!error) {
       setEditingBio(false)
       if (profile) setProfile({ ...profile, bio: bioValue })
     }
   }
 
+  const handleSaveUsername = async () => {
+    if (!usernameValid) return
+    setSavingUsername(true)
+    setUsernameError(null)
+    const { error } = await auth.updateProfile({ username: usernameValue })
+    setSavingUsername(false)
+    if (error) {
+      setUsernameError(error)
+    } else {
+      setEditingUsername(false)
+      if (profile) setProfile({ ...profile, username: usernameValue })
+    }
+  }
+
   if (loading || auth.loading) {
-    return (
-      <div className="wiki-form-page">
-        <p className="wiki-form-hint">Loading profile...</p>
-      </div>
-    )
+    return <div className="wiki-form-page"><p className="wiki-form-hint">Loading profile...</p></div>
   }
 
   if (!isOwnProfile && error) {
@@ -135,21 +146,66 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
 
   return (
     <div className="wiki-form-page" style={{ maxWidth: "800px" }}>
+
+      {/* Header */}
       <div className="wiki-profile-header">
-        <div>
-          <h1 className="wiki-form-heading" style={{ marginBottom: "var(--space-1)" }}>
-            {profile.username}
-          </h1>
-          <div className="wiki-profile-meta">
-            <span className={`wiki-admin-role ${roleBadgeClass}`}>
-              {profile.role === "pending" ? "awaiting approval" : profile.role}
-            </span>
-            {joinDate && <span className="wiki-profile-joined">Joined {joinDate}</span>}
-            <span className="wiki-profile-edits">{profile.editCount} contribution{profile.editCount !== 1 ? "s" : ""}</span>
+        {editingUsername && isOwnProfile ? (
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)", flexWrap: "wrap" }}>
+            <div style={{ flex: 1 }}>
+              <input
+                className="wiki-form-input"
+                type="text"
+                value={usernameValue}
+                onChange={(e) => { setUsernameValue(e.target.value); setUsernameError(null) }}
+                placeholder="new-username"
+                autoFocus
+                maxLength={30}
+                style={{ fontSize: "1.4rem", padding: "var(--space-2) var(--space-3)" }}
+              />
+              {usernameValue && !usernameValid && (
+                <span className="wiki-form-field-hint">3-30 chars, letters, numbers, hyphens only</span>
+              )}
+              {usernameError && <div className="wiki-form-error" style={{ marginTop: "var(--space-2)" }}>&gt; {usernameError}</div>}
+            </div>
+            <div className="wiki-form-actions" style={{ marginTop: "var(--space-1)" }}>
+              <button className="wiki-form-btn" onClick={handleSaveUsername} disabled={savingUsername || !usernameValid}>
+                {savingUsername ? "Saving..." : "Save"}
+              </button>
+              <button className="wiki-form-btn wiki-form-btn-secondary" onClick={() => { setEditingUsername(false); setUsernameError(null) }}>
+                Cancel
+              </button>
+            </div>
           </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--space-3)" }}>
+            <h1 className="wiki-form-heading" style={{ marginBottom: "var(--space-1)", flex: 1 }}>
+              {profile.username}
+            </h1>
+            {isOwnProfile && (
+              <button
+                className="wiki-edit-btn"
+                onClick={() => { setUsernameValue(profile.username); setEditingUsername(true) }}
+                style={{ marginTop: "6px", flexShrink: 0 }}
+                title="Change username"
+              >
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" style={{ marginRight: "3px" }}>
+                  <path d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L3.462 11.098a.25.25 0 00-.064.108l-.631 2.2 2.2-.63a.25.25 0 00.108-.064l8.61-8.61a.25.25 0 000-.354l-1.086-1.086z"/>
+                </svg>
+                Change username
+              </button>
+            )}
+          </div>
+        )}
+        <div className="wiki-profile-meta">
+          <span className={`wiki-admin-role ${roleBadgeClass}`}>
+            {profile.role === "pending" ? "awaiting approval" : profile.role}
+          </span>
+          {joinDate && <span className="wiki-profile-joined">Joined {joinDate}</span>}
+          <span className="wiki-profile-edits">{profile.editCount} contribution{profile.editCount !== 1 ? "s" : ""}</span>
         </div>
       </div>
 
+      {/* Bio */}
       <div className="wiki-profile-section">
         <h3 className="wiki-profile-section-title">Bio</h3>
         {editingBio && isOwnProfile ? (
@@ -164,8 +220,8 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
               style={{ minHeight: "80px" }}
             />
             <div className="wiki-form-actions" style={{ marginTop: "var(--space-2)" }}>
-              <button className="wiki-form-btn" onClick={handleSaveBio} disabled={saving}>
-                {saving ? "Saving..." : "Save"}
+              <button className="wiki-form-btn" onClick={handleSaveBio} disabled={savingBio}>
+                {savingBio ? "Saving..." : "Save"}
               </button>
               <button className="wiki-form-btn wiki-form-btn-secondary" onClick={() => setEditingBio(false)}>
                 Cancel
@@ -188,6 +244,37 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
         )}
       </div>
 
+      {/* Bookmarks — own profile only */}
+      {isOwnProfile && (
+        <div className="wiki-profile-section">
+          <h3 className="wiki-profile-section-title">Bookmarks ({bookmarks.length})</h3>
+          {bookmarks.length === 0 ? (
+            <p className="wiki-profile-bio" style={{ opacity: 0.5 }}>
+              No bookmarks yet. Use the Bookmark button on any article to save it here.
+            </p>
+          ) : (
+            <div className="wiki-bookmark-list">
+              {bookmarks.map((b) => (
+                <div key={b.slug} className="wiki-bookmark-item">
+                  <a href={`/${b.slug}`} className="wiki-bookmark-title wiki-form-link">
+                    {b.title}
+                  </a>
+                  <span className="wiki-bookmark-slug">{b.slug}</span>
+                  <button
+                    className="wiki-bookmark-remove"
+                    onClick={() => removeBookmark(b.slug)}
+                    title="Remove bookmark"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Edit history */}
       {profile.edits.length > 0 && (
         <div className="wiki-profile-section">
           <h3 className="wiki-profile-section-title">Edit History</h3>

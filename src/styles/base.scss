@@ -1,5 +1,33 @@
 // Reset + base typography
 
+// Font fallbacks with size-adjust to reduce CLS during web font swap
+@font-face {
+  font-family: "Playfair Display Fallback";
+  src: local("Georgia"), local("Times New Roman");
+  size-adjust: 112%;
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans Fallback";
+  src: local("Arial"), local("Helvetica Neue"), local("Helvetica");
+  size-adjust: 100%;
+  ascent-override: 101%;
+  descent-override: 27%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono Fallback";
+  src: local("Courier New"), local("Courier");
+  size-adjust: 106%;
+  ascent-override: 90%;
+  descent-override: 26%;
+  line-gap-override: 0%;
+}
+
 @keyframes glorp-quip-fade {
   from { opacity: 0; transform: translateY(3px); }
   to   { opacity: 0.75; transform: translateY(0); }

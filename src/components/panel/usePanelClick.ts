@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import { useStore } from "@/store"
 import { parseMarkdown } from "@/lib/markdown"
 import { useMusic } from "@/components/ui/MusicContext"
-import { useIsWiki } from "@/hooks/useIsWiki"
+import { useShell } from "@/hooks/useShell"
 
 /**
  * Global capture-phase click interceptor for internal links.
@@ -15,12 +15,12 @@ export function usePanelClick() {
   const toggleMusic = useStore((s) => s.toggleMusic)
   const setActiveGraphSlug = useStore((s) => s.setActiveGraphSlug)
   const { tracks, playTrack } = useMusic()
-  const isWiki = useIsWiki()
+  const shell = useShell()
 
   useEffect(() => {
     function handleClick(event: MouseEvent) {
-      // Wiki has no PanelStack — let all clicks navigate normally
-      if (isWiki) return
+      // Wiki and chat have no PanelStack — let all clicks navigate normally
+      if (shell !== "main") return
       const target = event.target as Element
       if (!target?.closest) return
 

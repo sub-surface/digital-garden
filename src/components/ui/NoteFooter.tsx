@@ -29,7 +29,7 @@ export function NoteFooter({ slug, meta }: Props) {
 
       <div className={styles.footerGrid}>
         <div className={styles.backlinksSection}>
-          <h3>Backlinks</h3>
+          <h2>Backlinks</h2>
           {meta?.backlinks && meta.backlinks.length > 0 ? (
             <ul className={styles.backlinksList}>
               {meta.backlinks.map((bl) => {

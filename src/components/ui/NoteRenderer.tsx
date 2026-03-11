@@ -7,6 +7,7 @@ import { NoteBody } from "./NoteBody"
 import { WikiInfobox } from "./WikiInfobox"
 import { resolveSlug } from "@/lib/content-loader"
 import { WikiEditButton } from "./WikiEditButton"
+import { BookmarkButton } from "./BookmarkButton"
 import { useIsWiki } from "@/hooks/useIsWiki"
 import type { NoteMetadata } from "@/types/content"
 
@@ -115,10 +116,11 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
 
   const header = (
     <div className="note-header" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: 'var(--space-12)' }}>
-      {(breadcrumbParts.length > 0 || editableWikiSlugs) && layout === "article" && (
+      {layout === "article" && (
         <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.45, marginBottom: 'var(--space-2)', display: 'flex', gap: '0.4em', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: '0.4em', alignItems: 'center' }}>
             {editableWikiSlugs && <WikiEditButton slug={slug} />}
+            <BookmarkButton slug={slug} title={title} />
           </div>
           <div style={{ display: 'flex', gap: '0.4em', alignItems: 'center' }}>
             {breadcrumbParts.map((part, i) => {

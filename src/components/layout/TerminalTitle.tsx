@@ -167,11 +167,12 @@ async function* wikiBootSequence(): AsyncGenerator<string, void, unknown> {
 // ── Component ──
 
 interface TerminalTitleProps {
-  context?: "wiki"
+  context?: "wiki" | "chat"
 }
 
 export function TerminalTitle({ context }: TerminalTitleProps = {}) {
   const isWiki = context === "wiki"
+  const isChat = context === "chat"
   const navigate = useNavigate()
   const location = useLocation()
   const clearStack = useStore((s) => s.clearStack)
@@ -184,7 +185,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
   const abortRef = useRef<AbortController | null>(null)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const settledText = isWiki ? "Philchat Wiki" : "Sub-Surface Territories"
+  const settledText = isWiki ? "Philchat Wiki" : isChat ? "Philchat" : "Sub-Surface Territories"
 
   // Run a snippet generator, updating the displayed line
   const runSnippet = useCallback(
@@ -228,12 +229,12 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
     const ac = new AbortController()
     abortRef.current = ac
     ;(async () => {
-      await runSnippet(isWiki ? wikiBootSequence() : bootSequence(), ac.signal)
+      await runSnippet((isWiki || isChat) ? wikiBootSequence() : bootSequence(), ac.signal)
       if (!ac.signal.aborted) {
         await sleep(600)
         setLine(settledText)
         setBooted(true)
-        if (!isWiki) scheduleIdle()
+        if (!isWiki && !isChat) scheduleIdle()
       }
     })()
     return () => {
@@ -241,10 +242,10 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runSnippet, scheduleIdle, isWiki])
+  }, [runSnippet, scheduleIdle, isWiki, isChat])
 
   const handleClick = async () => {
-    if (isWiki) {
+    if (isWiki || isChat) {
       window.location.href = "/"
       return
     }
@@ -277,7 +278,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
   }
 
   const displayText = (isHovered && booted && !isAnimating) ? settledText : line
-  const titleTooltip = isWiki ? "Wiki home" : tooltip
+  const titleTooltip = isWiki ? "Wiki home" : isChat ? "Chat home" : tooltip
 
   const titleContent = (
     <>

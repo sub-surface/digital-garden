@@ -9,7 +9,7 @@ import { DevDashboard } from "@/components/dev/DevDashboard"
 import { NotFound } from "@/components/ui/NotFound"
 import { useEffect, lazy, Suspense } from "react"
 import { useStore } from "@/store"
-import { useIsWiki } from "@/hooks/useIsWiki"
+import { useShell } from "@/hooks/useShell"
 import { TagPage } from "@/components/ui/TagPage"
 import { FolderPage } from "@/components/ui/FolderPage"
 import { RecentPage } from "@/components/ui/RecentPage"
@@ -153,9 +153,9 @@ const noteRoute = createRoute({
   path: "$",
   component: function NotePage() {
     const params = noteRoute.useParams()
-    const isWiki = useIsWiki()
+    const shell = useShell()
     const rawSlug = (params as Record<string, string>)["_splat"] || "index"
-    const slug = rawSlug === "index" && isWiki ? "wiki" : rawSlug
+    const slug = rawSlug === "index" && shell === "wiki" ? "wiki" : rawSlug
 
     const setActiveGraphSlug = useStore((s) => s.setActiveGraphSlug)
     useEffect(() => {

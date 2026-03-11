@@ -639,6 +639,61 @@ async function handleNew(request: Request, env: Env): Promise<Response> {
   }
 }
 
+// ── Bookmark endpoints ──
+
+async function handleBookmarks(request: Request, env: Env, pathname: string): Promise<Response> {
+  const auth = await verifyAuth(request, env)
+  if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+
+  // GET /api/bookmarks — list own bookmarks
+  if (pathname === "/api/bookmarks" && request.method === "GET") {
+    const res = await supabaseRest(env, `bookmarks?user_id=eq.${auth.id}&select=slug,title,added_at&order=added_at.desc`)
+    if (!res.ok) return jsonResponse({ error: "Failed to fetch bookmarks" }, 500)
+    return jsonResponse(await res.json())
+  }
+
+  // POST /api/bookmarks — add bookmark
+  if (pathname === "/api/bookmarks" && request.method === "POST") {
+    let body: { slug?: string; title?: string }
+    try { body = await request.json() } catch { return jsonResponse({ error: "Invalid body" }, 400) }
+    if (!body.slug?.trim() || !body.title?.trim()) return jsonResponse({ error: "slug and title required" }, 400)
+    const res = await supabaseRest(env, "bookmarks", "POST", {
+      user_id: auth.id, slug: body.slug.trim(), title: body.title.trim(),
+    })
+    if (!res.ok) {
+      // 409 = already exists (UNIQUE constraint) — treat as success
+      if (res.status === 409) return jsonResponse({ ok: true })
+      return jsonResponse({ error: "Failed to add bookmark" }, 500)
+    }
+    return jsonResponse({ ok: true })
+  }
+
+  // DELETE /api/bookmarks/:slug — remove bookmark
+  if (pathname.startsWith("/api/bookmarks/") && request.method === "DELETE") {
+    const slug = decodeURIComponent(pathname.slice("/api/bookmarks/".length))
+    const res = await supabaseRest(env, `bookmarks?user_id=eq.${auth.id}&slug=eq.${encodeURIComponent(slug)}`, "DELETE")
+    if (!res.ok) return jsonResponse({ error: "Failed to remove bookmark" }, 500)
+    return jsonResponse({ ok: true })
+  }
+
+  // POST /api/bookmarks/migrate — bulk-import from localStorage on first login
+  if (pathname === "/api/bookmarks/migrate" && request.method === "POST") {
+    let body: { bookmarks?: { slug: string; title: string; addedAt: string }[] }
+    try { body = await request.json() } catch { return jsonResponse({ error: "Invalid body" }, 400) }
+    if (!Array.isArray(body.bookmarks)) return jsonResponse({ error: "bookmarks array required" }, 400)
+    const valid = body.bookmarks.filter((b) => b.slug?.trim() && b.title?.trim()).slice(0, 200)
+    // Upsert all — ignore conflicts
+    for (const b of valid) {
+      await supabaseRest(env, "bookmarks", "POST", {
+        user_id: auth.id, slug: b.slug.trim(), title: b.title.trim(),
+      })
+    }
+    return jsonResponse({ ok: true, migrated: valid.length })
+  }
+
+  return jsonResponse({ error: "Not found" }, 404)
+}
+
 // ── GET /api/lock-status ──
 
 async function handleLockStatus(request: Request, env: Env): Promise<Response> {
@@ -749,9 +804,22 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
 
+    // Domain routing — one Worker, three surfaces:
+    // garden:  subsurfaces.net        → static assets + OG meta injection
+    // wiki:    wiki.subsurfaces.net   → auth, editing, profiles, bookmarks
+    // chat:    chat.subsurfaces.net   → realtime, stonks, bans, GIF search
+
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders() })
+    }
+
+    // Chat API — Phase 1 stubs (not yet implemented)
+    if (url.pathname.startsWith("/api/chat/")) {
+      return Response.json(
+        { error: "Chat API not yet available" },
+        { status: 501, headers: corsHeaders() },
+      )
     }
 
     // API routes
@@ -779,6 +847,9 @@ export default {
     }
     if (url.pathname === "/api/lock-status" && request.method === "GET") {
       return handleLockStatus(request, env)
+    }
+    if (url.pathname.startsWith("/api/bookmarks")) {
+      return handleBookmarks(request, env, url.pathname)
     }
     if (url.pathname.startsWith("/api/admin/")) {
       return handleAdmin(request, env, url.pathname)
