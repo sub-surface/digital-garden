@@ -31,14 +31,13 @@ export function AppShell() {
   const location = useLocation()
   const setContentIndex = useStore((s) => s.setContentIndex)
 
-  // Defer content-index fetch — only needed on main garden (not wiki/chat)
+  // Defer content-index fetch — needed by Query components on all shells
   useEffect(() => {
-    if (shell !== "main") return
     fetch("/content-index.json")
       .then((r) => r.json())
       .then(setContentIndex)
       .catch(() => console.warn("Content index not found — run prebuild first"))
-  }, [shell])
+  }, [setContentIndex])
 
   usePanelClick()
   useHotkeys()

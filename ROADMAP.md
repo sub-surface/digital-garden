@@ -197,6 +197,11 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **`_template.md`**: album template in `content/Photos/` for adding new albums without code changes
 - [x] **Photography.md restored**: written content now renders normally; `<PhotoAlbums />` appended below prose
 
+### Bug Fixes (Session 2026-03-11)
+- [x] **Query component broken on wiki**: `contentIndex` never populated on wiki shell — `AppShell` was guarding the `content-index.json` fetch behind `shell === "main"`. Removed guard; all shells now fetch it on mount.
+- [x] **Worker crash risk with optional ASSETS**: `getContentIndex(env.ASSETS)` could pass `undefined` — added null guard inside `getContentIndex`. Safe in practice due to early return, but now defensively correct.
+- [x] **Realtime message enrichment race condition**: fetching enriched profile using `before=created_at+1s` was unreliable under concurrent inserts. Now fetches last 10 messages and matches by ID.
+
 ### Bug Fixes
 - [x] **`class` → `className` in MDX content**: raw HTML in `.md` files compiled as JSX — `class=` attribute causes React warnings. Fixed in: `Chess.md`, `Photography.md`, `Writing/Writing-Template.md`, `Writing/On-Attention.md`, `Wiki/chatters/hughchungus.md`, `thinking in public.md`, `Wiki/Philsurvey Template.md`
 - [x] **Telescopic wikilink slugs**: `[[Note Name]]` inside telescopic blocks was generating `href="/Note Name"` (spaces, not hyphens) — now slugified to `href="/note-name"` matching runtime resolver
@@ -213,62 +218,6 @@ Custom React/Vite digital garden. Live at `subsurfaces.net`, wiki at `wiki.subsu
 - [x] **XFO / framing**: `X-Frame-Options: DENY` + CSP `frame-ancestors 'none'`
 - [x] **Additional**: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`
 - [ ] **Trusted Types**: evaluate `require-trusted-types-for 'script'` — may conflict with PixiJS/D3 dynamic DOM writes, audit first
-
----
-
-## Comments System
-
-Opt-in per-note comments. Turnstile-gated, no login required. Pseudonymous (name only). Stored in Cloudflare D1 via the existing Worker. Hierarchical replies, upvote/downvote. Available site-wide (wiki + main), styled to match the active shell.
-
-### D1 Database Setup
-- [ ] Create D1 database via Wrangler: `npx wrangler d1 create digital-garden-comments`
-- [ ] Add `[[d1_databases]]` binding to `wrangler.toml`: `binding = "DB", database_name = "digital-garden-comments"`
-- [ ] Add `DB: D1Database` to `Env` interface in `src/worker.ts`
-- [ ] Run schema migration via `wrangler d1 execute`:
-  ```sql
-  CREATE TABLE comments (
-    id TEXT PRIMARY KEY,
-    slug TEXT NOT NULL,
-    parent_id TEXT,
-    author TEXT NOT NULL,
-    body TEXT NOT NULL,
-    upvotes INTEGER DEFAULT 0,
-    downvotes INTEGER DEFAULT 0,
-    created_at TEXT NOT NULL
-  );
-  CREATE INDEX idx_comments_slug ON comments(slug);
-  ```
-
-### Worker API Endpoints (src/worker.ts)
-- [ ] `GET /api/comments?slug=...` — fetch all comments for a slug (ordered by created_at, tree structure assembled client-side)
-- [ ] `POST /api/comments` — submit a new comment: validate Turnstile token, validate name + body (non-empty, length limits), insert into D1, return created comment
-- [ ] `POST /api/comments/:id/vote` — body `{ dir: 1 | -1 }`: increment upvotes or downvotes on a comment row
-- [ ] `DELETE /api/comments/:id` — admin-only delete: requires `Authorization: Bearer <ADMIN_SECRET>` header; add `ADMIN_SECRET` to Worker secrets
-- [ ] Add `ADMIN_SECRET` to Worker runtime secrets in CF dashboard
-
-### Frontend — CommentSection Component
-- [ ] Create `src/components/ui/CommentSection.tsx`:
-  - Fetches comments on mount via `GET /api/comments?slug={slug}`
-  - Assembles flat list into tree (parent_id → children) client-side
-  - Renders top-level comments first (oldest first, LessWrong style)
-  - Each comment shows: author, relative timestamp, body, upvote/downvote buttons, reply button
-  - Upvote/downvote calls `POST /api/comments/:id/vote` and updates count optimistically
-  - Reply button opens inline reply form below the comment
-  - Submit form at the bottom of the comment list (top-level new comment)
-- [ ] Create `src/components/ui/CommentSection.module.scss` — styled to CSS variables, works in both dark/light, both shells
-- [ ] Submit form fields: Name (text, required), Comment (textarea, required), Turnstile widget, Submit button
-- [ ] Inline reply form: same fields, nested visually under parent
-- [ ] Loading + error states
-
-### Integration
-- [ ] Add `comments?: boolean` to `NoteMetadata` in `src/types/content.ts`
-- [ ] Extract `comments` field in `scripts/prebuild.ts` (add to `NoteMeta`, write to content-index)
-- [ ] In `NoteRenderer.tsx`: if `meta?.comments` is true, render `<CommentSection slug={slug} />` below `<NoteFooter>`
-- [ ] `CommentSection` uses `useIsWiki()` to determine which domain's API to call (both domains share the same Worker, so `/api/comments` works on both)
-
-### Opt-in
-- [ ] Add `comments: true` to any note frontmatter to enable the section
-- [ ] Suggested initial candidates: `content/Wiki/index.md`, chatter profiles
 
 ---
 

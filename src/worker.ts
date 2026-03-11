@@ -19,7 +19,8 @@ interface NoteMeta {
 // In-memory cache — survives for the lifetime of the Worker instance
 let contentIndexCache: Record<string, NoteMeta> | null = null
 
-async function getContentIndex(assetsFetcher: Fetcher): Promise<Record<string, NoteMeta>> {
+async function getContentIndex(assetsFetcher: Fetcher | undefined): Promise<Record<string, NoteMeta>> {
+  if (!assetsFetcher) return {};
   if (contentIndexCache) return contentIndexCache
   try {
     const res = await assetsFetcher.fetch("https://assets.internal/content-index.json")

@@ -119,9 +119,9 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
             // Own message — we have the profile already
             enriched = { ...newMsg, profiles: { username: currentUsername ?? "unknown", avatar_url: currentAvatarUrl }, reactions: [] }
           } else {
-            // Other user — fetch full enriched row from API
+            // Other user — fetch recent messages and match by ID to get enriched profile
             try {
-              const res = await fetch(`/api/chat/messages?room=${roomId}&limit=1&before=${encodeURIComponent(new Date(new Date(newMsg.created_at).getTime() + 1000).toISOString())}`, {
+              const res = await fetch(`/api/chat/messages?room=${roomId}&limit=10`, {
                 headers: { Authorization: `Bearer ${accessToken}` },
               })
               if (res.ok) {
