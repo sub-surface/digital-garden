@@ -1,6 +1,6 @@
 # Future & Deferred
 
-Items that are explicitly deferred, low priority, or pending design work. Grouped by domain.
+Items that are explicitly deferred, low priority, or pending design work. Grouped by domain. Write to main docs when completed.
 
 ---
 
@@ -40,7 +40,6 @@ Items that are explicitly deferred, low priority, or pending design work. Groupe
 - [ ] **Admin Room Management UI**: admin-only "+" button in room sidebar → inline form; admin can archive a room (removes from sidebar, preserves history)
 - [ ] **Twitter/X link cards**: render as styled link card (username + tweet text if extractable) — avoid loading Twitter's JS embed script by default; optional "load embed" button
 - [ ] **Lazy embeds**: all embeds lazy — nothing loads until the message is in the viewport (`IntersectionObserver`)
-- [ ] **Chat restyling**: visual refresh of the chat UI to better match the garden/wiki aesthetic — consider: message density tuning, thread/reply presentation, room header design, mobile responsiveness, dark/light theme parity, sidebar UX (collapsible on mobile, room descriptions), input area refinement (toolbar, formatting hints), and overall typographic consistency across all three shells
 
 ### Stonks (Phase 2 — all items)
 
