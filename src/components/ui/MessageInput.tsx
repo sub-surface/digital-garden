@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from "react"
 import type { ChatMessage } from "@/types/chat"
 import { EmotePicker } from "./EmotePicker"
 import styles from "./Chat.module.scss"
@@ -14,11 +14,24 @@ interface Props {
   onTyping?: (typing: boolean) => void
 }
 
-export function MessageInput({ onSend, replyTo, onCancelReply, onTyping }: Props) {
+export interface MessageInputHandle {
+  focus: () => void
+}
+
+export const MessageInput = forwardRef<MessageInputHandle, Props>(function MessageInput(
+  { onSend, replyTo, onCancelReply, onTyping },
+  ref
+) {
   const [body, setBody] = useState("")
   const [showEmotePicker, setShowEmotePicker] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useImperativeHandle(ref, () => ({
+    focus() {
+      textareaRef.current?.focus()
+    },
+  }))
 
   // Focus textarea when replyTo changes
   useEffect(() => {
@@ -40,6 +53,10 @@ export function MessageInput({ onSend, replyTo, onCancelReply, onTyping }: Props
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
+    }
+    // Escape while focused: blur textarea
+    if (e.key === "Escape") {
+      textareaRef.current?.blur()
     }
   }
 
@@ -87,13 +104,16 @@ export function MessageInput({ onSend, replyTo, onCancelReply, onTyping }: Props
       <div className={styles.inputRow}>
         <textarea
           ref={textareaRef}
+          id="chat-message-input"
+          name="chat-message"
           className={styles.textarea}
           value={body}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="Message…"
+          placeholder="Message… (press / to focus)"
           rows={1}
           maxLength={CHAR_LIMIT}
+          autoComplete="off"
         />
         <button
           className={`${styles.pickerBtn} ${showEmotePicker ? styles.pickerBtnActive : ""}`}
@@ -131,4 +151,4 @@ export function MessageInput({ onSend, replyTo, onCancelReply, onTyping }: Props
     </div>
     </div>
   )
-}
+})

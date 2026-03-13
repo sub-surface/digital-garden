@@ -96,6 +96,11 @@ function renderInlineTokens(text: string, keyPrefix: string) {
   })
 }
 
+function isEmoteOnly(body: string): boolean {
+  const trimmed = body.trim()
+  return /^:[a-zA-Z0-9_-]+:$/.test(trimmed)
+}
+
 function MessageBodyRenderer({ body }: { body: string }) {
   const lines = body.split("\n")
   const nodes: ReactNode[] = []
@@ -164,7 +169,7 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, i
         {msg.deleted_at ? (
           <span className={styles.deleted}>[message deleted]</span>
         ) : (
-          <div className={styles.messageBody}>
+          <div className={isEmoteOnly(msg.body) ? styles.messageBodyEmoteOnly : styles.messageBody}>
             <MessageBodyRenderer body={msg.body} />
           </div>
         )}

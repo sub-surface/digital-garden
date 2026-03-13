@@ -68,11 +68,14 @@ export function EmotePicker({ onSelect, onClose }: Props) {
   return (
     <div className={styles.emotePicker} ref={ref}>
       <input
+        id="emote-picker-filter"
+        name="emote-filter"
         className={styles.emotePickerSearch}
         type="text"
         placeholder="filter…"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
+        autoComplete="off"
         autoFocus
       />
       <div className={styles.emoteGrid}>
