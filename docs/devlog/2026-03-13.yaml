@@ -1,0 +1,50 @@
+- date: 2026-03-13
+  area: chat
+  title: Chat UI overhaul, inline search, emote-only rendering
+  status: done
+  files:
+    - src/components/ui/Chat.module.scss
+    - src/components/ui/ChatPage.tsx
+    - src/components/ui/MessageRow.tsx
+    - ROADMAP.md
+  changes:
+    - Full CSS rewrite of Chat.module.scss — justify-content flex-end on .messageList anchors messages to bottom of viewport
+    - Floating pill .msgActions replaces absolute-positioned action buttons
+    - Sidebar slimmed to 180px; new .sidebarSearch* classes support inline search results below channel list
+    - New .messageBodyEmoteOnly class applies height 2.8em for large emote rendering
+    - ChatPage.tsx — replaced ChatSearch overlay and sidebar search button with an inline debounced search input directly in the sidebar; 300ms debounce, 20-result limit; SearchResult interface added
+    - MessageRow.tsx — added isEmoteOnly() function detecting a single :emote: body using /^:[a-zA-Z0-9_-]+:$/ on trimmed text; applies messageBodyEmoteOnly class when matched
+    - ROADMAP.md — updated rich media rendering checkboxes, added chat UI overhaul completed items, updated avatar customisation items, added auth/nav completed items
+  decisions:
+    - ChatSearch.tsx kept in codebase but no longer mounted — the component is functional and could be repurposed for a dedicated full search page rather than deleted
+    - Emote-only detection uses a simple regex on trimmed body rather than running the full token parser — avoids parsing overhead for the common case and keeps the check self-contained in MessageRow
+    - Inline sidebar search chosen over a modal overlay to keep the two-column layout intact and avoid z-index conflicts with MiniProfilePopup
+  next: Twitter/X link card rendering, IntersectionObserver lazy embeds, admin room management UI
+
+- date: 2026-03-13
+  area: docs
+  title: Docs folder restructure — replace ROADMAP.md
+  status: done
+  files:
+    - docs/index.md
+    - docs/architecture.md
+    - docs/garden.md
+    - docs/wiki.md
+    - docs/chat.md
+    - docs/infrastructure.md
+    - docs/future.md
+    - docs/devlog/README.md
+    - docs/devlog/2026-03-13.yaml
+  changes:
+    - Migrated all ROADMAP.md content into domain-specific docs files with preserved checkbox states
+    - Added docs/architecture.md consolidating three-shell system, layering rules, domain routing
+    - Added docs/devlog/ with YAML schema for daily session logs
+    - Audited codebase against docs — added missing items (useHotkeys, TelescopicHandler, MDX pipeline, wiki worker endpoints, content loaders, NotFound)
+    - Added chat restyling item to future.md
+    - Deleted ROADMAP.md
+  decisions:
+    - Docs keep the same checkbox format as ROADMAP.md — compartmentalised by domain, not rewritten as prose
+    - Bug fixes merged into their relevant domain files rather than a standalone section
+    - Future/deferred items consolidated in future.md with cross-links back to domain files for full context
+    - CLAUDE.md left untouched — it covers runtime gotchas and dev reference, docs cover roadmap/status
+  next: null

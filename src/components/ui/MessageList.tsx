@@ -1,4 +1,4 @@
-import { forwardRef, type UIEventHandler } from "react"
+import { forwardRef, type UIEventHandler, type ReactNode } from "react"
 import type { ChatMessage } from "@/types/chat"
 import { MessageRow } from "./MessageRow"
 import styles from "./Chat.module.scss"
@@ -11,6 +11,7 @@ interface Props {
   onReact?: (messageId: string, emote: string) => void
   onDelete?: (messageId: string) => void
   currentUserId?: string
+  lastReadTimestamp?: string | null
 }
 
 // Two messages are in the same group if same user_id and within 5 minutes
@@ -20,30 +21,84 @@ function isSameGroup(a: ChatMessage, b: ChatMessage): boolean {
   return diff < 5 * 60 * 1000
 }
 
+function formatDayLabel(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const diffDays = Math.round((today.getTime() - msgDay.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return "Today"
+  if (diffDays === 1) return "Yesterday"
+  if (diffDays < 7) {
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    return days[d.getDay()]
+  }
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`
+}
+
+function getDayKey(iso: string): string {
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+}
+
 export const MessageList = forwardRef<HTMLDivElement, Props>(function MessageList(
-  { messages, onReply, onScroll, onUsernameClick, onReact, onDelete, currentUserId },
+  { messages, onReply, onScroll, onUsernameClick, onReact, onDelete, currentUserId, lastReadTimestamp },
   ref
 ) {
+  const nodes: ReactNode[] = []
+  let prevDayKey = ""
+  let unreadInserted = false
+
+  for (let idx = 0; idx < messages.length; idx++) {
+    const msg = messages[idx]
+    const dayKey = getDayKey(msg.created_at)
+
+    // Day separator
+    if (dayKey !== prevDayKey) {
+      nodes.push(
+        <div key={`day-${dayKey}`} className={styles.daySeparator}>
+          {formatDayLabel(msg.created_at)}
+        </div>
+      )
+      prevDayKey = dayKey
+    }
+
+    // Unread marker — insert before first message newer than lastReadTimestamp
+    if (lastReadTimestamp && !unreadInserted && msg.created_at > lastReadTimestamp) {
+      nodes.push(
+        <div key="unread-marker" className={styles.unreadMarker}>
+          new
+        </div>
+      )
+      unreadInserted = true
+    }
+
+    const prev = idx > 0 ? messages[idx - 1] : null
+    // Don't compact across day boundaries
+    const sameDay = prev ? getDayKey(prev.created_at) === dayKey : false
+    const compact = prev !== null && sameDay && isSameGroup(prev, msg) && !msg.reply_to_message
+
+    nodes.push(
+      <MessageRow
+        key={msg.id}
+        msg={msg}
+        compact={compact}
+        onReply={onReply}
+        onUsernameClick={onUsernameClick}
+        onReact={onReact}
+        onDelete={onDelete}
+        isOwn={currentUserId ? msg.user_id === currentUserId : false}
+        reactions={msg.reactions}
+      />
+    )
+  }
+
   return (
     <div className={styles.messageList} ref={ref} onScroll={onScroll}>
       <div className={styles.messageListInner}>
-        {messages.map((msg, idx) => {
-          const prev = idx > 0 ? messages[idx - 1] : null
-          const compact = prev !== null && isSameGroup(prev, msg) && !msg.reply_to_message
-          return (
-            <MessageRow
-              key={msg.id}
-              msg={msg}
-              compact={compact}
-              onReply={onReply}
-              onUsernameClick={onUsernameClick}
-              onReact={onReact}
-              onDelete={onDelete}
-              isOwn={currentUserId ? msg.user_id === currentUserId : false}
-              reactions={msg.reactions}
-            />
-          )
-        })}
+        {nodes}
       </div>
     </div>
   )

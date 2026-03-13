@@ -76,11 +76,14 @@ export function GifPicker({ onSelect, onClose }: Props) {
     <div className={styles.gifPicker} ref={ref}>
       <div className={styles.gifPickerHeader}>
         <input
+          id="gif-picker-search"
+          name="gif-search"
           className={styles.gifPickerSearch}
           type="text"
           placeholder="search GIFs…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          autoComplete="off"
           autoFocus
         />
         <img src="/brand/powered-by-klipy.svg" alt="Powered by KLIPY" className={styles.gifPickerBrand} />

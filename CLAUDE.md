@@ -1,6 +1,6 @@
 # digital-garden — Agent Reference
 
-Quick-start for AI agents working on this codebase. Read this first, refer to `ROADMAP.md` for objectives.
+Quick-start for AI agents working on this codebase. Read this first, refer to `docs/` for objectives and status tracking.
 
 ---
 
