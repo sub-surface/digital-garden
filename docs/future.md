@@ -31,6 +31,7 @@ Items that are explicitly deferred, low priority, or pending design work. Groupe
 - [ ] **Supabase RLS audit**: `bookmarks`, `edit_log`, `page_locks` tables have no RLS policies. Acceptable for now (trusted editors only). Before public launch: own-row-only for bookmarks; insert-only for edit_log; admin-only lock management.
 - [ ] Wiki community features (comments, reactions)
 - [ ] **GitHub App token** for non-expiring wiki submissions — until then, add a Worker startup preflight: verify token validity on boot, return clear "wiki submissions temporarily unavailable" error to users rather than a silent 500 if token is expired
+- [ ] **Chat restyling**: visual refresh of the chat UI to better match the garden/wiki aesthetic — consider: message density tuning, thread/reply presentation, room header design, mobile responsiveness, dark/light theme parity, sidebar UX (collapsible on mobile, room descriptions), input area refinement (toolbar, formatting hints), and overall typographic consistency across all three shells
 
 ---
 

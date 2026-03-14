@@ -13,7 +13,7 @@ interface SearchResult {
 }
 
 export function ChatPage() {
-  const { session, loading, username, avatar_url } = useAuth()
+  const { session, loading, username, avatar_url, signOut } = useAuth()
   const [rooms, setRooms] = useState<ChatRoomType[]>([])
   const [roomsLoading, setRoomsLoading] = useState(false)
   const [activeRoom, setActiveRoom] = useState<ChatRoomType | null>(null)
@@ -181,6 +181,30 @@ export function ChatPage() {
             </div>
           )}
         </div>
+
+        {/* User section — visible only on mobile (CSS-hidden on desktop) */}
+        {session && username && (
+          <div className={styles.sidebarUser}>
+            <div className={styles.sidebarUserInfo}>
+              <span className={styles.sidebarUserName}>{username}</span>
+            </div>
+            <div className={styles.sidebarUserActions}>
+              <a
+                className={styles.sidebarUserBtn}
+                href={`https://wiki.subsurfaces.net/profile`}
+                onClick={() => setSidebarOpen(false)}
+              >
+                profile
+              </a>
+              <button
+                className={styles.sidebarUserBtn}
+                onClick={() => { setSidebarOpen(false); signOut() }}
+              >
+                log out
+              </button>
+            </div>
+          </div>
+        )}
       </aside>
 
       <div className={styles.chatMain}>

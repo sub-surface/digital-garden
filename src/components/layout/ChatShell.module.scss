@@ -32,10 +32,8 @@
   font-family: var(--font-code);
   font-size: 0.72rem;
 
-  @media (max-width: 800px) {
-    bottom: 1rem;
-    left: 1rem;
-    font-size: 0.65rem;
+  @media (max-width: 700px) {
+    display: none;
   }
 }
 

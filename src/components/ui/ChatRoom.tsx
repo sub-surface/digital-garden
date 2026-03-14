@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import type { ChatMessage } from "@/types/chat"
 import { MessageList } from "./MessageList"
@@ -28,6 +28,8 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
   const atBottomRef = useRef(true)
   const lastReadRef = useRef<string | null>(null)
   const inputRef = useRef<{ focus: () => void }>(null)
+  const loadingMoreRef = useRef(false)
+  const prevScrollHeightRef = useRef(0)
 
   const broadcastTyping = useTypingBroadcast(roomId, currentUserId)
 
@@ -54,8 +56,8 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     setAtBottom(isBottom)
     if (isBottom) markAsRead()
 
-    // Auto-load when scrolled near top
-    if (el.scrollTop < 150 && hasMore && !loadingMore) {
+    // Auto-load when scrolled near top — use ref to prevent duplicate calls
+    if (el.scrollTop < 150 && hasMore && !loadingMoreRef.current) {
       loadMore()
     }
   }
@@ -84,10 +86,10 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
   }, [roomId, accessToken])
 
   async function loadMore() {
-    if (!hasMore || loadingMore || messages.length === 0) return
+    if (!hasMore || loadingMoreRef.current || messages.length === 0) return
     const oldest = messages[0].created_at
-    const el = listRef.current
-    const prevScrollHeight = el?.scrollHeight ?? 0
+    loadingMoreRef.current = true
+    prevScrollHeightRef.current = listRef.current?.scrollHeight ?? 0
     setLoadingMore(true)
     try {
       const res = await fetch(
@@ -98,19 +100,24 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       const data = await res.json() as { messages: ChatMessage[]; has_more: boolean }
       setMessages((prev) => [...(data.messages ?? []).reverse(), ...prev])
       setHasMore(data.has_more ?? false)
-
-      // Preserve scroll position after prepending older messages
-      requestAnimationFrame(() => {
-        if (el) {
-          el.scrollTop = el.scrollHeight - prevScrollHeight
-        }
-      })
     } catch {
       // Silently ignore load-more failure
     } finally {
       setLoadingMore(false)
+      loadingMoreRef.current = false
     }
   }
+
+  // Restore scroll position after older messages are prepended — runs synchronously before paint
+  useLayoutEffect(() => {
+    const el = listRef.current
+    if (!el || prevScrollHeightRef.current === 0) return
+    const newScrollHeight = el.scrollHeight
+    if (newScrollHeight > prevScrollHeightRef.current) {
+      el.scrollTop = newScrollHeight - prevScrollHeightRef.current
+      prevScrollHeightRef.current = 0
+    }
+  }, [messages])
 
   // Scroll to bottom after initial load + mark as read
   useEffect(() => {
