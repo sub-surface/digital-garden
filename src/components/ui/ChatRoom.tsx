@@ -45,7 +45,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     lastReadRef.current = latest
   }
 
-  // Track scroll position
+  // Track scroll position + auto-load older messages on scroll to top
   function handleScroll() {
     const el = listRef.current
     if (!el) return
@@ -53,6 +53,11 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     atBottomRef.current = isBottom
     setAtBottom(isBottom)
     if (isBottom) markAsRead()
+
+    // Auto-load when scrolled near top
+    if (el.scrollTop < 150 && hasMore && !loadingMore) {
+      loadMore()
+    }
   }
 
   function scrollToBottom() {
@@ -81,6 +86,8 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
   async function loadMore() {
     if (!hasMore || loadingMore || messages.length === 0) return
     const oldest = messages[0].created_at
+    const el = listRef.current
+    const prevScrollHeight = el?.scrollHeight ?? 0
     setLoadingMore(true)
     try {
       const res = await fetch(
@@ -91,6 +98,13 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       const data = await res.json() as { messages: ChatMessage[]; has_more: boolean }
       setMessages((prev) => [...(data.messages ?? []).reverse(), ...prev])
       setHasMore(data.has_more ?? false)
+
+      // Preserve scroll position after prepending older messages
+      requestAnimationFrame(() => {
+        if (el) {
+          el.scrollTop = el.scrollHeight - prevScrollHeight
+        }
+      })
     } catch {
       // Silently ignore load-more failure
     } finally {
@@ -267,17 +281,6 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
         <div className={styles.emptyState}>loading messages…</div>
       ) : (
         <>
-          {hasMore && (
-            <div style={{ display: "flex", justifyContent: "center", padding: "0.25rem 0" }}>
-              <button
-                className={styles.loadMoreBtn}
-                onClick={loadMore}
-                disabled={loadingMore}
-              >
-                {loadingMore ? "loading…" : "load earlier messages"}
-              </button>
-            </div>
-          )}
           <MessageList
             ref={listRef}
             messages={messages}
@@ -288,6 +291,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
             currentUserId={currentUserId}
             onUsernameClick={(username, el) => setPopup({ username, anchor: el })}
             lastReadTimestamp={lastReadRef.current}
+            loadingMore={loadingMore}
           />
         </>
       )}

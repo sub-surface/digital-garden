@@ -56,6 +56,14 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
     ? amr.some(a => a.method === "otp") && !amr.some(a => a.method === "password")
     : false
 
+  // Auto-open password form for fresh signups landing on /profile
+  useEffect(() => {
+    if (isOtpOnly && !editingPassword && !passwordSuccess) {
+      setEditingPassword(true)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOtpOnly])
+
   useEffect(() => {
     async function fetchProfile() {
       setLoading(true)

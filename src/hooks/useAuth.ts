@@ -39,10 +39,19 @@ export function useAuth(): AuthState & {
       return
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
-      if (session) fetchProfile(session.access_token)
-      else {
+      if (session) {
+        fetchProfile(session.access_token)
+
+        // Fresh signup callback — redirect to /profile so user can set a password
+        if (event === "SIGNED_IN" && localStorage.getItem("wiki_pending_username")) {
+          const currentPath = window.location.pathname
+          if (currentPath !== "/profile") {
+            window.location.replace("/profile")
+          }
+        }
+      } else {
         setRole(null)
         setUsername(null)
         setBio(null)
