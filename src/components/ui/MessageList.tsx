@@ -12,6 +12,7 @@ interface Props {
   onDelete?: (messageId: string) => void
   currentUserId?: string
   lastReadTimestamp?: string | null
+  loadingMore?: boolean
 }
 
 // Two messages are in the same group if same user_id and within 5 minutes
@@ -44,7 +45,7 @@ function getDayKey(iso: string): string {
 }
 
 export const MessageList = forwardRef<HTMLDivElement, Props>(function MessageList(
-  { messages, onReply, onScroll, onUsernameClick, onReact, onDelete, currentUserId, lastReadTimestamp },
+  { messages, onReply, onScroll, onUsernameClick, onReact, onDelete, currentUserId, lastReadTimestamp, loadingMore },
   ref
 ) {
   const nodes: ReactNode[] = []
@@ -98,6 +99,11 @@ export const MessageList = forwardRef<HTMLDivElement, Props>(function MessageLis
   return (
     <div className={styles.messageList} ref={ref} onScroll={onScroll}>
       <div className={styles.messageListInner}>
+        {loadingMore && (
+          <div className={styles.loadMoreBtn} style={{ alignSelf: "center", cursor: "default" }}>
+            loading…
+          </div>
+        )}
         {nodes}
       </div>
     </div>
