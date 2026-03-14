@@ -197,6 +197,55 @@
   padding: 4px;
 }
 
+// ── Sidebar user section (mobile) ──
+
+.sidebarUser {
+  display: none;
+  margin-top: auto;
+  padding: 0.75rem 14px;
+  border-top: 1px solid var(--color-border);
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+
+  @media (max-width: 700px) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+.sidebarUserInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--color-text);
+  font-size: 0.75rem;
+}
+
+.sidebarUserName {
+  font-weight: 600;
+}
+
+.sidebarUserActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.sidebarUserBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.1s;
+
+  &:hover {
+    color: var(--color-accent);
+  }
+}
+
 // ── Main chat area ──
 
 .chatMain {
