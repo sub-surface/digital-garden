@@ -84,6 +84,11 @@ interface GardenStore {
   setGraphOpen: (open: boolean) => void
   toggleGraph: () => void
 
+  // Side Chat
+  isSideChatOpen: boolean
+  toggleSideChat: () => void
+  setSideChatOpen: (open: boolean) => void
+
   // Music
   isMusicOpen: boolean
   toggleMusic: () => void
@@ -198,6 +203,11 @@ export const useStore = create<GardenStore>((set) => ({
   isGraphOpen: false,
   setGraphOpen: (isGraphOpen) => set({ isGraphOpen }),
   toggleGraph: () => set((s) => ({ isGraphOpen: !s.isGraphOpen })),
+
+  // Side Chat
+  isSideChatOpen: false,
+  toggleSideChat: () => set((s) => ({ isSideChatOpen: !s.isSideChatOpen })),
+  setSideChatOpen: (isSideChatOpen) => set({ isSideChatOpen }),
 
   // Music
   isMusicOpen: false,

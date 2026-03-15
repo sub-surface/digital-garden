@@ -1,0 +1,193 @@
+// ── SideChat — DGG-style thin right panel ──
+// Dense inline messages: username: text
+// No avatars, minimal chrome
+
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  z-index: 250;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  border-left: 1px solid var(--color-border);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+
+  // Hidden on mobile
+  @media (max-width: 700px) {
+    display: none;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  opacity: 0.6;
+
+  &::before {
+    content: "chat · ";
+    opacity: 0.5;
+  }
+}
+
+.headerActions {
+  display: flex;
+  gap: 2px;
+}
+
+.headerBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  opacity: 0.5;
+  transition: opacity 0.1s, color 0.1s;
+
+  &:hover {
+    opacity: 1;
+    color: var(--color-accent);
+  }
+}
+
+// ── Message output ──
+
+.output {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.35rem 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.msg {
+  padding: 1px 0.65rem;
+  line-height: 1.6;
+  word-break: break-word;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-bg-surface) 40%, transparent);
+  }
+}
+
+.user {
+  font-weight: 600;
+  color: var(--color-accent);
+  cursor: default;
+  font-size: inherit;
+}
+
+.sep {
+  color: var(--color-text-muted);
+  opacity: 0.4;
+}
+
+.text {
+  color: var(--color-text);
+}
+
+.deleted {
+  color: var(--color-text-muted);
+  font-style: italic;
+  opacity: 0.4;
+}
+
+.emote {
+  display: inline;
+  height: 1.3em;
+  width: auto;
+  vertical-align: middle;
+  margin: 0 1px;
+}
+
+.link {
+  color: var(--color-accent);
+  text-decoration: none;
+  word-break: break-all;
+
+  &:hover { text-decoration: underline; }
+}
+
+.empty {
+  padding: 1rem 0.65rem;
+  color: var(--color-text-muted);
+  opacity: 0.4;
+  text-align: center;
+}
+
+.loadingMore {
+  text-align: center;
+  color: var(--color-text-muted);
+  opacity: 0.4;
+  padding: 4px 0;
+  font-size: 0.65rem;
+}
+
+// ── Input ──
+
+.inputArea {
+  border-top: 1px solid var(--color-border);
+  padding: 0.4rem 0.5rem;
+  flex-shrink: 0;
+}
+
+.inputRow {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.input {
+  flex: 1;
+  background: color-mix(in srgb, var(--color-bg-surface) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+
+  &:focus {
+    border-color: color-mix(in srgb, var(--color-accent-base) 50%, transparent);
+  }
+
+  &::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.35;
+  }
+}
+
+.loginBtn {
+  width: 100%;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  padding: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+}
