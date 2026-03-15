@@ -19,7 +19,7 @@ All hooks run before the conditional return (React rules of hooks). Any hook tha
 |---|---|---|---|
 | AppShell | `subsurfaces.net` | BgCanvas, music, panels, graph, QuickControls | — |
 | WikiShell | `wiki.subsurfaces.net` | MDXProvider, ThemePanel, SearchOverlay, LinkPreview, breadcrumb | BgCanvas, music, panels, graph, QuickControls |
-| ChatShell | `chat.subsurfaces.net` | Auth menu, TerminalTitle "Philchat", QuickControls (chat variant) | BgCanvas, music, panels, graph |
+| ChatShell | `chat.subsurfaces.net` | BgCanvas, ThemePanel, QuickControls (chat variant), auth menu, TerminalTitle "Philchat" | Music, panels, graph |
 
 ### Strict Layering Rule
 

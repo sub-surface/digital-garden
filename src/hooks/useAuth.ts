@@ -73,18 +73,27 @@ export function useAuth(): AuthState & {
     })
 
     // Fallback: detect recovery tokens in URL hash (implicit flow from email links)
-    // PKCE's detectSessionInUrl only checks query params, not hash fragments
+    // PKCE's detectSessionInUrl only checks query params, not hash fragments,
+    // so we must manually parse and exchange hash tokens via setSession().
     const hash = window.location.hash
-    if (hash.includes("type=recovery") && hash.includes("access_token=")) {
-      // Supabase client will pick up the hash tokens via detectSessionInUrl,
-      // but we need to ensure redirect happens even if onAuthStateChange
-      // fires before this effect. Schedule a check after auth resolves.
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user) {
-          window.history.replaceState(null, "", "/profile")
-          window.location.replace("/profile")
-        }
-      })
+    if (hash.includes("access_token=")) {
+      const params = new URLSearchParams(hash.substring(1))
+      const accessToken = params.get("access_token")
+      const refreshToken = params.get("refresh_token")
+      if (accessToken && refreshToken) {
+        supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        }).then(({ data: { session: newSession }, error }) => {
+          if (error || !newSession) return
+          // Clean hash from URL
+          window.history.replaceState(null, "", window.location.pathname)
+          // Recovery flow — redirect to profile for password reset
+          if (params.get("type") === "recovery") {
+            window.location.replace("/profile")
+          }
+        })
+      }
     }
 
     return () => subscription.unsubscribe()
