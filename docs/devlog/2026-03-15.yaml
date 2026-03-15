@@ -1,0 +1,66 @@
+- date: 2026-03-15
+  area: chat
+  title: Chat bug fixes, mobile responsive, PR #13 merge
+  status: done
+  files:
+    - src/components/ui/Chat.module.scss
+    - src/components/ui/ChatPage.tsx
+    - src/components/ui/ChatRoom.tsx
+    - src/components/ui/MessageList.tsx
+    - src/components/ui/MessageInput.tsx
+    - src/components/layout/ChatShell.module.scss
+  changes:
+    - Fixed chat rendering off-screen — removed double offset (margin-top + padding-top) in .chatLayout
+    - Fixed chat still not scrolling — added box-sizing border-box to ChatShell .mainPane (100vh + padding overflowed)
+    - Added id/name/autoComplete attributes to all form fields (chat input, emote picker filter, gif search, sidebar search)
+    - Mobile responsive sidebar — collapses to floating burger toggle at ≤700px, drawer slides in with backdrop
+    - Moved profile/logout controls into mobile sidebar drawer to avoid overlapping chat input
+    - Day separator timestamps between message groups from different days
+    - Unread marker — localStorage-based lastRead tracking per room, visual divider before first unread message
+    - Scroll-to-bottom FAB appears when scrolled up from bottom
+    - Keyboard shortcuts — / to focus input, Escape to clear reply or blur
+    - Merged PR #13 (auth redirect + infinite scroll) with fixes for race condition and scroll restoration
+  decisions:
+    - Used loadingMoreRef (synchronous ref) instead of React state to guard infinite scroll — state batching allowed duplicate fetches before the flag updated
+    - Replaced requestAnimationFrame scroll restore with useLayoutEffect — runs synchronously before paint, eliminating position jump
+    - Mobile sidebar uses transform slide-in rather than display toggle for smooth animation
+    - Unread tracking uses localStorage keyed by room ID — simple, no server round-trip, sufficient for side-panel use case
+  next: Link previews in chat messages, update docs/chat.md with completed items
+
+- date: 2026-03-15
+  area: wiki
+  title: DGG-style side chat panel for wiki shell
+  status: done
+  files:
+    - src/components/ui/SideChat.tsx
+    - src/components/ui/SideChat.module.scss
+    - src/components/layout/WikiShell.tsx
+    - src/components/layout/WikiShell.module.scss
+    - src/store/index.ts
+  changes:
+    - New SideChat component — 320px fixed right panel with dense inline messages (username colon text, no avatars)
+    - Toggle button in wiki header (top-right), hidden on mobile
+    - Supabase Realtime subscription for live messages in #general room
+    - Infinite scroll with ref-guarded load-more and useLayoutEffect scroll restore
+    - Popout button opens chat.subsurfaces.net in a 400×700 window
+    - Login prompt for unauthenticated users
+    - Added isSideChatOpen / toggleSideChat / setSideChatOpen to Zustand store
+  decisions:
+    - Modelled after DGG chat density — 0.75rem font, 1.6 line-height, accent-colored usernames, no avatars or timestamps
+    - SideChat skips image/youtube token types from parseMessageBody — only renders text, emote, and url for density
+    - Panel hidden on mobile (≤700px) since wiki shell has no mobile sidebar pattern; users can use the full chat app instead
+    - Popout opens the dedicated chat subdomain rather than duplicating chat UI in a detached window
+  next: null
+
+- date: 2026-03-15
+  area: infrastructure
+  title: Auth redirect diagnosis (Supabase email templates)
+  status: blocked
+  files: []
+  changes:
+    - Diagnosed magic link and password reset emails redirecting to root instead of /profile
+    - Root cause is Supabase email templates using {{ .ConfirmationURL }} which doesn't include redirect_to parameter
+  decisions:
+    - Fix requires manual Supabase Dashboard change — email templates must use decomposed URL format with {{ .SiteURL }}/auth/v1/verify?token={{ .TokenHash }}&type=...&redirect_to={{ .RedirectURL }}
+    - This is a configuration issue, not a code bug — useAuth.ts already sets emailRedirectTo correctly
+  next: Update Confirm signup and Magic Link templates in Supabase Dashboard to use decomposed URL with {{ .RedirectURL }}

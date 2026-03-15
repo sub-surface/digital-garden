@@ -4,7 +4,8 @@
       "Bash(node:*)",
       "Bash(npx wrangler:*)",
       "WebFetch(domain:supabase.com)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(gh api:*)"
     ]
   }
 }
