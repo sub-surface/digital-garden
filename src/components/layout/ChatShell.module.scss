@@ -17,6 +17,7 @@
   flex-direction: column;
   // Reserve top for TerminalTitle
   padding-top: 3.5rem;
+  box-sizing: border-box;
 }
 
 // ── Auth Controls (bottom-left, same position as wiki) ──

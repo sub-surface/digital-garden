@@ -10,6 +10,7 @@ import { LinkPreview } from "@/components/ui/LinkPreview"
 import { SearchOverlay } from "@/components/ui/SearchOverlay"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
 import { WikiAuthModal } from "@/components/ui/WikiAuthModal"
+import { SideChat } from "@/components/ui/SideChat"
 import { useAuth } from "@/hooks/useAuth"
 import styles from "./WikiShell.module.scss"
 
@@ -97,6 +98,22 @@ function WikiUserMenu() {
   )
 }
 
+function SideChatToggle() {
+  const isSideChatOpen = useStore((s) => s.isSideChatOpen)
+  const toggleSideChat = useStore((s) => s.toggleSideChat)
+
+  return (
+    <button
+      className={`${styles.sideChatToggle} ${isSideChatOpen ? styles.sideChatToggleActive : ""}`}
+      onClick={toggleSideChat}
+      title={isSideChatOpen ? "Close chat" : "Open chat"}
+      aria-label="Toggle side chat"
+    >
+      chat
+    </button>
+  )
+}
+
 export function WikiShell() {
   const activeLayout = useStore((s) => s.activeLayout)
   const location = useLocation()
@@ -119,6 +136,7 @@ export function WikiShell() {
         <SearchOverlay />
 
         <TerminalTitle context="wiki" />
+        <SideChatToggle />
         <WikiUserMenu />
 
         {breadcrumb.length > 0 && (
@@ -138,6 +156,7 @@ export function WikiShell() {
           </div>
         </main>
 
+        <SideChat />
         <CornerMenu variant="wiki" />
       </div>
     </MDXProvider>
