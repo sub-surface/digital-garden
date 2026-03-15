@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import styles from "./MiniProfilePopup.module.scss"
 
 interface Props {
@@ -14,6 +15,7 @@ interface MiniProfile {
   bio: string | null
   created_at: string | null
   name_color: string | null
+  stonk_balance: number | null
 }
 
 function initials(username: string): string {
@@ -71,7 +73,7 @@ export function MiniProfilePopup({ username, anchorEl, onClose }: Props) {
 
   const transformStyle = placeAbove ? "translateY(-100%)" : undefined
 
-  return (
+  return createPortal(
     <div
       ref={popupRef}
       className={styles.miniProfilePopup}
@@ -121,7 +123,9 @@ export function MiniProfilePopup({ username, anchorEl, onClose }: Props) {
             </div>
           )}
           <div className={styles.miniProfileFooter}>
-            <span className={styles.miniProfileStonk}>◆ —</span>
+            {profile.stonk_balance !== null && (
+              <span className={styles.miniProfileStonk}>◆ {profile.stonk_balance}</span>
+            )}
             {profile.created_at && (
               <span className={styles.miniProfileJoined}>
                 joined {formatJoined(profile.created_at)}
@@ -138,6 +142,7 @@ export function MiniProfilePopup({ username, anchorEl, onClose }: Props) {
           </a>
         </>
       )}
-    </div>
+    </div>,
+    document.body
   )
 }

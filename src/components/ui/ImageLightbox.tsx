@@ -1,4 +1,5 @@
 import { useEffect } from "react"
+import { createPortal } from "react-dom"
 import styles from "./ImageLightbox.module.scss"
 
 interface Props {
@@ -16,7 +17,7 @@ export function ImageLightbox({ src, alt, onClose }: Props) {
     return () => document.removeEventListener("keydown", handleKey)
   }, [onClose])
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={onClose}>
       <img
         className={styles.image}
@@ -24,6 +25,7 @@ export function ImageLightbox({ src, alt, onClose }: Props) {
         alt={alt ?? ""}
         onClick={(e) => e.stopPropagation()}
       />
-    </div>
+    </div>,
+    document.body
   )
 }

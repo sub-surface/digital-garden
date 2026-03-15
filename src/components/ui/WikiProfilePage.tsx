@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { useBookmarks } from "@/hooks/useBookmarks"
+import { useStonkHistory } from "@/hooks/useStonkHistory"
+import { StonkSparkline } from "./StonkSparkline"
 
 interface ProfileData {
   username: string
@@ -49,6 +51,8 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
 
   const isOwnProfile = !viewUsername
   const usernameValid = /^[a-zA-Z0-9-]{3,30}$/.test(usernameValue)
+  const stonkUsername = viewUsername ?? auth.username ?? null
+  const { days: stonkDays } = useStonkHistory(stonkUsername)
 
   // Detect fresh magic-link OR password-reset session — prompt user to set/update password
   const amr = (auth.session?.user as any)?.amr as { method: string }[] | undefined
@@ -366,6 +370,19 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
           </div>
         )}
       </div>
+
+      {/* Stonks */}
+      {stonkDays.length > 0 && (
+        <div className="wiki-profile-section">
+          <h3 className="wiki-profile-section-title">Stonks</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
+            <span style={{ fontFamily: "var(--font-code)", fontSize: "1.1rem", color: "var(--color-text)" }}>
+              {stonkDays[stonkDays.length - 1].balance}
+            </span>
+            <StonkSparkline days={stonkDays} width={160} height={36} />
+          </div>
+        </div>
+      )}
 
       {/* Password — own profile only */}
       {isOwnProfile && (

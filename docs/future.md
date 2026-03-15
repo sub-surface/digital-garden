@@ -23,8 +23,9 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 
 ### Tier 3: Polish & UX
 
-- [ ] **Chat restyling**: visual refresh — message density tuning, mobile responsiveness, sidebar UX (collapsible on mobile), input area refinement, typographic consistency across shells
+- [x] **Chat restyling**: header bar with channel selector, centered layout (70% viewport), minimal input, autocomplete (`:emote`, `@mention`, `/command`), emote preview strip, pin ticker, popups portalled for z-index safety. SideChat unified with ChatRoom (single header via `headerExtra` prop, container queries handle narrow mode).
 - [ ] **Admin Room Management UI**: admin-only "+" button in room sidebar → inline form; admin can archive a room
+- [ ] **SideChat docked panel**: on wiki, SideChat should dock to the right edge and push page content left instead of overlapping. Left border acts as a draggable resize handle. Container queries already adapt ChatRoom to narrow widths.
 - [x] **Twitter/X link cards**: `twitter` token type in parseMessageBody + styled card with 𝕏 icon, @username, and URL — no Twitter JS embed loaded
 - [x] **Lazy embeds**: IntersectionObserver wrapper (`LazyEmbed`) in MessageRow — images and YouTube thumbnails only load when within 200px of viewport; emotes excluded (inline, tiny)
 - [ ] **Admin bans — permanent**: on permanent ban: hard-delete all message rows + anonymise profile

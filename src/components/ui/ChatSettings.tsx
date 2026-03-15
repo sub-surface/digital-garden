@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, type RefObject } from "react"
+import { createPortal } from "react-dom"
 import styles from "./ChatSettings.module.scss"
 
 const PRESET_COLORS = [
@@ -8,17 +9,39 @@ const PRESET_COLORS = [
   "#6442b4", "#b44282", "#42b4b4", "#b4b442", "#8a8a8a",
 ]
 
+interface StonkConfigRow {
+  key: string
+  value: number
+}
+
 interface Props {
   anchorRef: RefObject<HTMLElement | null>
   currentColor: string | null
   onSave: (color: string | null) => void
   onClose: () => void
+  isAdmin?: boolean
+  accessToken?: string
 }
 
-export function ChatSettings({ anchorRef, currentColor, onSave, onClose }: Props) {
+export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin, accessToken }: Props) {
   const [color, setColor] = useState(currentColor ?? "")
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
+  const [stonkConfig, setStonkConfig] = useState<StonkConfigRow[]>([])
+  const [stonkLoading, setStonkLoading] = useState(false)
+
+  // Load stonk config for admins
+  useEffect(() => {
+    if (!isAdmin || !accessToken) return
+    setStonkLoading(true)
+    fetch("/api/admin/stonk-config", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((data: StonkConfigRow[]) => setStonkConfig(data))
+      .catch(() => {})
+      .finally(() => setStonkLoading(false))
+  }, [isAdmin, accessToken])
 
   useEffect(() => {
     if (anchorRef.current) {
@@ -65,7 +88,7 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose }: Props
     }
   }
 
-  return (
+  return createPortal(
     <div
       className={styles.settings}
       ref={ref}
@@ -106,6 +129,70 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose }: Props
       <button className={styles.resetBtn} onClick={handleReset} type="button">
         reset to default
       </button>
-    </div>
+
+      {isAdmin && accessToken && (
+        <>
+          <div className={styles.divider} />
+          <div className={styles.header}>stonk config</div>
+          {stonkLoading ? (
+            <div className={styles.stonkLoading}>loading...</div>
+          ) : (
+            <div className={styles.stonkTable}>
+              {stonkConfig.map((row) => (
+                <div key={row.key} className={styles.stonkRow}>
+                  {row.key === "stonks_enabled" ? (
+                    <>
+                      <span className={styles.stonkKey}>{row.key}</span>
+                      <button
+                        className={`${styles.stonkToggle} ${row.value ? styles.stonkToggleOn : ""}`}
+                        onClick={() => {
+                          const newVal = row.value ? 0 : 1
+                          setStonkConfig(prev => prev.map(r => r.key === row.key ? { ...r, value: newVal } : r))
+                          fetch("/api/admin/stonk-config", {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+                            body: JSON.stringify({ key: row.key, value: newVal }),
+                          }).catch(() => {
+                            setStonkConfig(prev => prev.map(r => r.key === row.key ? { ...r, value: row.value } : r))
+                          })
+                        }}
+                        type="button"
+                      >
+                        {row.value ? "on" : "off"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className={styles.stonkKey}>{row.key}</span>
+                      <input
+                        className={styles.stonkInput}
+                        type="number"
+                        value={row.value}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10)
+                          if (isNaN(val)) return
+                          setStonkConfig(prev => prev.map(r => r.key === row.key ? { ...r, value: val } : r))
+                        }}
+                        onBlur={() => {
+                          fetch("/api/admin/stonk-config", {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+                            body: JSON.stringify({ key: row.key, value: row.value }),
+                          }).catch(() => {})
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") (e.target as HTMLInputElement).blur()
+                        }}
+                      />
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>,
+    document.body
   )
 }

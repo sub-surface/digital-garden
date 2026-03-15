@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react"
+import { createPortal } from "react-dom"
 import styles from "./EmotePopup.module.scss"
 
 interface Props {
@@ -34,7 +35,7 @@ export function EmotePopup({ name, src, anchor, onClose }: Props) {
     top: Math.min(Math.max(anchor.y - 140, 8), window.innerHeight - 160),
   }
 
-  return (
+  return createPortal(
     <div className={styles.popup} ref={ref} style={style}>
       <img
         className={styles.emoteImg}
@@ -49,6 +50,7 @@ export function EmotePopup({ name, src, anchor, onClose }: Props) {
         }}
       />
       <span className={styles.emoteName}>:{name}:</span>
-    </div>
+    </div>,
+    document.body
   )
 }

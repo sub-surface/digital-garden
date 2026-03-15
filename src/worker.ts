@@ -875,6 +875,33 @@ async function handleAdmin(request: Request, env: Env, pathname: string): Promis
     return jsonResponse({ ok: true })
   }
 
+  // GET /api/admin/stonk-config
+  if (pathname === "/api/admin/stonk-config" && request.method === "GET") {
+    const res = await supabaseRest(env, "stonk_config?select=key,value&order=key.asc")
+    if (!res.ok) return jsonResponse({ error: "Failed to fetch stonk config" }, 500)
+    return jsonResponse(await res.json())
+  }
+
+  // PUT /api/admin/stonk-config
+  if (pathname === "/api/admin/stonk-config" && request.method === "PUT") {
+    const body = await request.json<{ key: string; value: number }>()
+    if (!body.key?.trim() || typeof body.value !== "number") {
+      return jsonResponse({ error: "key and numeric value required" }, 400)
+    }
+    const res = await fetch(`${env.SUPABASE_URL}/rest/v1/stonk_config?key=eq.${encodeURIComponent(body.key.trim())}`, {
+      method: "PATCH",
+      headers: {
+        apikey: env.SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({ value: body.value }),
+    })
+    if (!res.ok) return jsonResponse({ error: "Failed to update stonk config" }, 500)
+    return jsonResponse({ ok: true })
+  }
+
   return jsonResponse({ error: "Not found" }, 404)
 }
 
@@ -969,6 +996,33 @@ async function handleChatMessages(request: Request, env: Env, url: URL): Promise
       deleted_by: auth.id,
     })
     if (!delRes.ok) return jsonResponse({ error: "Failed to delete message" }, 500)
+    return jsonResponse({ ok: true })
+  }
+
+  // PATCH /api/chat/messages/:id — edit own message
+  if (request.method === "PATCH") {
+    const id = url.pathname.split("/").pop()
+    if (!id) return jsonResponse({ error: "Message ID required" }, 400)
+
+    let payload: { body?: string }
+    try { payload = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
+    const newBody = payload.body?.trim()
+    if (!newBody) return jsonResponse({ error: "body required" }, 400)
+    if (newBody.length > 2000) return jsonResponse({ error: "Message too long" }, 400)
+
+    const fetchRes = await supabaseRest(env, `messages?id=eq.${id}&select=id,user_id,deleted_at`)
+    if (!fetchRes.ok) return jsonResponse({ error: "Failed to fetch message" }, 500)
+    const rows = await fetchRes.json<{ id: string; user_id: string; deleted_at: string | null }[]>()
+    if (!rows.length) return jsonResponse({ error: "Message not found" }, 404)
+    const msg = rows[0]
+    if (msg.deleted_at) return jsonResponse({ error: "Message is deleted" }, 409)
+    if (msg.user_id !== auth.id) return jsonResponse({ error: "Forbidden" }, 403)
+
+    const editRes = await supabaseRest(env, `messages?id=eq.${id}`, "PATCH", {
+      body: newBody,
+      edited_at: new Date().toISOString(),
+    })
+    if (!editRes.ok) return jsonResponse({ error: "Failed to edit message" }, 500)
     return jsonResponse({ ok: true })
   }
 
@@ -1080,6 +1134,8 @@ async function handleChatReactions(request: Request, env: Env): Promise<Response
       body: JSON.stringify({ message_id: body.message_id.trim(), user_id: auth.id, emote: body.emote.trim() }),
     })
     if (!res.ok) return jsonResponse({ error: "Failed to add reaction" }, 500)
+    // Fire-and-forget stonk processing
+    processStonkReaction(env, body.message_id.trim(), body.emote.trim(), auth.id, false).catch(() => {})
     return jsonResponse({ ok: true })
   }
 
@@ -1090,6 +1146,8 @@ async function handleChatReactions(request: Request, env: Env): Promise<Response
       "DELETE",
     )
     if (!res.ok) return jsonResponse({ error: "Failed to remove reaction" }, 500)
+    // Fire-and-forget stonk reversal
+    processStonkReaction(env, body.message_id.trim(), body.emote.trim(), auth.id, true).catch(() => {})
     return jsonResponse({ ok: true })
   }
 
@@ -1143,6 +1201,215 @@ async function handleChatSearch(request: Request, env: Env, url: URL): Promise<R
   return jsonResponse({ messages: filtered })
 }
 
+// ── GET /api/chat/pins?room=X — POST/DELETE /api/chat/messages/:id/pin ──
+
+async function handleChatPins(request: Request, env: Env, url: URL): Promise<Response> {
+  const auth = await verifyAuth(request, env)
+  if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+
+  // GET /api/chat/pins?room=X — list pinned messages for a room
+  if (request.method === "GET") {
+    const room = url.searchParams.get("room")
+    if (!room) return jsonResponse({ error: "room parameter required" }, 400)
+
+    const res = await supabaseRest(
+      env,
+      `messages?room_id=eq.${encodeURIComponent(room)}&pinned_at=not.is.null&deleted_at=is.null&order=pinned_at.desc&limit=20&select=id,body,pinned_at,pinned_by,profiles!messages_user_id_fkey(username,avatar_url,name_color)`
+    )
+    if (!res.ok) return jsonResponse({ error: "Failed to fetch pins" }, 500)
+    const pins = await res.json()
+    return jsonResponse({ pins })
+  }
+
+  return jsonResponse({ error: "Method not allowed" }, 405)
+}
+
+async function handleChatPin(request: Request, env: Env, url: URL): Promise<Response> {
+  const auth = await verifyAuth(request, env)
+  if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+  if (auth.role !== "admin") return jsonResponse({ error: "Admin only" }, 403)
+
+  const id = url.pathname.split("/")[4] // /api/chat/messages/:id/pin
+  if (!id) return jsonResponse({ error: "Message ID required" }, 400)
+
+  if (request.method === "POST") {
+    const res = await supabaseRest(env, `messages?id=eq.${id}`, "PATCH", {
+      pinned_at: new Date().toISOString(),
+      pinned_by: auth.id,
+    })
+    if (!res.ok) return jsonResponse({ error: "Failed to pin message" }, 500)
+    return jsonResponse({ ok: true })
+  }
+
+  if (request.method === "DELETE") {
+    const res = await supabaseRest(env, `messages?id=eq.${id}`, "PATCH", {
+      pinned_at: null,
+      pinned_by: null,
+    })
+    if (!res.ok) return jsonResponse({ error: "Failed to unpin message" }, 500)
+    return jsonResponse({ ok: true })
+  }
+
+  return jsonResponse({ error: "Method not allowed" }, 405)
+}
+
+// ── Stonk helpers ──
+
+async function getStonkConfig(env: Env): Promise<Record<string, number>> {
+  const res = await supabaseRest(env, "stonk_config?select=key,value")
+  if (!res.ok) return {}
+  const rows = await res.json<{ key: string; value: number }[]>()
+  const config: Record<string, number> = {}
+  for (const r of rows) config[r.key] = r.value
+  return config
+}
+
+async function writeStonkLedger(
+  env: Env,
+  userId: string,
+  amount: number,
+  reason: string,
+  sourceType: string,
+  sourceId: string,
+) {
+  // Clamp: don't write if it would take balance below 0
+  // Check current balance first
+  const balRes = await supabaseRest(env, `stonk_balance?user_id=eq.${userId}&select=balance`)
+  const balRows = await balRes.json<{ balance: number }[]>().catch(() => [] as { balance: number }[])
+  const currentBalance = balRows.length > 0 ? balRows[0].balance : 0
+  if (currentBalance + amount < 0) {
+    // Clamp: only debit what they have
+    amount = -currentBalance
+  }
+  if (amount === 0) return
+
+  await supabaseRest(env, "stonk_ledger", "POST", {
+    user_id: userId,
+    amount,
+    reason,
+    source_type: sourceType,
+    source_id: sourceId,
+  })
+}
+
+async function processStonkReaction(
+  env: Env,
+  messageId: string,
+  emote: string,
+  reactorId: string,
+  isDelete: boolean,
+) {
+  const config = await getStonkConfig(env)
+  if (!config.stonks_enabled) return
+
+  // Look up the message author
+  const msgRes = await supabaseRest(env, `messages?id=eq.${messageId}&select=user_id`)
+  if (!msgRes.ok) return
+  const msgs = await msgRes.json<{ user_id: string }[]>()
+  if (!msgs.length) return
+  const authorId = msgs[0].user_id
+
+  // No self-stonking
+  if (reactorId === authorId) return
+
+  const sourceId = `${messageId}:${reactorId}:${emote}`
+
+  if (isDelete) {
+    // Reversal: look up original ledger entries by source_id and negate them
+    const ledgerRes = await supabaseRest(env, `stonk_ledger?source_id=eq.${encodeURIComponent(sourceId)}&select=user_id,amount,source_type`)
+    if (!ledgerRes.ok) return
+    const entries = await ledgerRes.json<{ user_id: string; amount: number; source_type: string }[]>()
+    // Sum amounts per user to get net, then insert reversal
+    const netByUser: Record<string, { amount: number; sourceType: string }> = {}
+    for (const e of entries) {
+      const key = `${e.user_id}:${e.source_type}`
+      if (!netByUser[key]) netByUser[key] = { amount: 0, sourceType: e.source_type }
+      netByUser[key].amount += e.amount
+    }
+    for (const [key, val] of Object.entries(netByUser)) {
+      if (val.amount === 0) continue
+      const userId = key.split(":")[0]
+      await supabaseRest(env, "stonk_ledger", "POST", {
+        user_id: userId,
+        amount: -val.amount,
+        reason: `reversal: ${emote} reaction removed`,
+        source_type: val.sourceType,
+        source_id: sourceId,
+      })
+    }
+    return
+  }
+
+  // Add reaction: credit the author
+  const receivedKey = `${emote}_received`
+  const receivedAmount = config[receivedKey] ?? config.reaction_received_default ?? 0
+  if (receivedAmount !== 0) {
+    await writeStonkLedger(env, authorId, receivedAmount, `received ${emote} reaction`, "reaction_received", sourceId)
+  }
+
+  // For nahh: also debit the reactor
+  if (emote === "nahh") {
+    const givenAmount = config.nahh_given ?? 0
+    if (givenAmount !== 0) {
+      await writeStonkLedger(env, reactorId, givenAmount, `gave nahh reaction`, "reaction_given", sourceId)
+    }
+  }
+}
+
+// ── GET /api/chat/users/:username/stonk-history ──
+
+async function handleStonkHistory(request: Request, env: Env, username: string): Promise<Response> {
+  if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405)
+
+  // Check if stonks enabled
+  const config = await getStonkConfig(env)
+  if (!config.stonks_enabled) return jsonResponse({ days: [] })
+
+  // Look up user_id from username
+  const userRes = await supabaseRest(env, `profiles?username=eq.${encodeURIComponent(username)}&select=id`)
+  if (!userRes.ok) return jsonResponse({ error: "Failed to fetch user" }, 500)
+  const users = await userRes.json<{ id: string }[]>()
+  if (!users.length) return jsonResponse({ error: "User not found" }, 404)
+  const userId = users[0].id
+
+  // Get last 90 days of ledger entries
+  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+  const ledgerRes = await supabaseRest(
+    env,
+    `stonk_ledger?user_id=eq.${userId}&created_at=gte.${encodeURIComponent(since)}&select=amount,created_at&order=created_at.asc`
+  )
+  if (!ledgerRes.ok) return jsonResponse({ error: "Failed to fetch history" }, 500)
+  const entries = await ledgerRes.json<{ amount: number; created_at: string }[]>()
+
+  // Get balance before the 90-day window for running total
+  const preRes = await supabaseRest(
+    env,
+    `stonk_ledger?user_id=eq.${userId}&created_at=lt.${encodeURIComponent(since)}&select=amount`
+  )
+  let preBalance = 0
+  if (preRes.ok) {
+    const preEntries = await preRes.json<{ amount: number }[]>()
+    preBalance = preEntries.reduce((sum, e) => sum + e.amount, 0)
+  }
+
+  // Aggregate by day
+  const dailyDeltas: Record<string, number> = {}
+  for (const e of entries) {
+    const day = e.created_at.slice(0, 10) // YYYY-MM-DD
+    dailyDeltas[day] = (dailyDeltas[day] ?? 0) + e.amount
+  }
+
+  // Build running sum
+  const sortedDays = Object.keys(dailyDeltas).sort()
+  let running = Math.max(preBalance, 0)
+  const days = sortedDays.map(date => {
+    running = Math.max(running + dailyDeltas[date], 0)
+    return { date, balance: running }
+  })
+
+  return jsonResponse({ days })
+}
+
 // ── GET /api/chat/users/:username/mini ──
 
 async function handleChatUserMini(request: Request, env: Env, username: string): Promise<Response> {
@@ -1150,17 +1417,30 @@ async function handleChatUserMini(request: Request, env: Env, username: string):
 
   const res = await supabaseRest(
     env,
-    `profiles?username=eq.${encodeURIComponent(username)}&select=username,avatar_url,role,bio,created_at,name_color`,
+    `profiles?username=eq.${encodeURIComponent(username)}&select=id,username,avatar_url,role,bio,created_at,name_color`,
   )
   if (!res.ok) return jsonResponse({ error: "Failed to fetch user" }, 500)
-  const rows = await res.json<{ username: string; avatar_url: string | null; role: string; bio: string | null; created_at: string | null; name_color: string | null }[]>()
+  const rows = await res.json<{ id: string; username: string; avatar_url: string | null; role: string; bio: string | null; created_at: string | null; name_color: string | null }[]>()
   if (!rows.length) return jsonResponse({ error: "User not found" }, 404)
   const row = rows[0]
   if (!row.avatar_url) {
     const index = await getContentIndex(env.ASSETS)
     row.avatar_url = chatterImageForUsername(index, username)
   }
-  return jsonResponse(row)
+
+  // Stonk balance
+  const config = await getStonkConfig(env)
+  let stonk_balance: number | null = null
+  if (config.stonks_enabled) {
+    const balRes = await supabaseRest(env, `stonk_balance?user_id=eq.${row.id}&select=balance`)
+    if (balRes.ok) {
+      const balRows = await balRes.json<{ balance: number }[]>()
+      stonk_balance = balRows.length > 0 ? balRows[0].balance : 0
+    }
+  }
+
+  const { id: _id, ...rest } = row
+  return jsonResponse({ ...rest, stonk_balance })
 }
 
 // ── POST /api/chat/ban — POST /api/chat/unban ──
@@ -1265,9 +1545,15 @@ export default {
     // Chat API
     if (url.pathname === "/api/chat/rooms") return handleChatRooms(request, env)
     if (url.pathname === "/api/chat/messages") return handleChatMessages(request, env, url)
+    if (url.pathname.match(/^\/api\/chat\/messages\/[^/]+\/pin$/)) return handleChatPin(request, env, url)
     if (url.pathname.match(/^\/api\/chat\/messages\/[^/]+$/)) return handleChatMessages(request, env, url)
+    if (url.pathname === "/api/chat/pins") return handleChatPins(request, env, url)
     if (url.pathname === "/api/chat/reactions") return handleChatReactions(request, env)
     if (url.pathname === "/api/chat/search") return handleChatSearch(request, env, url)
+    if (url.pathname.match(/^\/api\/chat\/users\/[^/]+\/stonk-history$/)) {
+      const username = decodeURIComponent(url.pathname.split("/")[4])
+      return handleStonkHistory(request, env, username)
+    }
     if (url.pathname.match(/^\/api\/chat\/users\/[^/]+\/mini$/)) {
       const username = decodeURIComponent(url.pathname.split("/")[4])
       return handleChatUserMini(request, env, username)

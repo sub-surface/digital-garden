@@ -125,10 +125,54 @@ All message body rendering goes through a shared `parseMessageBody(text)` utilit
 - [ ] All embeds lazy — nothing loads until the message is in the viewport (`IntersectionObserver`)
 - [x] `onError` on all `<img>` tags — hide broken images silently, never show broken image icon in chat
 
+### Message Pinning (Admin)
+
+- [x] `pinned_at`, `pinned_by` columns on `messages` table
+- [x] `GET /api/chat/pins?room=` — list pinned messages for a room
+- [x] `POST /api/chat/messages/:id/pin` — admin only
+- [x] `DELETE /api/chat/messages/:id/pin` — admin only
+- [x] Pin ticker bar below header — accent-tinted background, carousel with dot pips for multiple pins, auto-cycles every 6s, pauses on hover
+- [x] Pin ticker renders emotes via `parseMessageBody`
+- [x] Pin/unpin action on message hover (admin only)
+
+### Message Editing
+
+- [x] `edited_at` column on `messages` table
+- [x] `PATCH /api/chat/messages/:id` — own messages only, updates body + sets `edited_at`
+- [x] Inline edit mode on MessageRow — textarea auto-sizes to content, Enter saves, Escape cancels
+- [x] Edit button in message hover actions (own messages only)
+- [x] Up arrow on empty input triggers edit on last own message
+- [x] "(edited)" indicator on edited messages
+- [x] Optimistic update with rollback on failure
+
+### Autocomplete System
+
+- [x] Unified autocomplete popup in MessageInput — triggered by `:` (emotes), `@` (mentions), `/` (commands)
+- [x] Arrow keys navigate, Tab/Enter selects, Escape dismisses
+- [x] Emote completions from `/emotes/index.json` with thumbnail previews
+- [x] User mention completions from known message authors in room
+- [x] Initial commands: `/gif` (opens picker), `/shrug` (inserts text), `/me` (action text)
+- [ ] Future commands: `/whisper`, `/pepo`, `/remind`
+
+### Emote Preview Strip
+
+- [x] Thin strip above input area — renders emote images when input contains `:emote:` tokens
+- [x] Deduplicates emotes, falls back from .gif to .png
+
+### Chat Layout Overhaul
+
+- [x] Sidebar collapsed into compact header bar: `[# channel selector] ... [search] [pin] [settings]`
+- [x] Chat main area centered (`justify-content: center`), 70% viewport width, max 860px
+- [x] Channel selector dropdown in header — unified between ChatPage and SideChat via `headerExtra` prop
+- [x] Search button expands inline input field with debounced results
+- [x] Borders removed between panels for leaner look
+- [x] Input box minimalized — transparent background, bottom-line only
+- [x] Name color applied as default username color (not just hover accent)
+
 ### Admin Room Management UI
 
-- [ ] Admin-only "+" button in room sidebar → inline form: room name + slug → `POST /api/chat/rooms`
-- [ ] Admin can archive a room (removes from sidebar, preserves history)
+- [ ] Admin-only "+" button in header → inline form: room name + slug → `POST /api/chat/rooms`
+- [ ] Admin can archive a room (removes from list, preserves history)
 
 ---
 

@@ -10,7 +10,12 @@ interface Props {
   onUsernameClick?: (username: string, el: HTMLElement) => void
   onReact?: (messageId: string, emote: string) => void
   onDelete?: (messageId: string) => void
+  onEdit?: (messageId: string, newBody: string) => void
+  onPin?: (messageId: string) => void
+  isAdmin?: boolean
   currentUserId?: string
+  editingMessageId?: string | null
+  onCancelEdit?: () => void
   lastReadTimestamp?: string | null
   loadingMore?: boolean
 }
@@ -45,7 +50,7 @@ function getDayKey(iso: string): string {
 }
 
 export const MessageList = forwardRef<HTMLDivElement, Props>(function MessageList(
-  { messages, onReply, onScroll, onUsernameClick, onReact, onDelete, currentUserId, lastReadTimestamp, loadingMore },
+  { messages, onReply, onScroll, onUsernameClick, onReact, onDelete, onEdit, onPin, isAdmin, currentUserId, editingMessageId, onCancelEdit, lastReadTimestamp, loadingMore },
   ref
 ) {
   const nodes: ReactNode[] = []
@@ -90,7 +95,12 @@ export const MessageList = forwardRef<HTMLDivElement, Props>(function MessageLis
         onUsernameClick={onUsernameClick}
         onReact={onReact}
         onDelete={onDelete}
+        onEdit={onEdit}
+        onPin={onPin}
+        isAdmin={isAdmin}
         isOwn={currentUserId ? msg.user_id === currentUserId : false}
+        isEditing={editingMessageId === msg.id}
+        onCancelEdit={onCancelEdit}
         reactions={msg.reactions}
       />
     )

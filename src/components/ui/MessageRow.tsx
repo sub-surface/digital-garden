@@ -1,9 +1,49 @@
 import { useState, useRef, useEffect, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 import type { ChatMessage, ChatReaction } from "@/types/chat"
 import { parseMessageBody } from "@/lib/parseMessageBody"
 import { ImageLightbox } from "./ImageLightbox"
 import { EmotePopup } from "./EmotePopup"
 import styles from "./Chat.module.scss"
+
+interface EmoteEntry { name: string; ext: string }
+
+const FALLBACK_EMOTES: EmoteEntry[] = [
+  { name: "kek", ext: "gif" },
+  { name: "based", ext: "gif" },
+  { name: "nahh", ext: "gif" },
+  { name: "gigachad", ext: "gif" },
+  { name: "cope", ext: "gif" },
+  { name: "pepehands", ext: "gif" },
+  { name: "pog", ext: "gif" },
+  { name: "wave", ext: "gif" },
+]
+
+// Shared emote index — fetched once, cached across all MessageRow instances
+let cachedEmotes: EmoteEntry[] | null = null
+let emoteFetchPromise: Promise<void> | null = null
+
+function useEmoteIndex() {
+  const [emotes, setEmotes] = useState<EmoteEntry[]>(cachedEmotes ?? FALLBACK_EMOTES)
+
+  useEffect(() => {
+    if (cachedEmotes) { setEmotes(cachedEmotes); return }
+    if (!emoteFetchPromise) {
+      emoteFetchPromise = fetch("/emotes/index.json")
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then((data: unknown) => {
+          if (!Array.isArray(data) || data.length === 0) return
+          cachedEmotes = typeof data[0] === "string"
+            ? (data as string[]).map(name => ({ name, ext: "gif" }))
+            : data as EmoteEntry[]
+        })
+        .catch(() => { cachedEmotes = FALLBACK_EMOTES })
+    }
+    emoteFetchPromise.then(() => { if (cachedEmotes) setEmotes(cachedEmotes) })
+  }, [])
+
+  return emotes
+}
 
 interface Props {
   msg: ChatMessage
@@ -11,7 +51,12 @@ interface Props {
   onReply: (msg: ChatMessage) => void
   onReact?: (messageId: string, emote: string) => void
   onDelete?: (messageId: string) => void
+  onEdit?: (messageId: string, newBody: string) => void
+  onCancelEdit?: () => void
+  onPin?: (messageId: string) => void
+  isAdmin?: boolean
   isOwn?: boolean
+  isEditing?: boolean
   reactions?: ChatReaction[]
 }
 
@@ -90,6 +135,36 @@ function LazyEmbed({ children, className }: { children: React.ReactNode; classNa
       {visible ? children : null}
     </div>
   )
+}
+
+function renderInlineSnippet(body: string, maxLen: number): ReactNode[] {
+  const truncated = body.length > maxLen ? body.slice(0, maxLen) + "..." : body
+  const tokens = parseMessageBody(truncated)
+  return tokens.map((tok, i) => {
+    if (tok.type === "emote") {
+      return (
+        <img
+          key={i}
+          src={`/emotes/${tok.name}.gif`}
+          alt={`:${tok.name}:`}
+          className={styles.emote}
+          style={{ height: "1em" }}
+          onError={(e) => {
+            const img = e.currentTarget as HTMLImageElement
+            if (!img.dataset.pngFallback) {
+              img.dataset.pngFallback = "1"
+              img.src = `/emotes/${tok.name}.png`
+            } else {
+              img.replaceWith(document.createTextNode(`:${tok.name}:`))
+            }
+          }}
+        />
+      )
+    }
+    if (tok.type === "text") return <span key={i}>{tok.value}</span>
+    if (tok.type === "url") return <span key={i}>{tok.label}</span>
+    return null
+  })
 }
 
 function isEmoteOnly(body: string): boolean {
@@ -191,13 +266,83 @@ function MessageBodyRenderer({
   return <>{nodes}</>
 }
 
-export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, isOwn, reactions, onUsernameClick }: Props & { onUsernameClick?: (username: string, el: HTMLElement) => void }) {
+export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, onEdit, onCancelEdit, onPin, isAdmin, isOwn, isEditing: isEditingProp, reactions, onUsernameClick }: Props & { onUsernameClick?: (username: string, el: HTMLElement) => void }) {
   const username = msg.profiles?.username ?? "unknown"
   const avatarUrl = msg.profiles?.avatar_url ?? null
   const nameColor = msg.profiles?.name_color ?? undefined
 
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [emotePopup, setEmotePopup] = useState<{ name: string; src: string; x: number; y: number } | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [editBody, setEditBody] = useState("")
+  const editRef = useRef<HTMLTextAreaElement>(null)
+  const [reactPickerOpen, setReactPickerOpen] = useState(false)
+  const [reactFilter, setReactFilter] = useState("")
+  const reactBtnRef = useRef<HTMLButtonElement>(null)
+  const reactPickerRef = useRef<HTMLDivElement>(null)
+  const allEmotes = useEmoteIndex()
+
+  // External trigger (up-arrow from MessageInput)
+  useEffect(() => {
+    if (isEditingProp && !editing) startEdit()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditingProp])
+
+  useEffect(() => {
+    if (editing && editRef.current) {
+      const el = editRef.current
+      el.focus()
+      const len = el.value.length
+      el.setSelectionRange(len, len)
+      // Auto-size to content
+      el.style.height = "auto"
+      el.style.height = el.scrollHeight + "px"
+    }
+  }, [editing])
+
+  // Close react picker on outside click
+  useEffect(() => {
+    if (!reactPickerOpen) return
+    function handleMouseDown(e: MouseEvent) {
+      if (reactPickerRef.current && !reactPickerRef.current.contains(e.target as Node) &&
+          reactBtnRef.current && !reactBtnRef.current.contains(e.target as Node)) {
+        setReactPickerOpen(false)
+        setReactFilter("")
+      }
+    }
+    document.addEventListener("mousedown", handleMouseDown)
+    return () => document.removeEventListener("mousedown", handleMouseDown)
+  }, [reactPickerOpen])
+
+  function startEdit() {
+    setEditBody(msg.body)
+    setEditing(true)
+  }
+
+  function cancelEdit() {
+    setEditing(false)
+    onCancelEdit?.()
+  }
+
+  function submitEdit() {
+    const trimmed = editBody.trim()
+    if (!trimmed || trimmed === msg.body) {
+      cancelEdit()
+      return
+    }
+    onEdit?.(msg.id, trimmed)
+    setEditing(false)
+  }
+
+  function handleEditKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      submitEdit()
+    }
+    if (e.key === "Escape") {
+      cancelEdit()
+    }
+  }
 
   return (
     <div className={styles.messageRow}>
@@ -230,13 +375,29 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, i
         {msg.reply_to_message && (
           <div className={styles.replyBar}>
             <strong>@{msg.reply_to_message.profiles?.username ?? "unknown"}</strong>:{" "}
-            {msg.reply_to_message.body.slice(0, 80)}
-            {msg.reply_to_message.body.length > 80 ? "..." : ""}
+            {renderInlineSnippet(msg.reply_to_message.body, 80)}
           </div>
         )}
 
         {msg.deleted_at ? (
           <span className={styles.deleted}>[message deleted]</span>
+        ) : editing ? (
+          <div className={styles.editArea}>
+            <textarea
+              ref={editRef}
+              className={styles.editTextarea}
+              value={editBody}
+              onChange={(e) => {
+                setEditBody(e.target.value)
+                e.target.style.height = "auto"
+                e.target.style.height = e.target.scrollHeight + "px"
+              }}
+              onKeyDown={handleEditKeyDown}
+              rows={1}
+              maxLength={2000}
+            />
+            <div className={styles.editHint}>enter to save · esc to cancel</div>
+          </div>
         ) : (
           <div className={isEmoteOnly(msg.body) ? styles.messageBodyEmoteOnly : styles.messageBody}>
             <MessageBodyRenderer
@@ -244,6 +405,7 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, i
               onImageClick={(src) => setLightboxSrc(src)}
               onEmoteClick={(name, src, e) => setEmotePopup({ name, src, x: e.clientX, y: e.clientY })}
             />
+            {msg.edited_at && <span className={styles.editedTag}>(edited)</span>}
           </div>
         )}
 
@@ -259,7 +421,7 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, i
                 <img src={`/emotes/${r.emote}.gif`} alt={r.emote} className={styles.reactionEmote}
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
                 />
-                <span>{r.count}</span>
+                {r.count > 1 && <span>{r.count}</span>}
               </button>
             ))}
           </div>
@@ -268,9 +430,22 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, i
 
       {!msg.deleted_at && (
         <div className={styles.msgActions}>
-          <button className={styles.stonkBtn} onClick={() => onReact?.(msg.id, "stonk")} aria-label="Stonk">&#x25B2;</button>
+          <button
+            ref={reactBtnRef}
+            className={styles.replyBtn}
+            onClick={() => setReactPickerOpen(v => !v)}
+            aria-label="React"
+          >+</button>
           <button className={styles.replyBtn} onClick={() => onReply(msg)} aria-label="Reply">reply</button>
           {isOwn && (
+            <button className={styles.replyBtn} onClick={startEdit} aria-label="Edit">edit</button>
+          )}
+          {isAdmin && (
+            <button className={styles.replyBtn} onClick={() => onPin?.(msg.id)} aria-label={msg.pinned_at ? "Unpin" : "Pin"}>
+              {msg.pinned_at ? "unpin" : "pin"}
+            </button>
+          )}
+          {(isOwn || isAdmin) && (
             <button className={styles.deleteBtn} onClick={() => onDelete?.(msg.id)} aria-label="Delete">del</button>
           )}
         </div>
@@ -287,6 +462,62 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, i
           anchor={{ x: emotePopup.x, y: emotePopup.y }}
           onClose={() => setEmotePopup(null)}
         />
+      )}
+
+      {reactPickerOpen && reactBtnRef.current && createPortal(
+        (() => {
+          const rect = reactBtnRef.current!.getBoundingClientRect()
+          const pickerWidth = 220
+          const left = Math.min(rect.left, window.innerWidth - pickerWidth - 8)
+          const filtered = reactFilter.trim()
+            ? allEmotes.filter(e => e.name.includes(reactFilter.trim().toLowerCase()))
+            : allEmotes
+          return (
+            <div
+              ref={reactPickerRef}
+              className={styles.reactPicker}
+              style={{ top: rect.bottom + 4, left }}
+            >
+              <input
+                className={styles.reactPickerFilter}
+                type="text"
+                placeholder="filter..."
+                value={reactFilter}
+                onChange={(e) => setReactFilter(e.target.value)}
+                autoComplete="off"
+                autoFocus
+              />
+              <div className={styles.reactPickerGrid}>
+                {filtered.map(emote => (
+                  <button
+                    key={emote.name}
+                    className={styles.reactPickerBtn}
+                    onClick={() => {
+                      onReact?.(msg.id, emote.name)
+                      setReactPickerOpen(false)
+                      setReactFilter("")
+                    }}
+                    title={`:${emote.name}:`}
+                  >
+                    <img
+                      src={`/emotes/${emote.name}.${emote.ext}`}
+                      alt={`:${emote.name}:`}
+                      className={styles.reactPickerEmote}
+                      onError={(e) => {
+                        const img = e.currentTarget as HTMLImageElement
+                        if (!img.dataset.pngFallback) {
+                          img.dataset.pngFallback = "1"
+                          img.src = `/emotes/${emote.name}.png`
+                        }
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })(),
+        document.body
       )}
     </div>
   )

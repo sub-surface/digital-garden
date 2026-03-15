@@ -100,6 +100,90 @@
   }
 }
 
+.divider {
+  height: 1px;
+  background: var(--color-border);
+  opacity: 0.4;
+  margin: 8px 0;
+}
+
+.stonkLoading {
+  font-family: var(--font-code);
+  font-size: 0.62rem;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  padding: 4px 0;
+}
+
+.stonkTable {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stonkRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.stonkKey {
+  font-family: var(--font-code);
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stonkInput {
+  width: 48px;
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  color: var(--color-text);
+  font-family: var(--font-code);
+  font-size: 0.65rem;
+  padding: 2px 4px;
+  text-align: right;
+  outline: none;
+  -moz-appearance: textfield;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  &:focus {
+    border-color: color-mix(in srgb, var(--color-accent-base) 50%, transparent);
+  }
+}
+
+.stonkToggle {
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.6rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+
+  &:hover {
+    border-color: var(--color-accent);
+  }
+}
+
+.stonkToggleOn {
+  border-color: color-mix(in srgb, var(--color-accent-base) 50%, transparent);
+  color: var(--color-accent);
+}
+
 @keyframes popIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }

@@ -6,7 +6,10 @@
       "WebFetch(domain:supabase.com)",
       "Bash(curl:*)",
       "Bash(gh api:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npx tsc:*)",
+      "mcp__plugin_supabase_supabase__list_projects",
+      "Bash(npm run:*)"
     ]
   }
 }
