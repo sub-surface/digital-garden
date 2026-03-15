@@ -17,17 +17,19 @@ Append-only. One row per point event.
 | `amount` | INTEGER | Positive or negative |
 | `reason` | TEXT | Human-readable (e.g. "received kek reaction") |
 | `source_type` | TEXT | `reaction_received`, `reaction_given` |
-| `source_id` | TEXT | message_id — for audit/dedup |
+| `source_id` | TEXT | Composite key: `{message_id}:{reactor_user_id}:{emote}` — uniquely identifies the reaction event for reversals |
 | `created_at` | TIMESTAMPTZ | `now()` |
 
-Indexes: `(user_id, created_at DESC)`, `(created_at)`.
+Indexes: `(user_id, created_at DESC)`, `(created_at)`, `(source_id, source_type)`.
 
 ### `stonk_balance` view
 
 ```sql
-SELECT user_id, COALESCE(SUM(amount), 0) AS balance
+SELECT user_id, GREATEST(COALESCE(SUM(amount), 0), 0) AS balance
 FROM stonk_ledger GROUP BY user_id
 ```
+
+Balance floor enforced at view level via `GREATEST(..., 0)`. Worker also clamps before insert as a belt-and-suspenders check.
 
 Never written to directly. Queried by API endpoints.
 
@@ -48,7 +50,7 @@ Seed values:
 | `nahh_given` | -1 | Points debited from the user who gives a nahh reaction |
 | `reaction_received_default` | 0 | Fallback for emotes without explicit config |
 
-Lookup logic: for emote `X`, worker checks `{X}_received` in config. If not found, uses `reaction_received_default`. Balance floor is 0 — worker clamps before insert.
+Lookup logic: for emote `X`, worker checks `{X}_received` in config. If not found, uses `reaction_received_default`.
 
 ## API
 
@@ -62,9 +64,11 @@ After inserting or deleting a reaction:
 4. Look up `{emote}_received` in `stonk_config` (fallback: `reaction_received_default`)
 5. If value != 0, insert `stonk_ledger` row for the author (`source_type: reaction_received`)
 6. For nahh: also look up `nahh_given`, insert a debit row for the reactor (`source_type: reaction_given`)
-7. On reaction DELETE: insert a reversal row (negated amount, same `source_id`) — ledger is append-only
+7. On reaction DELETE: look up the original ledger row(s) by `source_id` and negate the actual recorded amount (not the current config value — config may have changed since the reaction was given). Insert reversal row(s) with the negated amount and same `source_id`. Ledger is append-only.
 
-### New: `GET /api/users/:username/stonk-history`
+**Race conditions:** Rapid toggle (add/remove/add) could produce duplicate ledger entries. Accepted risk at current scale — the composite `source_id` makes auditing straightforward, and the view-based balance self-corrects on the next reaction event.
+
+### New: `GET /api/chat/users/:username/stonk-history`
 
 Returns daily balance snapshots for sparkline charting.
 
@@ -72,7 +76,7 @@ Returns daily balance snapshots for sparkline charting.
 { "days": [{ "date": "2026-03-15", "balance": 42 }] }
 ```
 
-Aggregates `stonk_ledger` by day using a running sum. Limited to last 90 days.
+Returns cumulative balance at end-of-each-day. Query: group by `date_trunc('day', created_at)`, sum `amount` per day, then `SUM(...) OVER (ORDER BY date)` for running total. Limited to last 90 days.
 
 ### New: `GET /api/admin/stonk-config`
 
@@ -84,7 +88,7 @@ Body: `{ "key": "kek_received", "value": 10 }`. Updates a single config row. Adm
 
 ### Modified: `GET /api/chat/users/:username/mini`
 
-Add `stonk_balance` field to response — query the `stonk_balance` view.
+Add `stonk_balance` field to response — query the `stonk_balance` view. When `stonks_enabled` is 0, return `stonk_balance: null` so the frontend can hide the display.
 
 ## Frontend
 
@@ -98,7 +102,7 @@ Replace the placeholder `◆ —` with the actual balance from the API response.
 
 ### Profile pages (WikiProfilePage + public `/user/:username`)
 
-Add a stonk section: balance number + sparkline.
+Add a stonk section below the bio: balance number (monospace) + sparkline inline to the right. Same row, left-aligned.
 
 ### `StonkSparkline` component
 
@@ -108,7 +112,7 @@ Pure inline SVG. Takes `{ date, balance }[]`, draws a polyline. Accent-coloured 
 
 ### `useStonkHistory` hook
 
-Fetches `/api/users/:username/stonk-history`. Returns `{ days, loading }`.
+Fetches `/api/chat/users/:username/stonk-history`. Returns `{ days, loading }`.
 
 ### ChatSettings — admin config section
 
@@ -125,6 +129,12 @@ Below the existing name colour section, admin-only:
 **In scope:** Ledger, config, reaction-based point events, balance display, sparkline, admin config UI, kill switch.
 
 **Out of scope (deferred):** Profile creation points, wiki edit points, variable/dynamic point values, secondary stonks market, Easter egg reaction effects (confetti), idle game.
+
+## Implementation notes
+
+- **RLS:** Enable RLS on `stonk_ledger` and `stonk_config` with no policies (all writes via CF Worker service role key). `stonk_balance` view inherits from `stonk_ledger`.
+- **Config seeding:** Seed `stonk_config` default values via the migration SQL.
+- **TypeScript:** Update `MiniProfile` interface to include `stonk_balance: number | null`.
 
 ## Dependencies
 
