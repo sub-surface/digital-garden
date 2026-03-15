@@ -13,12 +13,12 @@ import { useShell } from "@/hooks/useShell"
 import { TagPage } from "@/components/ui/TagPage"
 import { FolderPage } from "@/components/ui/FolderPage"
 import { RecentPage } from "@/components/ui/RecentPage"
-import { WikiSubmitPage } from "@/components/ui/WikiSubmitPage"
-import { WikiEditPage } from "@/components/ui/WikiEditPage"
-import { WikiNewPage } from "@/components/ui/WikiNewPage"
-import { WikiAdminPage } from "@/components/ui/WikiAdminPage"
-import { WikiProfilePage } from "@/components/ui/WikiProfilePage"
-import { ChatPage } from "@/components/ui/ChatPage"
+const WikiSubmitPage = lazy(() => import("@/components/ui/WikiSubmitPage").then(m => ({ default: m.WikiSubmitPage })))
+const WikiEditPage = lazy(() => import("@/components/ui/WikiEditPage").then(m => ({ default: m.WikiEditPage })))
+const WikiNewPage = lazy(() => import("@/components/ui/WikiNewPage").then(m => ({ default: m.WikiNewPage })))
+const WikiAdminPage = lazy(() => import("@/components/ui/WikiAdminPage").then(m => ({ default: m.WikiAdminPage })))
+const WikiProfilePage = lazy(() => import("@/components/ui/WikiProfilePage").then(m => ({ default: m.WikiProfilePage })))
+const ChatPage = lazy(() => import("@/components/ui/ChatPage").then(m => ({ default: m.ChatPage })))
 
 // Lazy load heavy components
 const GraphView = lazy(() => import("@/components/ui/GraphView").then(m => ({ default: m.GraphView })))
@@ -103,28 +103,36 @@ const recentRoute = createRoute({
 const submitRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/submit",
-  component: WikiSubmitPage,
+  component: function WikiSubmitRoute() {
+    return <Suspense fallback={<div className="loading-shimmer">Loading...</div>}><WikiSubmitPage /></Suspense>
+  },
 })
 
 // Wiki new article route
 const newRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/new",
-  component: WikiNewPage,
+  component: function WikiNewRoute() {
+    return <Suspense fallback={<div className="loading-shimmer">Loading...</div>}><WikiNewPage /></Suspense>
+  },
 })
 
 // Wiki admin route
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin",
-  component: WikiAdminPage,
+  component: function WikiAdminRoute() {
+    return <Suspense fallback={<div className="loading-shimmer">Loading...</div>}><WikiAdminPage /></Suspense>
+  },
 })
 
 // Profile routes
 const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/profile",
-  component: WikiProfilePage,
+  component: function WikiProfileRoute() {
+    return <Suspense fallback={<div className="loading-shimmer">Loading...</div>}><WikiProfilePage /></Suspense>
+  },
 })
 
 const userRoute = createRoute({
@@ -133,7 +141,7 @@ const userRoute = createRoute({
   component: function UserRoutePage() {
     const params = userRoute.useParams()
     const username = (params as Record<string, string>)["_splat"] || ""
-    return <WikiProfilePage username={username} />
+    return <Suspense fallback={<div className="loading-shimmer">Loading...</div>}><WikiProfilePage username={username} /></Suspense>
   },
 })
 
@@ -144,7 +152,7 @@ const editRoute = createRoute({
   component: function EditRoutePage() {
     const params = editRoute.useParams()
     const rawSlug = (params as Record<string, string>)["_splat"] || ""
-    return <WikiEditPage slug={rawSlug} />
+    return <Suspense fallback={<div className="loading-shimmer">Loading...</div>}><WikiEditPage slug={rawSlug} /></Suspense>
   },
 })
 
@@ -165,7 +173,7 @@ const noteRoute = createRoute({
     }, [slug, setActiveGraphSlug])
 
     if (shell === "chat") {
-      return <ChatPage />
+      return <Suspense fallback={null}><ChatPage /></Suspense>
     }
 
     return (

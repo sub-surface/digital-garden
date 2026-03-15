@@ -50,10 +50,11 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
   const isOwnProfile = !viewUsername
   const usernameValid = /^[a-zA-Z0-9-]{3,30}$/.test(usernameValue)
 
-  // Detect fresh magic-link session — AMR contains "otp" but not "password"
+  // Detect fresh magic-link OR password-reset session — prompt user to set/update password
   const amr = (auth.session?.user as any)?.amr as { method: string }[] | undefined
   const isOtpOnly = Array.isArray(amr)
-    ? amr.some(a => a.method === "otp") && !amr.some(a => a.method === "password")
+    ? (amr.some(a => a.method === "otp") || amr.some(a => a.method === "recovery"))
+      && !amr.some(a => a.method === "password")
     : false
 
   // Auto-open password form for fresh signups landing on /profile

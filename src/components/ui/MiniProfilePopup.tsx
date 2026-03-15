@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import styles from "./Chat.module.scss"
+import styles from "./MiniProfilePopup.module.scss"
 
 interface Props {
   username: string

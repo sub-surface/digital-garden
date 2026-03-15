@@ -2,7 +2,8 @@
 
 .chatLayout {
   display: flex;
-  height: 100%;
+  flex: 1;
+  min-height: 0; // allow flex child to shrink within parent
 }
 
 // ── Mobile sidebar overlay ──
@@ -274,16 +275,16 @@
 .messageList {
   flex: 1;
   overflow-y: auto;
+  min-height: 0; // allow flex child to shrink & scroll
   padding: 1rem 0 0.25rem;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end; // anchor to bottom
 }
 
 .messageListInner {
   width: 100%;
   max-width: 720px;
-  margin: 0 auto;
+  margin: auto auto 0; // margin-top: auto pushes to bottom when short; margin-left/right: auto centers
   padding: 0 1.25rem;
   display: flex;
   flex-direction: column;
@@ -352,6 +353,25 @@
     background: var(--color-accent);
     opacity: 0.4;
   }
+}
+
+// ── Toast ──
+
+.chatToast {
+  position: absolute;
+  bottom: 6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  color: var(--color-accent);
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0.9;
 }
 
 // ── Scroll-to-bottom FAB ──
@@ -659,6 +679,7 @@
 .inputAreaOuter {
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 .inputArea {
@@ -898,6 +919,47 @@
   word-break: break-all;
 }
 
+.twitterCard {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 6px 10px;
+  margin-top: 4px;
+  background: color-mix(in srgb, var(--color-bg-surface) 80%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  text-decoration: none;
+  transition: border-color 0.15s;
+  max-width: 420px;
+
+  &:hover {
+    border-color: var(--color-accent);
+  }
+}
+
+.twitterCardIcon {
+  font-size: 1rem;
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.twitterCardUser {
+  font-family: var(--font-code);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.twitterCardLink {
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .emote {
   display: inline;
   height: 1.4em;
@@ -912,288 +974,6 @@
   word-break: break-all;
 
   &:hover { text-decoration: underline; }
-}
-
-// ── MiniProfilePopup ──
-
-.miniProfilePopup {
-  position: fixed;
-  z-index: 500;
-  min-width: 200px;
-  max-width: 256px;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  padding: 0.9rem;
-  font-family: var(--font-code);
-  font-size: 0.78rem;
-  color: var(--color-text);
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-
-  @media (max-width: 700px) {
-    // Center on mobile instead of anchoring
-    left: 50% !important;
-    top: 50% !important;
-    transform: translate(-50%, -50%);
-    max-width: calc(100vw - 2rem);
-  }
-}
-
-.miniProfileLoading,
-.miniProfileError {
-  color: var(--color-text-muted);
-  font-style: italic;
-}
-
-.miniProfileTop {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.miniProfileAvatar {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  border-radius: 50%;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.miniProfileMeta {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.miniProfileUsername {
-  font-weight: 600;
-  color: var(--color-text);
-  font-size: 0.82rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.miniProfileRole {
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border-radius: 3px;
-  padding: 1px 5px;
-  display: inline-block;
-  width: fit-content;
-}
-
-.roleAdmin {
-  background: color-mix(in srgb, var(--color-accent-base) 20%, transparent);
-  color: var(--color-accent);
-  border: 1px solid color-mix(in srgb, var(--color-accent-base) 40%, transparent);
-}
-
-.roleEditor {
-  background: rgba(80, 160, 80, 0.15);
-  color: #6dbf6d;
-  border: 1px solid rgba(80, 160, 80, 0.35);
-}
-
-.rolePending {
-  background: rgba(180, 130, 40, 0.15);
-  color: #c8a24a;
-  border: 1px solid rgba(180, 130, 40, 0.35);
-}
-
-.miniProfileBio {
-  color: var(--color-text-muted);
-  line-height: 1.45;
-  font-size: 0.74rem;
-  font-family: var(--font-body);
-}
-
-.miniProfileFooter {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: var(--color-text-muted);
-  font-size: 0.68rem;
-  border-top: 1px solid var(--color-border);
-  padding-top: 0.4rem;
-  margin-top: 0.1rem;
-  opacity: 0.6;
-}
-
-.miniProfileStonk { opacity: 0.6; }
-.miniProfileJoined { opacity: 0.6; }
-
-.miniProfileLink {
-  color: var(--color-accent);
-  text-decoration: none;
-  font-size: 0.7rem;
-  align-self: flex-start;
-
-  &:hover { text-decoration: underline; }
-}
-
-// ── Emote picker ──
-
-.emotePicker {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 0.5rem;
-  width: 240px;
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 300;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-
-  @media (max-width: 700px) {
-    width: calc(100vw - 1rem);
-    right: -0.5rem;
-    max-height: 180px;
-  }
-}
-
-.emotePickerSearch {
-  width: 100%;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--color-text);
-  font-family: var(--font-code);
-  font-size: 0.75rem;
-  padding: 4px 8px;
-  margin-bottom: 0.5rem;
-  box-sizing: border-box;
-
-  &:focus { outline: none; border-color: var(--color-accent); }
-}
-
-.emoteGrid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.emoteBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.1s;
-
-  &:hover { background: var(--color-bg); }
-}
-
-.emoteImg {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-}
-
-// ── GIF picker ──
-
-.gifPicker {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  background: var(--color-bg-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 0.5rem;
-  width: 320px;
-  max-height: 280px;
-  overflow-y: auto;
-  z-index: 300;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-
-  @media (max-width: 700px) {
-    width: calc(100vw - 1rem);
-    right: -0.5rem;
-    max-height: 240px;
-  }
-}
-
-.gifPickerHeader {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
-}
-
-.gifPickerSearch {
-  flex: 1;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--color-text);
-  font-family: var(--font-code);
-  font-size: 0.75rem;
-  padding: 4px 8px;
-  box-sizing: border-box;
-
-  &:focus { outline: none; border-color: var(--color-accent); }
-}
-
-.gifPickerBrand {
-  height: 14px;
-  width: auto;
-  flex-shrink: 0;
-  opacity: 0.9;
-}
-
-.gifGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 4px;
-}
-
-.gifBtn {
-  position: relative;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  border-radius: 4px;
-  overflow: hidden;
-  aspect-ratio: 16 / 9;
-  transition: opacity 0.1s;
-
-  &:hover { opacity: 0.85; }
-}
-
-.gifWatermark {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  height: 14px;
-  width: auto;
-  opacity: 0.75;
-  pointer-events: none;
-}
-
-.gifImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 // ── Picker toggle buttons ──
@@ -1248,118 +1028,4 @@
   }
 }
 
-// ── Legacy search overlay (kept for ChatSearch component compat) ──
-
-.searchOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 400;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-}
-
-.searchPanel {
-  width: 380px;
-  height: 100vh;
-  background: var(--color-bg-surface);
-  border-left: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  font-family: var(--font-code);
-}
-
-.searchPanelHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.8rem;
-}
-
-.searchForm {
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.searchInput {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--color-text);
-  font-family: var(--font-code);
-  font-size: 0.78rem;
-  padding: 6px 10px;
-  width: 100%;
-  box-sizing: border-box;
-
-  &:focus { outline: none; border-color: var(--color-accent); }
-}
-
-.searchLabel { font-size: 0.7rem; color: var(--color-text-muted); }
-
-.searchRow {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-.searchBtn {
-  background: var(--color-accent);
-  border: none;
-  border-radius: 4px;
-  color: white;
-  font-family: var(--font-code);
-  font-size: 0.75rem;
-  padding: 6px 16px;
-  cursor: pointer;
-  align-self: flex-start;
-  transition: opacity 0.15s;
-
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
-}
-
-.searchResults { flex: 1; overflow-y: auto; padding: 0.5rem 1rem; }
-
-.searchResult {
-  padding: 6px 0;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.75rem;
-  cursor: default;
-}
-
-.searchResultMeta { color: var(--color-text-muted); font-size: 0.65rem; margin-bottom: 2px; }
-.searchResultBody { color: var(--color-text); }
-
-.closeBtn {
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  font-size: 1rem;
-  font-family: var(--font-code);
-  padding: 2px 6px;
-
-  &:hover { color: var(--color-text); }
-}
-
-.sidebarSearchBtn {
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  font-family: var(--font-code);
-  font-size: 0.65rem;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  transition: color 0.1s;
-
-  &:hover { color: var(--color-accent); }
-}
+// Search overlay, MiniProfile, EmotePicker, GifPicker — extracted to own .module.scss files

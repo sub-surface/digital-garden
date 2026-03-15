@@ -1,0 +1,114 @@
+- date: 2026-03-15
+  area: wiki
+  title: Notification banner system, forgot password, recovery session handling
+  status: done
+  files:
+    - src/hooks/useNotifications.ts
+    - src/components/ui/NotificationBanner.tsx
+    - src/components/ui/NotificationBanner.module.scss
+    - src/components/ui/EmailConfirmBanner.tsx (deleted)
+    - src/components/ui/EmailConfirmBanner.module.scss (deleted)
+    - src/components/layout/WikiShell.tsx
+    - src/components/layout/WikiShell.module.scss
+    - src/components/layout/ChatShell.tsx
+    - src/components/layout/ChatShell.module.scss
+    - src/hooks/useAuth.ts
+    - src/components/ui/WikiAuthModal.tsx
+    - src/components/ui/WikiProfilePage.tsx
+  changes:
+    - EmailConfirmBanner replaced by generalised NotificationBanner — multi-notification ticker with dot-pip navigation, semantic colour per type
+    - useNotifications hook centralises notification registry; dismiss logic supports session-only (React state) and persistent (localStorage "dg_notif_dismissed") per notification
+    - Two initial notifications — email-unverified (amber, session-dismiss, Resend action) and gdpr-cookies (neutral, localStorage-persistent)
+    - Ticker uses same CSS marquee mechanic as MusicBar; auto-cycles every 8s, pauses on hover
+    - Success-type notifications auto-dismiss after 5s regardless of active index
+    - body[data-banner] attribute set by NotificationBanner when queue non-empty; both shell SCSS files use body[data-banner] & selector to increase padding-top by 1.75rem, preventing layout shift
+    - useAuth gains resetPassword(email) — calls supabase.auth.resetPasswordForEmail with redirectTo /profile
+    - WikiAuthModal login tab gets "Forgot password?" link — opens inline reset panel within modal, pre-fills email from login form, shows confirmation text on success
+    - WikiProfilePage amr check extended to handle recovery method alongside otp — password reset links now correctly auto-open the change-password form on /profile
+  decisions:
+    - dg_notif_dismissed localStorage key namespaced to avoid collisions with other subsystems
+    - Dismiss on "Resend" action — after resending, banner dismisses rather than showing a second confirmation state; keeps component minimal
+    - body attribute approach for layout shift — avoids threading banner visibility state through shell props; shells remain unaware of notification content
+    - Forgot password as inline panel (not a new tab or modal) — consistent with the modal's existing form-replacement pattern used for the post-signup "check your email" state
+    - stonks-ticker noted in useNotifications with comment as intended future home for Phase 2 price feed; hook interface ready to extend with dynamic content type
+  next: null
+
+- date: 2026-03-15
+  area: infrastructure
+  title: Shell isolation, ChatRoom decomposition, CSS modularisation
+  status: done
+  files:
+    - src/components/layout/AppShell.tsx
+    - src/router.tsx
+    - src/components/ui/ChatRoom.tsx
+    - src/hooks/useChatMessages.ts
+    - src/hooks/useChatScroll.ts
+    - src/hooks/useChatToast.ts
+    - src/components/ui/MessageInput.tsx
+    - src/components/ui/Chat.module.scss
+    - src/components/ui/EmotePicker.module.scss
+    - src/components/ui/GifPicker.module.scss
+    - src/components/ui/MiniProfilePopup.module.scss
+    - src/components/ui/ChatSearch.module.scss
+    - docs/future.md
+  changes:
+    - WikiShell and ChatShell now lazy-loaded in AppShell — garden visitors no longer download Supabase SDK, chat, or wiki code
+    - All wiki/chat route pages (WikiSubmitPage, WikiEditPage, WikiNewPage, WikiAdminPage, WikiProfilePage, ChatPage) lazy-loaded in router.tsx with Suspense
+    - ChatPage now code-splits into its own 30KB chunk instead of shipping in main bundle
+    - ChatRoom (335 lines, 8 useEffects) decomposed into three hooks — useChatMessages (realtime + pagination), useChatScroll (scroll tracking + restoration), useChatToast (transient error display)
+    - ChatRoom now ~160 lines — thin composition of hooks + handlers + JSX
+    - Silent catch blocks replaced with visible error toasts — send failure, reaction failure (with optimistic rollback), delete failure all show user-facing feedback
+    - Chat.module.scss split from 1,366 lines into 5 focused modules — Chat (~850), EmotePicker, GifPicker, MiniProfilePopup, ChatSearch
+    - GifPicker wired into MessageInput with mutual exclusion toggle alongside EmotePicker
+    - Reaction failures now roll back optimistic UI state
+    - Delete and send handlers now check res.ok and throw on non-200 responses
+  decisions:
+    - listRef created in ChatRoom and passed to both useChatMessages (for scroll height snapshot during loadMore) and useChatScroll (for scroll tracking) — avoids circular dependency between hooks
+    - prevScrollHeightRef lives in useChatMessages because loadMore is where the snapshot is taken; useChatScroll consumes it in useLayoutEffect for scroll restoration
+    - Toast system is deliberately minimal (single message, 4s auto-clear, no queue) — sufficient for chat error frequency; avoids over-engineering
+    - .pickerBtn/.pickerBtnActive kept in Chat.module.scss since MessageInput imports from there — avoids a fifth import just for two shared button classes
+    - .emote and .avatarImg kept in Chat.module.scss — used by MessageRow which imports Chat styles
+    - .avatarImg duplicated into MiniProfilePopup.module.scss since MiniProfilePopup now has its own stylesheet
+  next: Build verification passed. Chat restyling and admin room management next.
+
+- date: 2026-03-15
+  area: chat
+  title: Lazy embeds, Twitter/X link cards, bookmarks audit
+  status: done
+  files:
+    - src/components/ui/MessageRow.tsx
+    - src/lib/parseMessageBody.ts
+    - src/components/ui/Chat.module.scss
+    - docs/future.md
+  changes:
+    - All image and YouTube embeds in chat now lazy-load via IntersectionObserver — nothing renders until within 200px of viewport; emotes excluded (tiny, inline)
+    - New `twitter` token type in parseMessageBody — detects twitter.com and x.com status URLs, extracts @username
+    - Twitter/X URLs render as styled link cards (𝕏 icon + @username + URL) instead of plain links — no Twitter JS embed loaded
+    - Bookmarks future.md item resolved as stale — AppShell has no bookmarks imports; useBookmarks only used in BookmarkButton (NoteRenderer) and WikiProfilePage, both now lazy-loaded
+  decisions:
+    - LazyEmbed uses rootMargin 200px for preloading just before scroll — balances UX (no visible loading delay) with bandwidth savings
+    - Twitter card deliberately avoids fetching tweet content or loading Twitter's embed script — just a styled link. Future enhancement could fetch via server-side proxy
+    - embedUsed flag extended to twitter type so max-one-embed-per-message rule applies
+  next: Admin room management UI, chat restyling, and admin bans remain as Tier 3 items
+
+- date: 2026-03-15
+  area: wiki
+  title: Signup flow — password set at registration instead of post-magic-link
+  status: done
+  files:
+    - src/components/ui/WikiAuthModal.tsx
+    - src/hooks/useAuth.ts
+  changes:
+    - Signup form now includes a password field (min 6 chars) alongside email and username
+    - signUp() now calls supabase.auth.signUp({ email, password }) instead of signInWithOtp — user sets password at registration, not after clicking a magic link
+    - Confirmation email still sent (if Supabase email confirm is enabled) — but user already has password and can log in immediately after verifying
+    - Removed forced redirect to /profile on SIGNED_IN event — no longer needed since password is set upfront
+    - Confirmation message updated to reflect new flow ("click it to verify, then log in with your password")
+    - Password field placeholder differs per mode ("min 6 characters" on signup, dots on login)
+    - Submit button disabled until password is non-empty on both login and signup tabs
+  decisions:
+    - Used supabase.auth.signUp rather than signInWithOtp — signUp accepts a password param and creates a proper password-authenticated account; OTP was only needed because there was no password collection at signup time
+    - wiki_pending_username localStorage mechanism kept intact — fetchProfile still picks it up on first successful auth and sets the username via /api/auth/profile; this works whether the user confirms email immediately or later
+    - Removed the SIGNED_IN redirect to /profile — that was only there to prompt password setup; now redundant
+    - emailRedirectTo kept on signUp options — Supabase uses it for the confirmation link destination; /profile is still a sensible landing page after email verification
+  next: null

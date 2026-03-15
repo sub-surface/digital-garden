@@ -1,0 +1,144 @@
+// ── Banner container ──────────────────────────────────────────────────────────
+
+.banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0 0.75rem;
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+// ── Type variants ─────────────────────────────────────────────────────────────
+
+.banner_warn {
+  background: #1a1400;
+  border-bottom: 1px solid #b48c14;
+  color: #d4a820;
+}
+
+.banner_info {
+  background: #0a1520;
+  border-bottom: 1px solid #1e5fa0;
+  color: #5ca8e8;
+}
+
+.banner_error {
+  background: #1a0a0a;
+  border-bottom: 1px solid var(--color-accent);
+  color: #d45060;
+}
+
+.banner_success {
+  background: #0a1a0f;
+  border-bottom: 1px solid #2a7a4a;
+  color: #4ab870;
+}
+
+.banner_neutral {
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid #333;
+  color: var(--color-text-muted);
+}
+
+// ── Ticker ────────────────────────────────────────────────────────────────────
+
+.ticker {
+  flex: 1;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+  min-width: 0;
+}
+
+.tickerInner {
+  display: flex;
+  gap: 60px;
+  white-space: nowrap;
+  animation: ticker 22s linear infinite;
+  width: max-content;
+
+  .banner:hover & {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(calc(-50% - 30px)); }
+}
+
+// ── Action button ─────────────────────────────────────────────────────────────
+
+.actionBtn {
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  color: inherit;
+  font-family: var(--font-code);
+  font-size: 0.65rem;
+  padding: 1px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 0.85;
+  transition: opacity 0.15s, background 0.15s;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
+
+// ── Dot pips ──────────────────────────────────────────────────────────────────
+
+.dots {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.3;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.7;
+  }
+}
+
+.dotActive {
+  opacity: 1;
+}
+
+// ── Dismiss button ────────────────────────────────────────────────────────────
+
+.dismissBtn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.4;
+  padding: 0 2px;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 1;
+  }
+}

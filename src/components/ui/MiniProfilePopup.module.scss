@@ -1,0 +1,136 @@
+// ── MiniProfilePopup ──
+
+.miniProfilePopup {
+  position: fixed;
+  z-index: 500;
+  min-width: 200px;
+  max-width: 256px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  padding: 0.9rem;
+  font-family: var(--font-code);
+  font-size: 0.78rem;
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  @media (max-width: 700px) {
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%);
+    max-width: calc(100vw - 2rem);
+  }
+}
+
+.miniProfileLoading,
+.miniProfileError {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.miniProfileTop {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.miniProfileAvatar {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 50%;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.miniProfileMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.miniProfileUsername {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.miniProfileRole {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 3px;
+  padding: 1px 5px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.roleAdmin {
+  background: color-mix(in srgb, var(--color-accent-base) 20%, transparent);
+  color: var(--color-accent);
+  border: 1px solid color-mix(in srgb, var(--color-accent-base) 40%, transparent);
+}
+
+.roleEditor {
+  background: rgba(80, 160, 80, 0.15);
+  color: #6dbf6d;
+  border: 1px solid rgba(80, 160, 80, 0.35);
+}
+
+.rolePending {
+  background: rgba(180, 130, 40, 0.15);
+  color: #c8a24a;
+  border: 1px solid rgba(180, 130, 40, 0.35);
+}
+
+.miniProfileBio {
+  color: var(--color-text-muted);
+  line-height: 1.45;
+  font-size: 0.74rem;
+  font-family: var(--font-body);
+}
+
+.miniProfileFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: 0.68rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.4rem;
+  margin-top: 0.1rem;
+  opacity: 0.6;
+}
+
+.miniProfileStonk { opacity: 0.6; }
+.miniProfileJoined { opacity: 0.6; }
+
+.miniProfileLink {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-size: 0.7rem;
+  align-self: flex-start;
+
+  &:hover { text-decoration: underline; }
+}

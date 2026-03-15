@@ -3,6 +3,7 @@ export type MessageToken =
   | { type: "emote"; name: string }
   | { type: "image"; url: string }
   | { type: "youtube"; videoId: string; url: string }
+  | { type: "twitter"; username: string; url: string }
   | { type: "url"; url: string; label: string };
 
 const EMOTE_RE = /^:[a-z0-9-]+:$/;
@@ -33,6 +34,20 @@ function extractYouTubeId(url: string): string | null {
     // malformed URL
   }
   return null;
+}
+
+function extractTwitterInfo(url: string): { username: string } | null {
+  try {
+    const parsed = new URL(url)
+    const host = parsed.hostname.replace(/^www\./, "")
+    if (host !== "twitter.com" && host !== "x.com") return null
+    // Match /{username}/status/{id}
+    const match = parsed.pathname.match(/^\/([^/]+)\/status\/\d+/)
+    if (!match) return null
+    return { username: match[1] }
+  } catch {
+    return null
+  }
 }
 
 function isImageUrl(url: string): boolean {
@@ -93,6 +108,15 @@ function classifyWord(
     return { type: "url", url, label: getHostname(url) };
   }
 
+  // Twitter/X status
+  const twitterMatch = extractTwitterInfo(url)
+  if (twitterMatch) {
+    if (!embedUsed) {
+      return { type: "twitter", username: twitterMatch.username, url }
+    }
+    return { type: "url", url, label: getHostname(url) }
+  }
+
   // Image URL
   if (isImageUrl(url)) {
     if (!embedUsed) {
@@ -148,7 +172,7 @@ export function parseMessageBody(text: string): MessageToken[] {
       if (classified !== null) {
         flushText();
         tokens.push(classified);
-        if (classified.type === "image" || classified.type === "youtube") {
+        if (classified.type === "image" || classified.type === "youtube" || classified.type === "twitter") {
           embedUsed = true;
         }
         // If the original word had trailing punctuation that was stripped,
@@ -160,6 +184,8 @@ export function parseMessageBody(text: string): MessageToken[] {
               : classified.type === "image"
               ? classified.url
               : classified.type === "youtube"
+              ? classified.url
+              : classified.type === "twitter"
               ? classified.url
               : "";
           if (strippedUrl.length < part.length) {

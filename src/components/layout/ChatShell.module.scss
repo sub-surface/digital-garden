@@ -18,7 +18,19 @@
   // Reserve top for TerminalTitle
   padding-top: 3.5rem;
   box-sizing: border-box;
+
+  // When NotificationBanner is visible (28px), push content down further
+  :global(body[data-banner]) & {
+    padding-top: calc(3.5rem + 1.75rem);
+  }
+
+  // Ensure Outlet content fills remaining space
+  > * {
+    flex: 1;
+    min-height: 0;
+  }
 }
+
 
 // ── Auth Controls (bottom-left, same position as wiki) ──
 

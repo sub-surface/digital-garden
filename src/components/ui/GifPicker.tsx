@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react"
-import styles from "./Chat.module.scss"
+import styles from "./GifPicker.module.scss"
 
 interface GifResult {
   url: string

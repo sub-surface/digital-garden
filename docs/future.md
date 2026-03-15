@@ -4,62 +4,80 @@ Items that are explicitly deferred, low priority, or pending design work. Groupe
 
 ---
 
+## Refactoring & Technical Debt (dependency-ordered)
+
+Priority work to improve code quality, performance, and shell isolation. Items are ordered so that earlier items unblock later ones.
+
+### Tier 1: Shell Isolation (unblocks everything else)
+
+- [x] **Lazy-load shell components in router**: wrapped in `lazy()` — ChatPage now code-splits into own 30KB chunk
+- [x] **Lazy-load WikiShell and ChatShell in AppShell**: garden visitors no longer download Supabase SDK or chat/wiki code
+- [x] **Bookmarks: move off AppShell** — investigated: AppShell has no bookmarks imports. `useBookmarks` is only used by `BookmarkButton` (rendered in NoteRenderer for article layouts) and `WikiProfilePage`. No Supabase import in AppShell. With lazy-loading of shells and route pages, bookmarks code only loads when navigating to a note. Item was stale.
+
+### Tier 2: Chat Quality (the real issues)
+
+- [x] **ChatRoom decomposition**: extracted `useChatMessages`, `useChatScroll`, `useChatToast` hooks — ChatRoom now ~160 lines
+- [x] **Silent failure → visible failure**: toast system + optimistic rollback on reaction failure + res.ok checks on send/delete
+- [x] **CSS monolith split**: Chat.module.scss split into 5 focused modules (Chat, EmotePicker, GifPicker, MiniProfilePopup, ChatSearch)
+- [x] **GifPicker wired up**: toggle button in MessageInput with mutual exclusion against EmotePicker
+
+### Tier 3: Polish & UX
+
+- [ ] **Chat restyling**: visual refresh — message density tuning, mobile responsiveness, sidebar UX (collapsible on mobile), input area refinement, typographic consistency across shells
+- [ ] **Admin Room Management UI**: admin-only "+" button in room sidebar → inline form; admin can archive a room
+- [x] **Twitter/X link cards**: `twitter` token type in parseMessageBody + styled card with 𝕏 icon, @username, and URL — no Twitter JS embed loaded
+- [x] **Lazy embeds**: IntersectionObserver wrapper (`LazyEmbed`) in MessageRow — images and YouTube thumbnails only load when within 200px of viewport; emotes excluded (inline, tiny)
+- [ ] **Admin bans — permanent**: on permanent ban: hard-delete all message rows + anonymise profile
+
+---
+
 ## Garden
 
-- [ ] Improve chess UI to match site themes, optimise WASM performance, public leaderboard (Stockfish has built-in support for this)
+- [ ] Improve chess UI to match site themes, optimise WASM performance, public leaderboard
 - [ ] **Chess performance**: investigate Stockfish WASM latency on local builds
 - [ ] **Pre-render SSG**: build-time HTML generation for all notes
 - [ ] **Image optimisation**: sharp WebP variants + `<picture>` srcsets
 - [ ] **Lighthouse CI**: GitHub Actions target 95+ desktop
-- [ ] **OG gen: SVG image support**: satori cannot load `.svg` images from Wikipedia/external sources — throws "Unsupported image type: unknown". Fix: detect SVG URLs in `og-gen.ts` and skip the image, or rasterise via `sharp` before passing to satori.
-- [ ] **OG gen: external image fetch failures**: `https://covers.openlibrary.org/...` fetch fails in CF build environment (likely blocked). Fix: catch fetch errors per-image and fall back gracefully.
-- [ ] **OG caching not working**: build log shows `132 image(s) to generate (0 cached)` on every build. Investigate cache key / hash logic in `og-gen.ts` and ensure the cache directory persists between CF builds.
-- [ ] **Prebuild runs twice per CF deploy**: build log shows prebuild running once standalone (for OG gen) and again as part of `npm run build`. Investigate deduplication.
-- [ ] **`glob@11` deprecation warning**: `npm warn deprecated glob@11.1.0` on every install. Track — update when a direct or transitive dependency releases a fix.
-- [ ] **37 broken wikilinks**: build log reports 37 unresolved `[[wikilinks]]` across 14 notes — see [garden.md](garden.md) for the full cluster breakdown.
-- [ ] **Detailed documentation**: comprehensive docs for the codebase (delegate to worker agent)
-- [ ] Fix CLS fully: image `width`/`height` attributes (affects Gallery, sidenotes, link preview, lightbox)
+- [ ] **OG gen: SVG image support**: satori cannot load `.svg` images — detect SVG URLs in `og-gen.ts` and skip or rasterise via `sharp`
+- [ ] **OG gen: external image fetch failures**: `covers.openlibrary.org` fetch fails in CF build. Catch per-image and fall back gracefully.
+- [ ] **OG caching not working**: `0 cached` on every build. Investigate cache key logic; CF builds may not persist cache dir.
+- [ ] **Prebuild runs twice per CF deploy**: investigate deduplication
+- [ ] **`glob@11` deprecation warning**: track — update when fix is released upstream
+- [ ] **37 broken wikilinks**: see [garden.md](garden.md) for cluster breakdown
+- [ ] **Detailed documentation**: comprehensive docs for the codebase
+- [ ] Fix CLS fully: image `width`/`height` attributes (Gallery, sidenotes, link preview, lightbox)
 
 ---
 
 ## Wiki
 
 - [ ] Contributor dashboard (recent activity, stats)
-- [ ] Watchlist (get notified when bookmarked pages are edited) — needs Supabase `watchlist` table
+- [ ] Watchlist (get notified when bookmarked pages are edited) — needs `watchlist` table
 - [ ] Page metadata editing (description, tags) from wiki editor UI
-- [ ] **Bookmarks: move off AppShell** — `AppShell` currently imports Supabase client for bookmarks, violating the "garden has no Supabase dependency" rule. Bookmarks should live entirely on `wiki.subsurfaces.net`; remove Supabase import from `AppShell` and `useBookmarks` hook from the main site
-- [ ] **Supabase RLS audit**: `bookmarks`, `edit_log`, `page_locks` tables have no RLS policies. Acceptable for now (trusted editors only). Before public launch: own-row-only for bookmarks; insert-only for edit_log; admin-only lock management.
+- [ ] **Supabase RLS audit**: `bookmarks`, `edit_log`, `page_locks` have no RLS policies. Before public launch: own-row-only for bookmarks; insert-only for edit_log; admin-only lock management.
 - [ ] Wiki community features (comments, reactions)
-- [ ] **GitHub App token** for non-expiring wiki submissions — until then, add a Worker startup preflight: verify token validity on boot, return clear "wiki submissions temporarily unavailable" error to users rather than a silent 500 if token is expired
-- [ ] **Chat restyling**: visual refresh of the chat UI to better match the garden/wiki aesthetic — consider: message density tuning, thread/reply presentation, room header design, mobile responsiveness, dark/light theme parity, sidebar UX (collapsible on mobile, room descriptions), input area refinement (toolbar, formatting hints), and overall typographic consistency across all three shells
+- [ ] **GitHub App token** for non-expiring wiki submissions — until then, preflight token validity check with clear user-facing error
 
 ---
 
-## Chat / Stonks / Identity
-
-- [ ] **Admin bans — permanent**: on permanent ban: hard-delete all message rows + anonymise profile
-- [ ] **Admin Room Management UI**: admin-only "+" button in room sidebar → inline form; admin can archive a room (removes from sidebar, preserves history)
-- [ ] **Twitter/X link cards**: render as styled link card (username + tweet text if extractable) — avoid loading Twitter's JS embed script by default; optional "load embed" button
-- [ ] **Lazy embeds**: all embeds lazy — nothing loads until the message is in the viewport (`IntersectionObserver`)
-
-### Stonks (Phase 2 — all items)
+## Stonks (Phase 2 — all items)
 
 - [ ] `stonk_ledger` table, `stonk_balance` view, point events, `stonk_config` table
 - [ ] Stonk balance + sparkline on profile pages and `MiniProfilePopup`
 - [ ] Admin stonk config UI (`GET/PUT /api/admin/stonk-config`)
 - [ ] Easter egg reactions with configurable effects (e.g. confetti via `canvas-confetti`)
-- [ ] Secondary stonks market (users investing in other users' stonks, prediction-market style) — deliberately deferred; ledger schema supports it without changes
+- [ ] Secondary stonks market — deliberately deferred; ledger schema supports it
 
-### Identity & Avatar (Phase 3 — remaining items)
+## Identity & Avatar (Phase 3 — remaining items)
 
-- [ ] Wiki Profile Claiming: `chatter_claims` table, `POST /api/chat/claim`, claim UI on profile and chatter pages
+- [ ] Wiki Profile Claiming: `chatter_claims` table, `POST /api/chat/claim`, claim UI
 - [ ] Avatar displayed in: wiki profile infobox (if claimed), `WikiShell` auth header
-- [ ] Idle game (cookie-clicker / Universal Paperclips style) — full design TBD; idle rate scales with stonk level, points calculated from `last_login` delta, capped at 24h accumulation
+- [ ] Idle game — full design TBD
 
 ---
 
 ## Infrastructure & Legal
 
-- [ ] **Trusted Types**: evaluate `require-trusted-types-for 'script'` — may conflict with PixiJS/D3 dynamic DOM writes, audit first
-- [ ] **GDPR cookie consent**: cookie consent banner for EU users — required since we set a cross-domain session cookie (`domain=.subsurfaces.net`). Minimal UI: bottom bar with "Accept" / "Reject" buttons; reject disables Supabase auth cookie (localStorage fallback only).
-- [ ] **Privacy policy page**: document what data is stored (Supabase auth, profiles, messages, bookmarks), cookie usage, and contact info. Link from footer of all three shells.
+- [ ] **Trusted Types**: evaluate `require-trusted-types-for 'script'` — audit PixiJS/D3 compatibility first
+- [ ] **GDPR cookie consent**: cookie consent banner — required for cross-domain session cookie. Reject → localStorage fallback only.
+- [ ] **Privacy policy page**: document data stored, cookie usage, contact info. Link from all three shells.

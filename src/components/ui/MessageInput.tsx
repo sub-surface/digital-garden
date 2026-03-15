@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from "react"
 import type { ChatMessage } from "@/types/chat"
 import { EmotePicker } from "./EmotePicker"
+import { GifPicker } from "./GifPicker"
 import styles from "./Chat.module.scss"
 
 const CHAR_LIMIT = 2000
@@ -24,6 +25,7 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
 ) {
   const [body, setBody] = useState("")
   const [showEmotePicker, setShowEmotePicker] = useState(false)
+  const [showGifPicker, setShowGifPicker] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -117,11 +119,19 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
         />
         <button
           className={`${styles.pickerBtn} ${showEmotePicker ? styles.pickerBtnActive : ""}`}
-          onClick={() => setShowEmotePicker((v) => !v)}
+          onClick={() => { setShowEmotePicker((v) => !v); setShowGifPicker(false) }}
           type="button"
           aria-label="Emote picker"
         >
           emote
+        </button>
+        <button
+          className={`${styles.pickerBtn} ${showGifPicker ? styles.pickerBtnActive : ""}`}
+          onClick={() => { setShowGifPicker((v) => !v); setShowEmotePicker(false) }}
+          type="button"
+          aria-label="GIF picker"
+        >
+          gif
         </button>
         <button
           className={styles.sendBtn}
@@ -139,6 +149,16 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
             setShowEmotePicker(false)
           }}
           onClose={() => setShowEmotePicker(false)}
+        />
+      )}
+
+      {showGifPicker && (
+        <GifPicker
+          onSelect={(md) => {
+            appendText(md)
+            setShowGifPicker(false)
+          }}
+          onClose={() => setShowGifPicker(false)}
         />
       )}
 

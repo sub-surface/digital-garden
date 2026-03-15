@@ -3,9 +3,9 @@ import { Outlet, useNavigate } from "@tanstack/react-router"
 import { useStore } from "@/store"
 import { ThemePanel } from "./ThemePanel"
 import { TerminalTitle } from "./TerminalTitle"
-import { CornerMenu } from "./CornerMenu"
 import { QuickControls } from "./QuickControls"
 import { WikiAuthModal } from "@/components/ui/WikiAuthModal"
+import { NotificationBanner } from "@/components/ui/NotificationBanner"
 import { useAuth } from "@/hooks/useAuth"
 import styles from "./ChatShell.module.scss"
 
@@ -105,6 +105,7 @@ export function ChatShell() {
     >
       <ThemePanel />
 
+      <NotificationBanner />
       <TerminalTitle context="chat" />
       <QuickControls variant="chat" />
       <ChatUserMenu />
@@ -113,7 +114,6 @@ export function ChatShell() {
         <Outlet />
       </main>
 
-      <CornerMenu variant="wiki" />
     </div>
   )
 }

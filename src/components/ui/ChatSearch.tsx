@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
-import styles from "./Chat.module.scss"
+import styles from "./ChatSearch.module.scss"
 
 interface SearchResult {
   id: string

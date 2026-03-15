@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import styles from "./Chat.module.scss"
+import styles from "./EmotePicker.module.scss"
 
 interface EmoteEntry { name: string; ext: string }
 

@@ -11,6 +11,7 @@ import { SearchOverlay } from "@/components/ui/SearchOverlay"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
 import { WikiAuthModal } from "@/components/ui/WikiAuthModal"
 import { SideChat } from "@/components/ui/SideChat"
+import { NotificationBanner } from "@/components/ui/NotificationBanner"
 import { useAuth } from "@/hooks/useAuth"
 import styles from "./WikiShell.module.scss"
 
@@ -135,6 +136,7 @@ export function WikiShell() {
         <LinkPreview />
         <SearchOverlay />
 
+        <NotificationBanner />
         <TerminalTitle context="wiki" />
         <SideChatToggle />
         <WikiUserMenu />

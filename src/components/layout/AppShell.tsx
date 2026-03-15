@@ -5,8 +5,8 @@ import { PanelStack } from "@/components/panel/PanelStack"
 import { usePanelClick } from "@/components/panel/usePanelClick"
 import { useHotkeys } from "@/hooks/useHotkeys"
 import { useShell } from "@/hooks/useShell"
-import { WikiShell } from "./WikiShell"
-import { ChatShell } from "./ChatShell"
+const WikiShell = lazy(() => import("./WikiShell").then(m => ({ default: m.WikiShell })))
+const ChatShell = lazy(() => import("./ChatShell").then(m => ({ default: m.ChatShell })))
 import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
 import { BgCanvas } from "./BgCanvas"
@@ -42,8 +42,8 @@ export function AppShell() {
   usePanelClick()
   useHotkeys()
 
-  if (shell === "wiki") return <WikiShell />
-  if (shell === "chat") return <ChatShell />
+  if (shell === "wiki") return <Suspense fallback={null}><WikiShell /></Suspense>
+  if (shell === "chat") return <Suspense fallback={null}><ChatShell /></Suspense>
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 800
   const showFloatingGraph = !isMobile

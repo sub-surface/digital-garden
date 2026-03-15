@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Notification Banner Mockup</title>
+<style>
+  :root {
+    --color-bg: #0a0a0a;
+    --color-bg-surface: #1a1a1f;
+    --color-text: #e0e0e0;
+    --color-text-muted: #888;
+    --color-accent: #b4424c;
+    --font-code: "IBM Plex Mono", "Courier New", monospace;
+    --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+  }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-family: var(--font-code);
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 2rem 2rem 0.75rem;
+    border-top: 1px solid #222;
+    margin-top: 2rem;
+  }
+  .section-label:first-child { border-top: none; margin-top: 0; }
+
+  /* ── Shell chrome sim ── */
+  .shell-sim {
+    position: relative;
+    background: var(--color-bg);
+    border: 1px solid #222;
+    margin: 0 2rem 2rem;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 120px;
+  }
+
+  .shell-chrome {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 1rem;
+    gap: 1rem;
+    background: var(--color-bg);
+    border-bottom: 1px solid #222;
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    z-index: 2;
+  }
+
+  .shell-title { color: var(--color-text); letter-spacing: 1px; }
+  .shell-nav { opacity: 0.5; }
+  .shell-user { margin-left: auto; }
+
+  .shell-content {
+    position: absolute;
+    top: 32px; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-code);
+    font-size: 0.65rem;
+    color: #333;
+    letter-spacing: 1px;
+  }
+
+  /* ══════════════════════════════════════════
+     BANNER VARIANTS
+  ══════════════════════════════════════════ */
+
+  .banner {
+    position: absolute;
+    top: 32px; left: 0; right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0 1rem;
+    height: 28px;
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+  }
+
+  /* Colour themes */
+  .banner-warn {
+    background: #1a1400;
+    border-bottom: 1px solid #b48c14;
+    color: #d4a820;
+  }
+  .banner-info {
+    background: #0a1520;
+    border-bottom: 1px solid #1e5fa0;
+    color: #5ca8e8;
+  }
+  .banner-error {
+    background: #1a0a0a;
+    border-bottom: 1px solid var(--color-accent);
+    color: #d45060;
+  }
+  .banner-success {
+    background: #0a1a0f;
+    border-bottom: 1px solid #2a7a4a;
+    color: #4ab870;
+  }
+  .banner-neutral {
+    background: var(--color-bg-surface);
+    border-bottom: 1px solid #333;
+    color: var(--color-text-muted);
+  }
+
+  /* Ticker / marquee text */
+  .banner-ticker {
+    flex: 1;
+    overflow: hidden;
+    mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+    position: relative;
+  }
+  .banner-ticker-inner {
+    display: flex;
+    gap: 60px;
+    white-space: nowrap;
+    animation: ticker 18s linear infinite;
+    width: max-content;
+  }
+  .banner-ticker-inner.slow { animation-duration: 28s; }
+  .banner-ticker-inner.paused { animation-play-state: paused; }
+
+  @keyframes ticker {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(calc(-50% - 30px)); }
+  }
+
+  /* Static text (no ticker) */
+  .banner-text { flex: 1; }
+
+  /* Dot indicator for multiple notifications */
+  .banner-dots {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .banner-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.35;
+    cursor: pointer;
+  }
+  .banner-dot.active { opacity: 1; }
+
+  /* Nav arrows */
+  .banner-arrow {
+    background: none;
+    border: none;
+    color: inherit;
+    font-family: var(--font-code);
+    font-size: 0.65rem;
+    cursor: pointer;
+    opacity: 0.6;
+    padding: 0 2px;
+    flex-shrink: 0;
+  }
+  .banner-arrow:hover { opacity: 1; }
+
+  /* Action link */
+  .banner-action {
+    background: none;
+    border: 1px solid currentColor;
+    color: inherit;
+    font-family: var(--font-code);
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    opacity: 0.85;
+  }
+  .banner-action:hover { opacity: 1; background: rgba(255,255,255,0.06); }
+
+  /* Dismiss */
+  .banner-dismiss {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 0.9rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.4;
+    padding: 0 2px;
+    flex-shrink: 0;
+  }
+  .banner-dismiss:hover { opacity: 1; }
+
+  /* Counter badge */
+  .banner-count {
+    font-size: 0.6rem;
+    opacity: 0.55;
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Palette reference ── */
+  .palette-row {
+    display: flex;
+    gap: 1rem;
+    padding: 0 2rem 2rem;
+    flex-wrap: wrap;
+  }
+  .palette-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-code);
+    font-size: 0.65rem;
+  }
+  .swatch {
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .swatch-warn    { background: #b48c14; }
+  .swatch-info    { background: #1e5fa0; }
+  .swatch-error   { background: var(--color-accent); }
+  .swatch-success { background: #2a7a4a; }
+  .swatch-neutral { background: #333; }
+
+  /* ── Forgot password mockup ── */
+  .modal-sim {
+    margin: 0 2rem 2rem;
+    border: 1px solid #222;
+    border-radius: 4px;
+    background: var(--color-bg-surface);
+    padding: 1.5rem;
+    max-width: 340px;
+    font-family: var(--font-code);
+    font-size: 0.75rem;
+  }
+  .modal-title {
+    font-size: 0.8rem;
+    color: var(--color-text);
+    margin-bottom: 1rem;
+    letter-spacing: 1px;
+  }
+  .modal-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid #333;
+  }
+  .tab {
+    padding: 4px 12px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab.active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+  }
+  .modal-field { margin-bottom: 0.75rem; }
+  .modal-label {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: 0.65rem;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+  .modal-input {
+    width: 100%;
+    background: var(--color-bg);
+    border: 1px solid #333;
+    border-radius: 3px;
+    color: var(--color-text);
+    font-family: var(--font-code);
+    font-size: 0.72rem;
+    padding: 5px 8px;
+  }
+  .forgot-link {
+    display: block;
+    text-align: right;
+    color: var(--color-text-muted);
+    font-size: 0.65rem;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    text-decoration: underline;
+    opacity: 0.6;
+  }
+  .forgot-link:hover { opacity: 1; }
+  .modal-btn {
+    background: none;
+    border: 1px solid var(--color-accent);
+    color: var(--color-accent);
+    font-family: var(--font-code);
+    font-size: 0.72rem;
+    padding: 5px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin-right: 8px;
+  }
+  .modal-btn:hover { background: var(--color-accent); color: #000; }
+  .modal-btn-sec {
+    background: none;
+    border: 1px solid #444;
+    color: var(--color-text-muted);
+    font-family: var(--font-code);
+    font-size: 0.72rem;
+    padding: 5px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  /* forgot password inline panel */
+  .forgot-panel {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: var(--color-bg);
+    border: 1px solid #333;
+    border-radius: 3px;
+    font-size: 0.7rem;
+  }
+  .forgot-panel-title {
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+  }
+  .forgot-panel-hint {
+    color: var(--color-text-muted);
+    font-size: 0.65rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 1: Banner colour palette
+════════════════════════════════════════════════ -->
+<div class="section-label">1 — Notification types & colour palette</div>
+<div class="palette-row">
+  <div class="palette-chip"><div class="swatch swatch-warn"></div> warn — email unverified, cookie consent</div>
+  <div class="palette-chip"><div class="swatch swatch-info"></div> info — general notices, tips</div>
+  <div class="palette-chip"><div class="swatch swatch-error"></div> error — account action required</div>
+  <div class="palette-chip"><div class="swatch swatch-success"></div> success — email confirmed, password reset</div>
+  <div class="palette-chip"><div class="swatch swatch-neutral"></div> neutral — GDPR/legal, low-priority</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 2: Option A — Ticker / marquee banner
+     (single notification scrolls like music title)
+════════════════════════════════════════════════ -->
+<div class="section-label">2 — Option A: Single ticker, dots to cycle</div>
+<div class="shell-sim">
+  <div class="shell-chrome">
+    <span class="shell-title">wiki.subsurfaces.net</span>
+    <span class="shell-nav">notes | chat</span>
+    <span class="shell-user">leon ·</span>
+  </div>
+  <!-- Warn: unverified email, tickers -->
+  <div class="banner banner-warn">
+    <div class="banner-ticker">
+      <div class="banner-ticker-inner slow">
+        <span>Please verify your email to complete signup — check your inbox for a confirmation link.</span>
+        <span>Please verify your email to complete signup — check your inbox for a confirmation link.</span>
+      </div>
+    </div>
+    <button class="banner-action">Resend</button>
+    <div class="banner-dots">
+      <div class="banner-dot active"></div>
+      <div class="banner-dot"></div>
+    </div>
+    <button class="banner-dismiss">×</button>
+  </div>
+  <div class="shell-content">— page content —</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 3: Option A — info notification (cycling)
+════════════════════════════════════════════════ -->
+<div class="section-label">2b — Option A: cycled to info notification</div>
+<div class="shell-sim">
+  <div class="shell-chrome">
+    <span class="shell-title">wiki.subsurfaces.net</span>
+    <span class="shell-nav">notes | chat</span>
+    <span class="shell-user">leon ·</span>
+  </div>
+  <div class="banner banner-neutral">
+    <div class="banner-ticker">
+      <div class="banner-ticker-inner slow">
+        <span>This site uses cookies for session management. No tracking or advertising cookies. &nbsp;·&nbsp; Privacy policy</span>
+        <span>This site uses cookies for session management. No tracking or advertising cookies. &nbsp;·&nbsp; Privacy policy</span>
+      </div>
+    </div>
+    <div class="banner-dots">
+      <div class="banner-dot"></div>
+      <div class="banner-dot active"></div>
+    </div>
+    <button class="banner-dismiss">×</button>
+  </div>
+  <div class="shell-content">— page content —</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 4: Option B — Static text + prev/next arrows
+════════════════════════════════════════════════ -->
+<div class="section-label">3 — Option B: Static text, arrow navigation</div>
+<div class="shell-sim">
+  <div class="shell-chrome">
+    <span class="shell-title">wiki.subsurfaces.net</span>
+    <span class="shell-nav">notes | chat</span>
+    <span class="shell-user">leon ·</span>
+  </div>
+  <div class="banner banner-warn">
+    <button class="banner-arrow">‹</button>
+    <div class="banner-text">Please verify your email to complete signup.</div>
+    <span class="banner-count">1 / 2</span>
+    <button class="banner-action">Resend</button>
+    <button class="banner-arrow">›</button>
+    <button class="banner-dismiss">×</button>
+  </div>
+  <div class="shell-content">— page content —</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 5: Option B — static, no notifications
+════════════════════════════════════════════════ -->
+<div class="section-label">3b — Option B: when all dismissed (banner gone)</div>
+<div class="shell-sim">
+  <div class="shell-chrome">
+    <span class="shell-title">wiki.subsurfaces.net</span>
+    <span class="shell-nav">notes | chat</span>
+    <span class="shell-user">leon ·</span>
+  </div>
+  <!-- no banner = shell content fills full height -->
+  <div class="shell-content" style="top:32px">— page content fills full height —</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 6: Option C — compact left-side pill
+     (no layout shift, notifications as a small badge)
+════════════════════════════════════════════════ -->
+<div class="section-label">4 — Option C: compact pill on left of chrome (no layout push)</div>
+<div class="shell-sim">
+  <div class="shell-chrome">
+    <span class="shell-title">wiki.subsurfaces.net</span>
+    <!-- inline pill, no separate row -->
+    <span style="display:inline-flex;align-items:center;gap:6px;background:#1a1400;border:1px solid #b48c14;border-radius:10px;padding:2px 8px;font-size:0.62rem;color:#d4a820;cursor:pointer;">
+      ⚠ verify email
+    </span>
+    <span class="shell-nav">notes | chat</span>
+    <span class="shell-user">leon ·</span>
+  </div>
+  <div class="shell-content">— page content (no layout shift) —</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 7: Success state (email confirmed)
+════════════════════════════════════════════════ -->
+<div class="section-label">5 — Success state (shown briefly after confirm)</div>
+<div class="shell-sim">
+  <div class="shell-chrome">
+    <span class="shell-title">wiki.subsurfaces.net</span>
+    <span class="shell-nav">notes | chat</span>
+    <span class="shell-user">leon ·</span>
+  </div>
+  <div class="banner banner-success">
+    <div class="banner-text">Email confirmed. Welcome to the wiki.</div>
+    <button class="banner-dismiss">×</button>
+  </div>
+  <div class="shell-content">— page content —</div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SECTION 8: Forgot password in auth modal
+════════════════════════════════════════════════ -->
+<div class="section-label">6 — Forgot password: inline expansion in auth modal</div>
+<div class="modal-sim">
+  <div class="modal-title">&gt; wiki.subsurfaces.net</div>
+  <div class="modal-tabs">
+    <button class="tab active">Log in</button>
+    <button class="tab">Sign up</button>
+  </div>
+  <div class="modal-field">
+    <label class="modal-label">Email *</label>
+    <input class="modal-input" type="email" placeholder="you@example.com" />
+  </div>
+  <div class="modal-field">
+    <label class="modal-label">Password *</label>
+    <input class="modal-input" type="password" placeholder="••••••••" />
+  </div>
+  <a class="forgot-link">Forgot password?</a>
+  <div>
+    <button class="modal-btn">Log in</button>
+    <button class="modal-btn-sec">Cancel</button>
+  </div>
+
+  <!-- Inline forgot-password panel (shown on click) -->
+  <div class="forgot-panel">
+    <div class="forgot-panel-title">Reset your password</div>
+    <div class="forgot-panel-hint">Enter your email and we'll send a reset link. You can set a new password immediately after clicking it.</div>
+    <div class="modal-field">
+      <input class="modal-input" type="email" placeholder="you@example.com" />
+    </div>
+    <button class="modal-btn">Send reset link</button>
+  </div>
+</div>
+
+</body>
+</html>

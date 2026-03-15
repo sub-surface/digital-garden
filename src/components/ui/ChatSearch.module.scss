@@ -1,0 +1,100 @@
+// ── Chat search overlay ──
+
+.searchOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 400;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.searchPanel {
+  width: 380px;
+  height: 100vh;
+  background: var(--color-bg-surface);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-code);
+}
+
+.searchPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.8rem;
+}
+
+.searchForm {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.searchInput {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: var(--font-code);
+  font-size: 0.78rem;
+  padding: 6px 10px;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus { outline: none; border-color: var(--color-accent); }
+}
+
+.searchLabel { font-size: 0.7rem; color: var(--color-text-muted); }
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.searchBtn {
+  background: var(--color-accent);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  padding: 6px 16px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: opacity 0.15s;
+
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.searchResults { flex: 1; overflow-y: auto; padding: 0.5rem 1rem; }
+
+.searchResult {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.75rem;
+  cursor: default;
+}
+
+.searchResultMeta { color: var(--color-text-muted); font-size: 0.65rem; margin-bottom: 2px; }
+.searchResultBody { color: var(--color-text); }
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  font-family: var(--font-code);
+  padding: 2px 6px;
+
+  &:hover { color: var(--color-text); }
+}

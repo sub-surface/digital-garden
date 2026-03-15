@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react"
+import { useState, useRef, useEffect, type ReactNode } from "react"
 import type { ChatMessage, ChatReaction } from "@/types/chat"
 import { parseMessageBody } from "@/lib/parseMessageBody"
 import styles from "./Chat.module.scss"
@@ -63,6 +63,33 @@ function YouTubeThumbnail({ videoId, url }: { videoId: string; url: string }) {
   )
 }
 
+function LazyEmbed({ children, className }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: "200px" }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div ref={ref} className={className}>
+      {visible ? children : null}
+    </div>
+  )
+}
+
 function renderInlineTokens(text: string, keyPrefix: string) {
   const tokens = parseMessageBody(text)
   return tokens.map((tok, i) => {
@@ -82,11 +109,24 @@ function renderInlineTokens(text: string, keyPrefix: string) {
       />
     )
     if (tok.type === "image") return (
-      <img key={key} src={tok.url} alt="" className={styles.embedImg}
-        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
-      />
+      <LazyEmbed key={key}>
+        <img src={tok.url} alt="" className={styles.embedImg}
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+        />
+      </LazyEmbed>
     )
-    if (tok.type === "youtube") return <YouTubeThumbnail key={key} videoId={tok.videoId} url={tok.url} />
+    if (tok.type === "youtube") return (
+      <LazyEmbed key={key}>
+        <YouTubeThumbnail videoId={tok.videoId} url={tok.url} />
+      </LazyEmbed>
+    )
+    if (tok.type === "twitter") return (
+      <a key={key} href={tok.url} target="_blank" rel="noopener noreferrer" className={styles.twitterCard}>
+        <span className={styles.twitterCardIcon}>{"\u{1D54F}"}</span>
+        <span className={styles.twitterCardUser}>@{tok.username}</span>
+        <span className={styles.twitterCardLink}>{tok.url}</span>
+      </a>
+    )
     if (tok.type === "url") return (
       <a key={key} href={tok.url} target="_blank" rel="noopener noreferrer" className={styles.msgLink}>
         {tok.label}

@@ -20,10 +20,11 @@ interface AuthState extends ProfileFields {
 export function useAuth(): AuthState & {
   signIn: (email: string) => Promise<{ error: string | null }>
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
-  signUp: (email: string, username: string) => Promise<{ error: string | null }>
+  signUp: (email: string, username: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   updateProfile: (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url">>) => Promise<{ error: string | null }>
   changePassword: (newPassword: string) => Promise<{ error: string | null }>
+  resetPassword: (email: string) => Promise<{ error: string | null }>
 } {
   const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<UserRole>(null)
@@ -44,13 +45,7 @@ export function useAuth(): AuthState & {
       if (session) {
         fetchProfile(session.access_token)
 
-        // Fresh signup callback — redirect to /profile so user can set a password
-        if (event === "SIGNED_IN" && localStorage.getItem("wiki_pending_username")) {
-          const currentPath = window.location.pathname
-          if (currentPath !== "/profile") {
-            window.location.replace("/profile")
-          }
-        }
+        // Fresh signup — username will be set via fetchProfile's pending_username logic
       } else {
         setRole(null)
         setUsername(null)
@@ -148,7 +143,7 @@ export function useAuth(): AuthState & {
     return { error: error?.message ?? null }
   }
 
-  async function signUp(email: string, usernameVal: string) {
+  async function signUp(email: string, usernameVal: string, password: string) {
     if (!supabase) return { error: "Auth not configured" }
 
     // Validate & check uniqueness server-side
@@ -162,13 +157,22 @@ export function useAuth(): AuthState & {
       return { error: data.error ?? "Registration failed" }
     }
 
-    // Store username for post-magic-link profile setup
+    // Store username for post-signup profile setup
     localStorage.setItem("wiki_pending_username", usernameVal)
 
-    // Trigger magic link — redirect to /profile so they're prompted to set a password
-    const { error } = await supabase.auth.signInWithOtp({
+    // Sign up with email + password directly — no magic link round-trip
+    const { error } = await supabase.auth.signUp({
       email,
+      password,
       options: { emailRedirectTo: `${window.location.origin}/profile` },
+    })
+    return { error: error?.message ?? null }
+  }
+
+  async function resetPassword(email: string) {
+    if (!supabase) return { error: "Auth not configured" }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/profile`,
     })
     return { error: error?.message ?? null }
   }
@@ -211,5 +215,5 @@ export function useAuth(): AuthState & {
     return { error: null }
   }, [session])
 
-  return { session, role, loading, username, bio, avatar_url, created_at, signIn, signInWithPassword, signUp, signOut, updateProfile, changePassword }
+  return { session, role, loading, username, bio, avatar_url, created_at, signIn, signInWithPassword, signUp, signOut, updateProfile, changePassword, resetPassword }
 }
