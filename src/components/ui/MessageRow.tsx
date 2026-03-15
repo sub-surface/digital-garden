@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, type ReactNode } from "react"
 import type { ChatMessage, ChatReaction } from "@/types/chat"
 import { parseMessageBody } from "@/lib/parseMessageBody"
+import { ImageLightbox } from "./ImageLightbox"
+import { EmotePopup } from "./EmotePopup"
 import styles from "./Chat.module.scss"
 
 interface Props {
@@ -55,7 +57,7 @@ function YouTubeThumbnail({ videoId, url }: { videoId: string; url: string }) {
         className={styles.embedImg}
         onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
       />
-      <span className={styles.ytPlay}>▶</span>
+      <span className={styles.ytPlay}>&#9654;</span>
       <a href={url} target="_blank" rel="noopener noreferrer" className={styles.ytLink} onClick={e => e.stopPropagation()}>
         {url}
       </a>
@@ -90,58 +92,80 @@ function LazyEmbed({ children, className }: { children: React.ReactNode; classNa
   )
 }
 
-function renderInlineTokens(text: string, keyPrefix: string) {
-  const tokens = parseMessageBody(text)
-  return tokens.map((tok, i) => {
-    const key = `${keyPrefix}-${i}`
-    if (tok.type === "text") return <span key={key}>{tok.value}</span>
-    if (tok.type === "emote") return (
-      <img key={key} src={`/emotes/${tok.name}.gif`} alt={`:${tok.name}:`} className={styles.emote}
-        onError={(e) => {
-          const img = e.currentTarget as HTMLImageElement
-          if (!img.dataset.pngFallback) {
-            img.dataset.pngFallback = "1"
-            img.src = `/emotes/${tok.name}.png`
-          } else {
-            img.replaceWith(document.createTextNode(`:${tok.name}:`))
-          }
-        }}
-      />
-    )
-    if (tok.type === "image") return (
-      <LazyEmbed key={key}>
-        <img src={tok.url} alt="" className={styles.embedImg}
-          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
-        />
-      </LazyEmbed>
-    )
-    if (tok.type === "youtube") return (
-      <LazyEmbed key={key}>
-        <YouTubeThumbnail videoId={tok.videoId} url={tok.url} />
-      </LazyEmbed>
-    )
-    if (tok.type === "twitter") return (
-      <a key={key} href={tok.url} target="_blank" rel="noopener noreferrer" className={styles.twitterCard}>
-        <span className={styles.twitterCardIcon}>{"\u{1D54F}"}</span>
-        <span className={styles.twitterCardUser}>@{tok.username}</span>
-        <span className={styles.twitterCardLink}>{tok.url}</span>
-      </a>
-    )
-    if (tok.type === "url") return (
-      <a key={key} href={tok.url} target="_blank" rel="noopener noreferrer" className={styles.msgLink}>
-        {tok.label}
-      </a>
-    )
-    return null
-  })
-}
-
 function isEmoteOnly(body: string): boolean {
   const trimmed = body.trim()
   return /^:[a-zA-Z0-9_-]+:$/.test(trimmed)
 }
 
-function MessageBodyRenderer({ body }: { body: string }) {
+function MessageBodyRenderer({
+  body,
+  onImageClick,
+  onEmoteClick,
+}: {
+  body: string
+  onImageClick?: (src: string) => void
+  onEmoteClick?: (name: string, src: string, e: React.MouseEvent) => void
+}) {
+  function renderInlineTokens(text: string, keyPrefix: string) {
+    const tokens = parseMessageBody(text)
+    return tokens.map((tok, i) => {
+      const key = `${keyPrefix}-${i}`
+      if (tok.type === "text") return <span key={key}>{tok.value}</span>
+      if (tok.type === "emote") {
+        const src = `/emotes/${tok.name}.gif`
+        return (
+          <img
+            key={key}
+            src={src}
+            alt={`:${tok.name}:`}
+            className={styles.emote}
+            style={{ cursor: "pointer" }}
+            onClick={(e) => onEmoteClick?.(tok.name, src, e)}
+            onError={(e) => {
+              const img = e.currentTarget as HTMLImageElement
+              if (!img.dataset.pngFallback) {
+                img.dataset.pngFallback = "1"
+                img.src = `/emotes/${tok.name}.png`
+              } else {
+                img.replaceWith(document.createTextNode(`:${tok.name}:`))
+              }
+            }}
+          />
+        )
+      }
+      if (tok.type === "image") return (
+        <LazyEmbed key={key}>
+          <img
+            src={tok.url}
+            alt=""
+            className={styles.embedImg}
+            style={{ cursor: "zoom-in" }}
+            onClick={() => onImageClick?.(tok.url)}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+          />
+        </LazyEmbed>
+      )
+      if (tok.type === "youtube") return (
+        <LazyEmbed key={key}>
+          <YouTubeThumbnail videoId={tok.videoId} url={tok.url} />
+        </LazyEmbed>
+      )
+      if (tok.type === "twitter") return (
+        <a key={key} href={tok.url} target="_blank" rel="noopener noreferrer" className={styles.twitterCard}>
+          <span className={styles.twitterCardIcon}>{"\u{1D54F}"}</span>
+          <span className={styles.twitterCardUser}>@{tok.username}</span>
+          <span className={styles.twitterCardLink}>{tok.url}</span>
+        </a>
+      )
+      if (tok.type === "url") return (
+        <a key={key} href={tok.url} target="_blank" rel="noopener noreferrer" className={styles.msgLink}>
+          {tok.label}
+        </a>
+      )
+      return null
+    })
+  }
+
   const lines = body.split("\n")
   const nodes: ReactNode[] = []
   let i = 0
@@ -170,6 +194,10 @@ function MessageBodyRenderer({ body }: { body: string }) {
 export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, isOwn, reactions, onUsernameClick }: Props & { onUsernameClick?: (username: string, el: HTMLElement) => void }) {
   const username = msg.profiles?.username ?? "unknown"
   const avatarUrl = msg.profiles?.avatar_url ?? null
+  const nameColor = msg.profiles?.name_color ?? undefined
+
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+  const [emotePopup, setEmotePopup] = useState<{ name: string; src: string; x: number; y: number } | null>(null)
 
   return (
     <div className={styles.messageRow}>
@@ -190,6 +218,7 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, i
           <div className={styles.messageHeader}>
             <button
               className={styles.username}
+              style={nameColor ? { color: nameColor } : undefined}
               onClick={(e) => onUsernameClick?.(username, e.currentTarget)}
             >
               {username}
@@ -202,7 +231,7 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, i
           <div className={styles.replyBar}>
             <strong>@{msg.reply_to_message.profiles?.username ?? "unknown"}</strong>:{" "}
             {msg.reply_to_message.body.slice(0, 80)}
-            {msg.reply_to_message.body.length > 80 ? "…" : ""}
+            {msg.reply_to_message.body.length > 80 ? "..." : ""}
           </div>
         )}
 
@@ -210,7 +239,11 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, i
           <span className={styles.deleted}>[message deleted]</span>
         ) : (
           <div className={isEmoteOnly(msg.body) ? styles.messageBodyEmoteOnly : styles.messageBody}>
-            <MessageBodyRenderer body={msg.body} />
+            <MessageBodyRenderer
+              body={msg.body}
+              onImageClick={(src) => setLightboxSrc(src)}
+              onEmoteClick={(name, src, e) => setEmotePopup({ name, src, x: e.clientX, y: e.clientY })}
+            />
           </div>
         )}
 
@@ -235,12 +268,25 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, i
 
       {!msg.deleted_at && (
         <div className={styles.msgActions}>
-          <button className={styles.stonkBtn} onClick={() => onReact?.(msg.id, "stonk")} aria-label="Stonk">▲</button>
+          <button className={styles.stonkBtn} onClick={() => onReact?.(msg.id, "stonk")} aria-label="Stonk">&#x25B2;</button>
           <button className={styles.replyBtn} onClick={() => onReply(msg)} aria-label="Reply">reply</button>
           {isOwn && (
             <button className={styles.deleteBtn} onClick={() => onDelete?.(msg.id)} aria-label="Delete">del</button>
           )}
         </div>
+      )}
+
+      {lightboxSrc && (
+        <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
+      )}
+
+      {emotePopup && (
+        <EmotePopup
+          name={emotePopup.name}
+          src={emotePopup.src}
+          anchor={{ x: emotePopup.x, y: emotePopup.y }}
+          onClose={() => setEmotePopup(null)}
+        />
       )}
     </div>
   )

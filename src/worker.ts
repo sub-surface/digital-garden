@@ -246,6 +246,7 @@ interface ProfileData {
   bio: string | null
   avatar_url: string | null
   created_at: string | null
+  name_color: string | null
 }
 
 interface AuthUser {
@@ -256,6 +257,7 @@ interface AuthUser {
   bio: string | null
   avatar_url: string | null
   created_at: string | null
+  name_color: string | null
 }
 
 async function verifyAuth(request: Request, env: Env): Promise<AuthUser | null> {
@@ -273,7 +275,7 @@ async function verifyAuth(request: Request, env: Env): Promise<AuthUser | null> 
 
   // Fetch profile from profiles table
   const profileRes = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=role,username,bio,avatar_url,created_at`,
+    `${env.SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=role,username,bio,avatar_url,created_at,name_color`,
     {
       headers: {
         apikey: env.SUPABASE_SERVICE_KEY,
@@ -290,7 +292,7 @@ async function verifyAuth(request: Request, env: Env): Promise<AuthUser | null> 
     await supabaseRest(env, "profiles", "POST", {
       id: user.id, email: user.email, role: "pending",
     })
-    return { id: user.id, role: "pending", email: user.email, username: null, bio: null, avatar_url: null, created_at: null }
+    return { id: user.id, role: "pending", email: user.email, username: null, bio: null, avatar_url: null, created_at: null, name_color: null }
   }
 
   return {
@@ -301,6 +303,7 @@ async function verifyAuth(request: Request, env: Env): Promise<AuthUser | null> 
     bio: profile.bio,
     avatar_url: profile.avatar_url,
     created_at: profile.created_at,
+    name_color: profile.name_color ?? null,
   }
 }
 
@@ -368,6 +371,7 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
     bio: auth.bio,
     avatar_url,
     created_at: auth.created_at,
+    name_color: auth.name_color,
   })
 }
 
@@ -400,6 +404,17 @@ async function handleUpdateProfile(request: Request, env: Env): Promise<Response
   }
   if (typeof body.bio === "string") updates.bio = body.bio.slice(0, 500)
   if (typeof body.avatar_url === "string") updates.avatar_url = body.avatar_url.slice(0, 500)
+  if (body.name_color !== undefined) {
+    if (body.name_color === null || body.name_color === "") {
+      updates.name_color = null as any
+    } else if (typeof body.name_color === "string") {
+      const color = body.name_color.trim()
+      if (!/^#[0-9a-fA-F]{6}$/.test(color)) {
+        return jsonResponse({ error: "name_color must be a valid hex color (#RRGGBB)" }, 400)
+      }
+      updates.name_color = color
+    }
+  }
 
   if (Object.keys(updates).length === 0) return jsonResponse({ error: "No fields to update" }, 400)
 
@@ -498,7 +513,7 @@ async function handleUserProfile(env: Env, username: string): Promise<Response> 
   // Fetch profile by username
   const profileRes = await supabaseRest(
     env,
-    `profiles?username=eq.${encodeURIComponent(username)}&select=id,username,role,bio,avatar_url,created_at`
+    `profiles?username=eq.${encodeURIComponent(username)}&select=id,username,role,bio,avatar_url,created_at,name_color`
   )
   if (!profileRes.ok) return jsonResponse({ error: "Failed to fetch profile" }, 500)
   const profiles = await profileRes.json<(ProfileData & { id: string })[]>()
@@ -526,6 +541,7 @@ async function handleUserProfile(env: Env, username: string): Promise<Response> 
     bio: profile.bio,
     avatar_url,
     created_at: profile.created_at,
+    name_color: profile.name_color ?? null,
     edits,
     editCount: edits.length,
   })
@@ -989,7 +1005,7 @@ async function handleChatMessages(request: Request, env: Env, url: URL): Promise
   if (before) filter += `&created_at=lt.${encodeURIComponent(before)}`
   filter += `&order=created_at.desc&limit=${limit}`
 
-  const res = await supabaseRest(env, `messages?${filter}&select=*,profiles!messages_user_id_fkey(username,avatar_url)`)
+  const res = await supabaseRest(env, `messages?${filter}&select=*,profiles!messages_user_id_fkey(username,avatar_url,name_color)`)
   if (!res.ok) return jsonResponse({ error: "Failed to fetch messages" }, 500)
   const messages = await res.json<ChatMessage[]>()
 
@@ -998,7 +1014,7 @@ async function handleChatMessages(request: Request, env: Env, url: URL): Promise
   let replyMap: Record<string, Pick<ChatMessage, "id" | "body" | "profiles">> = {}
   if (replyIds.length > 0) {
     const idsFilter = replyIds.map(id => encodeURIComponent(id)).join(",")
-    const replyRes = await supabaseRest(env, `messages?id=in.(${idsFilter})&select=id,body,profiles!messages_user_id_fkey(username,avatar_url)`)
+    const replyRes = await supabaseRest(env, `messages?id=in.(${idsFilter})&select=id,body,profiles!messages_user_id_fkey(username,avatar_url,name_color)`)
     if (replyRes.ok) {
       const replyRows = await replyRes.json<Pick<ChatMessage, "id" | "body" | "profiles">[]>()
       for (const r of replyRows) replyMap[r.id] = r
@@ -1114,7 +1130,7 @@ async function handleChatSearch(request: Request, env: Env, url: URL): Promise<R
   // PostgREST can filter on embedded resources with a special syntax:
   if (user) filter += `&profiles.username=eq.${encodeURIComponent(user)}`
 
-  const res = await supabaseRest(env, `messages?${filter}&select=*,profiles!messages_user_id_fkey(username,avatar_url)`)
+  const res = await supabaseRest(env, `messages?${filter}&select=*,profiles!messages_user_id_fkey(username,avatar_url,name_color)`)
   if (!res.ok) return jsonResponse({ error: "Search failed" }, 500)
   const messages = await res.json<ChatMessage[]>()
 
@@ -1134,10 +1150,10 @@ async function handleChatUserMini(request: Request, env: Env, username: string):
 
   const res = await supabaseRest(
     env,
-    `profiles?username=eq.${encodeURIComponent(username)}&select=username,avatar_url,role,bio,created_at`,
+    `profiles?username=eq.${encodeURIComponent(username)}&select=username,avatar_url,role,bio,created_at,name_color`,
   )
   if (!res.ok) return jsonResponse({ error: "Failed to fetch user" }, 500)
-  const rows = await res.json<{ username: string; avatar_url: string | null; role: string; bio: string | null; created_at: string | null }[]>()
+  const rows = await res.json<{ username: string; avatar_url: string | null; role: string; bio: string | null; created_at: string | null; name_color: string | null }[]>()
   if (!rows.length) return jsonResponse({ error: "User not found" }, 404)
   const row = rows[0]
   if (!row.avatar_url) {

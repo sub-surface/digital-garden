@@ -67,7 +67,7 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
         title="Cycle accent color"
       />
 
-      {variant === "full" && <BgModeToggle />}
+      <BgModeToggle />
 
       {/* Clock */}
       <div className={styles.clockGroup}>

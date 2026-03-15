@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from "react"
 import type { ChatMessage } from "@/types/chat"
 import { EmotePicker } from "./EmotePicker"
-import { GifPicker } from "./GifPicker"
 import styles from "./Chat.module.scss"
 
 const CHAR_LIMIT = 2000
@@ -24,8 +23,7 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
   ref
 ) {
   const [body, setBody] = useState("")
-  const [showEmotePicker, setShowEmotePicker] = useState(false)
-  const [showGifPicker, setShowGifPicker] = useState(false)
+  const [showPicker, setShowPicker] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -91,7 +89,7 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
         <div className={styles.replyPreview}>
           <span>
             Replying to <strong>@{replyTo.profiles?.username ?? "unknown"}</strong>:{" "}
-            {replyTo.body.slice(0, 60)}{replyTo.body.length > 60 ? "…" : ""}
+            {replyTo.body.slice(0, 60)}{replyTo.body.length > 60 ? "..." : ""}
           </span>
           <button
             className={styles.replyPreviewCancel}
@@ -112,26 +110,23 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
           value={body}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder="Message… (press / to focus)"
+          placeholder="Message... (press / to focus)"
           rows={1}
           maxLength={CHAR_LIMIT}
           autoComplete="off"
         />
         <button
-          className={`${styles.pickerBtn} ${showEmotePicker ? styles.pickerBtnActive : ""}`}
-          onClick={() => { setShowEmotePicker((v) => !v); setShowGifPicker(false) }}
+          className={`${styles.pickerBtn} ${showPicker ? styles.pickerBtnActive : ""}`}
+          onClick={() => setShowPicker((v) => !v)}
           type="button"
-          aria-label="Emote picker"
+          aria-label="Emote & GIF picker"
         >
-          emote
-        </button>
-        <button
-          className={`${styles.pickerBtn} ${showGifPicker ? styles.pickerBtnActive : ""}`}
-          onClick={() => { setShowGifPicker((v) => !v); setShowEmotePicker(false) }}
-          type="button"
-          aria-label="GIF picker"
-        >
-          gif
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+            <line x1="9" y1="9" x2="9.01" y2="9"/>
+            <line x1="15" y1="9" x2="15.01" y2="9"/>
+          </svg>
         </button>
         <button
           className={styles.sendBtn}
@@ -142,26 +137,19 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
         </button>
       </div>
 
-      {showEmotePicker && (
+      {showPicker && (
         <EmotePicker
           onSelect={(code) => {
             appendText(code)
-            setShowEmotePicker(false)
+            setShowPicker(false)
           }}
-          onClose={() => setShowEmotePicker(false)}
-        />
-      )}
-
-      {showGifPicker && (
-        <GifPicker
-          onSelect={(md) => {
+          onSelectGif={(md) => {
             appendText(md)
-            setShowGifPicker(false)
+            setShowPicker(false)
           }}
-          onClose={() => setShowGifPicker(false)}
+          onClose={() => setShowPicker(false)}
         />
       )}
-
 
       {showCounter && (
         <div className={`${styles.charCount} ${remaining < 100 ? styles.charCountWarn : ""}`}>

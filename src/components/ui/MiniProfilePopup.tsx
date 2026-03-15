@@ -13,6 +13,7 @@ interface MiniProfile {
   role: string
   bio: string | null
   created_at: string | null
+  name_color: string | null
 }
 
 function initials(username: string): string {
@@ -97,7 +98,7 @@ export function MiniProfilePopup({ username, anchorEl, onClose }: Props) {
               )}
             </div>
             <div className={styles.miniProfileMeta}>
-              <div className={styles.miniProfileUsername}>{profile.username}</div>
+              <div className={styles.miniProfileUsername} style={profile.name_color ? { color: profile.name_color } : undefined}>{profile.username}</div>
               <div
                 className={[
                   styles.miniProfileRole,

@@ -1,0 +1,109 @@
+.settings {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 4px;
+  z-index: 500;
+  background: color-mix(in srgb, var(--color-bg-surface) 95%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px;
+  width: 220px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  animation: popIn 0.12s ease;
+}
+
+.header {
+  font-family: var(--font-code);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  margin-bottom: 8px;
+}
+
+.swatchGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.1s, transform 0.1s;
+
+  &:hover {
+    transform: scale(1.15);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+.swatchActive {
+  border-color: white;
+  transform: scale(1.1);
+}
+
+.hexRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.hexInput {
+  flex: 1;
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  padding: 4px 6px;
+  outline: none;
+
+  &:focus {
+    border-color: color-mix(in srgb, var(--color-accent-base) 50%, transparent);
+  }
+
+  &::placeholder {
+    color: var(--color-text-muted);
+    opacity: 0.35;
+  }
+}
+
+.preview {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.resetBtn {
+  width: 100%;
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.65rem;
+  padding: 4px;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+
+  &:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}

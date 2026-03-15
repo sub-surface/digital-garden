@@ -1,0 +1,40 @@
+.popup {
+  position: fixed;
+  z-index: 600;
+  background: color-mix(in srgb, var(--color-bg-surface) 95%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  animation: popIn 0.12s ease;
+}
+
+.emoteImg {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+}
+
+.emoteName {
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

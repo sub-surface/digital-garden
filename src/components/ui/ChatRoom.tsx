@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import type { ChatMessage } from "@/types/chat"
+import { useAuth } from "@/hooks/useAuth"
 import { useChatMessages } from "@/hooks/useChatMessages"
 import { useChatScroll } from "@/hooks/useChatScroll"
 import { useChatToast } from "@/hooks/useChatToast"
@@ -7,6 +8,7 @@ import { MessageList } from "./MessageList"
 import { MessageInput } from "./MessageInput"
 import { TypingIndicator, useTypingBroadcast } from "./TypingIndicator"
 import { MiniProfilePopup } from "./MiniProfilePopup"
+import { ChatSettings } from "./ChatSettings"
 import styles from "./Chat.module.scss"
 
 interface Props {
@@ -21,6 +23,8 @@ interface Props {
 export function ChatRoom({ roomId, roomName, accessToken, currentUserId, currentUsername, currentAvatarUrl }: Props) {
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
   const [popup, setPopup] = useState<{ username: string; anchor: HTMLElement } | null>(null)
+  const [showSettings, setShowSettings] = useState(false)
+  const { name_color, updateProfile } = useAuth()
   const inputRef = useRef<{ focus: () => void }>(null)
   const lastReadRef = useRef<string | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -156,8 +160,29 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
   return (
     <>
       <div className={styles.chatRoomHeader}>
-        <div className={styles.chatContentWrapper}>
+        <div className={styles.chatContentWrapper} style={{ position: "relative" }}>
           <span>{roomName}</span>
+          <button
+            className={styles.settingsBtn}
+            onClick={() => setShowSettings((v) => !v)}
+            title="Chat settings"
+            aria-label="Chat settings"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+          {showSettings && (
+            <ChatSettings
+              currentColor={name_color}
+              onSave={async (color) => {
+                await updateProfile({ name_color: color })
+                setShowSettings(false)
+              }}
+              onClose={() => setShowSettings(false)}
+            />
+          )}
         </div>
       </div>
 

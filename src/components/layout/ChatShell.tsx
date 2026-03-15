@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react"
 import { Outlet, useNavigate } from "@tanstack/react-router"
 import { useStore } from "@/store"
 import { ThemePanel } from "./ThemePanel"
+import { BgCanvas } from "./BgCanvas"
 import { TerminalTitle } from "./TerminalTitle"
 import { QuickControls } from "./QuickControls"
 import { WikiAuthModal } from "@/components/ui/WikiAuthModal"
@@ -103,6 +104,7 @@ export function ChatShell() {
       data-layout={activeLayout}
       data-testid="chat-shell"
     >
+      <BgCanvas />
       <ThemePanel />
 
       <NotificationBanner />

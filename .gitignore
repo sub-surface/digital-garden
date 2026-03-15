@@ -6,6 +6,7 @@ dist/
 Thumbs.db
 .env
 .env.local
+.claude
 # Generated at build time
 public/content-index.json
 public/graph.json

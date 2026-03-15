@@ -9,6 +9,7 @@ interface ProfileFields {
   bio: string | null
   avatar_url: string | null
   created_at: string | null
+  name_color: string | null
 }
 
 interface AuthState extends ProfileFields {
@@ -22,7 +23,7 @@ export function useAuth(): AuthState & {
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, username: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
-  updateProfile: (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url">>) => Promise<{ error: string | null }>
+  updateProfile: (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url" | "name_color">>) => Promise<{ error: string | null }>
   changePassword: (newPassword: string) => Promise<{ error: string | null }>
   resetPassword: (email: string) => Promise<{ error: string | null }>
 } {
@@ -33,6 +34,7 @@ export function useAuth(): AuthState & {
   const [bio, setBio] = useState<string | null>(null)
   const [avatar_url, setAvatarUrl] = useState<string | null>(null)
   const [created_at, setCreatedAt] = useState<string | null>(null)
+  const [name_color, setNameColor] = useState<string | null>(null)
 
   useEffect(() => {
     if (!supabase) {
@@ -56,6 +58,7 @@ export function useAuth(): AuthState & {
         setBio(null)
         setAvatarUrl(null)
         setCreatedAt(null)
+        setNameColor(null)
         setLoading(false)
       }
     })
@@ -116,12 +119,14 @@ export function useAuth(): AuthState & {
           bio: string | null
           avatar_url: string | null
           created_at: string | null
+          name_color: string | null
         }
         setRole(data.role as UserRole)
         setUsername(data.username)
         setBio(data.bio)
         setAvatarUrl(data.avatar_url)
         setCreatedAt(data.created_at)
+        setNameColor(data.name_color)
 
         // If we have a pending username from signup, set it now
         const pendingUsername = localStorage.getItem("wiki_pending_username")
@@ -211,9 +216,10 @@ export function useAuth(): AuthState & {
     setBio(null)
     setAvatarUrl(null)
     setCreatedAt(null)
+    setNameColor(null)
   }
 
-  const updateProfile = useCallback(async (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url">>) => {
+  const updateProfile = useCallback(async (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url" | "name_color">>) => {
     if (!session) return { error: "Not authenticated" }
     const res = await fetch("/api/auth/profile", {
       method: "PUT",
@@ -231,8 +237,9 @@ export function useAuth(): AuthState & {
     if (data.username !== undefined) setUsername(data.username)
     if (data.bio !== undefined) setBio(data.bio)
     if (data.avatar_url !== undefined) setAvatarUrl(data.avatar_url)
+    if (data.name_color !== undefined) setNameColor(data.name_color)
     return { error: null }
   }, [session])
 
-  return { session, role, loading, username, bio, avatar_url, created_at, signIn, signInWithPassword, signUp, signOut, updateProfile, changePassword, resetPassword }
+  return { session, role, loading, username, bio, avatar_url, created_at, name_color, signIn, signInWithPassword, signUp, signOut, updateProfile, changePassword, resetPassword }
 }

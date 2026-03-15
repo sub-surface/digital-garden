@@ -4,6 +4,7 @@
   display: flex;
   flex: 1;
   min-height: 0; // allow flex child to shrink within parent
+  background: transparent;
 }
 
 // ── Mobile sidebar overlay ──
@@ -54,6 +55,9 @@
   flex-direction: column;
   flex-shrink: 0;
   overflow: hidden;
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 
   @media (max-width: 700px) {
     position: fixed;
@@ -256,6 +260,11 @@
   overflow: hidden;
   min-width: 0;
   position: relative;
+  container-type: inline-size;
+  container-name: chat;
+  background: color-mix(in srgb, var(--color-bg) 75%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .chatContentWrapper {
@@ -680,6 +689,9 @@
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
   padding-bottom: env(safe-area-inset-bottom, 0);
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .inputArea {
@@ -1014,6 +1026,9 @@
   color: var(--color-text-muted);
   flex-shrink: 0;
   opacity: 0.7;
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 
   .chatContentWrapper {
     display: flex;
@@ -1028,4 +1043,94 @@
   }
 }
 
-// Search overlay, MiniProfile, EmotePicker, GifPicker — extracted to own .module.scss files
+.settingsBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 4px;
+  margin-left: auto;
+  opacity: 0.4;
+  transition: opacity 0.1s, color 0.1s;
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    opacity: 1;
+    color: var(--color-accent);
+  }
+}
+
+// ── Container query: narrow mode (sidechat) ──
+
+@container chat (max-width: 420px) {
+  .avatar,
+  .avatarPlaceholder {
+    display: none;
+  }
+
+  .messageRow {
+    gap: 0;
+  }
+
+  .messageListInner {
+    padding: 0 0.5rem;
+    max-width: 100%;
+  }
+
+  .inputArea {
+    padding: 0.4rem 0.5rem;
+    max-width: 100%;
+  }
+
+  .chatContentWrapper {
+    padding: 0 0.5rem;
+    max-width: 100%;
+  }
+
+  .chatRoomHeader {
+    padding: 0.35rem 0;
+  }
+
+  .username {
+    font-size: 0.75rem;
+  }
+
+  .messageBody {
+    font-size: 0.82rem;
+  }
+
+  .sendBtn {
+    display: none;
+  }
+
+  .embedImg {
+    max-width: 100%;
+    max-height: 160px;
+  }
+
+  .embedIframe {
+    max-width: 100%;
+    height: 160px;
+  }
+
+  .daySeparator {
+    margin: 0.4rem 0 0.3rem;
+    font-size: 0.58rem;
+  }
+
+  .typingIndicator {
+    padding: 0 0.5rem;
+    font-size: 0.6rem;
+  }
+
+  .scrollToBottom {
+    right: 0.5rem;
+    bottom: 4.5rem;
+    width: 26px;
+    height: 26px;
+    font-size: 0.7rem;
+  }
+}
+
+// Search overlay, MiniProfile, EmotePicker — extracted to own .module.scss files
