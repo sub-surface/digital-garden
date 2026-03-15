@@ -50,7 +50,6 @@
 .sidebar {
   width: 180px;
   min-width: 180px;
-  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -124,7 +123,6 @@
 .sidebarSearch {
   margin: 0.75rem 10px 0;
   flex-shrink: 0;
-  border-top: 1px solid var(--color-border);
   padding-top: 0.75rem;
 }
 
@@ -208,7 +206,6 @@
   display: none;
   margin-top: auto;
   padding: 0.75rem 14px;
-  border-top: 1px solid var(--color-border);
   font-family: var(--font-code);
   font-size: 0.72rem;
 
@@ -262,9 +259,6 @@
   position: relative;
   container-type: inline-size;
   container-name: chat;
-  background: color-mix(in srgb, var(--color-bg) 75%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .chatContentWrapper {
@@ -686,12 +680,8 @@
 // ── Input area ──
 
 .inputAreaOuter {
-  border-top: 1px solid var(--color-border);
   flex-shrink: 0;
   padding-bottom: env(safe-area-inset-bottom, 0);
-  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .inputArea {
@@ -744,13 +734,14 @@
 
 .textarea {
   flex: 1;
-  background: color-mix(in srgb, var(--color-bg-surface) 60%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
-  border-radius: 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  border-radius: 0;
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: 0.88rem;
-  padding: 7px 11px;
+  padding: 7px 4px;
   resize: none;
   min-height: 36px;
   max-height: 120px;
@@ -769,22 +760,25 @@
 
   @media (max-width: 700px) {
     font-size: 1rem; // prevent iOS zoom
-    padding: 6px 8px;
+    padding: 6px 4px;
     min-height: 34px;
   }
 }
 
 .sendBtn {
-  background: var(--color-accent);
+  background: none;
   border: none;
-  border-radius: 6px;
-  color: white;
+  color: var(--color-text-muted);
   font-family: var(--font-code);
   font-size: 0.72rem;
-  padding: 0 12px;
+  padding: 0 8px;
   cursor: pointer;
   white-space: nowrap;
-  transition: opacity 0.15s;
+  transition: color 0.15s;
+
+  &:hover {
+    color: var(--color-accent);
+  }
 
   &:disabled {
     opacity: 0.3;
@@ -1020,15 +1014,11 @@
 
 .chatRoomHeader {
   padding: 0.5rem 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
   font-family: var(--font-code);
   font-size: 0.75rem;
   color: var(--color-text-muted);
   flex-shrink: 0;
   opacity: 0.7;
-  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 
   .chatContentWrapper {
     display: flex;

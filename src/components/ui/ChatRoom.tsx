@@ -28,6 +28,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
   const inputRef = useRef<{ focus: () => void }>(null)
   const lastReadRef = useRef<string | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const settingsBtnRef = useRef<HTMLButtonElement>(null)
 
   const { toast, showToast } = useChatToast()
   const broadcastTyping = useTypingBroadcast(roomId, currentUserId)
@@ -160,9 +161,10 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
   return (
     <>
       <div className={styles.chatRoomHeader}>
-        <div className={styles.chatContentWrapper} style={{ position: "relative" }}>
+        <div className={styles.chatContentWrapper}>
           <span>{roomName}</span>
           <button
+            ref={settingsBtnRef}
             className={styles.settingsBtn}
             onClick={() => setShowSettings((v) => !v)}
             title="Chat settings"
@@ -175,6 +177,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
           </button>
           {showSettings && (
             <ChatSettings
+              anchorRef={settingsBtnRef}
               currentColor={name_color}
               onSave={async (color) => {
                 await updateProfile({ name_color: color })

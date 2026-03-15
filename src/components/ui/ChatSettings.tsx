@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, type RefObject } from "react"
 import styles from "./ChatSettings.module.scss"
 
 const PRESET_COLORS = [
@@ -9,14 +9,26 @@ const PRESET_COLORS = [
 ]
 
 interface Props {
+  anchorRef: RefObject<HTMLElement | null>
   currentColor: string | null
   onSave: (color: string | null) => void
   onClose: () => void
 }
 
-export function ChatSettings({ currentColor, onSave, onClose }: Props) {
+export function ChatSettings({ anchorRef, currentColor, onSave, onClose }: Props) {
   const [color, setColor] = useState(currentColor ?? "")
   const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
+
+  useEffect(() => {
+    if (anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect()
+      setPos({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      })
+    }
+  }, [anchorRef])
 
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
@@ -54,7 +66,11 @@ export function ChatSettings({ currentColor, onSave, onClose }: Props) {
   }
 
   return (
-    <div className={styles.settings} ref={ref}>
+    <div
+      className={styles.settings}
+      ref={ref}
+      style={pos ? { top: pos.top, right: pos.right } : { visibility: "hidden" }}
+    >
       <div className={styles.header}>name colour</div>
 
       <div className={styles.swatchGrid}>
