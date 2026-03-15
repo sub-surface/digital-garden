@@ -91,16 +91,17 @@ Dev dashboard: `/__dev` (dev mode only).
 
 ---
 
-## Two Shells
+## Three Shells
 
 | Shell | Activates when | Has | Doesn't have |
 |---|---|---|---|
 | AppShell | `subsurfaces.net` | Everything: BgCanvas, music, panels, graph, QuickControls | — |
-| WikiShell | `wiki.subsurfaces.net` or `VITE_WIKI_MODE=true` | MDXProvider, ThemePanel, SearchOverlay, LinkPreview, breadcrumb | BgCanvas, music, panels, graph, QuickControls |
+| WikiShell | `wiki.subsurfaces.net` or `VITE_WIKI_MODE=true` | MDXProvider, ThemePanel, SearchOverlay, LinkPreview, breadcrumb | Music, panels, graph |
+| ChatShell | `chat.subsurfaces.net` or `VITE_CHAT_MODE=true` | BgCanvas, ThemePanel, QuickControls (chat variant), ChatPage | Music, panels, graph, search |
 
-Detection: `useIsWiki()` hook in `src/hooks/useIsWiki.ts`. AppShell calls all hooks first (React rules), then conditionally returns WikiShell.
+Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki" | "chat"`. `useIsWiki()` and `useIsChat()` are thin wrappers. AppShell calls all hooks first (React rules), then conditionally returns WikiShell or ChatShell.
 
-**`VITE_WIKI_MODE=true`** — for local dev testing of wiki shell. Must NEVER be set in CF build env.
+**`VITE_WIKI_MODE=true`** / **`VITE_CHAT_MODE=true`** — for local dev testing. Must NEVER be set in CF build env.
 
 ---
 
@@ -110,7 +111,7 @@ Detection: `useIsWiki()` hook in `src/hooks/useIsWiki.ts`. AppShell calls all ho
 - **Trigger:** Push to `main` → CF auto-build
 - **Build output:** `dist/`
 - **SPA routing:** `wrangler.toml` `[assets]` block + `public/_redirects` (`/* /index.html 200`)
-- **Custom domains:** `subsurfaces.net`, `www.subsurfaces.net`, `wiki.subsurfaces.net` (Worker custom domains)
+- **Custom domains:** `subsurfaces.net`, `www.subsurfaces.net`, `wiki.subsurfaces.net`, `chat.subsurfaces.net` (Worker custom domains)
 - **Functions:** `functions/api/submit.ts` — compiled by CF separately, not by Vite
 
 ---
