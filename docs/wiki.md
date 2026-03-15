@@ -97,6 +97,7 @@
 - [x] **Magic link → profile redirect**: `emailRedirectTo` changed to `${origin}/profile`; `WikiProfilePage` detects OTP-only session (no password) via `session.user.amr` and shows accent notice prompting user to set a password; `WikiAuthModal` sent-state message updated accordingly.
 - [x] **Custom SMTP**: Resend configured via `smtp.resend.com:465` — bypasses Supabase free tier 3 emails/hour limit.
 - [x] **`handle_new_user` security fix**: `ALTER FUNCTION public.handle_new_user() SET search_path = public` applied to resolve mutable search path warning.
+- [x] **Password recovery redirect**: `resetPasswordForEmail` sets `redirectTo` to `/profile`, but Supabase hash-based implicit flow ignores the path and lands at site root. Fixed with client-side detection: `onAuthStateChange` handles `PASSWORD_RECOVERY` event → redirect to `/profile`; fallback checks URL hash for `type=recovery` on init. Profile page detects recovery session via `amr` and prompts password change.
 
 ### Navigation
 

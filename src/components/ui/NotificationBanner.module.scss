@@ -58,11 +58,15 @@
 }
 
 .tickerInner {
-  display: flex;
-  gap: 60px;
+  display: inline-flex;
   white-space: nowrap;
-  animation: ticker 22s linear infinite;
+  animation: ticker 20s linear infinite;
   width: max-content;
+
+  // Each span gets right-padding as the visual gap — keeps -50% math exact
+  > span {
+    padding-right: 5em;
+  }
 
   .banner:hover & {
     animation-play-state: paused;
@@ -71,7 +75,7 @@
 
 @keyframes ticker {
   0%   { transform: translateX(0); }
-  100% { transform: translateX(calc(-50% - 30px)); }
+  100% { transform: translateX(-50%); }
 }
 
 // ── Action button ─────────────────────────────────────────────────────────────

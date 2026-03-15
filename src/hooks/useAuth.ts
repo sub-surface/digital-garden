@@ -45,7 +45,11 @@ export function useAuth(): AuthState & {
       if (session) {
         fetchProfile(session.access_token)
 
-        // Fresh signup — username will be set via fetchProfile's pending_username logic
+        // Recovery flow — redirect to profile so user can set a new password
+        if (event === "PASSWORD_RECOVERY") {
+          window.location.replace("/profile")
+          return
+        }
       } else {
         setRole(null)
         setUsername(null)
@@ -64,6 +68,21 @@ export function useAuth(): AuthState & {
         setLoading(false)
       }
     })
+
+    // Fallback: detect recovery tokens in URL hash (implicit flow from email links)
+    // PKCE's detectSessionInUrl only checks query params, not hash fragments
+    const hash = window.location.hash
+    if (hash.includes("type=recovery") && hash.includes("access_token=")) {
+      // Supabase client will pick up the hash tokens via detectSessionInUrl,
+      // but we need to ensure redirect happens even if onAuthStateChange
+      // fires before this effect. Schedule a check after auth resolves.
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          window.history.replaceState(null, "", "/profile")
+          window.location.replace("/profile")
+        }
+      })
+    }
 
     return () => subscription.unsubscribe()
   }, [])
