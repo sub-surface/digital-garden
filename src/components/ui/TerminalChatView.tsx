@@ -350,10 +350,10 @@ export function TerminalChatView({
         const n = parseInt(parts[1] ?? "", 10)
         const visibleMessages = messages.slice(cleared)
         if (isNaN(n) || n < 1 || n > visibleMessages.length) {
-          appendLocalLine(`Usage: /reply <n>  (1–${visibleMessages.length})`)
+          appendLocalLine(`Usage: /reply <n>  (1 = most recent)`)
           return
         }
-        const target = visibleMessages[n - 1]
+        const target = visibleMessages[visibleMessages.length - n]
         setReplyContext(target)
         const username = target.profiles?.username ?? "unknown"
         const preview = target.body.slice(0, 60) + (target.body.length > 60 ? "..." : "")
@@ -601,6 +601,22 @@ export function TerminalChatView({
                   inputRef.current?.focus()
                 }}
               >
+                {isEmoteAc && (
+                  <img
+                    src={`/emotes/${c.slice(1, -1)}.gif`}
+                    alt=""
+                    style={{ height: "14px", width: "auto", verticalAlign: "middle", marginRight: "6px", display: "inline" }}
+                    onError={(e) => {
+                      const img = e.currentTarget
+                      if (!img.dataset.pngFallback) {
+                        img.dataset.pngFallback = "1"
+                        img.src = `/emotes/${c.slice(1, -1)}.png`
+                      } else {
+                        img.style.display = "none"
+                      }
+                    }}
+                  />
+                )}
                 {c}
                 {COMMAND_DEFS[c] ? <span style={{ color: "#555", marginLeft: "0.5rem" }}>{COMMAND_DEFS[c]}</span> : null}
               </div>
