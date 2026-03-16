@@ -40,7 +40,9 @@ function useEmoteIndex() {
         })
         .catch(() => { cachedEmotes = FALLBACK_EMOTES })
     }
-    emoteFetchPromise.then(() => { if (cachedEmotes) setEmotes(cachedEmotes) })
+    let alive = true
+    emoteFetchPromise.then(() => { if (alive && cachedEmotes) setEmotes(cachedEmotes) })
+    return () => { alive = false }
   }, [])
 
   return emotes
@@ -345,7 +347,9 @@ function MessageBodyRenderer({
 export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, onEdit, onCancelEdit, onPin, isAdmin, isOwn, isEditing: isEditingProp, reactions, onUsernameClick }: Props & { onUsernameClick?: (username: string, el: HTMLElement) => void }) {
   const username = msg.profiles?.username ?? "unknown"
   const avatarUrl = msg.profiles?.avatar_url ?? null
-  const nameColor = msg.profiles?.name_color ?? undefined
+  const nameColor = msg.profiles?.name_color?.match(/^#[0-9a-fA-F]{3,8}$/)
+    ? msg.profiles.name_color
+    : undefined
 
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
   const [emotePopup, setEmotePopup] = useState<{ name: string; src: string; x: number; y: number } | null>(null)
