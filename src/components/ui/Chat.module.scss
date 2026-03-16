@@ -1424,4 +1424,61 @@
   animation: reactionGlow 0.9s ease-out forwards;
 }
 
+// ── Footnote sidenotes ──
+
+.footnoteRef {
+  font-size: 0.7em;
+  color: var(--color-accent-base);
+  vertical-align: super;
+  line-height: 1;
+}
+
+.sidenotes {
+  position: absolute;
+  left: calc(100% + 1rem);
+  top: 0;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  @media (max-width: 900px) { display: none; }
+}
+
+.sidenote {
+  display: flex;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--color-text);
+  opacity: 0.7;
+  line-height: 1.4;
+}
+
+.sidenoteNum {
+  flex-shrink: 0;
+  color: var(--color-accent-base);
+  font-size: 0.7em;
+}
+
+.sidenoteText { flex: 1; }
+
+.sidenotesMobile {
+  margin-top: 0.4rem;
+
+  details {
+    font-size: 0.75rem;
+    color: var(--color-text);
+    opacity: 0.7;
+
+    summary {
+      cursor: pointer;
+      color: var(--color-accent-base);
+      list-style: none;
+      &::-webkit-details-marker { display: none; }
+    }
+  }
+
+  @media (min-width: 901px) { display: none; }
+}
+
 // Search overlay, MiniProfile, EmotePicker — extracted to own .module.scss files
