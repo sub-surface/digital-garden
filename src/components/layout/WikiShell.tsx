@@ -30,6 +30,8 @@ function SideChatToggle() {
 
 export function WikiShell() {
   const activeLayout = useStore((s) => s.activeLayout)
+  const isSideChatOpen = useStore((s) => s.isSideChatOpen)
+  const sideChatWidth = useStore((s) => s.sideChatWidth)
   const location = useLocation()
 
   const segments = location.pathname.replace(/^\//, "").split("/").filter(Boolean)
@@ -64,13 +66,19 @@ export function WikiShell() {
           </nav>
         )}
 
-        <main className={styles.mainPane} data-testid="main-pane">
-          <div className={styles.mainContent}>
-            <Outlet />
-          </div>
-        </main>
+        <div className={styles.dockedLayout}>
+          <main
+            className={styles.mainPane}
+            data-testid="main-pane"
+            style={isSideChatOpen ? { width: `calc(100% - ${sideChatWidth}px)` } : undefined}
+          >
+            <div className={styles.mainContent}>
+              <Outlet />
+            </div>
+          </main>
 
-        <SideChat />
+          <SideChat />
+        </div>
         <CornerMenu variant="wiki" />
       </div>
     </MDXProvider>

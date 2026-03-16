@@ -24,11 +24,11 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 ### Tier 3: Polish & UX
 
 - [x] **Chat restyling**: header bar with channel selector, centered layout (70% viewport), minimal input, autocomplete (`:emote`, `@mention`, `/command`), emote preview strip, pin ticker, popups portalled for z-index safety. SideChat unified with ChatRoom (single header via `headerExtra` prop, container queries handle narrow mode).
-- [ ] **Admin Room Management UI**: admin-only "+" button in room sidebar → inline form; admin can archive a room
-- [ ] **SideChat docked panel**: on wiki, SideChat should dock to the right edge and push page content left instead of overlapping. Left border acts as a draggable resize handle. Container queries already adapt ChatRoom to narrow widths.
+- [x] **Admin Room Management UI**: admin-only "+" button in channel dropdown → inline form (name + slug); archive button per room; `PATCH /api/chat/rooms/:id`
+- [x] **SideChat docked panel**: SideChat docks to right edge, pushes page content left via flex layout. Left border is a draggable resize handle (260–600px, persisted to localStorage). Container queries adapt ChatRoom to narrow widths.
 - [x] **Twitter/X link cards**: `twitter` token type in parseMessageBody + styled card with 𝕏 icon, @username, and URL — no Twitter JS embed loaded
 - [x] **Lazy embeds**: IntersectionObserver wrapper (`LazyEmbed`) in MessageRow — images and YouTube thumbnails only load when within 200px of viewport; emotes excluded (inline, tiny)
-- [ ] **Admin bans — permanent**: on permanent ban: hard-delete all message rows + anonymise profile
+- [x] **Admin bans — permanent**: on permanent ban: hard-delete all messages + reactions, anonymise profile (username → `[deleted]`, avatar/bio/name_color → null)
 
 ---
 
@@ -55,17 +55,21 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 - [ ] Contributor dashboard (recent activity, stats)
 - [ ] Watchlist (get notified when bookmarked pages are edited) — needs `watchlist` table
 - [ ] Page metadata editing (description, tags) from wiki editor UI
-- [ ] **Supabase RLS audit**: `bookmarks`, `edit_log`, `page_locks` have no RLS policies. Before public launch: own-row-only for bookmarks; insert-only for edit_log; admin-only lock management.
+- [x] **Supabase RLS audit**: RLS enabled + policies on `bookmarks` (own-row-only), `edit_log` (authenticated insert/select), `page_locks` (admin-only write, authenticated read)
 - [ ] Wiki community features (comments, reactions)
 - [ ] **GitHub App token** for non-expiring wiki submissions — until then, preflight token validity check with clear user-facing error
 
 ---
 
-## Stonks (Phase 2 — all items)
+## Stonks (Phase 2)
 
-- [ ] `stonk_ledger` table, `stonk_balance` view, point events, `stonk_config` table
-- [ ] Stonk balance + sparkline on profile pages and `MiniProfilePopup`
-- [ ] Admin stonk config UI (`GET/PUT /api/admin/stonk-config`)
+- [x] `stonk_ledger` table, `stonk_balance` view, `stonk_config` table with RLS
+- [x] Reaction-based point events (kek +5, nahh -3 received / -1 given, configurable per-emote)
+- [x] Stonk balance on `MiniProfilePopup` + sparkline on profile pages
+- [x] Admin stonk config UI in ChatSettings (`GET/PUT /api/admin/stonk-config`)
+- [x] `GET /api/chat/users/:username/stonk-history` — 90-day daily cumulative balance
+- [x] React picker with full emote pool (from `/emotes/index.json`)
+- [x] Removed stonk triangle button — all points flow through emote reactions
 - [ ] Easter egg reactions with configurable effects (e.g. confetti via `canvas-confetti`)
 - [ ] Secondary stonks market — deliberately deferred; ledger schema supports it
 
@@ -80,5 +84,5 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 ## Infrastructure & Legal
 
 - [ ] **Trusted Types**: evaluate `require-trusted-types-for 'script'` — audit PixiJS/D3 compatibility first
-- [ ] **GDPR cookie consent**: cookie consent banner — required for cross-domain session cookie. Reject → localStorage fallback only.
-- [ ] **Privacy policy page**: document data stored, cookie usage, contact info. Link from all three shells.
+- [x] **GDPR cookie consent**: `CookieConsent` component in all three shells. Accept/Reject stored in `localStorage`. Reject disables cross-domain cookie, reloads for localStorage-only auth.
+- [x] **Privacy policy page**: `/privacy` route on all shells. Links from CornerMenu + cookie consent banner. Covers auth, cookies, third parties, data retention, rights.

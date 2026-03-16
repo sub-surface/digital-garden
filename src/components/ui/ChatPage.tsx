@@ -11,7 +11,7 @@ export function ChatPage() {
   const [activeRoom, setActiveRoom] = useState<ChatRoomType | null>(null)
   const [showAuth, setShowAuth] = useState(false)
 
-  useEffect(() => {
+  function fetchRooms() {
     if (!session) return
     fetch("/api/chat/rooms", {
       headers: { Authorization: `Bearer ${session.access_token}` },
@@ -25,6 +25,10 @@ export function ChatPage() {
         }
       })
       .catch(() => {})
+  }
+
+  useEffect(() => {
+    fetchRooms()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
@@ -69,6 +73,7 @@ export function ChatPage() {
             currentAvatarUrl={avatar_url}
             rooms={rooms}
             onRoomChange={(room) => setActiveRoom(room)}
+            onRefreshRooms={fetchRooms}
           />
         )}
       </div>

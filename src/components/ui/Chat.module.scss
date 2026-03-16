@@ -978,6 +978,79 @@
   color: var(--color-accent);
 }
 
+.channelRow {
+  display: flex;
+  align-items: center;
+
+  .channelOption {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.channelArchiveBtn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+
+  .channelRow:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: var(--color-danger, #e74c3c);
+  }
+}
+
+.newRoomForm {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--color-border);
+}
+
+.newRoomInput {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  color: var(--color-text);
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  padding: 4px 6px;
+  outline: none;
+
+  &:focus {
+    border-color: var(--color-accent);
+  }
+}
+
+.newRoomActions {
+  display: flex;
+  gap: 4px;
+}
+
+.newRoomBtn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-text);
+    border-color: var(--color-accent);
+  }
+}
+
 // ── Header actions ──
 
 .headerActions {

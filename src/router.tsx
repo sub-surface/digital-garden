@@ -17,6 +17,7 @@ const WikiSubmitPage = lazy(() => import("@/components/ui/WikiSubmitPage").then(
 const WikiEditPage = lazy(() => import("@/components/ui/WikiEditPage").then(m => ({ default: m.WikiEditPage })))
 const WikiNewPage = lazy(() => import("@/components/ui/WikiNewPage").then(m => ({ default: m.WikiNewPage })))
 const WikiAdminPage = lazy(() => import("@/components/ui/WikiAdminPage").then(m => ({ default: m.WikiAdminPage })))
+const PrivacyPage = lazy(() => import("@/components/ui/PrivacyPage").then(m => ({ default: m.PrivacyPage })))
 const WikiProfilePage = lazy(() => import("@/components/ui/WikiProfilePage").then(m => ({ default: m.WikiProfilePage })))
 const ChatPage = lazy(() => import("@/components/ui/ChatPage").then(m => ({ default: m.ChatPage })))
 
@@ -145,6 +146,15 @@ const userRoute = createRoute({
   },
 })
 
+// Privacy policy — available on all shells
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/privacy",
+  component: function PrivacyRoute() {
+    return <Suspense fallback={<div className="loading-shimmer">Loading...</div>}><PrivacyPage /></Suspense>
+  },
+})
+
 // Wiki edit route — catch-all for /edit/*
 const editRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -197,6 +207,7 @@ const routeTree = rootRoute.addChildren([
   adminRoute,
   profileRoute,
   userRoute,
+  privacyRoute,
   editRoute,
   noteRoute,
 ])

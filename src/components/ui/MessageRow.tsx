@@ -419,7 +419,13 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, o
                 title={r.emote}
               >
                 <img src={`/emotes/${r.emote}.gif`} alt={r.emote} className={styles.reactionEmote}
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+                  onError={(e) => {
+                    const img = e.currentTarget as HTMLImageElement
+                    if (!img.dataset.pngFallback) {
+                      img.dataset.pngFallback = "1"
+                      img.src = `/emotes/${r.emote}.png`
+                    }
+                  }}
                 />
                 {r.count > 1 && <span>{r.count}</span>}
               </button>

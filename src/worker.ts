@@ -364,6 +364,17 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
     avatar_url = chatterImageForUsername(index, auth.username)
   }
 
+  // Stonk balance
+  const config = await getStonkConfig(env)
+  let stonk_balance: number | null = null
+  if (config.stonks_enabled) {
+    const balRes = await supabaseRest(env, `stonk_balance?user_id=eq.${auth.id}&select=balance`)
+    if (balRes.ok) {
+      const balRows = await balRes.json<{ balance: number }[]>()
+      stonk_balance = balRows.length > 0 ? balRows[0].balance : 0
+    }
+  }
+
   return jsonResponse({
     role: auth.role,
     email: auth.email,
@@ -372,6 +383,7 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
     avatar_url,
     created_at: auth.created_at,
     name_color: auth.name_color,
+    stonk_balance,
   })
 }
 
@@ -967,6 +979,25 @@ async function handleChatRooms(request: Request, env: Env): Promise<Response> {
     return jsonResponse(await res.json(), 201)
   }
 
+  if (request.method === "PATCH") {
+    const auth = await verifyAuth(request, env)
+    if (!auth || auth.role !== "admin") return jsonResponse({ error: "Admin access required" }, 403)
+
+    let body: { archived?: boolean }
+    try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
+
+    // Extract room ID from pathname: /api/chat/rooms/:id
+    const parts = new URL(request.url).pathname.split("/")
+    const roomId = parts[4]
+    if (!roomId) return jsonResponse({ error: "Room ID required" }, 400)
+
+    const res = await supabaseRest(env, `rooms?id=eq.${encodeURIComponent(roomId)}`, "PATCH", {
+      archived: body.archived ?? true,
+    })
+    if (!res.ok) return jsonResponse({ error: "Failed to update room" }, 500)
+    return jsonResponse({ ok: true })
+  }
+
   return jsonResponse({ error: "Method not allowed" }, 405)
 }
 
@@ -1465,12 +1496,26 @@ async function handleChatBan(request: Request, env: Env): Promise<Response> {
     const ban_expires_at = body.type === "temporary" && body.duration_hours
       ? new Date(Date.now() + body.duration_hours * 3600000).toISOString()
       : null
-    const res = await supabaseRest(env, `profiles?id=eq.${body.user_id.trim()}`, "PATCH", {
+    const targetId = body.user_id.trim()
+    const res = await supabaseRest(env, `profiles?id=eq.${targetId}`, "PATCH", {
       ban_type: body.type,
       ban_expires_at,
       ban_reason: body.reason ?? null,
     })
     if (!res.ok) return jsonResponse({ error: "Failed to ban user" }, 500)
+
+    // Permanent ban: hard-delete messages + anonymise profile
+    if (body.type === "permanent") {
+      await supabaseRest(env, `messages?user_id=eq.${targetId}`, "DELETE")
+      await supabaseRest(env, `reactions?user_id=eq.${targetId}`, "DELETE")
+      await supabaseRest(env, `profiles?id=eq.${targetId}`, "PATCH", {
+        username: "[deleted]",
+        avatar_url: null,
+        bio: null,
+        name_color: null,
+      })
+    }
+
     return jsonResponse({ ok: true })
   }
 
@@ -1543,7 +1588,7 @@ export default {
     }
 
     // Chat API
-    if (url.pathname === "/api/chat/rooms") return handleChatRooms(request, env)
+    if (url.pathname === "/api/chat/rooms" || url.pathname.match(/^\/api\/chat\/rooms\/[^/]+$/)) return handleChatRooms(request, env)
     if (url.pathname === "/api/chat/messages") return handleChatMessages(request, env, url)
     if (url.pathname.match(/^\/api\/chat\/messages\/[^/]+\/pin$/)) return handleChatPin(request, env, url)
     if (url.pathname.match(/^\/api\/chat\/messages\/[^/]+$/)) return handleChatMessages(request, env, url)
