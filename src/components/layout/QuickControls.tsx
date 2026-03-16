@@ -141,7 +141,7 @@ function SideChatToggle() {
 
   return (
     <button
-      className={`${styles.iconBtn} ${isSideChatOpen ? styles.chatToggleActive : ""}`}
+      className={`${styles.iconBtn} ${styles.chatToggle} ${isSideChatOpen ? styles.chatToggleActive : ""}`}
       onClick={toggleSideChat}
       title={isSideChatOpen ? "Close chat" : "Open chat"}
       aria-label="Toggle side chat"

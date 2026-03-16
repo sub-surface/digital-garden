@@ -58,6 +58,11 @@
   opacity: 0.5;
   pointer-events: none;
   user-select: none;
+  transition: top 0.15s ease;
+
+  :global(body[data-banner]) & {
+    top: calc(12px + 28px);
+  }
 
   @media (max-width: 800px) {
     display: none;

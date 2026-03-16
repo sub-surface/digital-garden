@@ -7,6 +7,11 @@
   align-items: baseline;
   gap: 0;
   pointer-events: auto;
+  transition: top 0.15s ease;
+
+  :global(body[data-banner]) & {
+    top: calc(12px + 28px);
+  }
 }
 
 .title {
