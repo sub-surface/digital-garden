@@ -153,10 +153,9 @@ function classifyWord(
 export function parseMessageBody(text: string): MessageToken[] {
   if (text.length === 0) return [];
 
-  // Split into segments: we want to split on whitespace while preserving the
-  // whitespace itself so that text tokens can include spacing between words.
-  // Strategy: split into alternating [non-ws, ws, non-ws, ...] chunks.
-  const parts = text.split(/(\s+)/);
+  // Split on whitespace AND footnote refs ([^n]) so refs work mid-word too.
+  // Capturing groups preserve the delimiters in the resulting array.
+  const parts = text.split(/(\s+|\[\^\d+\])/);
 
   const tokens: MessageToken[] = [];
   let pendingText = "";

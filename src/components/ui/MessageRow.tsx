@@ -294,29 +294,31 @@ function MessageBodyRenderer({
     }
     i++
   }
+  const sidenoteEntries = Array.from(footnotes.entries())
+
+  if (footnotes.size === 0) {
+    return <div>{nodes}</div>
+  }
+
   return (
-    <div style={{ position: "relative" }}>
-      {nodes}
-      {footnotes.size > 0 && (
-        <>
-          <aside className={styles.sidenotes}>
-            {Array.from(footnotes.entries()).map(([idx, content]) => (
-              <div key={idx} className={styles.sidenote}>
-                <sup className={styles.sidenoteNum}>{idx}</sup>
-                <span className={styles.sidenoteText}>{content}</span>
-              </div>
-            ))}
-          </aside>
-          <div className={styles.sidenotesMobile}>
-            {Array.from(footnotes.entries()).map(([idx, content]) => (
-              <details key={idx}>
-                <summary>note {idx}</summary>
-                {content}
-              </details>
-            ))}
+    <div className={styles.messageWithSidenotes}>
+      <div className={styles.messageBodyCol}>{nodes}</div>
+      <aside className={styles.sidenotes}>
+        {sidenoteEntries.map(([idx, content]) => (
+          <div key={idx} className={styles.sidenote}>
+            <sup className={styles.sidenoteNum}>{idx}</sup>
+            <span className={styles.sidenoteText}>{content}</span>
           </div>
-        </>
-      )}
+        ))}
+      </aside>
+      <div className={styles.sidenotesMobile}>
+        {sidenoteEntries.map(([idx, content]) => (
+          <details key={idx}>
+            <summary>note {idx}</summary>
+            {content}
+          </details>
+        ))}
+      </div>
     </div>
   )
 }

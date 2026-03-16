@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, KeyboardEvent, type ReactNode } from "react"
 import type { ChatMessage } from "@/types/chat"
-import { parseMessageBody } from "@/lib/parseMessageBody"
+import { parseMessageBodyWithFootnotes } from "@/lib/parseMessageBody"
 import { fetchEmoteIndex, getEmoteCache, emoteSrc } from "@/lib/emoteIndex"
 import { useStore } from "@/store"
 import { SPLASH_LOGO } from "./TerminalBootScreen"
@@ -71,8 +71,7 @@ interface TerminalLine {
 }
 
 
-function renderMessageTokens(text: string): ReactNode {
-  const tokens = parseMessageBody(text)
+function renderTokens(tokens: ReturnType<typeof parseMessageBodyWithFootnotes>["tokens"]): ReactNode {
   return tokens.map((tok, i) => {
     switch (tok.type) {
       case "text":
@@ -150,11 +149,16 @@ function renderMessageTokens(text: string): ReactNode {
           </a>
         )
       case "footnote-ref":
-        return <span key={i} style={{ color: "#666" }}>[^{tok.index}]</span>
+        return <sup key={i} style={{ color: "#7a9fbf", fontSize: "0.7em" }}>{tok.index}</sup>
       default:
         return null
     }
   })
+}
+
+function renderMessageBody(text: string): { body: ReactNode; footnotes: Map<number, string> } {
+  const { tokens, footnotes } = parseMessageBodyWithFootnotes(text)
+  return { body: renderTokens(tokens), footnotes }
 }
 
 export function TerminalChatView({
@@ -523,10 +527,10 @@ export function TerminalChatView({
       className={styles.terminalView}
       onClick={() => inputRef.current?.focus()}
     >
-      <div className={styles.terminalLogoHeader}>
-        {SPLASH_LOGO.map((l, i) => <div key={i}>{l}</div>)}
-      </div>
       <div className={styles.terminalMessages}>
+        <div className={styles.terminalLogoHeader}>
+          {SPLASH_LOGO.map((l, i) => <div key={i}>{l}</div>)}
+        </div>
         {displayLines.map((line) => {
           if (line.kind === "boot") {
             return (
@@ -565,9 +569,19 @@ export function TerminalChatView({
                 </span>
                 {line.isDeleted ? (
                   <span className={styles.terminalBodyDeleted}>[deleted]</span>
-                ) : (
-                  <span className={styles.terminalBody}>{renderMessageTokens(line.text)}</span>
-                )}
+                ) : (() => {
+                  const { body, footnotes } = renderMessageBody(line.text)
+                  return (
+                    <>
+                      <span className={styles.terminalBody}>{body}</span>
+                      {footnotes.size > 0 && Array.from(footnotes.entries()).map(([idx, content]) => (
+                        <span key={idx} className={styles.terminalReplyRef}>
+                          <sup style={{ color: "#7a9fbf", fontSize: "0.7em" }}>{idx}</sup>{" "}{content}
+                        </span>
+                      ))}
+                    </>
+                  )
+                })()}
               </span>
               {line.reactions && line.reactions.length > 0 && (
                 <span className={styles.terminalReactions}>

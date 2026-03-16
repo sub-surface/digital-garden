@@ -24,6 +24,7 @@
   @media (max-width: 700px) {
     flex: 1;
   }
+
 }
 
 .chatContentWrapper {
@@ -1433,16 +1434,36 @@
   line-height: 1;
 }
 
-.sidenotes {
-  position: absolute;
-  left: calc(100% + 1rem);
-  top: 0;
-  width: 180px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+// Two-column wrapper when a message has sidenotes
+.messageWithSidenotes {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto;
 
-  @media (max-width: 900px) { display: none; }
+  @media (min-width: 901px) {
+    grid-template-columns: 1fr 180px;
+    grid-template-rows: auto auto;
+    column-gap: 1rem;
+  }
+}
+
+.messageBodyCol {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.sidenotes {
+  display: none;
+
+  @media (min-width: 901px) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
 }
 
 .sidenote {
@@ -1464,6 +1485,8 @@
 
 .sidenotesMobile {
   margin-top: 0.4rem;
+  grid-column: 1;
+  grid-row: 2;
 
   details {
     font-size: 0.75rem;

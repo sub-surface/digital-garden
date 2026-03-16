@@ -107,7 +107,7 @@ export const MessageList = forwardRef<HTMLDivElement, Props>(function MessageLis
   }
 
   return (
-    <div className={styles.messageList} ref={ref} onScroll={onScroll}>
+    <div className={styles.messageList} ref={ref} onScroll={onScroll} data-chat-scroll>
       <div className={styles.messageListInner}>
         {loadingMore && (
           <div className={styles.loadMoreBtn} style={{ alignSelf: "center", cursor: "default" }}>
