@@ -6,21 +6,60 @@
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  padding: 10px;
-  width: 220px;
+  width: 240px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   animation: popIn 0.12s ease;
+  overflow: hidden;
 }
 
-.header {
+// ── Tabs ──
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-muted);
   font-family: var(--font-code);
-  font-size: 0.62rem;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 7px 4px;
+  cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+  margin-bottom: -1px;
+
+  &:hover { color: var(--color-text); }
+}
+
+.tabActive {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.tabContent {
+  padding: 10px;
+}
+
+// ── Section label ──
+
+.sectionLabel {
+  font-family: var(--font-code);
+  font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--color-text-muted);
   opacity: 0.6;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  margin-top: 2px;
 }
+
+// ── Colour picker ──
 
 .swatchGrid {
   display: grid;
@@ -66,14 +105,8 @@
   padding: 4px 6px;
   outline: none;
 
-  &:focus {
-    border-color: color-mix(in srgb, var(--color-accent-base) 50%, transparent);
-  }
-
-  &::placeholder {
-    color: var(--color-text-muted);
-    opacity: 0.35;
-  }
+  &:focus { border-color: color-mix(in srgb, var(--color-accent-base) 50%, transparent); }
+  &::placeholder { color: var(--color-text-muted); opacity: 0.35; }
 }
 
 .preview {
@@ -94,10 +127,7 @@
   cursor: pointer;
   transition: border-color 0.1s, color 0.1s;
 
-  &:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-  }
+  &:hover { border-color: var(--color-accent); color: var(--color-accent); }
 }
 
 .divider {
@@ -107,13 +137,189 @@
   margin: 8px 0;
 }
 
-.stonkLoading {
+// ── Segment buttons (density / scale) ──
+
+.densityRow {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.scaleRow {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.25rem;
+}
+
+.segBtn {
+  flex: 1;
+  padding: 0.3rem 0.4rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text-muted);
+  border-radius: 3px;
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+
+  &:hover { border-color: var(--color-accent-base); color: var(--color-text); }
+}
+
+.segBtnActive {
+  border-color: var(--color-accent-base);
+  color: var(--color-accent);
+}
+
+.segBtnWide {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+// ── API Keys tab ──
+
+.keyGenRow {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.keyNameInput {
+  flex: 1;
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  padding: 4px 6px;
+  outline: none;
+  min-width: 0;
+
+  &:focus { border-color: color-mix(in srgb, var(--color-accent-base) 50%, transparent); }
+  &::placeholder { color: var(--color-text-muted); opacity: 0.35; }
+}
+
+.generateBtn {
+  background: color-mix(in srgb, var(--color-accent-base) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent-base) 40%, transparent);
+  border-radius: 4px;
+  color: var(--color-accent);
+  font-family: var(--font-code);
+  font-size: 0.65rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s;
+
+  &:hover { background: color-mix(in srgb, var(--color-accent-base) 25%, transparent); }
+}
+
+.generatedKey {
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent-base) 30%, transparent);
+  border-radius: 4px;
+  padding: 7px 8px;
+  margin-bottom: 8px;
+}
+
+.generatedKeyLabel {
+  font-family: var(--font-code);
+  font-size: 0.58rem;
+  color: var(--color-accent);
+  opacity: 0.8;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.generatedKeyValue {
+  font-family: var(--font-code);
+  font-size: 0.6rem;
+  color: var(--color-text);
+  word-break: break-all;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.copyBtn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.6rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+
+  &:hover { border-color: var(--color-accent); color: var(--color-accent); }
+}
+
+.keyList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.keyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 6px;
+  background: color-mix(in srgb, var(--color-bg) 60%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.keyInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.keyName {
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keyMeta {
+  font-family: var(--font-code);
+  font-size: 0.57rem;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.revokeBtn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.1s, color 0.1s;
+
+  &:hover { border-color: #c84a4a; color: #c84a4a; }
+}
+
+.loadingText, .emptyText {
   font-family: var(--font-code);
   font-size: 0.62rem;
   color: var(--color-text-muted);
   opacity: 0.5;
   padding: 4px 0;
 }
+
+// ── Admin / Stonk config ──
 
 .stonkTable {
   display: flex;
@@ -153,14 +359,9 @@
   -moz-appearance: textfield;
 
   &::-webkit-inner-spin-button,
-  &::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
+  &::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
-  &:focus {
-    border-color: color-mix(in srgb, var(--color-accent-base) 50%, transparent);
-  }
+  &:focus { border-color: color-mix(in srgb, var(--color-accent-base) 50%, transparent); }
 }
 
 .stonkToggle {
@@ -174,38 +375,12 @@
   cursor: pointer;
   transition: border-color 0.1s, color 0.1s;
 
-  &:hover {
-    border-color: var(--color-accent);
-  }
+  &:hover { border-color: var(--color-accent); }
 }
 
 .stonkToggleOn {
   border-color: color-mix(in srgb, var(--color-accent-base) 50%, transparent);
   color: var(--color-accent);
-}
-
-.densityRow, .scaleRow {
-  display: flex;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
-}
-
-.densityBtn, .scaleBtn {
-  flex: 1;
-  padding: 0.3rem 0.5rem;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.12);
-  color: var(--color-text);
-  border-radius: 3px;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: border-color 0.15s;
-
-  &:hover { border-color: var(--color-accent-base); }
-  &.active {
-    border-color: var(--color-accent-base);
-    color: var(--color-accent-base);
-  }
 }
 
 @keyframes popIn {

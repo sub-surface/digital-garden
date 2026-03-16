@@ -1485,6 +1485,11 @@
 
 // ── Density overrides ──
 
+// Apply font scale baseline (catches all densities including default)
+.messageRow {
+  font-size: calc(1rem * var(--chat-font-scale, 1));
+}
+
 :global([data-density="compact"]) .messageListInner { gap: 0; }
 :global([data-density="compact"]) .messageRow {
   padding-block: 0.1rem;
@@ -1495,7 +1500,7 @@
   padding-block: 0.45rem;
   font-size: calc(1rem * var(--chat-font-scale, 1));
 }
-:global([data-density="comfortable"]) .msgRow {
+:global([data-density="comfortable"]) .messageRow {
   font-size: calc(1rem * var(--chat-font-scale, 1));
 }
 
