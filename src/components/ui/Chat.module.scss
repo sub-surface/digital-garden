@@ -1495,6 +1495,9 @@
   padding-block: 0.45rem;
   font-size: calc(1rem * var(--chat-font-scale, 1));
 }
+:global([data-density="comfortable"]) .msgRow {
+  font-size: calc(1rem * var(--chat-font-scale, 1));
+}
 
 // ── Terminal skin ──
 // Applied when [data-terminal="1"] is on the ChatShell root.
