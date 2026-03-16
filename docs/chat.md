@@ -248,3 +248,147 @@ All message body rendering goes through a shared `parseMessageBody(text)` utilit
 - [x] **Query component broken on wiki**: `contentIndex` never populated on wiki shell — `AppShell` was guarding the `content-index.json` fetch behind `shell === "main"`. Removed guard; all shells now fetch it on mount.
 - [x] **Worker crash risk with optional ASSETS**: `getContentIndex(env.ASSETS)` could pass `undefined` — added null guard inside `getContentIndex`. Safe in practice due to early return, but now defensively correct.
 - [x] **Realtime message enrichment race condition**: fetching enriched profile using `before=created_at+1s` was unreliable under concurrent inserts. Now fetches last 10 messages and matches by ID.
+
+---
+
+## Terminal Mode (Chat Polish Session 2026-03-16)
+
+A full terminal/CLI mode for the chat. Toggled via the `>_` button in QuickControls (chat shell only). The design goal is a genuine terminal aesthetic — not just a CSS skin — that treats the chat as a protocol and the UI as one possible frontend.
+
+### Motivation
+
+The terminal mode embodies a key architectural principle: the chat backend is universal, and the nice web UI is just one frontend. The terminal mode is a second frontend for the same backend. This distinction matters for:
+- Future API key access: anyone can build their own frontend against the same CF Worker API
+- Clarity of what is "chat" vs what is "site UI" — reactions, emotes, density settings are site-layer; messages, rooms, users are protocol-layer
+- The terminal mode is a demonstration that the protocol is clean enough to use directly
+
+### Architecture
+
+**Store field:** `chatTerminal: boolean` in Zustand store, persisted to localStorage (`"chatTerminal"` key). Toggled by `TerminalToggle` in `QuickControls.tsx` (visible on chat shell only).
+
+**ChatShell integration:** When `chatTerminal` is true, `data-terminal="1"` is applied to the shell root div. `ChatShell.module.scss` transitions `.shell` background to `#000`. `TerminalChatView` uses `position: fixed; top: 3.5rem; left: 0; right: 0; bottom: 0; z-index: 100` to cover the full chat area below the TerminalTitle nav.
+
+**Component tree (terminal mode):**
+```
+ChatShell (data-terminal="1", bg: #000)
+  TerminalTitle (z: 200+, stays visible)
+  QuickControls (z: 200+, stays visible)
+  ChatRoom
+    TerminalBootScreen (z: 9999, fixed overlay, plays on first toggle)
+    TerminalChatView (z: 100, fixed overlay covering chat area)
+      [normal ChatRoom header/input hidden]
+```
+
+**Normal mode is fully preserved** — toggling terminal off returns to exactly the normal chat UI.
+
+### Boot Sequence (`TerminalBootScreen.tsx`)
+
+Three phases, each skippable:
+
+**Phase 1 — Randomised BIOS** (click to skip to splash):
+Picks 4-6 elements at random from a pool of 12 types. Elements include:
+- `bios_header` — box-drawn `╔══╗` header with system name
+- `bios_post` — 6-9 random hardware POST lines (CPU, RAM, network, Supabase connection status, poetic lines like "Soul: waveform detected ∿∿∿")
+- `memory_test` — animated in-place memory counter (0K → 65536K OK)
+- `network_handshake` — TX/RX SYN handshake with latency stats
+- `scope_pulse` — animated ASCII oscilloscope (sine wave built char by char, self-removes)
+- `branch_tree` — ASCII tree growing from bottom up, self-removes
+- `echo_text` — word echoes into dim copies at increasing indent
+- `hex_dump` — three lines of hex memory dump
+- `module_load` — in-place module loader (kernel... ok / auth... ok / chat... ok)
+- `spectral` — three-band ASCII spectrum readout
+- `perf_test` — benchmark rows with in-place `[PASSED]` update
+- `tip_block` — random tip from a 15-item pool (chat tips, philosophical, funny)
+
+Order is shuffled each boot. The `alive` ref pattern ensures unmount safety throughout all async loops.
+
+**Phase 2 — ASCII Splash** (pause for explicit click/keypress):
+Terminal cleared. Large PHILCHAT block-char logo displayed line by line (10ms/line). Taglines and a random splash quote from a 5-item pool appear below. A pulsing `[ PRESS ANY KEY ]` prompt at bottom centre. `ESC to skip` hint at bottom right.
+
+This is a deliberate pause — the user must choose to enter.
+
+**Phase 3 — Message roll-in** (last 8 messages typed as boot output):
+Messages from the live chat feed roll through the terminal as typed output (`[username] body`, 60ms between messages, 15ms char-by-char). Styled identically to the chat view so the transition from boot output to live chat is seamless. Ends with `-- connected to #channel --` / `-- type /help for commands --`.
+
+**Skip logic:**
+- Click during Phase 1 → jump to splash
+- Click/keypress during Phase 2 → proceed to message roll-in
+- Click during Phase 3 → collapse all typing, show all messages instantly
+- ESC at any time → dismiss immediately
+
+### CLI Chat View (`TerminalChatView.tsx`)
+
+**Message format:** `[username] message body` per line. No avatars, no reaction strips, no reply UI, no emote pickers.
+
+**Rich rendering** via `parseMessageBody`:
+- Emotes → `<img>` 14px inline, `.gif` + `.png` fallback + text fallback
+- URLs → `<a>` dim underline
+- Images → `<img>` lazy-loaded, max 120px height, below text
+- YouTube/Twitter/Video → plain `<a>` bracketed label
+
+**Input:** Single-line `<input>` with `$` prefix (or `$~` when muted). Always focused. Black background, no border.
+
+**Autocomplete:**
+- `/` → command matches from COMMAND_DEFS
+- `@` → known users from current message set
+- `:` (unclosed) → emote names from `/emotes/index.json` (fetched once on mount, cached in ref)
+- Tab/Enter selects, ArrowUp/Down navigates, Escape clears input
+
+**Command history:** ArrowUp/Down (when autocomplete not showing) cycles through last 20 sent entries.
+
+**Boot echo strip:** A dim `kind: "boot"` line at the top of the message area: `PSYCHOGRAPH OS v3.1.4 — session active`. Provides visual continuity from the boot screen.
+
+### Command Suite
+
+| Command | Description |
+|---|---|
+| `/help` | List all commands in terminal output |
+| `/me <action>` | Send action message (`* username action`) |
+| `/shrug` | Append `¯\_(ツ)_/¯` to next message |
+| `/clear` | Clear local display (messages not deleted) |
+| `/timestamps` | Toggle `[HH:MM]` prefix on messages |
+| `/reply <n>` | Reply to message #n (1-based from visible list) |
+| `/unread` | Count messages after last-read timestamp |
+| `/room` | Show current room name |
+| `/whoami` | Show username and user ID |
+| `/users` | List unique users in current view |
+| `/nick` | Show current username |
+| `/mute` | Toggle typing indicator broadcast (`$~` prompt) |
+
+### Styling
+
+The terminal view is intentionally isolated from the site's design token cascade:
+- All colours are hardcoded: `#000` bg, `#e0e0e0` body text, `#888` prompt, `#666` system lines
+- Usernames keep their `name_color` from profiles (validated against `/^#[0-9a-fA-F]{3,8}$/`)
+- Font: IBM Plex Mono exclusively (no `var(--font-code)` — deliberate)
+- No `backdrop-filter`, no transparency, no CSS variables — pure terminal
+- The autocomplete dropdown uses `#0d0d0d` bg with `#2a2a2a` border
+
+### Future Considerations
+
+**Standalone terminal client:**
+The architecture deliberately separates protocol (chat Worker API) from UI. The terminal mode is a proof of concept that the API is usable without the site's design system. Next steps could include:
+- A raw HTTP-accessible websocket endpoint for true external terminal clients (e.g. `wscat`)
+- Documented API schema for third-party client builders
+- The `api_keys` table (already implemented with SHA-256 hashing) enables authenticated access without OAuth — important for headless clients
+
+**Terminal-native features:**
+The terminal mode currently parity-implements the web UI. Features that would be *better* in terminal:
+- `/log <n>` — dump last N messages as plain text (exportable)
+- `/grep <pattern>` — local search across visible messages
+- `/watch <username>` — highlight lines from a specific user
+- `/filter <pattern>` — hide lines not matching a pattern
+- Named pipe / clipboard integration for copy-as-text
+- Keyboard-driven reply: arrow-select message, Enter to reply
+
+**Emote rendering in terminal:**
+Currently emotes render as small inline images. A pure ASCII fallback mode (`:kek:` shown as-is, no images) would make the terminal usable in low-bandwidth or text-only contexts. Could be toggled via `/emotes off`.
+
+**Boot sequence as ambient display:**
+The Phase 2 splash screen could evolve into a "screensaver" mode — if the terminal is idle for N minutes, clear screen and play a boot sequence or ASCII animation. Inspired by `TerminalTitle`'s idle snippet system.
+
+**Realtime latency display:**
+`/ping` command showing Supabase Realtime round-trip latency would be a useful terminal-native feature for debugging connection quality.
+
+**API key platform (already implemented):**
+The `api_keys` Supabase table is live (SHA-256 hashed, `sk_` prefix, `revoked_at` soft-delete). CF Worker `verifyAuth` has fallthrough: JWT first, then API key path. Endpoints: `POST /api/keys` (generate), `GET /api/keys` (list own), `DELETE /api/keys/:id` (revoke). This enables external terminal clients to authenticate without browser OAuth.
