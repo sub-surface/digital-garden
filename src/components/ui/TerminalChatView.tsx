@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, KeyboardEvent, type ReactNode } from "react"
 import type { ChatMessage } from "@/types/chat"
 import { parseMessageBody } from "@/lib/parseMessageBody"
+import { SPLASH_LOGO } from "./TerminalBootScreen"
 import styles from "./Terminal.module.scss"
 
 interface Props {
@@ -56,12 +57,6 @@ interface TerminalLine {
   reactions?: Array<{ emote: string; count: number; reacted: boolean }>
 }
 
-const SPLASH_LOGO_SMALL = [
-  "╔═══════════════════════════════╗",
-  "║   P H I L C H A T   v4.2.0   ║",
-  "║   realtime community terminal ║",
-  "╚═══════════════════════════════╝",
-]
 
 function renderMessageTokens(text: string): ReactNode {
   const tokens = parseMessageBody(text)
@@ -173,8 +168,6 @@ export function TerminalChatView({
   const [acIndex, setAcIndex] = useState(-1)
   const [replyContext, setReplyContext] = useState<ChatMessage | null>(null)
   const [mutedTyping, setMutedTyping] = useState(false)
-  const [logoVisible, setLogoVisible] = useState(true)
-  const [logoFade, setLogoFade] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lineIdRef = useRef(0)
@@ -185,13 +178,6 @@ export function TerminalChatView({
   function mkId() {
     return String(++lineIdRef.current)
   }
-
-  // Ephemeral logo timers
-  useEffect(() => {
-    const t1 = setTimeout(() => setLogoFade(true), 2500)
-    const t2 = setTimeout(() => setLogoVisible(false), 4000)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [])
 
   // Fetch emotes once on mount
   useEffect(() => {
@@ -501,12 +487,10 @@ export function TerminalChatView({
       className={styles.terminalView}
       onClick={() => inputRef.current?.focus()}
     >
+      <div className={styles.terminalLogoHeader}>
+        {SPLASH_LOGO.map((l, i) => <div key={i}>{l}</div>)}
+      </div>
       <div className={styles.terminalMessages}>
-        {logoVisible && (
-          <div className={styles.terminalLogoHeader} data-fade={logoFade ? "1" : undefined}>
-            {SPLASH_LOGO_SMALL.map((l, i) => <div key={i}>{l}</div>)}
-          </div>
-        )}
         {displayLines.map((line) => {
           if (line.kind === "boot") {
             return (

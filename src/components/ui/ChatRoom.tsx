@@ -402,7 +402,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
 
   return (
     <>
-      {chatTerminal && (
+      {chatTerminal && !showBoot && (
         <div className={termStyles.terminalFixed}>
           <TerminalChatView
             messages={messages}
