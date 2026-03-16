@@ -52,7 +52,7 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
   const isOwnProfile = !viewUsername
   const usernameValid = /^[a-zA-Z0-9-]{3,30}$/.test(usernameValue)
   const stonkUsername = viewUsername ?? auth.username ?? null
-  const { days: stonkDays } = useStonkHistory(stonkUsername)
+  const { days: stonkDays, balance: stonkBalance } = useStonkHistory(stonkUsername)
 
   // Detect fresh magic-link OR password-reset session — prompt user to set/update password
   const amr = (auth.session?.user as any)?.amr as { method: string }[] | undefined
@@ -372,12 +372,12 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
       </div>
 
       {/* Stonks */}
-      {stonkDays.length > 0 && (
+      {stonkBalance !== null && (
         <div className="wiki-profile-section">
           <h3 className="wiki-profile-section-title">Stonks</h3>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
             <span style={{ fontFamily: "var(--font-code)", fontSize: "1.1rem", color: "var(--color-text)" }}>
-              {stonkDays[stonkDays.length - 1].balance}
+              {stonkBalance}
             </span>
             <StonkSparkline days={stonkDays} width={160} height={36} />
           </div>

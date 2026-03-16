@@ -11,6 +11,8 @@ const COOKIE_DOMAIN = import.meta.env.VITE_COOKIE_DOMAIN as string | undefined
 // Falls back to localStorage when VITE_COOKIE_DOMAIN is unset (local dev).
 function makeCookieStorage(domain?: string) {
   if (!domain || typeof document === "undefined") return undefined
+  // Respect cookie consent — rejected = localStorage-only (single domain sessions)
+  if (typeof localStorage !== "undefined" && localStorage.getItem("cookie-consent") === "rejected") return undefined
 
   const MAX_AGE = 60 * 60 * 24 * 365 // 1 year
 

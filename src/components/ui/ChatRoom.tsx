@@ -28,6 +28,7 @@ interface Props {
   currentAvatarUrl: string | null
   rooms?: ChatRoomType[]
   onRoomChange?: (room: ChatRoomType) => void
+  onRefreshRooms?: () => void
   /** Extra buttons rendered at the right end of the header (e.g. popout, close) */
   headerExtra?: ReactNode
 }
@@ -62,7 +63,7 @@ function renderPinBody(body: string): ReactNode[] {
   })
 }
 
-export function ChatRoom({ roomId, roomName, accessToken, currentUserId, currentUsername, currentAvatarUrl, rooms, onRoomChange, headerExtra }: Props) {
+export function ChatRoom({ roomId, roomName, accessToken, currentUserId, currentUsername, currentAvatarUrl, rooms, onRoomChange, onRefreshRooms, headerExtra }: Props) {
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
   const [popup, setPopup] = useState<{ username: string; anchor: HTMLElement } | null>(null)
   const [showSettings, setShowSettings] = useState(false)
@@ -76,6 +77,9 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
   const [activePinIndex, setActivePinIndex] = useState(0)
   const pinTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [searchLoading, setSearchLoading] = useState(false)
+  const [showNewRoom, setShowNewRoom] = useState(false)
+  const [newRoomName, setNewRoomName] = useState("")
+  const [newRoomSlug, setNewRoomSlug] = useState("")
   const { role, name_color, updateProfile } = useAuth()
   const inputRef = useRef<{ focus: () => void }>(null)
   const lastReadRef = useRef<string | null>(null)
@@ -344,6 +348,42 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     return [...names]
   }, [messages])
 
+  const isAdmin = role === "admin"
+
+  async function handleCreateRoom() {
+    const name = newRoomName.trim()
+    const slug = newRoomSlug.trim()
+    if (!name || !slug) return
+    try {
+      const res = await fetch("/api/chat/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ name, slug }),
+      })
+      if (!res.ok) throw new Error()
+      setNewRoomName("")
+      setNewRoomSlug("")
+      setShowNewRoom(false)
+      onRefreshRooms?.()
+    } catch {
+      showToast("Failed to create room")
+    }
+  }
+
+  async function handleArchiveRoom(id: string) {
+    try {
+      const res = await fetch(`/api/chat/rooms/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ archived: true }),
+      })
+      if (!res.ok) throw new Error()
+      onRefreshRooms?.()
+    } catch {
+      showToast("Failed to archive room")
+    }
+  }
+
   const hasRoomSelector = rooms && rooms.length > 0 && onRoomChange
 
   return (
@@ -363,17 +403,58 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
               {channelOpen && (
                 <div className={styles.channelDropdown}>
                   {rooms.map((r) => (
-                    <button
-                      key={r.id}
-                      className={`${styles.channelOption} ${r.id === roomId ? styles.channelOptionActive : ""}`}
-                      onClick={() => {
-                        onRoomChange(r)
-                        setChannelOpen(false)
-                      }}
-                    >
-                      {r.name}
-                    </button>
+                    <div key={r.id} className={styles.channelRow}>
+                      <button
+                        className={`${styles.channelOption} ${r.id === roomId ? styles.channelOptionActive : ""}`}
+                        onClick={() => {
+                          onRoomChange(r)
+                          setChannelOpen(false)
+                        }}
+                      >
+                        {r.name}
+                      </button>
+                      {isAdmin && r.id !== roomId && (
+                        <button
+                          className={styles.channelArchiveBtn}
+                          onClick={(e) => { e.stopPropagation(); handleArchiveRoom(r.id) }}
+                          title="Archive room"
+                          aria-label={`Archive ${r.name}`}
+                        >
+                          &times;
+                        </button>
+                      )}
+                    </div>
                   ))}
+                  {isAdmin && (
+                    showNewRoom ? (
+                      <div className={styles.newRoomForm}>
+                        <input
+                          className={styles.newRoomInput}
+                          placeholder="name"
+                          value={newRoomName}
+                          onChange={(e) => setNewRoomName(e.target.value)}
+                          autoFocus
+                        />
+                        <input
+                          className={styles.newRoomInput}
+                          placeholder="slug"
+                          value={newRoomSlug}
+                          onChange={(e) => setNewRoomSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                        />
+                        <div className={styles.newRoomActions}>
+                          <button className={styles.newRoomBtn} onClick={handleCreateRoom}>create</button>
+                          <button className={styles.newRoomBtn} onClick={() => { setShowNewRoom(false); setNewRoomName(""); setNewRoomSlug("") }}>cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        className={styles.channelOption}
+                        onClick={() => setShowNewRoom(true)}
+                      >
+                        + new room
+                      </button>
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -491,7 +572,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
             setShowSettings(false)
           }}
           onClose={() => setShowSettings(false)}
-          isAdmin={role === "admin"}
+          isAdmin={isAdmin}
           accessToken={accessToken}
         />
       )}
@@ -557,8 +638,8 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
           onReact={handleReact}
           onDelete={handleDelete}
           onEdit={handleEdit}
-          onPin={role === "admin" ? handlePin : undefined}
-          isAdmin={role === "admin"}
+          onPin={isAdmin ? handlePin : undefined}
+          isAdmin={isAdmin}
           currentUserId={currentUserId}
           editingMessageId={editingMessageId}
           onCancelEdit={() => setEditingMessageId(null)}

@@ -180,41 +180,41 @@ All message body rendering goes through a shared `parseMessageBody(text)` utilit
 
 ### Supabase Schema
 
-- [ ] Create `stonk_ledger` table: `id UUID PRIMARY KEY, user_id UUID REFERENCES profiles, amount INTEGER NOT NULL, reason TEXT NOT NULL, source_type TEXT NOT NULL` (e.g. `reaction_received`, `reaction_given`, `profile_created`, `wiki_edit`, `nahh_given`), `source_id TEXT, created_at TIMESTAMPTZ NOT NULL`
-  - Index: `(user_id, created_at DESC)`
-  - Balance = `SUM(amount) WHERE user_id = ?` — pure ledger, no cached balance needed at current scale (~500k rows before performance consideration, years away at community scale)
-  - Add `created_at` index at schema creation time — enables clean range-based archiving later without schema changes: `CREATE INDEX idx_stonk_ledger_created ON stonk_ledger(created_at)`
-- [ ] `stonk_balance` Postgres view: `SELECT user_id, SUM(amount) AS balance FROM stonk_ledger GROUP BY user_id`
-- [ ] Add `stonk_balance` to `GET /api/auth/me` and `GET /api/users/:username/mini` responses (query the view)
-- [ ] Add `chat_launched: false` to `stonk_config` as a feature flag — stonks display components check this flag and render nothing (not zero) until chat is live; flip to `true` when Phase 1 ships to avoid misleading zeroes on wiki profiles before the economy exists
+- [x] `stonk_ledger` table: append-only, `id UUID PK`, `user_id`, `amount`, `reason`, `source_type`, `source_id` (composite `{msg_id}:{reactor}:{emote}`), `created_at`. Indexes: `(user_id, created_at DESC)`, `(created_at)`, `(source_id, source_type)`. RLS enabled, no client policies (service key only).
+- [x] `stonk_balance` view: `SELECT user_id, GREATEST(COALESCE(SUM(amount), 0), 0) AS balance FROM stonk_ledger GROUP BY user_id`
+- [x] `stonk_config` table: `key TEXT PK, value INTEGER`. RLS enabled.
+- [x] `stonk_balance` added to `GET /api/chat/users/:username/mini` (null when disabled, 0 when no entries)
 
-### Point Events (all instant, all write to `stonk_ledger`)
+### Point Events (reaction-based, all write to `stonk_ledger`)
 
-- [ ] Profile created: +50
-- [ ] Wiki edit submitted (PR merged): +10
-- [ ] Wiki page created: +25
-- [ ] Received a kek reaction: +5
-- [ ] Received a nahh reaction: -3 (floor: 0 — clamp in Worker before insert)
-- [ ] Gave a nahh reaction: -1 to giver (configurable, default -1 — cost disincentivises spam)
-- [ ] Gave a kek: +0 (giving keks is free, costs nothing)
-- [ ] Other reaction emotes: configurable per-emote value (default 0, admins can set per emote)
-- [ ] All values admin-configurable via a `stonk_config` table: `key TEXT PRIMARY KEY, value INTEGER`
+- [x] Received a kek reaction: +5 (configurable via `kek_received`)
+- [x] Received a nahh reaction: -3 (configurable via `nahh_received`; balance floor 0)
+- [x] Gave a nahh reaction: -1 to giver (configurable via `nahh_given`)
+- [x] Other reaction emotes: configurable per-emote value (default 0 via `reaction_received_default`)
+- [x] No self-stonking (reactor === author skipped)
+- [x] Reaction delete: reversal rows (negated original amount from ledger, not current config)
+- [x] Kill switch: `stonks_enabled` in config — 0 disables all ledger writes and hides UI
+- [ ] Profile created points, wiki edit points — deferred to Phase 3
 
 ### `stonk_config` table
 
-- [ ] Seed default values for all point events above
-- [ ] `GET /api/admin/stonk-config` — returns all config rows
-- [ ] `PUT /api/admin/stonk-config` — body `{ key, value }`: update a config value; admin only
+- [x] Seeded defaults: `stonks_enabled=1`, `kek_received=5`, `nahh_received=-3`, `nahh_given=-1`, `reaction_received_default=0`
+- [x] `GET /api/admin/stonk-config` — returns all config rows (admin only)
+- [x] `PUT /api/admin/stonk-config` — body `{ key, value }`: update a config value (admin only)
 
 ### Frontend — Stonks Display
 
-- [ ] Stonk balance + sparkline on `WikiProfilePage` (own profile) and public `/user/:username` page
-- [ ] Stonk balance + small number on `MiniProfilePopup`
-- [ ] Sparkline chart: lightweight SVG (uPlot or hand-rolled with D3 — D3 already in bundle) showing balance over time from `stonk_ledger` grouped by day
-- [ ] `GET /api/users/:username/stonk-history` — returns daily balance snapshots (aggregate ledger by day) for charting
-- [ ] Easter egg reactions: configurable per-emote `effect` field in `stonk_config` (e.g. `confetti`) — client reads effect from emote config and triggers animation; confetti via `canvas-confetti` (tiny, ~3KB)
+- [x] Stonk balance + sparkline on `WikiProfilePage` (own + public) — shows even with 0 balance
+- [x] Stonk balance on `MiniProfilePopup` (monospace number)
+- [x] `StonkSparkline` component: pure inline SVG polyline, accent-coloured, flat line when < 2 data points
+- [x] `useStonkHistory` hook: fetches history + balance in parallel
+- [x] `GET /api/chat/users/:username/stonk-history` — 90-day daily cumulative balance via window function
+- [x] React picker in message actions (`+` button): full emote pool from `/emotes/index.json`, filterable, scrollable grid, portalled
+- [x] Removed stonk triangle button — all point flow through emote reactions
+- [x] Admin stonk config section in ChatSettings: toggle for enabled, inline-editable number inputs per emote
+- [ ] Easter egg reactions: configurable per-emote effects — deferred
 
-> **Future note:** Secondary stonks market (users investing in other users' stonks, prediction-market style) — deliberately deferred. The ledger schema supports it without changes.
+> **Future note:** Secondary stonks market — deliberately deferred. Ledger schema supports it.
 
 ---
 

@@ -18,6 +18,7 @@ import { MobileMusicBar } from "@/components/ui/MobileMusicBar"
 import { SearchOverlay } from "@/components/ui/SearchOverlay"
 import { GraphOverlay } from "@/components/ui/GraphOverlay"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
+import { CookieConsent } from "./CookieConsent"
 import styles from "./AppShell.module.scss"
 
 // Lazy-load LocalGraph — pulls in D3 + PixiJS (~570KB), only needed on desktop
@@ -42,8 +43,8 @@ export function AppShell() {
   usePanelClick()
   useHotkeys()
 
-  if (shell === "wiki") return <Suspense fallback={null}><WikiShell /></Suspense>
-  if (shell === "chat") return <Suspense fallback={null}><ChatShell /></Suspense>
+  if (shell === "wiki") return <Suspense fallback={null}><WikiShell /><CookieConsent /></Suspense>
+  if (shell === "chat") return <Suspense fallback={null}><ChatShell /><CookieConsent /></Suspense>
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 800
   const showFloatingGraph = !isMobile
@@ -87,6 +88,7 @@ export function AppShell() {
 
         {/* Corner menu — bottom-right (includes Theme toggle) */}
         <CornerMenu />
+        <CookieConsent />
       </div>
     </MDXProvider>
   )

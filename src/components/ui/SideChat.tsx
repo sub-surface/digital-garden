@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { useStore } from "@/store"
 import { ChatRoom } from "./ChatRoom"
@@ -7,13 +7,21 @@ import type { ChatRoom as ChatRoomType } from "@/types/chat"
 import styles from "./SideChat.module.scss"
 import chatStyles from "./Chat.module.scss"
 
+const MIN_WIDTH = 260
+const MAX_WIDTH = 600
+
 export function SideChat() {
   const isOpen = useStore((s) => s.isSideChatOpen)
   const setSideChatOpen = useStore((s) => s.setSideChatOpen)
+  const width = useStore((s) => s.sideChatWidth)
+  const setWidth = useStore((s) => s.setSideChatWidth)
   const { session, username, avatar_url } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
   const [room, setRoom] = useState<ChatRoomType | null>(null)
   const [rooms, setRooms] = useState<ChatRoomType[]>([])
+  const [resizing, setResizing] = useState(false)
+  const startXRef = useRef(0)
+  const startWidthRef = useRef(0)
 
   useEffect(() => {
     if (!isOpen || !session) return
@@ -31,6 +39,31 @@ export function SideChat() {
       .catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, session])
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    const delta = startXRef.current - e.clientX
+    const newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startWidthRef.current + delta))
+    setWidth(newWidth)
+  }, [setWidth])
+
+  const handleMouseUp = useCallback(() => {
+    setResizing(false)
+    document.removeEventListener("mousemove", handleMouseMove)
+    document.removeEventListener("mouseup", handleMouseUp)
+    document.body.style.cursor = ""
+    document.body.style.userSelect = ""
+  }, [handleMouseMove])
+
+  function handleResizeStart(e: React.MouseEvent) {
+    e.preventDefault()
+    startXRef.current = e.clientX
+    startWidthRef.current = width
+    setResizing(true)
+    document.addEventListener("mousemove", handleMouseMove)
+    document.addEventListener("mouseup", handleMouseUp)
+    document.body.style.cursor = "col-resize"
+    document.body.style.userSelect = "none"
+  }
 
   function handlePopout() {
     window.open("https://chat.subsurfaces.net", "philchat", "width=400,height=700")
@@ -67,7 +100,11 @@ export function SideChat() {
   )
 
   return (
-    <div className={styles.panel}>
+    <div className={styles.panel} style={{ width }}>
+      <div
+        className={`${styles.resizeHandle} ${resizing ? styles.resizing : ""}`}
+        onMouseDown={handleResizeStart}
+      />
       <div className={styles.chatContainer}>
         {!session ? (
           <div className={styles.loginArea}>

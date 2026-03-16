@@ -143,6 +143,14 @@ export function CornerMenu({ variant = "default" }: CornerMenuProps = {}) {
         >
           About
         </a>
+        <a
+          href="/privacy"
+          className={styles.aboutLink}
+          onClick={() => handleNav({ label: "Privacy", to: "/privacy" })}
+          data-panel-ignore
+        >
+          Privacy
+        </a>
         <span className={styles.copyright}>&copy; Sub-Surface</span>
       </div>
     </div>

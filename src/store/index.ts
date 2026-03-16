@@ -88,6 +88,8 @@ interface GardenStore {
   isSideChatOpen: boolean
   toggleSideChat: () => void
   setSideChatOpen: (open: boolean) => void
+  sideChatWidth: number
+  setSideChatWidth: (width: number) => void
 
   // Music
   isMusicOpen: boolean
@@ -208,6 +210,11 @@ export const useStore = create<GardenStore>((set) => ({
   isSideChatOpen: false,
   toggleSideChat: () => set((s) => ({ isSideChatOpen: !s.isSideChatOpen })),
   setSideChatOpen: (isSideChatOpen) => set({ isSideChatOpen }),
+  sideChatWidth: parseInt(typeof localStorage !== "undefined" ? localStorage.getItem("sidechat-width") ?? "340" : "340", 10),
+  setSideChatWidth: (width) => {
+    localStorage.setItem("sidechat-width", String(width))
+    set({ sideChatWidth: width })
+  },
 
   // Music
   isMusicOpen: false,
