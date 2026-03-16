@@ -49,6 +49,65 @@
   pointer-events: none;
 }
 
+// ── Boot splash styles ──
+
+.terminalSplashLogo {
+  display: block;
+  white-space: pre;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #e0e0e0;
+}
+
+.terminalSplashTagline {
+  display: block;
+  white-space: pre-wrap;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #888;
+  min-height: 1.5em;
+}
+
+.terminalSplashQuote {
+  display: block;
+  white-space: pre-wrap;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #bbb;
+  font-style: italic;
+}
+
+@keyframes keyPulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+.terminalPressKey {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.78rem;
+  color: #ccc;
+  animation: keyPulse 1s ease-in-out infinite;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.terminalEscHint {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 2rem;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.65rem;
+  color: #444;
+  pointer-events: none;
+}
+
 // ── Terminal Chat View ──
 
 // Fullscreen fixed overlay (used when chatTerminal is active)
