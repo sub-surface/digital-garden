@@ -274,10 +274,12 @@ ChatShell (data-terminal="1", bg: #000)
   TerminalTitle (z: 200+, stays visible)
   QuickControls (z: 200+, stays visible)
   ChatRoom
-    TerminalBootScreen (z: 9999, fixed overlay, plays on first toggle)
-    TerminalChatView (z: 100, fixed overlay covering chat area)
+    TerminalBootScreen (z: 99, fixed overlay — rendered only while showBoot=true)
+    TerminalChatView (z: 100, fixed overlay — rendered only after boot completes)
       [normal ChatRoom header/input hidden]
 ```
+
+Boot and chat views are **mutually exclusive** — `TerminalChatView` renders only when `chatTerminal && !showBoot`. Once `TerminalBootScreen` calls `onDone`, `showBoot` becomes false and the chat view mounts.
 
 **Normal mode is fully preserved** — toggling terminal off returns to exactly the normal chat UI.
 
@@ -318,7 +320,13 @@ Messages from the live chat feed roll through the terminal as typed output (`[us
 
 ### CLI Chat View (`TerminalChatView.tsx`)
 
-**Message format:** `[username] message body` per line. No avatars, no reaction strips, no reply UI, no emote pickers.
+**Static logo header:** The large `SPLASH_LOGO` block-char title (imported from `TerminalBootScreen.tsx`) is hardcoded at the top-centre of the terminal chat view — always visible, no fade, no interaction. Provides identity and visual continuity from the boot screen without replaying the boot sequence.
+
+**Message format:** `[username] message body` per line. Centred layout, `max-width: 860px`, matching the boot sequence's width and padding.
+
+**Reply rendering:** Replied-to messages show an inline `↳ [username]: preview` above the message body (`.terminalReplyRef`, dim with left border). The reply context bar above the input (`↩ replying to [username]: preview`) is dismissed via Escape — Escape prioritises cancelling reply context before clearing input.
+
+**Reactions:** Emote reactions appear below each message as a row of small buttons (`.terminalReactions`). Each shows the emote image (13px) and count badge when >1. Reacted state shown via border/colour change. Clickable via `onReact` prop wired to `handleReact` in `ChatRoom`.
 
 **Rich rendering** via `parseMessageBody`:
 - Emotes → `<img>` 14px inline, `.gif` + `.png` fallback + text fallback
