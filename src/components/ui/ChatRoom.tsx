@@ -14,6 +14,7 @@ import { TerminalChatView } from "./TerminalChatView"
 import { TerminalBootScreen } from "./TerminalBootScreen"
 import { useStore } from "@/store"
 import styles from "./Chat.module.scss"
+import termStyles from "./Terminal.module.scss"
 
 interface SearchResult {
   id: string
@@ -401,6 +402,23 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
 
   return (
     <>
+      {chatTerminal && (
+        <div className={termStyles.terminalFixed}>
+          <TerminalChatView
+            messages={messages}
+            currentUserId={currentUserId}
+            currentUsername={currentUsername}
+            roomId={roomId}
+            accessToken={accessToken}
+            onSend={handleSend}
+            knownUsers={knownUsers}
+            bootEcho="PSYCHOGRAPH OS v3.1.4 — session active"
+            lastReadTimestamp={lastReadRef.current}
+          />
+        </div>
+      )}
+      {showBoot && <TerminalBootScreen onDone={() => setShowBoot(false)} />}
+      {!chatTerminal && (
       <div className={styles.chatRoomHeader}>
         <div className={styles.chatContentWrapper}>
           {/* Channel selector */}
@@ -575,8 +593,9 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
           </div>
         </div>
       </div>
+      )}
 
-      {showSettings && (
+      {!chatTerminal && showSettings && (
         <ChatSettings
           anchorRef={settingsBtnRef}
           currentColor={name_color}
@@ -591,7 +610,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       )}
 
       {/* Pinned message ticker */}
-      {showPinTicker && pinnedMessages.length > 0 && (() => {
+      {showPinTicker && pinnedMessages.length > 0 && !chatTerminal && (() => {
         const safeIdx = Math.min(activePinIndex, pinnedMessages.length - 1)
         const pin = pinnedMessages[safeIdx]
         return (
@@ -640,17 +659,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
         )
       })()}
 
-      {chatTerminal ? (
-        <TerminalChatView
-          messages={messages}
-          currentUserId={currentUserId}
-          currentUsername={currentUsername}
-          roomId={roomId}
-          accessToken={accessToken}
-          onSend={handleSend}
-          knownUsers={knownUsers}
-        />
-      ) : (
+      {!chatTerminal && (
         <>
           {loading ? (
             <div className={styles.emptyState}>loading messages…</div>
@@ -709,8 +718,6 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
           />
         </>
       )}
-
-      {showBoot && <TerminalBootScreen onDone={() => setShowBoot(false)} />}
     </>
   )
 }

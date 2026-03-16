@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback, KeyboardEvent } from "react"
+import { useState, useEffect, useRef, useCallback, KeyboardEvent, type ReactNode } from "react"
 import type { ChatMessage } from "@/types/chat"
+import { parseMessageBody } from "@/lib/parseMessageBody"
 import styles from "./Terminal.module.scss"
 
 interface Props {
@@ -10,6 +11,8 @@ interface Props {
   accessToken: string
   onSend: (body: string, replyToId?: string) => Promise<void>
   knownUsers: string[]
+  bootEcho?: string
+  lastReadTimestamp?: string | null
 }
 
 const NAME_COLOR_RE = /^#[0-9a-fA-F]{3,8}$/
@@ -34,16 +37,111 @@ const COMMAND_DEFS: Record<string, string> = {
   "/room": "show current room name",
   "/whoami": "show your username",
   "/users": "list users visible in current view",
+  "/reply": "/reply <n>  — reply to message #n in view",
+  "/unread": "show count of unread messages",
+  "/nick": "show your current username",
+  "/mute": "toggle typing indicator broadcast",
 }
 
 interface TerminalLine {
   id: string
   text: string
-  kind: "msg" | "system" | "help"
+  kind: "msg" | "system" | "help" | "boot"
   username?: string
   nameColor?: string | null
   isDeleted?: boolean
   timestamp?: string
+}
+
+function renderMessageTokens(text: string): ReactNode {
+  const tokens = parseMessageBody(text)
+  return tokens.map((tok, i) => {
+    switch (tok.type) {
+      case "text":
+        return <span key={i}>{tok.value}</span>
+      case "emote":
+        return (
+          <img
+            key={i}
+            src={`/emotes/${tok.name}.gif`}
+            alt={`:${tok.name}:`}
+            style={{ height: "14px", width: "auto", verticalAlign: "middle", margin: "0 1px", display: "inline" }}
+            onError={(e) => {
+              const img = e.currentTarget
+              if (!img.dataset.pngFallback) {
+                img.dataset.pngFallback = "1"
+                img.src = `/emotes/${tok.name}.png`
+              } else {
+                img.replaceWith(document.createTextNode(`:${tok.name}:`))
+              }
+            }}
+          />
+        )
+      case "url":
+        return (
+          <a
+            key={i}
+            href={tok.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#888", textDecoration: "underline" }}
+          >
+            {tok.label}
+          </a>
+        )
+      case "image":
+        return (
+          <span key={i} style={{ display: "block" }}>
+            <img
+              src={tok.url}
+              alt=""
+              loading="lazy"
+              style={{ maxHeight: "120px", maxWidth: "100%", marginTop: "3px", display: "block" }}
+            />
+          </span>
+        )
+      case "youtube":
+        return (
+          <a
+            key={i}
+            href={tok.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#888", textDecoration: "underline" }}
+          >
+            [youtube: {tok.videoId}]
+          </a>
+        )
+      case "twitter":
+        return (
+          <a
+            key={i}
+            href={tok.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#888", textDecoration: "underline" }}
+          >
+            [&#x1D54F; @{tok.username}]
+          </a>
+        )
+      case "video":
+        return (
+          <a
+            key={i}
+            href={tok.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#888", textDecoration: "underline" }}
+          >
+            [video]
+          </a>
+        )
+      case "footnote-ref":
+        return <span key={i} style={{ color: "#666" }}>[^{tok.index}]</span>
+      default:
+        return null
+    }
+  })
 }
 
 export function TerminalChatView({
@@ -53,6 +151,8 @@ export function TerminalChatView({
   roomId,
   onSend,
   knownUsers,
+  bootEcho,
+  lastReadTimestamp,
 }: Props) {
   const [input, setInput] = useState("")
   const [showTimestamps, setShowTimestamps] = useState(false)
@@ -60,13 +160,32 @@ export function TerminalChatView({
   const [localLines, setLocalLines] = useState<TerminalLine[]>([])
   const [cleared, setCleared] = useState<number>(0) // epoch marker to reset
   const [acIndex, setAcIndex] = useState(-1)
+  const [replyContext, setReplyContext] = useState<ChatMessage | null>(null)
+  const [mutedTyping, setMutedTyping] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lineIdRef = useRef(0)
+  const emotesRef = useRef<string[]>([])
+  const historyRef = useRef<string[]>([])
+  const historyIdxRef = useRef(-1)
 
   function mkId() {
     return String(++lineIdRef.current)
   }
+
+  // Fetch emotes once on mount
+  useEffect(() => {
+    fetch("/emotes/index.json")
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          emotesRef.current = (data as unknown[])
+            .map((e) => (typeof e === "string" ? e : (e as { name: string }).name))
+            .filter(Boolean)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Build display lines from messages, after last clear epoch
   const msgLines: TerminalLine[] = messages.map((m) => ({
@@ -79,15 +198,21 @@ export function TerminalChatView({
     timestamp: m.created_at,
   }))
 
-  // Combine: system lines from local + message lines (after cleared marker) + local help lines
+  // Boot echo line (if provided)
+  const bootLine: TerminalLine | null = bootEcho
+    ? { id: "boot-echo", text: bootEcho, kind: "boot" }
+    : null
+
+  // System load line
   const systemLoadLine: TerminalLine = {
     id: "sysload",
     text: `-- loaded ${messages.length} messages --`,
     kind: "system",
   }
 
-  // All display lines: system header, then messages (post-clear), then local help/system lines
+  // All display lines: optional boot echo, system header, then messages (post-clear), then local help/system lines
   const displayLines: TerminalLine[] = [
+    ...(bootLine ? [bootLine] : []),
     systemLoadLine,
     ...msgLines.slice(cleared),
     ...localLines,
@@ -114,10 +239,26 @@ export function TerminalChatView({
         .filter((u) => u.toLowerCase().startsWith(partial))
         .map((u) => `@${u}`)
     }
+    // Emote autocomplete: triggered when input has an open :
+    const lastColon = input.lastIndexOf(":")
+    const hasOpenEmote =
+      lastColon >= 0 && !input.slice(lastColon + 1).includes(":")
+    if (hasOpenEmote) {
+      const partial = input.slice(lastColon + 1).toLowerCase()
+      if (partial.length > 0) {
+        return emotesRef.current
+          .filter((n) => n.startsWith(partial))
+          .slice(0, 12)
+          .map((n) => `:${n}:`)
+      }
+    }
     return []
   })()
 
   const showAc = acCandidates.length > 0
+
+  // Determine if current AC is an emote (not command, not @mention)
+  const isEmoteAc = showAc && acCandidates[0]?.startsWith(":")
 
   function appendLocalLine(text: string, kind: TerminalLine["kind"] = "system") {
     setLocalLines((prev) => [...prev, { id: mkId(), text, kind }])
@@ -128,6 +269,12 @@ export function TerminalChatView({
     if (!raw) return
     setInput("")
     setAcIndex(-1)
+
+    // Add to history (skip /clear to not pollute history)
+    if (raw && raw !== "/clear") {
+      historyRef.current = [raw, ...historyRef.current].slice(0, 20)
+      historyIdxRef.current = -1
+    }
 
     // Command dispatch
     if (raw.startsWith("/")) {
@@ -145,6 +292,7 @@ export function TerminalChatView({
       if (cmd === "/clear") {
         setCleared(messages.length)
         setLocalLines([])
+        historyIdxRef.current = -1
         return
       }
 
@@ -185,6 +333,45 @@ export function TerminalChatView({
         return
       }
 
+      if (cmd === "/reply") {
+        const n = parseInt(parts[1] ?? "", 10)
+        const visibleMessages = messages.slice(cleared)
+        if (isNaN(n) || n < 1 || n > visibleMessages.length) {
+          appendLocalLine(`Usage: /reply <n>  (1–${visibleMessages.length})`)
+          return
+        }
+        const target = visibleMessages[n - 1]
+        setReplyContext(target)
+        const username = target.profiles?.username ?? "unknown"
+        const preview = target.body.slice(0, 60) + (target.body.length > 60 ? "..." : "")
+        appendLocalLine(`-- replying to [${username}]: ${preview} --`)
+        return
+      }
+
+      if (cmd === "/unread") {
+        if (!lastReadTimestamp) {
+          appendLocalLine("-- no read tracking available --")
+          return
+        }
+        const count = messages.filter((m) => m.created_at > lastReadTimestamp).length
+        appendLocalLine(`-- ${count} unread message${count === 1 ? "" : "s"} --`)
+        return
+      }
+
+      if (cmd === "/nick") {
+        appendLocalLine(`nick: ${currentUsername ?? "unknown"}`)
+        return
+      }
+
+      if (cmd === "/mute") {
+        setMutedTyping((v) => {
+          const next = !v
+          appendLocalLine(`-- typing indicator ${next ? "muted" : "unmuted"} --`)
+          return next
+        })
+        return
+      }
+
       appendLocalLine(`Unknown command: ${cmd}  — type /help for commands`)
       return
     }
@@ -195,8 +382,13 @@ export function TerminalChatView({
       body = body + " ¯\\_(ツ)_/¯"
       setShrugPending(false)
     }
-    await onSend(body)
-  }, [input, messages, currentUserId, currentUsername, roomId, onSend, shrugPending, showTimestamps])
+    if (replyContext) {
+      await onSend(body, replyContext.id)
+      setReplyContext(null)
+    } else {
+      await onSend(body)
+    }
+  }, [input, messages, currentUserId, currentUsername, roomId, onSend, shrugPending, showTimestamps, cleared, replyContext, lastReadTimestamp, mutedTyping])
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
@@ -206,6 +398,9 @@ export function TerminalChatView({
         const sel = acCandidates[acIndex]
         if (input.startsWith("/")) {
           setInput(sel + " ")
+        } else if (isEmoteAc) {
+          const lastColon = input.lastIndexOf(":")
+          setInput(input.slice(0, lastColon) + sel + " ")
         } else {
           // @mention — replace the @partial at end
           const before = input.slice(0, input.lastIndexOf("@"))
@@ -226,6 +421,9 @@ export function TerminalChatView({
         const sel = acCandidates[next]
         if (input.startsWith("/")) {
           setInput(sel + " ")
+        } else if (isEmoteAc) {
+          const lastColon = input.lastIndexOf(":")
+          setInput(input.slice(0, lastColon) + sel + " ")
         } else {
           const before = input.slice(0, input.lastIndexOf("@"))
           setInput(before + sel + " ")
@@ -238,6 +436,11 @@ export function TerminalChatView({
       if (showAc) {
         e.preventDefault()
         setAcIndex((i) => (i <= 0 ? acCandidates.length - 1 : i - 1))
+      } else {
+        e.preventDefault()
+        const next = Math.min(historyIdxRef.current + 1, historyRef.current.length - 1)
+        historyIdxRef.current = next
+        if (historyRef.current[next] !== undefined) setInput(historyRef.current[next])
       }
       return
     }
@@ -246,6 +449,11 @@ export function TerminalChatView({
       if (showAc) {
         e.preventDefault()
         setAcIndex((i) => (i >= acCandidates.length - 1 ? 0 : i + 1))
+      } else {
+        e.preventDefault()
+        const next = historyIdxRef.current - 1
+        historyIdxRef.current = Math.max(next, -1)
+        setInput(next < 0 ? "" : (historyRef.current[next] ?? ""))
       }
       return
     }
@@ -264,6 +472,13 @@ export function TerminalChatView({
     >
       <div className={styles.terminalMessages}>
         {displayLines.map((line) => {
+          if (line.kind === "boot") {
+            return (
+              <span key={line.id} className={styles.terminalBoot}>
+                {line.text}
+              </span>
+            )
+          }
           if (line.kind === "system" || line.kind === "help") {
             return (
               <span key={line.id} className={`${styles.terminalMsg} ${styles.terminalSystem}`}>
@@ -289,13 +504,19 @@ export function TerminalChatView({
               {line.isDeleted ? (
                 <span className={styles.terminalBodyDeleted}>[deleted]</span>
               ) : (
-                <span className={styles.terminalBody}>{line.text}</span>
+                <span className={styles.terminalBody}>{renderMessageTokens(line.text)}</span>
               )}
             </span>
           )
         })}
         <div ref={messagesEndRef} />
       </div>
+
+      {replyContext && (
+        <div className={styles.terminalSystem} style={{ padding: "0 1rem 0.25rem", fontSize: "0.72rem", flexShrink: 0 }}>
+          replying to [{replyContext.profiles?.username ?? "unknown"}] — press Esc to cancel
+        </div>
+      )}
 
       <div className={styles.terminalInputRow}>
         {showAc && (
@@ -308,6 +529,9 @@ export function TerminalChatView({
                   e.preventDefault()
                   if (input.startsWith("/")) {
                     setInput(c + " ")
+                  } else if (isEmoteAc) {
+                    const lastColon = input.lastIndexOf(":")
+                    setInput(input.slice(0, lastColon) + c + " ")
                   } else {
                     const before = input.slice(0, input.lastIndexOf("@"))
                     setInput(before + c + " ")
@@ -322,7 +546,7 @@ export function TerminalChatView({
             ))}
           </div>
         )}
-        <span className={styles.terminalPrompt}>$</span>
+        <span className={styles.terminalPrompt}>{mutedTyping ? "$~" : "$"}</span>
         <input
           ref={inputRef}
           className={styles.terminalInput}
