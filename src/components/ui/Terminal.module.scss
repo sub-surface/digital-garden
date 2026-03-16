@@ -1,0 +1,177 @@
+// ── Terminal Boot Screen ──
+
+.terminalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  color: #fff;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+.terminalInner {
+  padding: 2rem;
+  max-width: 860px;
+  margin: 0 auto;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.terminalLine {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-all;
+  min-height: 1.6em;
+}
+
+.terminalCursor {
+  display: inline-block;
+  color: #fff;
+  animation: cursorBlink 0.8s step-end infinite;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.terminalSkip {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 2rem;
+  font-size: 0.65rem;
+  color: #555;
+  pointer-events: none;
+}
+
+// ── Terminal Chat View ──
+
+.terminalView {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #000;
+  color: #e0e0e0;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.terminalMessages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #000;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #333;
+  }
+}
+
+.terminalMsg {
+  display: block;
+  padding: 1px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.terminalUsername {
+  font-weight: 600;
+}
+
+.terminalBody {
+  color: #e0e0e0;
+}
+
+.terminalBodyDeleted {
+  color: #555;
+  font-style: italic;
+}
+
+.terminalSystem {
+  color: #666;
+  font-style: italic;
+}
+
+.terminalTimestamp {
+  color: #555;
+}
+
+.terminalInputRow {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #1a1a1a;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.terminalPrompt {
+  color: #888;
+  margin-right: 0.4rem;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.terminalInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e0e0e0;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.82rem;
+  caret-color: #e0e0e0;
+  min-width: 0;
+
+  &::placeholder {
+    color: #444;
+  }
+}
+
+.terminalAutocomplete {
+  position: absolute;
+  bottom: 100%;
+  left: 1rem;
+  right: 1rem;
+  background: #0d0d0d;
+  border: 1px solid #2a2a2a;
+  border-bottom: none;
+  max-height: 160px;
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.terminalAutocompleteItem {
+  display: block;
+  padding: 3px 8px;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.78rem;
+  color: #999;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    background: #1a1a1a;
+    color: #e0e0e0;
+  }
+}
+
+.terminalAutocompleteItemActive {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}

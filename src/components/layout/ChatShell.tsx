@@ -11,7 +11,6 @@ export function ChatShell() {
   const activeLayout = useStore((s) => s.activeLayout)
   const chatDensity = useStore((s) => s.chatDensity)
   const chatFontScale = useStore((s) => s.chatFontScale)
-  const chatTerminal = useStore((s) => s.chatTerminal)
 
   return (
     <div
@@ -19,7 +18,6 @@ export function ChatShell() {
       data-chat
       data-layout={activeLayout}
       data-density={chatDensity}
-      data-terminal={chatTerminal ? "1" : undefined}
       style={{ "--chat-font-scale": chatFontScale } as React.CSSProperties}
       data-testid="chat-shell"
     >

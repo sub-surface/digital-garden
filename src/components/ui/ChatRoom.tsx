@@ -10,6 +10,9 @@ import { MessageInput } from "./MessageInput"
 import { TypingIndicator, useTypingBroadcast } from "./TypingIndicator"
 import { MiniProfilePopup } from "./MiniProfilePopup"
 import { ChatSettings } from "./ChatSettings"
+import { TerminalChatView } from "./TerminalChatView"
+import { TerminalBootScreen } from "./TerminalBootScreen"
+import { useStore } from "@/store"
 import styles from "./Chat.module.scss"
 
 interface SearchResult {
@@ -64,6 +67,9 @@ function renderPinBody(body: string): ReactNode[] {
 }
 
 export function ChatRoom({ roomId, roomName, accessToken, currentUserId, currentUsername, currentAvatarUrl, rooms, onRoomChange, onRefreshRooms, headerExtra }: Props) {
+  const chatTerminal = useStore((s) => s.chatTerminal)
+  const [showBoot, setShowBoot] = useState(false)
+  const prevTerminal = useRef(false)
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
   const [popup, setPopup] = useState<{ username: string; anchor: HTMLElement } | null>(null)
   const [showSettings, setShowSettings] = useState(false)
@@ -88,6 +94,13 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
   const channelRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (chatTerminal && !prevTerminal.current) {
+      setShowBoot(true)
+    }
+    prevTerminal.current = chatTerminal
+  }, [chatTerminal])
 
   const { toast, showToast } = useChatToast()
   const broadcastTyping = useTypingBroadcast(roomId, currentUserId)
@@ -627,61 +640,77 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
         )
       })()}
 
-      {loading ? (
-        <div className={styles.emptyState}>loading messages…</div>
-      ) : (
-        <MessageList
-          ref={listRef}
+      {chatTerminal ? (
+        <TerminalChatView
           messages={messages}
-          onReply={setReplyTo}
-          onScroll={handleScroll}
-          onReact={handleReact}
-          onDelete={handleDelete}
-          onEdit={handleEdit}
-          onPin={isAdmin ? handlePin : undefined}
-          isAdmin={isAdmin}
           currentUserId={currentUserId}
-          editingMessageId={editingMessageId}
-          onCancelEdit={() => setEditingMessageId(null)}
-          onUsernameClick={(username, el) => setPopup({ username, anchor: el })}
-          lastReadTimestamp={lastReadRef.current}
-          loadingMore={loadingMore}
+          currentUsername={currentUsername}
+          roomId={roomId}
+          accessToken={accessToken}
+          onSend={handleSend}
+          knownUsers={knownUsers}
         />
+      ) : (
+        <>
+          {loading ? (
+            <div className={styles.emptyState}>loading messages…</div>
+          ) : (
+            <MessageList
+              ref={listRef}
+              messages={messages}
+              onReply={setReplyTo}
+              onScroll={handleScroll}
+              onReact={handleReact}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+              onPin={isAdmin ? handlePin : undefined}
+              isAdmin={isAdmin}
+              currentUserId={currentUserId}
+              editingMessageId={editingMessageId}
+              onCancelEdit={() => setEditingMessageId(null)}
+              onUsernameClick={(username, el) => setPopup({ username, anchor: el })}
+              lastReadTimestamp={lastReadRef.current}
+              loadingMore={loadingMore}
+            />
+          )}
+
+          {popup && (
+            <MiniProfilePopup
+              username={popup.username}
+              anchorEl={popup.anchor}
+              onClose={() => setPopup(null)}
+            />
+          )}
+
+          {toast && <div className={styles.chatToast}>{toast}</div>}
+
+          <button
+            className={`${styles.scrollToBottom} ${!atBottom ? styles.scrollToBottomVisible : ""}`}
+            onClick={() => { scrollToBottom(); markAsRead() }}
+            aria-label="Scroll to bottom"
+          >
+            ↓
+          </button>
+
+          <TypingIndicator roomId={roomId} currentUserId={currentUserId} />
+
+          <MessageInput
+            ref={inputRef}
+            roomId={roomId}
+            onSend={handleSend}
+            onEditLast={() => {
+              const last = messages.findLast((m) => m.user_id === currentUserId && !m.deleted_at)
+              if (last) setEditingMessageId(last.id)
+            }}
+            replyTo={replyTo}
+            onCancelReply={() => setReplyTo(null)}
+            onTyping={broadcastTyping}
+            knownUsers={knownUsers}
+          />
+        </>
       )}
 
-      {popup && (
-        <MiniProfilePopup
-          username={popup.username}
-          anchorEl={popup.anchor}
-          onClose={() => setPopup(null)}
-        />
-      )}
-
-      {toast && <div className={styles.chatToast}>{toast}</div>}
-
-      <button
-        className={`${styles.scrollToBottom} ${!atBottom ? styles.scrollToBottomVisible : ""}`}
-        onClick={() => { scrollToBottom(); markAsRead() }}
-        aria-label="Scroll to bottom"
-      >
-        ↓
-      </button>
-
-      <TypingIndicator roomId={roomId} currentUserId={currentUserId} />
-
-      <MessageInput
-        ref={inputRef}
-        roomId={roomId}
-        onSend={handleSend}
-        onEditLast={() => {
-          const last = messages.findLast((m) => m.user_id === currentUserId && !m.deleted_at)
-          if (last) setEditingMessageId(last.id)
-        }}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
-        onTyping={broadcastTyping}
-        knownUsers={knownUsers}
-      />
+      {showBoot && <TerminalBootScreen onDone={() => setShowBoot(false)} />}
     </>
   )
 }
