@@ -132,6 +132,26 @@ function ProfileButton() {
   )
 }
 
+function TerminalToggle() {
+  const shell = useShell()
+  const chatTerminal = useStore((s) => s.chatTerminal)
+  const setChatTerminal = useStore((s) => s.setChatTerminal)
+  if (shell !== "chat") return null
+  return (
+    <button
+      className={chatTerminal ? `${styles.iconBtn} ${styles.iconBtnActive}` : styles.iconBtn}
+      onClick={() => setChatTerminal(!chatTerminal)}
+      title={chatTerminal ? "Exit terminal view" : "Terminal view"}
+      aria-label="Toggle terminal view"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="4 17 10 11 4 5"/>
+        <line x1="12" y1="19" x2="20" y2="19"/>
+      </svg>
+    </button>
+  )
+}
+
 function SideChatToggle() {
   const shell = useShell()
   const isSideChatOpen = useStore((s) => s.isSideChatOpen)
@@ -202,6 +222,9 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
 
       {/* Side Chat Toggle (wiki only) */}
       <SideChatToggle />
+
+      {/* Terminal View Toggle (chat only) */}
+      <TerminalToggle />
 
       {/* Profile Icon */}
       <ProfileButton />
