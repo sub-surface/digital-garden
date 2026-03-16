@@ -46,11 +46,6 @@ interface TerminalLine {
   timestamp?: string
 }
 
-let lineId = 0
-function mkId() {
-  return String(++lineId)
-}
-
 export function TerminalChatView({
   messages,
   currentUserId,
@@ -67,6 +62,11 @@ export function TerminalChatView({
   const [acIndex, setAcIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const lineIdRef = useRef(0)
+
+  function mkId() {
+    return String(++lineIdRef.current)
+  }
 
   // Build display lines from messages, after last clear epoch
   const msgLines: TerminalLine[] = messages.map((m) => ({
