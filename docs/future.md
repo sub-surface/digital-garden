@@ -29,6 +29,19 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 - [x] **Twitter/X link cards**: `twitter` token type in parseMessageBody + styled card with 𝕏 icon, @username, and URL — no Twitter JS embed loaded
 - [x] **Lazy embeds**: IntersectionObserver wrapper (`LazyEmbed`) in MessageRow — images and YouTube thumbnails only load when within 200px of viewport; emotes excluded (inline, tiny)
 - [x] **Admin bans — permanent**: on permanent ban: hard-delete all messages + reactions, anonymise profile (username → `[deleted]`, avatar/bio/name_color → null)
+- [x] **Chat polish pass**: footnote sidenotes (`[^1]` tufte-style), ephemeral emote glow (canvas-sampled dominant colour), message density/scale presets (compact/comfortable/spacious + S/M/L), terminal mode (full CLI overlay with boot screen, command suite, emote autocomplete, command history, rich rendering)
+- [x] **API key platform**: SHA-256 hashed keys, `sk_` prefix, CF Worker `verifyAuth` fallthrough, `POST/GET/DELETE /api/keys` endpoints — enables headless/third-party chat clients
+
+### Terminal Mode — Remaining / Future
+
+- [ ] `/log <n>` — dump last N messages as plain text (exportable)
+- [ ] `/grep <pattern>` — local search across visible messages
+- [ ] `/watch <username>` — highlight lines from a specific user
+- [ ] `/emotes off` — pure ASCII fallback mode (no inline images)
+- [ ] `/ping` — display Supabase Realtime round-trip latency
+- [ ] Screensaver mode: idle N minutes → replay ASCII animation (inspired by TerminalTitle idle snippets)
+- [ ] Documented public API schema for third-party terminal client builders
+- [ ] WebSocket endpoint for raw `wscat`-style access
 
 ---
 
