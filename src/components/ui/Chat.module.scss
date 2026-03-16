@@ -1504,6 +1504,7 @@
   .chatMain { font-family: var(--font-code), monospace; }
   .messageRow { border-bottom: 1px solid #1a3a1a; }
   .avatar { display: none; }
+  .avatarCircle { display: none; }
   .username::before { content: "> "; opacity: 0.5; }
   .username { color: #33ff33 !important; font-family: var(--font-code), monospace; }
   .messageBody { color: #ccffcc; font-family: var(--font-code), monospace; }
