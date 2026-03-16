@@ -252,6 +252,7 @@ export function TerminalChatView({
 
     if (e.key === "Escape") {
       setAcIndex(-1)
+      setInput("")
       return
     }
   }
