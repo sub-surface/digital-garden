@@ -277,10 +277,11 @@ async function buildAuthUser(env: Env, userId: string, email: string | null): Pr
 
   // Auto-create profile if none exists (first login after magic link)
   if (!profile) {
+    if (!email) return null  // API key path — no profile means invalid key user
     await supabaseRest(env, "profiles", "POST", {
       id: userId, email: email, role: "pending",
     })
-    return { id: userId, role: "pending", email: email ?? "", username: null, bio: null, avatar_url: null, created_at: null, name_color: null }
+    return { id: userId, role: "pending", email, username: null, bio: null, avatar_url: null, created_at: null, name_color: null }
   }
 
   return {
@@ -301,17 +302,21 @@ async function verifyAuth(request: Request, env: Env): Promise<AuthUser | null> 
 
   const token = authHeader.slice(7)
 
-  // 1. Verify the JWT by calling Supabase auth
-  const userRes = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
-    headers: { Authorization: `Bearer ${token}`, apikey: env.SUPABASE_SERVICE_KEY },
-  })
-  if (userRes.ok) {
-    const user = await userRes.json<{ id: string; email: string }>()
-    return buildAuthUser(env, user.id, user.email)
+  // Fast path: API keys start with sk_ — skip JWT attempt
+  if (!token.startsWith("sk_")) {
+    // 1. Verify the JWT by calling Supabase auth
+    const userRes = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+      headers: { Authorization: `Bearer ${token}`, apikey: env.SUPABASE_SERVICE_KEY },
+    })
+    if (userRes.ok) {
+      const user = await userRes.json<{ id: string; email: string }>()
+      return buildAuthUser(env, user.id, user.email)
+    }
   }
 
-  // 2. Try as API key
-  const keyHash = await hashApiKey(token)
+  // 2. Try as API key — strip sk_ prefix if present
+  const apiKeyRaw = token.startsWith("sk_") ? token.slice(3) : token
+  const keyHash = await hashApiKey(apiKeyRaw)
   const keyRes = await fetch(
     env.SUPABASE_URL + "/rest/v1/api_keys?key_hash=eq." + encodeURIComponent(keyHash) + "&revoked_at=is.null&select=user_id",
     { headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_KEY } }
