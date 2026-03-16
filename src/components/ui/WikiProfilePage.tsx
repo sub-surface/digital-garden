@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { useBookmarks } from "@/hooks/useBookmarks"
 import { useStonkHistory } from "@/hooks/useStonkHistory"
+import { useStore } from "@/store"
 import { StonkSparkline } from "./StonkSparkline"
 
 interface ProfileData {
@@ -49,6 +50,11 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [passwordSuccess, setPasswordSuccess] = useState(false)
 
+  // Wiki claim
+  const [claimedSlug, setClaimedSlug] = useState<string | null>(null)
+  const [claiming, setClaiming] = useState(false)
+  const contentIndex = useStore((s) => s.contentIndex)
+
   const isOwnProfile = !viewUsername
   const usernameValid = /^[a-zA-Z0-9-]{3,30}$/.test(usernameValue)
   const stonkUsername = viewUsername ?? auth.username ?? null
@@ -68,6 +74,18 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOtpOnly])
+
+  // Fetch claim for this profile
+  useEffect(() => {
+    const uname = viewUsername ?? auth.username
+    if (!uname) return
+    fetch(`/api/users/${encodeURIComponent(uname)}/claim`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((data: { claim: { wiki_slug: string } | null }) => {
+        setClaimedSlug(data.claim?.wiki_slug ?? null)
+      })
+      .catch(() => setClaimedSlug(null))
+  }, [viewUsername, auth.username])
 
   useEffect(() => {
     async function fetchProfile() {
@@ -117,6 +135,33 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
     }
     if (!auth.loading) fetchProfile()
   }, [auth.loading, auth.session, auth.username, viewUsername])
+
+  // Find a wiki page with matching username frontmatter
+  const matchingWikiSlug = (() => {
+    if (!contentIndex || !profile) return null
+    const lower = profile.username.toLowerCase()
+    for (const [slug, meta] of Object.entries(contentIndex)) {
+      if ((meta as any).username?.toLowerCase() === lower) return slug
+    }
+    return null
+  })()
+
+  const handleClaim = async () => {
+    if (!matchingWikiSlug || !auth.session) return
+    setClaiming(true)
+    try {
+      const res = await fetch("/api/chat/claim", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.session.access_token}`,
+        },
+        body: JSON.stringify({ wiki_slug: matchingWikiSlug }),
+      })
+      if (res.ok) setClaimedSlug(matchingWikiSlug)
+    } catch {}
+    setClaiming(false)
+  }
 
   const handleSaveBio = async () => {
     setSavingBio(true)
@@ -243,7 +288,7 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
       <div className="wiki-profile-avatar-row">
         <div className="wiki-profile-avatar-wrap">
           {profile.avatar_url ? (
-            <img src={profile.avatar_url} alt={profile.username} className="wiki-profile-avatar-img" />
+            <img src={profile.avatar_url} alt={profile.username} className="wiki-profile-avatar-img" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} />
           ) : (
             <div className="wiki-profile-avatar-placeholder">
               {profile.username.slice(0, 2).toUpperCase()}
@@ -381,6 +426,27 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
             </span>
             <StonkSparkline days={stonkDays} width={160} height={36} />
           </div>
+        </div>
+      )}
+
+      {/* Wiki Page Link */}
+      {claimedSlug && (
+        <div className="wiki-profile-section">
+          <h3 className="wiki-profile-section-title">Wiki Page</h3>
+          <a href={`/${claimedSlug}`} className="wiki-form-link" style={{ fontFamily: "var(--font-code)", fontSize: "0.85rem" }}>
+            {claimedSlug}
+          </a>
+        </div>
+      )}
+      {!claimedSlug && isOwnProfile && matchingWikiSlug && (
+        <div className="wiki-profile-section">
+          <h3 className="wiki-profile-section-title">Wiki Page</h3>
+          <p className="wiki-profile-bio" style={{ opacity: 0.7, marginBottom: "var(--space-2)" }}>
+            A wiki page matching your username exists at <a href={`/${matchingWikiSlug}`} className="wiki-form-link">{matchingWikiSlug}</a>.
+          </p>
+          <button className="wiki-form-btn" onClick={handleClaim} disabled={claiming}>
+            {claiming ? "Claiming..." : "Claim this page"}
+          </button>
         </div>
       )}
 

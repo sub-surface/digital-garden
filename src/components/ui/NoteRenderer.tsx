@@ -106,7 +106,7 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
   }
 
   const infobox = (type === "chatter" || type === "philosopher") ? (
-    <WikiInfobox type={type} data={{ ...fm, title }} />
+    <WikiInfobox type={type} data={{ ...fm, title }} slug={resolvedKey} />
   ) : null
 
   // Breadcrumb: derive from slug parts

@@ -1,9 +1,15 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import styles from "./WikiInfobox.module.scss"
+
+interface ClaimData {
+  username: string
+  avatar_url: string | null
+}
 
 interface Props {
   type: "chatter" | "philosopher"
   data: Record<string, any>
+  slug?: string
 }
 
 /**
@@ -30,8 +36,9 @@ function resolveAvatarPath(path?: string): string | undefined {
   return `/content/Media/${cleanPath}`
 }
 
-export function WikiInfobox({ type, data }: Props) {
+export function WikiInfobox({ type, data, slug }: Props) {
   const [expanded, setExpanded] = useState(false)
+  const [claim, setClaim] = useState<ClaimData | null>(null)
   const {
     title,
     image,
@@ -47,7 +54,17 @@ export function WikiInfobox({ type, data }: Props) {
     notable_ideas
   } = data
 
-  const avatar = resolveAvatarPath(image || data.avatar)
+  // Fetch claim data for chatter pages — use claimer's avatar if available
+  useEffect(() => {
+    if (type !== "chatter" || !slug) return
+    fetch(`/api/claims/by-slug/${encodeURIComponent(slug)}`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((d: { claim: ClaimData | null }) => setClaim(d.claim))
+      .catch(() => setClaim(null))
+  }, [type, slug])
+
+  // Prefer claim avatar over frontmatter image
+  const avatar = claim?.avatar_url || resolveAvatarPath(image || data.avatar)
 
   return (
     <aside className={styles.infobox} data-type={type} data-panel-ignore>

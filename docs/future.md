@@ -75,8 +75,8 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 
 ## Identity & Avatar (Phase 3 — remaining items)
 
-- [ ] Wiki Profile Claiming: `chatter_claims` table, `POST /api/chat/claim`, claim UI
-- [ ] Avatar displayed in: wiki profile infobox (if claimed), `WikiShell` auth header
+- [x] Wiki Profile Claiming: `chatter_claims` table, `POST /api/chat/claim`, `GET /api/users/:username/claim`, `GET /api/claims/by-slug/:slug`, claim UI on WikiProfilePage
+- [x] Avatar displayed in: WikiInfobox fetches claim data and overrides frontmatter image with claimer's avatar_url; WikiProfilePage shows claimed wiki page link and "Claim this page" button
 - [ ] Idle game — full design TBD
 
 ---

@@ -16,6 +16,7 @@ interface AuthState extends ProfileFields {
   session: Session | null
   role: UserRole
   loading: boolean
+  claimed_slug: string | null
 }
 
 export function useAuth(): AuthState & {
@@ -35,6 +36,7 @@ export function useAuth(): AuthState & {
   const [avatar_url, setAvatarUrl] = useState<string | null>(null)
   const [created_at, setCreatedAt] = useState<string | null>(null)
   const [name_color, setNameColor] = useState<string | null>(null)
+  const [claimed_slug, setClaimedSlug] = useState<string | null>(null)
 
   useEffect(() => {
     if (!supabase) {
@@ -59,6 +61,7 @@ export function useAuth(): AuthState & {
         setAvatarUrl(null)
         setCreatedAt(null)
         setNameColor(null)
+        setClaimedSlug(null)
         setLoading(false)
       }
     })
@@ -129,6 +132,7 @@ export function useAuth(): AuthState & {
           avatar_url: string | null
           created_at: string | null
           name_color: string | null
+          claimed_slug?: string | null
         }
         setRole(data.role as UserRole)
         setUsername(data.username)
@@ -136,6 +140,7 @@ export function useAuth(): AuthState & {
         setAvatarUrl(data.avatar_url)
         setCreatedAt(data.created_at)
         setNameColor(data.name_color)
+        setClaimedSlug(data.claimed_slug ?? null)
 
         // If we have a pending username from signup, set it now
         const pendingUsername = localStorage.getItem("wiki_pending_username")
@@ -226,6 +231,7 @@ export function useAuth(): AuthState & {
     setAvatarUrl(null)
     setCreatedAt(null)
     setNameColor(null)
+    setClaimedSlug(null)
   }
 
   const updateProfile = useCallback(async (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url" | "name_color">>) => {
@@ -250,5 +256,5 @@ export function useAuth(): AuthState & {
     return { error: null }
   }, [session])
 
-  return { session, role, loading, username, bio, avatar_url, created_at, name_color, signIn, signInWithPassword, signUp, signOut, updateProfile, changePassword, resetPassword }
+  return { session, role, loading, username, bio, avatar_url, created_at, name_color, claimed_slug, signIn, signInWithPassword, signUp, signOut, updateProfile, changePassword, resetPassword }
 }

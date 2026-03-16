@@ -110,6 +110,36 @@ function YouTubeThumbnail({ videoId, url }: { videoId: string; url: string }) {
   )
 }
 
+function VideoEmbed({ url }: { url: string }) {
+  const [playing, setPlaying] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  function handlePlay() {
+    setPlaying(true)
+    // Wait for state update then play
+    requestAnimationFrame(() => videoRef.current?.play())
+  }
+
+  return (
+    <div className={styles.videoWrap}>
+      <video
+        ref={videoRef}
+        className={styles.embedImg}
+        src={url}
+        preload="metadata"
+        controls={playing}
+        playsInline
+        onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = "none" }}
+      />
+      {!playing && (
+        <button className={styles.videoPlayOverlay} onClick={handlePlay} aria-label="Play video">
+          <span className={styles.ytPlay}>&#9654;</span>
+        </button>
+      )}
+    </div>
+  )
+}
+
 function LazyEmbed({ children, className }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -223,6 +253,11 @@ function MessageBodyRenderer({
       if (tok.type === "youtube") return (
         <LazyEmbed key={key}>
           <YouTubeThumbnail videoId={tok.videoId} url={tok.url} />
+        </LazyEmbed>
+      )
+      if (tok.type === "video") return (
+        <LazyEmbed key={key}>
+          <VideoEmbed url={tok.url} />
         </LazyEmbed>
       )
       if (tok.type === "twitter") return (
@@ -344,14 +379,23 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, o
     }
   }
 
+  function scrollToReply() {
+    if (!msg.reply_to_message) return
+    const target = document.querySelector(`[data-message-id="${msg.reply_to_message.id}"]`) as HTMLElement | null
+    if (!target) return
+    target.scrollIntoView({ behavior: "smooth", block: "center" })
+    target.classList.add(styles.messageHighlight)
+    setTimeout(() => target.classList.remove(styles.messageHighlight), 1500)
+  }
+
   return (
-    <div className={styles.messageRow}>
+    <div className={styles.messageRow} data-message-id={msg.id}>
       {compact ? (
         <div className={styles.avatarPlaceholder} />
       ) : (
         <div className={styles.avatar}>
           {avatarUrl ? (
-            <img className={styles.avatarImg} src={avatarUrl} alt={username} />
+            <img className={styles.avatarImg} src={avatarUrl} alt={username} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }} />
           ) : (
             getInitials(username)
           )}
@@ -373,10 +417,10 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, o
         )}
 
         {msg.reply_to_message && (
-          <div className={styles.replyBar}>
+          <button className={styles.replyBar} onClick={scrollToReply} type="button">
             <strong>@{msg.reply_to_message.profiles?.username ?? "unknown"}</strong>:{" "}
             {renderInlineSnippet(msg.reply_to_message.body, 80)}
-          </div>
+          </button>
         )}
 
         {msg.deleted_at ? (

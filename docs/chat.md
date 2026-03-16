@@ -222,10 +222,11 @@ All message body rendering goes through a shared `parseMessageBody(text)` utilit
 
 ### Wiki Profile Claiming (Supabase-backed)
 
-- [ ] Create `chatter_claims` table: `user_id UUID REFERENCES profiles PRIMARY KEY, wiki_slug TEXT NOT NULL UNIQUE, claimed_at TIMESTAMPTZ`
-- [ ] `POST /api/chat/claim` — body `{ wiki_slug }`: verifies `username` frontmatter on the markdown file matches the authenticated user's username (fetch from `content-index.json`); inserts into `chatter_claims`; returns claim record
-- [ ] `GET /api/users/:username/claim` — returns claimed wiki slug if exists
-- [ ] On `WikiProfilePage` and public profile: show linked chatter wiki page if claim exists; show "Claim this wiki page" button if a matching `username` frontmatter exists but no claim yet
+- [x] Create `chatter_claims` table: `user_id UUID REFERENCES profiles PRIMARY KEY, wiki_slug TEXT NOT NULL UNIQUE, claimed_at TIMESTAMPTZ`
+- [x] `POST /api/chat/claim` — body `{ wiki_slug }`: verifies `username` frontmatter on the markdown file matches the authenticated user's username (fetch from `content-index.json`); inserts into `chatter_claims`; returns claim record
+- [x] `GET /api/users/:username/claim` — returns claimed wiki slug if exists
+- [x] `GET /api/claims/by-slug/:slug` — returns claim data (username, avatar_url) for a wiki slug
+- [x] On `WikiProfilePage` and public profile: show linked chatter wiki page if claim exists; show "Claim this wiki page" button if a matching `username` frontmatter exists but no claim yet
 - [ ] On chatter wiki profile pages (`type: chatter`): show linked user account if claim exists; show "Is this you? Claim this page" button otherwise
 - [ ] Logged-in users without a claim and without a matching wiki profile: show "Create your chatter profile" button → opens submit form (`/submit`) pre-filled with their username; submission still creates a PR (GitHub App token deferred)
 
@@ -234,7 +235,8 @@ All message body rendering goes through a shared `parseMessageBody(text)` utilit
 - [x] Avatar upload on `WikiProfilePage` — 72px circle, `↑` overlay button, hidden file input; max 2MB JPEG/PNG/WebP/GIF; `POST /api/profile/avatar` in worker uploads to Supabase Storage bucket `avatars` (public), stores URL in `profiles.avatar_url`
 - [x] Chatter wiki page image fallback — if `avatar_url` null, worker looks up chatter page by `username` frontmatter in content-index and returns its `image` field; applied in `/api/auth/me`, `/api/user/:username`, `/api/chat/users/:username/mini`
 - [x] Avatar displayed in: chat `MessageRow`, `MiniProfilePopup`, `WikiProfilePage`
-- [ ] Avatar displayed in: wiki profile infobox (if claimed), `WikiShell` auth header
+- [x] Avatar displayed in: wiki profile infobox (if claimed) — WikiInfobox fetches `/api/claims/by-slug/:slug` and overrides frontmatter image with claimer's avatar
+- [ ] Avatar displayed in: `WikiShell` auth header
 
 #### Idle Game (deferred — design note)
 > Cookie-clicker / Universal Paperclips style idle mechanic. Idle rate scales with stonk level. Points calculated on login from `last_login` delta, capped at 24h accumulation. Avatar "collects" while away — client-side presentation of the delta. Full design TBD.
