@@ -5,10 +5,13 @@ export type MessageToken =
   | { type: "video"; url: string }
   | { type: "youtube"; videoId: string; url: string }
   | { type: "twitter"; username: string; url: string }
-  | { type: "url"; url: string; label: string };
+  | { type: "url"; url: string; label: string }
+  | { type: "footnote-ref"; index: number };
 
 const EMOTE_RE = /^:[a-z0-9-]+:$/;
 const MARKDOWN_IMAGE_RE = /^!\[([^\]]*)\]\(([^)]+)\)$/;
+const FOOTNOTE_DEF_RE = /^\[\^(\d+)\]:\s*(.+)$/
+const FOOTNOTE_REF_RE = /^\[\^(\d+)\]$/
 const IMAGE_EXT_RE = /\.(?:jpg|jpeg|png|gif|webp)(?:[?#].*)?$/i;
 const VIDEO_EXT_RE = /\.(?:mp4|webm|mov|ogg)(?:[?#].*)?$/i;
 const IMAGE_CDN_HOSTS = new Set([
@@ -175,6 +178,12 @@ export function parseMessageBody(text: string): MessageToken[] {
 
     if (part.length === 0) continue;
 
+    if (FOOTNOTE_REF_RE.test(part)) {
+      flushText()
+      tokens.push({ type: "footnote-ref", index: Number(part.slice(2, -1)) })
+      continue
+    }
+
     // Check emote: must be exactly :name: with no surrounding content
     if (EMOTE_RE.test(part)) {
       flushText();
@@ -240,4 +249,24 @@ export function parseMessageBody(text: string): MessageToken[] {
   }
 
   return merged;
+}
+
+export interface ParsedMessage {
+  tokens: MessageToken[]
+  footnotes: Map<number, string>
+}
+
+export function parseMessageBodyWithFootnotes(text: string): ParsedMessage {
+  const footnotes = new Map<number, string>()
+  const bodyLines: string[] = []
+  for (const line of text.split("\n")) {
+    const defMatch = FOOTNOTE_DEF_RE.exec(line.trim())
+    if (defMatch) {
+      footnotes.set(Number(defMatch[1]), defMatch[2])
+    } else {
+      bodyLines.push(line)
+    }
+  }
+  const tokens = parseMessageBody(bodyLines.join("\n"))
+  return { tokens, footnotes }
 }
