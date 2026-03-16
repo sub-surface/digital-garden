@@ -130,6 +130,14 @@ interface GardenStore {
   contentIndex: ContentIndex | null
   setContentIndex: (index: ContentIndex) => void
 
+  // Chat display
+  chatDensity: "compact" | "comfortable" | "spacious"
+  setChatDensity: (d: GardenStore["chatDensity"]) => void
+  chatFontScale: number
+  setChatFontScale: (s: number) => void
+  chatTerminal: boolean
+  setChatTerminal: (v: boolean) => void
+
   // Session overrides (for dev property manager)
   sessionOverrides: Record<string, Partial<NoteMetadata>>
   setOverride: (slug: string, data: Partial<NoteMetadata>) => void
@@ -282,6 +290,23 @@ export const useStore = create<GardenStore>((set) => ({
   // Content index
   contentIndex: null,
   setContentIndex: (contentIndex) => set({ contentIndex }),
+
+  // Chat display
+  chatDensity: (typeof localStorage !== "undefined"
+    ? (localStorage.getItem("chatDensity") as "compact" | "comfortable" | "spacious" | null) ?? "comfortable"
+    : "comfortable"),
+  setChatDensity: (d) => { localStorage.setItem("chatDensity", d); set({ chatDensity: d }) },
+  chatFontScale: (typeof localStorage !== "undefined"
+    ? Number(localStorage.getItem("chatFontScale") || "1")
+    : 1),
+  setChatFontScale: (s) => { localStorage.setItem("chatFontScale", String(s)); set({ chatFontScale: s }) },
+  chatTerminal: (typeof localStorage !== "undefined"
+    ? localStorage.getItem("chatTerminal") === "1"
+    : false),
+  setChatTerminal: (v) => {
+    localStorage.setItem("chatTerminal", v ? "1" : "0")
+    set({ chatTerminal: v })
+  },
 
   // Session overrides
   sessionOverrides: {},

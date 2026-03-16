@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, type RefObject } from "react"
 import { createPortal } from "react-dom"
+import { useStore } from "@/store"
 import styles from "./ChatSettings.module.scss"
 
 const PRESET_COLORS = [
@@ -26,6 +27,17 @@ interface Props {
 export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin, accessToken }: Props) {
   const [color, setColor] = useState(currentColor ?? "")
   const ref = useRef<HTMLDivElement>(null)
+  const chatDensity = useStore((s) => s.chatDensity)
+  const setChatDensity = useStore((s) => s.setChatDensity)
+  const chatFontScale = useStore((s) => s.chatFontScale)
+  const setChatFontScale = useStore((s) => s.setChatFontScale)
+
+  const DENSITY_OPTIONS = ["compact", "comfortable", "spacious"] as const
+  const SCALE_OPTIONS = [
+    { label: "S", value: 0.85 },
+    { label: "M", value: 1.0 },
+    { label: "L", value: 1.15 },
+  ]
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
   const [stonkConfig, setStonkConfig] = useState<StonkConfigRow[]>([])
   const [stonkLoading, setStonkLoading] = useState(false)
@@ -129,6 +141,26 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
       <button className={styles.resetBtn} onClick={handleReset} type="button">
         reset to default
       </button>
+
+      <div className={styles.divider} />
+      <div className={styles.header}>density</div>
+      <div className={styles.densityRow}>
+        {DENSITY_OPTIONS.map(d => (
+          <button key={d} type="button"
+            className={chatDensity === d ? `${styles.densityBtn} ${styles.active}` : styles.densityBtn}
+            onClick={() => setChatDensity(d)}
+          >{d}</button>
+        ))}
+      </div>
+      <div className={styles.header}>text size</div>
+      <div className={styles.scaleRow}>
+        {SCALE_OPTIONS.map(o => (
+          <button key={o.value} type="button"
+            className={chatFontScale === o.value ? `${styles.scaleBtn} ${styles.active}` : styles.scaleBtn}
+            onClick={() => setChatFontScale(o.value)}
+          >{o.label}</button>
+        ))}
+      </div>
 
       {isAdmin && accessToken && (
         <>

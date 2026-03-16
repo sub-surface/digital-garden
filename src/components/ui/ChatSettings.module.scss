@@ -184,6 +184,30 @@
   color: var(--color-accent);
 }
 
+.densityRow, .scaleRow {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.densityBtn, .scaleBtn {
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--color-text);
+  border-radius: 3px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+
+  &:hover { border-color: var(--color-accent-base); }
+  &.active {
+    border-color: var(--color-accent-base);
+    color: var(--color-accent-base);
+  }
+}
+
 @keyframes popIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }

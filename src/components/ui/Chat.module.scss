@@ -1482,3 +1482,30 @@
 }
 
 // Search overlay, MiniProfile, EmotePicker — extracted to own .module.scss files
+
+// ── Density overrides ──
+
+:global([data-density="compact"]) .messageListInner { gap: 0; }
+:global([data-density="compact"]) .messageRow {
+  padding-block: 0.1rem;
+  font-size: calc(0.875rem * var(--chat-font-scale, 1));
+}
+:global([data-density="spacious"]) .messageListInner { gap: 0.5rem; }
+:global([data-density="spacious"]) .messageRow {
+  padding-block: 0.45rem;
+  font-size: calc(1rem * var(--chat-font-scale, 1));
+}
+
+// ── Terminal skin ──
+// Applied when [data-terminal="1"] is on the ChatShell root.
+// Additive only — does not affect other shells or views.
+
+:global([data-terminal="1"]) {
+  .chatMain { font-family: var(--font-code), monospace; }
+  .messageRow { border-bottom: 1px solid #1a3a1a; }
+  .avatar { display: none; }
+  .username::before { content: "> "; opacity: 0.5; }
+  .username { color: #33ff33 !important; font-family: var(--font-code), monospace; }
+  .messageBody { color: #ccffcc; font-family: var(--font-code), monospace; }
+  .timestamp { color: #1a6b1a; }
+}
