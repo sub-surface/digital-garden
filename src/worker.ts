@@ -260,22 +260,10 @@ interface AuthUser {
   name_color: string | null
 }
 
-async function verifyAuth(request: Request, env: Env): Promise<AuthUser | null> {
-  const authHeader = request.headers.get("Authorization")
-  if (!authHeader?.startsWith("Bearer ") || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return null
-
-  const token = authHeader.slice(7)
-
-  // Verify the JWT by calling Supabase auth
-  const userRes = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
-    headers: { Authorization: `Bearer ${token}`, apikey: env.SUPABASE_SERVICE_KEY },
-  })
-  if (!userRes.ok) return null
-  const user = await userRes.json<{ id: string; email: string }>()
-
+async function buildAuthUser(env: Env, userId: string, email: string | null): Promise<AuthUser | null> {
   // Fetch profile from profiles table
   const profileRes = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=role,username,bio,avatar_url,created_at,name_color`,
+    `${env.SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=role,username,bio,avatar_url,created_at,name_color`,
     {
       headers: {
         apikey: env.SUPABASE_SERVICE_KEY,
@@ -290,21 +278,61 @@ async function verifyAuth(request: Request, env: Env): Promise<AuthUser | null> 
   // Auto-create profile if none exists (first login after magic link)
   if (!profile) {
     await supabaseRest(env, "profiles", "POST", {
-      id: user.id, email: user.email, role: "pending",
+      id: userId, email: email, role: "pending",
     })
-    return { id: user.id, role: "pending", email: user.email, username: null, bio: null, avatar_url: null, created_at: null, name_color: null }
+    return { id: userId, role: "pending", email: email ?? "", username: null, bio: null, avatar_url: null, created_at: null, name_color: null }
   }
 
   return {
-    id: user.id,
+    id: userId,
     role: profile.role ?? "pending",
-    email: user.email,
+    email: email ?? "",
     username: profile.username,
     bio: profile.bio,
     avatar_url: profile.avatar_url,
     created_at: profile.created_at,
     name_color: profile.name_color ?? null,
   }
+}
+
+async function verifyAuth(request: Request, env: Env): Promise<AuthUser | null> {
+  const authHeader = request.headers.get("Authorization")
+  if (!authHeader?.startsWith("Bearer ") || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return null
+
+  const token = authHeader.slice(7)
+
+  // 1. Verify the JWT by calling Supabase auth
+  const userRes = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    headers: { Authorization: `Bearer ${token}`, apikey: env.SUPABASE_SERVICE_KEY },
+  })
+  if (userRes.ok) {
+    const user = await userRes.json<{ id: string; email: string }>()
+    return buildAuthUser(env, user.id, user.email)
+  }
+
+  // 2. Try as API key
+  const keyHash = await hashApiKey(token)
+  const keyRes = await fetch(
+    env.SUPABASE_URL + "/rest/v1/api_keys?key_hash=eq." + encodeURIComponent(keyHash) + "&revoked_at=is.null&select=user_id",
+    { headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_KEY } }
+  )
+  if (!keyRes.ok) return null
+  const keyRows = await keyRes.json<{ user_id: string }[]>()
+  if (!keyRows[0]) return null
+
+  // Update last_used_at — fire and forget, failure never blocks request
+  fetch(env.SUPABASE_URL + "/rest/v1/api_keys?key_hash=eq." + encodeURIComponent(keyHash), {
+    method: "PATCH",
+    headers: {
+      apikey: env.SUPABASE_SERVICE_KEY,
+      Authorization: "Bearer " + env.SUPABASE_SERVICE_KEY,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({ last_used_at: new Date().toISOString() }),
+  }).catch(() => {})
+
+  return buildAuthUser(env, keyRows[0].user_id, null)
 }
 
 function corsHeaders(): Record<string, string> {
@@ -926,6 +954,72 @@ async function handleAdmin(request: Request, env: Env, pathname: string): Promis
   return jsonResponse({ error: "Not found" }, 404)
 }
 
+// ── Admin: API keys ──
+
+async function handleAdminApiKeys(request: Request, env: Env, url: URL): Promise<Response> {
+  const pathname = url.pathname
+
+  // POST /api/admin/api-keys — generate new key
+  if (pathname === "/api/admin/api-keys" && request.method === "POST") {
+    const authUser = await verifyAuth(request, env)
+    if (!authUser) return jsonResponse({ error: "Unauthorized" }, 401)
+    const body = await request.json<{ name?: string }>()
+    const name = (body.name ?? "").trim() || "API Key"
+    const rawBytes = crypto.getRandomValues(new Uint8Array(32))
+    const rawKey = Array.from(rawBytes).map(b => b.toString(16).padStart(2, "0")).join("")
+    const keyHash = await hashApiKey(rawKey)
+    const insertRes = await fetch(env.SUPABASE_URL + "/rest/v1/api_keys", {
+      method: "POST",
+      headers: {
+        apikey: env.SUPABASE_SERVICE_KEY,
+        Authorization: "Bearer " + env.SUPABASE_SERVICE_KEY,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({ user_id: authUser.id, key_hash: keyHash, name }),
+    })
+    if (!insertRes.ok) return jsonResponse({ error: "Failed to create key" }, 500)
+    // Raw key returned once — never stored in DB
+    return jsonResponse({ key: "sk_" + rawKey, name })
+  }
+
+  // GET /api/admin/api-keys — list own keys (key_hash never returned)
+  if (pathname === "/api/admin/api-keys" && request.method === "GET") {
+    const authUser = await verifyAuth(request, env)
+    if (!authUser) return jsonResponse({ error: "Unauthorized" }, 401)
+    const res = await fetch(
+      env.SUPABASE_URL + "/rest/v1/api_keys?user_id=eq." + authUser.id + "&select=id,name,created_at,last_used_at,revoked_at&order=created_at.desc",
+      { headers: { apikey: env.SUPABASE_SERVICE_KEY, Authorization: "Bearer " + env.SUPABASE_SERVICE_KEY } }
+    )
+    if (!res.ok) return jsonResponse({ error: "Failed to fetch keys" }, 500)
+    return jsonResponse(await res.json())
+  }
+
+  // DELETE /api/admin/api-keys/:id — soft revoke
+  if (pathname.match(/^\/api\/admin\/api-keys\/[^/]+$/) && request.method === "DELETE") {
+    const authUser = await verifyAuth(request, env)
+    if (!authUser) return jsonResponse({ error: "Unauthorized" }, 401)
+    const keyId = pathname.split("/").pop()
+    const res = await fetch(
+      env.SUPABASE_URL + "/rest/v1/api_keys?id=eq." + keyId + "&user_id=eq." + authUser.id,
+      {
+        method: "PATCH",
+        headers: {
+          apikey: env.SUPABASE_SERVICE_KEY,
+          Authorization: "Bearer " + env.SUPABASE_SERVICE_KEY,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({ revoked_at: new Date().toISOString() }),
+      }
+    )
+    if (!res.ok) return jsonResponse({ error: "Failed to revoke key" }, 500)
+    return jsonResponse({ ok: true })
+  }
+
+  return jsonResponse({ error: "Not found" }, 404)
+}
+
 // ── Chat helpers ──
 
 interface ChatMessage {
@@ -944,6 +1038,14 @@ interface BanProfile {
   ban_type: string | null
   ban_expires_at: string | null
   ban_reason: string | null
+}
+
+async function hashApiKey(key: string): Promise<string> {
+  const data = new TextEncoder().encode(key)
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data)
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("")
 }
 
 async function checkBanStatus(env: Env, userId: string): Promise<{ banned: boolean; reason?: string }> {
@@ -1742,6 +1844,10 @@ export default {
     }
     if (url.pathname.startsWith("/api/bookmarks")) {
       return handleBookmarks(request, env, url.pathname)
+    }
+    if (url.pathname === "/api/admin/api-keys" ||
+        url.pathname.match(/^\/api\/admin\/api-keys\/[^/]+$/)) {
+      return handleAdminApiKeys(request, env, url)
     }
     if (url.pathname.startsWith("/api/admin/")) {
       return handleAdmin(request, env, url.pathname)
