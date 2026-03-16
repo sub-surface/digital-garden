@@ -1412,4 +1412,16 @@
   }
 }
 
+// ── Reaction glow ──
+
+@keyframes reactionGlow {
+  0%   { box-shadow: 0 0 0px transparent; }
+  30%  { box-shadow: 0 0 18px 4px var(--glow-color, var(--color-accent-base)); }
+  100% { box-shadow: 0 0 0px transparent; }
+}
+
+.messageRow[data-glow="1"] {
+  animation: reactionGlow 0.9s ease-out forwards;
+}
+
 // Search overlay, MiniProfile, EmotePicker — extracted to own .module.scss files

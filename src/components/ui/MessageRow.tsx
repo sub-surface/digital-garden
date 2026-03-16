@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, type ReactNode } from "react"
+import { getEmoteColor } from "@/lib/emoteColor"
 import { createPortal } from "react-dom"
 import type { ChatMessage, ChatReaction } from "@/types/chat"
-import { parseMessageBody } from "@/lib/parseMessageBody"
+import { parseMessageBody, parseMessageBodyWithFootnotes } from "@/lib/parseMessageBody"
 import { ImageLightbox } from "./ImageLightbox"
 import { EmotePopup } from "./EmotePopup"
 import styles from "./Chat.module.scss"
@@ -211,11 +212,27 @@ function MessageBodyRenderer({
   onImageClick?: (src: string) => void
   onEmoteClick?: (name: string, src: string, e: React.MouseEvent) => void
 }) {
+  // Extract footnote definitions before processing
+  const footnotes = new Map<number, string>()
+  const cleanLines: string[] = []
+  for (const line of body.split("\n")) {
+    const defMatch = /^\[\^(\d+)\]:\s*(.+)$/.exec(line.trim())
+    if (defMatch) {
+      footnotes.set(Number(defMatch[1]), defMatch[2])
+    } else {
+      cleanLines.push(line)
+    }
+  }
+  const cleanBody = cleanLines.join("\n")
+
   function renderInlineTokens(text: string, keyPrefix: string) {
     const tokens = parseMessageBody(text)
     return tokens.map((tok, i) => {
       const key = `${keyPrefix}-${i}`
       if (tok.type === "text") return <span key={key}>{tok.value}</span>
+      if (tok.type === "footnote-ref") return (
+        <sup key={key} className={styles.footnoteRef}>{tok.index}</sup>
+      )
       if (tok.type === "emote") {
         const src = `/emotes/${tok.name}.gif`
         return (
@@ -276,7 +293,7 @@ function MessageBodyRenderer({
     })
   }
 
-  const lines = body.split("\n")
+  const lines = cleanBody.split("\n")
   const nodes: ReactNode[] = []
   let i = 0
   while (i < lines.length) {
@@ -298,7 +315,31 @@ function MessageBodyRenderer({
     }
     i++
   }
-  return <>{nodes}</>
+  return (
+    <div style={{ position: "relative" }}>
+      {nodes}
+      {footnotes.size > 0 && (
+        <>
+          <aside className={styles.sidenotes}>
+            {Array.from(footnotes.entries()).map(([idx, content]) => (
+              <div key={idx} className={styles.sidenote}>
+                <sup className={styles.sidenoteNum}>{idx}</sup>
+                <span className={styles.sidenoteText}>{content}</span>
+              </div>
+            ))}
+          </aside>
+          <div className={styles.sidenotesMobile}>
+            {Array.from(footnotes.entries()).map(([idx, content]) => (
+              <details key={idx}>
+                <summary>note {idx}</summary>
+                {content}
+              </details>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, onEdit, onCancelEdit, onPin, isAdmin, isOwn, isEditing: isEditingProp, reactions, onUsernameClick }: Props & { onUsernameClick?: (username: string, el: HTMLElement) => void }) {
@@ -316,6 +357,20 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, o
   const reactBtnRef = useRef<HTMLButtonElement>(null)
   const reactPickerRef = useRef<HTMLDivElement>(null)
   const allEmotes = useEmoteIndex()
+
+  const [glowColor, setGlowColor] = useState<string | null>(null)
+  const glowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  async function triggerGlow(emote: string) {
+    const color = await getEmoteColor(emote)
+    setGlowColor(color)
+    if (glowTimerRef.current) clearTimeout(glowTimerRef.current)
+    glowTimerRef.current = setTimeout(() => setGlowColor(null), 900)
+  }
+
+  useEffect(() => () => {
+    if (glowTimerRef.current) clearTimeout(glowTimerRef.current)
+  }, [])
 
   // External trigger (up-arrow from MessageInput)
   useEffect(() => {
@@ -389,7 +444,12 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, o
   }
 
   return (
-    <div className={styles.messageRow} data-message-id={msg.id}>
+    <div
+      className={styles.messageRow}
+      data-message-id={msg.id}
+      style={glowColor ? { "--glow-color": glowColor } as React.CSSProperties : undefined}
+      data-glow={glowColor ? "1" : undefined}
+    >
       {compact ? (
         <div className={styles.avatarPlaceholder} />
       ) : (
@@ -459,7 +519,7 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, o
               <button
                 key={r.emote}
                 className={`${styles.reactionBtn} ${r.reacted ? styles.reactionBtnActive : ""}`}
-                onClick={() => onReact?.(msg.id, r.emote)}
+                onClick={() => { onReact?.(msg.id, r.emote); triggerGlow(r.emote) }}
                 title={r.emote}
               >
                 <img src={`/emotes/${r.emote}.gif`} alt={r.emote} className={styles.reactionEmote}
@@ -544,6 +604,7 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, o
                     className={styles.reactPickerBtn}
                     onClick={() => {
                       onReact?.(msg.id, emote.name)
+                      triggerGlow(emote.name)
                       setReactPickerOpen(false)
                       setReactFilter("")
                     }}
