@@ -4,6 +4,7 @@ import { readdirSync } from "fs"
 import { execSync, spawnSync, spawn } from "child_process"
 import { join, dirname } from "path"
 import { fileURLToPath } from "url"
+import { createHash } from "crypto"
 import { createConnection } from "net"
 import { createInterface } from "readline"
 import { createSocket as udpSocket } from "dgram"
@@ -12,15 +13,17 @@ if (!process.stdin.isTTY) { console.error("dash needs an interactive terminal");
 
 const ROOT = dirname(fileURLToPath(import.meta.url))
 const CONTENT = join(ROOT, "content")
-const SINGLETON_PORT = 47823
+// Project-scoped singleton — hash ROOT to a unique port per project (49152–65535)
+const SINGLETON_PORT = 49152 + (parseInt(createHash("md5").update(ROOT).digest("hex").slice(0, 8), 16) % 16383)
 const DEV_PORTS = [5173, 3000] // Vite default, then fallback
+const WORKER_PORT = 8787
 
 // ── Singleton guard ───────────────────────────────────────────────────
 const guard = udpSocket("udp4")
 await new Promise((res, rej) => {
   guard.once("error", rej)
   guard.bind(SINGLETON_PORT, "127.0.0.1", () => { guard.removeListener("error", rej); res() })
-}).catch(() => { console.error("dash is already running"); process.exit(1) })
+}).catch(() => { console.error("dash is already running for this project"); process.exit(1) })
 
 // ── ANSI ─────────────────────────────────────────────────────────────
 const g = "\x1b[92m", y = "\x1b[33m", c = "\x1b[36m", r = "\x1b[31m"
@@ -51,6 +54,7 @@ const QUIPS = [
 let serverUp = false, serverPort = null
 let frame = 0, quipIdx = Math.floor(Math.random() * QUIPS.length)
 let msg = "", paused = false, animState = "idle"
+let devProc = null // tracked child process
 
 // ── Helpers ───────────────────────────────────────────────────────────
 function countMd(sub) {
@@ -84,6 +88,28 @@ function checkPort(port) {
 async function checkServer() {
   const results = await Promise.all(DEV_PORTS.map(checkPort))
   return results.find(p => p !== null) ?? null
+}
+
+/** Kill a process tree on Windows by PID (taskkill /T = tree) */
+function killTree(pid) {
+  // pid is always an integer from process.pid or parsed from netstat — safe
+  try { spawnSync("taskkill", ["/F", "/T", "/PID", String(pid)], { stdio: "ignore" }) } catch {}
+}
+
+/** Kill any process listening on a given port (fallback for orphans) */
+function killPort(port) {
+  try {
+    const out = execSync(`netstat -ano`, { encoding: "utf8" })
+    const pids = new Set()
+    for (const line of out.split("\n")) {
+      // Match lines like "  TCP    0.0.0.0:5173    ...    LISTENING    12345"
+      if (line.includes("LISTENING") && line.includes(`:${port} `)) {
+        const pid = line.trim().split(/\s+/).pop()
+        if (pid && pid !== "0" && /^\d+$/.test(pid)) pids.add(parseInt(pid))
+      }
+    }
+    for (const pid of pids) killTree(pid)
+  } catch {}
 }
 
 // ── Render ────────────────────────────────────────────────────────────
@@ -174,21 +200,41 @@ async function commit() {
 function serve() {
   if (serverUp) { msg = `${y}▸ server already running on :${serverPort}${_}`; render(); return }
   animState = "busy"
-  spawn("npm", ["run", "dev"], { cwd: ROOT, detached: true, stdio: "ignore", shell: true, windowsHide: true }).unref()
+  // Spawn as tracked child — NOT detached, so it dies when dash dies
+  devProc = spawn("npm", ["run", "dev"], { cwd: ROOT, stdio: "ignore", shell: true, windowsHide: true })
+  devProc.on("exit", () => { devProc = null })
   msg = `${g}▸ weaving the garden...${_}`
   render()
   setTimeout(refresh, 6000)
 }
 
-async function kill() {
+async function killServer() {
   msg = `${d}▸ dimming the lights...${_}`
   render()
-  for (const port of DEV_PORTS) {
-    try { execSync(`npx kill-port ${port}`, { cwd: ROOT, stdio: "ignore" }) } catch {}
+
+  // 1. Kill tracked child process tree
+  if (devProc && devProc.pid) {
+    killTree(devProc.pid)
+    devProc = null
   }
+
+  // 2. Sweep known ports for any orphans (from previous sessions or external starts)
+  for (const port of [...DEV_PORTS, WORKER_PORT]) {
+    killPort(port)
+  }
+
   serverUp = false; serverPort = null; animState = "idle"
   msg = `${r}▸ the garden sleeps${_}`
   render()
+}
+
+let cleaned = false
+function cleanup() {
+  if (cleaned) return
+  cleaned = true
+  if (devProc && devProc.pid) killTree(devProc.pid)
+  try { guard.close() } catch {}
+  process.stdout.write("\x1b[?1049l")
 }
 
 // ── Main ──────────────────────────────────────────────────────────────
@@ -212,11 +258,15 @@ setInterval(async () => {
   if (up !== serverUp || port !== serverPort) { serverPort = port; serverUp = up; st = getStats(); render() }
 }, 6000)
 
+// Clean up on any exit path — kill child server when dash dies
+process.on("exit", cleanup)
+process.on("SIGINT", () => { cleanup(); process.exit(0) })
+process.on("SIGTERM", () => { cleanup(); process.exit(0) })
+
 process.stdin.on("data", async key => {
   const k = key.toString()
   if (k === "q" || k === "\x03") {
-    guard.close()
-    process.stdout.write("\x1b[?1049l")
+    cleanup()
     process.stdin.setRawMode(false)
     process.exit(0)
   }
@@ -226,7 +276,7 @@ process.stdin.on("data", async key => {
     case "s": await shell("git pull origin main", "syncing..."); break
     case "c": await commit(); break
     case "r": serve(); break
-    case "k": await kill(); break
+    case "k": await killServer(); break
     case "b": await shell("npm run build", "weaving the garden..."); break
     case "g": await shell("git status", "checking the ledger..."); break
   }

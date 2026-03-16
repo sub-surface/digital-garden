@@ -10,7 +10,12 @@
   font-size: 0.7rem;
   color: var(--color-text-muted);
   white-space: nowrap;
-  transition: right 0.15s ease;
+  transition: right 0.15s ease, top 0.15s ease;
+
+  // Push below notification banner when visible
+  :global(body[data-banner]) & {
+    top: calc(1.5rem + 28px);
+  }
 
   :global(.quick-icon-btn) {
     background: none;
@@ -47,6 +52,12 @@
   &:hover {
     opacity: 1;
     color: var(--color-accent-base);
+  }
+}
+
+.chatToggle {
+  @media (max-width: 700px) {
+    display: none;
   }
 }
 
