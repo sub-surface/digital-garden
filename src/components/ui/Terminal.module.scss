@@ -153,22 +153,22 @@
   word-break: break-word;
 }
 
-// Ephemeral logo header
+// Static logo header above messages
 .terminalLogoHeader {
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
+  flex-shrink: 0;
+  text-align: center;
+  padding: 1.5rem 2rem 1rem;
   border-bottom: 1px solid #1a1a1a;
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   color: #444;
-  line-height: 1.3;
+  line-height: 1.35;
   white-space: pre;
-  opacity: 1;
-  transition: opacity 1.5s ease;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
   overflow-x: auto;
-}
-
-.terminalLogoHeader[data-fade="1"] {
-  opacity: 0;
 }
 
 .terminalMessages {
