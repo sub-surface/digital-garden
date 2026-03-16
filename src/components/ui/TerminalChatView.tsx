@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, KeyboardEvent, type ReactNode } from "react"
 import type { ChatMessage } from "@/types/chat"
 import { parseMessageBody } from "@/lib/parseMessageBody"
+import { fetchEmoteIndex, getEmoteCache, emoteSrc } from "@/lib/emoteIndex"
 import { SPLASH_LOGO } from "./TerminalBootScreen"
 import styles from "./Terminal.module.scss"
 
@@ -68,17 +69,12 @@ function renderMessageTokens(text: string): ReactNode {
         return (
           <img
             key={i}
-            src={`/emotes/${tok.name}.gif`}
+            src={emoteSrc(tok.name)}
             alt={`:${tok.name}:`}
             style={{ height: "14px", width: "auto", verticalAlign: "middle", margin: "0 1px", display: "inline" }}
             onError={(e) => {
               const img = e.currentTarget
-              if (!img.dataset.pngFallback) {
-                img.dataset.pngFallback = "1"
-                img.src = `/emotes/${tok.name}.png`
-              } else {
-                img.replaceWith(document.createTextNode(`:${tok.name}:`))
-              }
+              img.replaceWith(document.createTextNode(`:${tok.name}:`))
             }}
           />
         )
@@ -181,16 +177,12 @@ export function TerminalChatView({
 
   // Fetch emotes once on mount
   useEffect(() => {
-    fetch("/emotes/index.json")
-      .then((r) => r.json())
-      .then((data: unknown) => {
-        if (Array.isArray(data)) {
-          emotesRef.current = (data as unknown[])
-            .map((e) => (typeof e === "string" ? e : (e as { name: string }).name))
-            .filter(Boolean)
-        }
-      })
-      .catch(() => {})
+    const cached = getEmoteCache()
+    if (cached) { emotesRef.current = cached.map((e) => e.name); return }
+    fetchEmoteIndex().then(() => {
+      const c = getEmoteCache()
+      if (c) emotesRef.current = c.map((e) => e.name)
+    })
   }, [])
 
   // Build display lines from messages, after last clear epoch
@@ -546,17 +538,12 @@ export function TerminalChatView({
                       title={`:${r.emote}:`}
                     >
                       <img
-                        src={`/emotes/${r.emote}.gif`}
+                        src={emoteSrc(r.emote)}
                         alt={`:${r.emote}:`}
                         style={{ height: "13px", width: "auto", verticalAlign: "middle" }}
                         onError={(e) => {
                           const img = e.currentTarget
-                          if (!img.dataset.pngFallback) {
-                            img.dataset.pngFallback = "1"
-                            img.src = `/emotes/${r.emote}.png`
-                          } else {
-                            img.replaceWith(document.createTextNode(`:${r.emote}:`))
-                          }
+                          img.replaceWith(document.createTextNode(`:${r.emote}:`))
                         }}
                       />
                       {r.count > 1 && <span className={styles.terminalReactionCount}>{r.count}</span>}
@@ -603,17 +590,11 @@ export function TerminalChatView({
               >
                 {isEmoteAc && (
                   <img
-                    src={`/emotes/${c.slice(1, -1)}.gif`}
+                    src={emoteSrc(c.slice(1, -1))}
                     alt=""
                     style={{ height: "14px", width: "auto", verticalAlign: "middle", marginRight: "6px", display: "inline" }}
                     onError={(e) => {
-                      const img = e.currentTarget
-                      if (!img.dataset.pngFallback) {
-                        img.dataset.pngFallback = "1"
-                        img.src = `/emotes/${c.slice(1, -1)}.png`
-                      } else {
-                        img.style.display = "none"
-                      }
+                      (e.currentTarget as HTMLImageElement).style.display = "none"
                     }}
                   />
                 )}

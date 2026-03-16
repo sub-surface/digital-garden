@@ -12,6 +12,7 @@ import { MiniProfilePopup } from "./MiniProfilePopup"
 import { ChatSettings } from "./ChatSettings"
 import { TerminalChatView } from "./TerminalChatView"
 import { TerminalBootScreen } from "./TerminalBootScreen"
+import { emoteSrc } from "@/lib/emoteIndex"
 import { useStore } from "@/store"
 import styles from "./Chat.module.scss"
 import termStyles from "./Terminal.module.scss"
@@ -45,18 +46,13 @@ function renderPinBody(body: string): ReactNode[] {
       return (
         <img
           key={i}
-          src={`/emotes/${tok.name}.gif`}
+          src={emoteSrc(tok.name)}
           alt={`:${tok.name}:`}
           className={styles.emote}
           style={{ height: "1.2em" }}
           onError={(e) => {
             const img = e.currentTarget as HTMLImageElement
-            if (!img.dataset.pngFallback) {
-              img.dataset.pngFallback = "1"
-              img.src = `/emotes/${tok.name}.png`
-            } else {
-              img.replaceWith(document.createTextNode(`:${tok.name}:`))
-            }
+            img.replaceWith(document.createTextNode(`:${tok.name}:`))
           }}
         />
       )

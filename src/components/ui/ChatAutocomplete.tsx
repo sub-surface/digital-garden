@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react"
+import { emoteSrc } from "@/lib/emoteIndex"
 import styles from "./ChatAutocomplete.module.scss"
 
 export type AutocompleteType = "emote" | "mention" | "command"
@@ -49,11 +50,7 @@ export function ChatAutocomplete({ items, selectedIndex, onSelect, position }: P
               alt={item.label}
               className={styles.emoteThumb}
               onError={(e) => {
-                const img = e.currentTarget
-                if (!img.dataset.pngFallback) {
-                  img.dataset.pngFallback = "1"
-                  img.src = item.icon!.replace(".gif", ".png")
-                }
+                (e.currentTarget as HTMLImageElement).style.display = "none"
               }}
             />
           )}
@@ -68,25 +65,10 @@ export function ChatAutocomplete({ items, selectedIndex, onSelect, position }: P
 
 // ── Emote cache (shared across instances) ──
 
-let emoteCache: string[] | null = null
-let emoteFetchPromise: Promise<string[]> | null = null
-
 export function fetchEmoteNames(): Promise<string[]> {
-  if (emoteCache) return Promise.resolve(emoteCache)
-  if (emoteFetchPromise) return emoteFetchPromise
-  emoteFetchPromise = fetch("/emotes/index.json")
-    .then((r) => (r.ok ? r.json() : Promise.reject()))
-    .then((data: unknown) => {
-      if (!Array.isArray(data)) return []
-      const names = data.map((d) => (typeof d === "string" ? d : (d as { name: string }).name))
-      emoteCache = names
-      return names
-    })
-    .catch(() => {
-      emoteCache = ["kek", "based", "nahh", "gigachad", "cope", "pepehands", "pog", "wave"]
-      return emoteCache
-    })
-  return emoteFetchPromise
+  return import("@/lib/emoteIndex").then(({ fetchEmoteIndex, getEmoteCache }) =>
+    fetchEmoteIndex().then(() => getEmoteCache()?.map((e) => e.name) ?? [])
+  )
 }
 
 // ── Static commands ──
@@ -140,7 +122,7 @@ export function useAutocomplete({ body, cursorPos, knownUsers }: UseAutocomplete
             type: "emote",
             label: n,
             value: `:${n}: `,
-            icon: `/emotes/${n}.gif`,
+            icon: emoteSrc(n),
           }))
         setState({ items: matches, selectedIndex: 0, trigger: { type: "emote", start: emoteMatch.index!, query } })
         return

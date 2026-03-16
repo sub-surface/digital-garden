@@ -417,6 +417,26 @@ function main() {
     console.log("  public/content/Media/: media assets copied")
   }
 
+  // Generate emote index from public/emotes/
+  const emotesDir = path.join(PUBLIC_DIR, "emotes")
+  if (fs.existsSync(emotesDir)) {
+    const EMOTE_EXTS = new Set([".gif", ".png", ".webp"])
+    const emoteEntries = fs
+      .readdirSync(emotesDir)
+      .filter((f) => EMOTE_EXTS.has(path.extname(f).toLowerCase()) && f !== "index.json")
+      .map((f) => ({ name: path.basename(f, path.extname(f)), ext: path.extname(f).slice(1) }))
+      // If same name exists as gif and png/webp, prefer gif then webp then png
+      .reduce<Map<string, { name: string; ext: string }>>((map, entry) => {
+        const existing = map.get(entry.name)
+        const rank = (e: string) => e === "gif" ? 0 : e === "webp" ? 1 : 2
+        if (!existing || rank(entry.ext) < rank(existing.ext)) map.set(entry.name, entry)
+        return map
+      }, new Map())
+    const sorted = [...emoteEntries.values()].sort((a, b) => a.name.localeCompare(b.name))
+    fs.writeFileSync(path.join(emotesDir, "index.json"), JSON.stringify(sorted, null, 2))
+    console.log(`  emotes/index.json: ${sorted.length} emotes`)
+  }
+
   // Generate RSS feeds (opt-in, curated)
   const SITE_URL = "https://subsurfaces.net"
   const WIKI_URL = "https://wiki.subsurfaces.net"

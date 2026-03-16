@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef, type ReactNode } from "react"
 import type { ChatMessage } from "@/types/chat"
 import { parseMessageBody } from "@/lib/parseMessageBody"
+import { emoteSrc } from "@/lib/emoteIndex"
 import { EmotePicker } from "./EmotePicker"
 import { ChatAutocomplete, useAutocomplete, CHAT_COMMANDS } from "./ChatAutocomplete"
 import styles from "./Chat.module.scss"
@@ -13,16 +14,12 @@ function renderReplySnippet(body: string, maxLen: number): ReactNode[] {
       return (
         <img
           key={i}
-          src={`/emotes/${tok.name}.gif`}
+          src={emoteSrc(tok.name)}
           alt={`:${tok.name}:`}
           className={styles.emote}
           style={{ height: "1em" }}
           onError={(e) => {
-            const img = e.currentTarget as HTMLImageElement
-            if (!img.dataset.pngFallback) {
-              img.dataset.pngFallback = "1"
-              img.src = `/emotes/${tok.name}.png`
-            }
+            (e.currentTarget as HTMLImageElement).style.display = "none"
           }}
         />
       )
@@ -209,18 +206,12 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
         {emoteTokens.map((name) => (
           <img
             key={name}
-            src={`/emotes/${name}.gif`}
+            src={emoteSrc(name)}
             alt={`:${name}:`}
             className={styles.emotePreviewImg}
             title={`:${name}:`}
             onError={(e) => {
-              const img = e.currentTarget
-              if (!img.dataset.pngFallback) {
-                img.dataset.pngFallback = "1"
-                img.src = `/emotes/${name}.png`
-              } else {
-                img.style.display = "none"
-              }
+              (e.currentTarget as HTMLImageElement).style.display = "none"
             }}
           />
         ))}

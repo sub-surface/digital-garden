@@ -3,11 +3,10 @@ import { getEmoteColor } from "@/lib/emoteColor"
 import { createPortal } from "react-dom"
 import type { ChatMessage, ChatReaction } from "@/types/chat"
 import { parseMessageBody, parseMessageBodyWithFootnotes } from "@/lib/parseMessageBody"
+import { type EmoteEntry, fetchEmoteIndex, getEmoteCache, emoteSrc } from "@/lib/emoteIndex"
 import { ImageLightbox } from "./ImageLightbox"
 import { EmotePopup } from "./EmotePopup"
 import styles from "./Chat.module.scss"
-
-interface EmoteEntry { name: string; ext: string }
 
 const FALLBACK_EMOTES: EmoteEntry[] = [
   { name: "kek", ext: "gif" },
@@ -20,28 +19,16 @@ const FALLBACK_EMOTES: EmoteEntry[] = [
   { name: "wave", ext: "gif" },
 ]
 
-// Shared emote index — fetched once, cached across all MessageRow instances
-let cachedEmotes: EmoteEntry[] | null = null
-let emoteFetchPromise: Promise<void> | null = null
-
 function useEmoteIndex() {
-  const [emotes, setEmotes] = useState<EmoteEntry[]>(cachedEmotes ?? FALLBACK_EMOTES)
+  const [emotes, setEmotes] = useState<EmoteEntry[]>(getEmoteCache() ?? FALLBACK_EMOTES)
 
   useEffect(() => {
-    if (cachedEmotes) { setEmotes(cachedEmotes); return }
-    if (!emoteFetchPromise) {
-      emoteFetchPromise = fetch("/emotes/index.json")
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then((data: unknown) => {
-          if (!Array.isArray(data) || data.length === 0) return
-          cachedEmotes = typeof data[0] === "string"
-            ? (data as string[]).map(name => ({ name, ext: "gif" }))
-            : data as EmoteEntry[]
-        })
-        .catch(() => { cachedEmotes = FALLBACK_EMOTES })
-    }
+    const cached = getEmoteCache()
+    if (cached) { setEmotes(cached); return }
     let alive = true
-    emoteFetchPromise.then(() => { if (alive && cachedEmotes) setEmotes(cachedEmotes) })
+    fetchEmoteIndex().then(() => {
+      if (alive) setEmotes(getEmoteCache() ?? FALLBACK_EMOTES)
+    })
     return () => { alive = false }
   }, [])
 
@@ -178,18 +165,13 @@ function renderInlineSnippet(body: string, maxLen: number): ReactNode[] {
       return (
         <img
           key={i}
-          src={`/emotes/${tok.name}.gif`}
+          src={emoteSrc(tok.name)}
           alt={`:${tok.name}:`}
           className={styles.emote}
           style={{ height: "1em" }}
           onError={(e) => {
             const img = e.currentTarget as HTMLImageElement
-            if (!img.dataset.pngFallback) {
-              img.dataset.pngFallback = "1"
-              img.src = `/emotes/${tok.name}.png`
-            } else {
-              img.replaceWith(document.createTextNode(`:${tok.name}:`))
-            }
+            img.replaceWith(document.createTextNode(`:${tok.name}:`))
           }}
         />
       )
@@ -236,7 +218,7 @@ function MessageBodyRenderer({
         <sup key={key} className={styles.footnoteRef}>{tok.index}</sup>
       )
       if (tok.type === "emote") {
-        const src = `/emotes/${tok.name}.gif`
+        const src = emoteSrc(tok.name)
         return (
           <img
             key={key}
@@ -247,12 +229,7 @@ function MessageBodyRenderer({
             onClick={(e) => onEmoteClick?.(tok.name, src, e)}
             onError={(e) => {
               const img = e.currentTarget as HTMLImageElement
-              if (!img.dataset.pngFallback) {
-                img.dataset.pngFallback = "1"
-                img.src = `/emotes/${tok.name}.png`
-              } else {
-                img.replaceWith(document.createTextNode(`:${tok.name}:`))
-              }
+              img.replaceWith(document.createTextNode(`:${tok.name}:`))
             }}
           />
         )
@@ -526,13 +503,9 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, o
                 onClick={() => { onReact?.(msg.id, r.emote); triggerGlow(r.emote) }}
                 title={r.emote}
               >
-                <img src={`/emotes/${r.emote}.gif`} alt={r.emote} className={styles.reactionEmote}
+                <img src={emoteSrc(r.emote)} alt={r.emote} className={styles.reactionEmote}
                   onError={(e) => {
-                    const img = e.currentTarget as HTMLImageElement
-                    if (!img.dataset.pngFallback) {
-                      img.dataset.pngFallback = "1"
-                      img.src = `/emotes/${r.emote}.png`
-                    }
+                    (e.currentTarget as HTMLImageElement).style.display = "none"
                   }}
                 />
                 {r.count > 1 && <span>{r.count}</span>}
