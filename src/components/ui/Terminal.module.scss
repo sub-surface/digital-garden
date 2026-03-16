@@ -156,11 +156,11 @@
 // Static logo header above messages
 .terminalLogoHeader {
   flex-shrink: 0;
-  text-align: center;
+  text-align: left;
   padding: 1.5rem 2rem 1rem;
   border-bottom: 1px solid #1a1a1a;
   font-size: 0.72rem;
-  color: #444;
+  color: #e0e0e0;
   line-height: 1.35;
   white-space: pre;
   font-family: "IBM Plex Mono", "Courier New", monospace;

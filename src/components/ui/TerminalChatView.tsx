@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, KeyboardEvent, type ReactNode
 import type { ChatMessage } from "@/types/chat"
 import { parseMessageBody } from "@/lib/parseMessageBody"
 import { fetchEmoteIndex, getEmoteCache, emoteSrc } from "@/lib/emoteIndex"
+import { useStore } from "@/store"
 import { SPLASH_LOGO } from "./TerminalBootScreen"
 import styles from "./Terminal.module.scss"
 
@@ -44,6 +45,17 @@ const COMMAND_DEFS: Record<string, string> = {
   "/unread": "show count of unread messages",
   "/nick": "show your current username",
   "/mute": "toggle typing indicator broadcast",
+  "/options": "set display options (density, scale)",
+}
+
+// /options subcommands — used for autocomplete and dispatch
+const OPTIONS_DEFS: Record<string, string> = {
+  "density:compact":      "message density → compact",
+  "density:comfortable":  "message density → comfortable",
+  "density:spacious":     "message density → spacious",
+  "scale:s":              "text size → small (0.85×)",
+  "scale:m":              "text size → medium (1×)",
+  "scale:l":              "text size → large (1.15×)",
 }
 
 interface TerminalLine {
@@ -156,6 +168,11 @@ export function TerminalChatView({
   lastReadTimestamp,
   onReact,
 }: Props) {
+  const chatDensity = useStore((s) => s.chatDensity)
+  const setChatDensity = useStore((s) => s.setChatDensity)
+  const chatFontScale = useStore((s) => s.chatFontScale)
+  const setChatFontScale = useStore((s) => s.setChatFontScale)
+
   const [input, setInput] = useState("")
   const [showTimestamps, setShowTimestamps] = useState(false)
   const [shrugPending, setShrugPending] = useState(false)
@@ -236,7 +253,15 @@ export function TerminalChatView({
   // Autocomplete candidates
   const acCandidates: string[] = (() => {
     if (input.startsWith("/")) {
-      return Object.keys(COMMAND_DEFS).filter((k) => k.startsWith(input.split(" ")[0]))
+      const parts = input.split(" ")
+      // /options <subcommand> autocomplete
+      if (parts[0] === "/options" && parts.length >= 2) {
+        const partial = parts[1].toLowerCase()
+        return Object.keys(OPTIONS_DEFS)
+          .filter((k) => k.startsWith(partial))
+          .map((k) => `/options ${k}`)
+      }
+      return Object.keys(COMMAND_DEFS).filter((k) => k.startsWith(parts[0]))
     }
     if (input.startsWith("@")) {
       const partial = input.slice(1).toLowerCase()
@@ -377,6 +402,25 @@ export function TerminalChatView({
         return
       }
 
+      if (cmd === "/options") {
+        const sub = parts[1]?.toLowerCase()
+        if (!sub) {
+          appendLocalLine("usage: /options <subcommand>", "help")
+          appendLocalLine("  density options:  compact  comfortable  spacious", "help")
+          appendLocalLine("  scale options:    s  m  l", "help")
+          appendLocalLine(`  current: density=${chatDensity}  scale=${chatFontScale === 0.85 ? "s" : chatFontScale === 1.15 ? "l" : "m"}`, "help")
+          return
+        }
+        if (sub === "density:compact")     { setChatDensity("compact");     appendLocalLine("-- density: compact --"); return }
+        if (sub === "density:comfortable") { setChatDensity("comfortable"); appendLocalLine("-- density: comfortable --"); return }
+        if (sub === "density:spacious")    { setChatDensity("spacious");    appendLocalLine("-- density: spacious --"); return }
+        if (sub === "scale:s") { setChatFontScale(0.85); appendLocalLine("-- text size: S --"); return }
+        if (sub === "scale:m") { setChatFontScale(1.0);  appendLocalLine("-- text size: M --"); return }
+        if (sub === "scale:l") { setChatFontScale(1.15); appendLocalLine("-- text size: L --"); return }
+        appendLocalLine(`Unknown option: ${sub}  — type /options for list`)
+        return
+      }
+
       appendLocalLine(`Unknown command: ${cmd}  — type /help for commands`)
       return
     }
@@ -393,7 +437,7 @@ export function TerminalChatView({
     } else {
       await onSend(body)
     }
-  }, [input, messages, currentUserId, currentUsername, roomId, onSend, shrugPending, showTimestamps, cleared, replyContext, lastReadTimestamp, mutedTyping])
+  }, [input, messages, currentUserId, currentUsername, roomId, onSend, shrugPending, showTimestamps, cleared, replyContext, lastReadTimestamp, mutedTyping, chatDensity, setChatDensity, chatFontScale, setChatFontScale])
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
@@ -599,7 +643,10 @@ export function TerminalChatView({
                   />
                 )}
                 {c}
-                {COMMAND_DEFS[c] ? <span style={{ color: "#555", marginLeft: "0.5rem" }}>{COMMAND_DEFS[c]}</span> : null}
+                {(() => {
+                  const desc = COMMAND_DEFS[c] ?? OPTIONS_DEFS[c.replace("/options ", "")]
+                  return desc ? <span style={{ color: "#555", marginLeft: "0.5rem" }}>{desc}</span> : null
+                })()}
               </div>
             ))}
           </div>
