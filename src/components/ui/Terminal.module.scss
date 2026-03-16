@@ -190,13 +190,13 @@
 
 .terminalMsg {
   display: block;
-  padding: 1px 0;
   white-space: pre-wrap;
   word-break: break-word;
+  line-height: 1.6;
 }
 
 .terminalUsername {
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .terminalBody {

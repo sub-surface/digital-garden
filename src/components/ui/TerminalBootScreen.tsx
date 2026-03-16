@@ -1,15 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import styles from "./Terminal.module.scss"
 
-export interface BootMessage {
-  username: string
-  body: string
-  nameColor?: string | null
-}
-
 interface Props {
   onDone: () => void
-  messages?: BootMessage[]
 }
 
 interface TerminalBootLine {
@@ -152,21 +145,19 @@ export const SPLASH_LOGO = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function TerminalBootScreen({ onDone, messages }: Props) {
+export function TerminalBootScreen({ onDone }: Props) {
   // lines[] = committed lines, currentLine = in-progress typed line
   const [lines, setLines] = useState<TerminalBootLine[]>([])
   const [currentLine, setCurrentLine] = useState("")
-  const [phase, setPhase] = useState<0 | 1 | 2>(0) // 0=bios, 1=splash, 2=rollIn
+  const [phase, setPhase] = useState<0 | 1>(0) // 0=bios, 1=splash
   const [splashLines, setSplashLines] = useState<string[]>([])
   const [showPressKey, setShowPressKey] = useState(false)
 
   const alive = useRef(true)
   const doneRef = useRef(false)
-  const phaseRef = useRef<0 | 1 | 2>(0)
+  const phaseRef = useRef<0 | 1>(0)
   const skipPhase0Ref = useRef(false)
-  const skipPhase2Ref = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const rollInMessagesRef = useRef<BootMessage[]>([])
 
   // Keep a stable ref to onDone so Phase 2 effect has no dep on it
   const onDoneRef = useRef(onDone)
@@ -202,12 +193,7 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
       if (p === 0) {
         skipPhase0Ref.current = true
       } else if (p === 1) {
-        // snapshot messages then advance to roll-in
-        rollInMessagesRef.current = messages?.slice(-8) ?? []
-        setPhase(2)
-        phaseRef.current = 2
-      } else if (p === 2) {
-        skipPhase2Ref.current = true
+        dismiss()
       }
     }
 
@@ -217,7 +203,7 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
       window.removeEventListener("keydown", handleKey)
       window.removeEventListener("click", handleClick)
     }
-  }, [dismiss, messages])
+  }, [dismiss])
 
   // ── Phase 0: BIOS ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -545,84 +531,8 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
 
     runSplash()
     return () => { cancelled = true }
-  }, [phase])
+  }, [phase]) // dismiss is stable (uses refs only)
 
-  // ── Phase 2: Roll-in ───────────────────────────────────────────────────────
-  useEffect(() => {
-    if (phase !== 2) return
-
-    // Clear splash, reset lines
-    setSplashLines([])
-    setShowPressKey(false)
-    setLines([])
-    setCurrentLine("")
-
-    let cancelled = false
-
-    const appendL = (text: string) => {
-      if (cancelled) return
-      setLines((prev) => [...prev, { text }])
-    }
-
-    async function runRollIn() {
-      // Use the snapshot captured at the moment of phase transition
-      const msgs = rollInMessagesRef.current
-
-      for (const m of msgs) {
-        if (cancelled) return
-        const prefix = `[${m.username}] `
-        const full = prefix + m.body
-
-        if (skipPhase2Ref.current) {
-          appendL(full)
-          continue
-        }
-
-        // Type char by char (body only, prefix instant)
-        appendL("") // placeholder
-        setLines((prev) => {
-          const next = [...prev]
-          next[next.length - 1] = { text: prefix }
-          return next
-        })
-
-        for (let i = 1; i <= m.body.length; i++) {
-          if (cancelled) return
-          if (skipPhase2Ref.current) {
-            setLines((prev) => {
-              const next = [...prev]
-              next[next.length - 1] = { text: full }
-              return next
-            })
-            break
-          }
-          const partial = prefix + m.body.slice(0, i)
-          setLines((prev) => {
-            const next = [...prev]
-            next[next.length - 1] = { text: partial }
-            return next
-          })
-          await sleep(15)
-        }
-
-        if (!skipPhase2Ref.current) await sleep(60)
-      }
-
-      if (cancelled) return
-      await sleep(200)
-      appendL("-- connected to #general --")
-      await sleep(80)
-      appendL("-- type /help for commands --")
-      await sleep(400)
-      if (!cancelled && !doneRef.current) {
-        doneRef.current = true
-        onDoneRef.current()
-      }
-    }
-
-    runRollIn()
-    return () => { cancelled = true }
-  }, [phase]) // NO messages or onDone in deps — uses refs
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -673,7 +583,7 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
             <span className={styles.terminalCursor}>▋</span>
           </span>
         )}
-        {currentLine === "" && lines.length > 0 && phase === 0 && (
+        {currentLine === "" && lines.length > 0 && (
           <span className={styles.terminalLine}>
             <span className={styles.terminalCursor}>▋</span>
           </span>

@@ -417,11 +417,6 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       {showBoot && (
         <TerminalBootScreen
           onDone={() => setShowBoot(false)}
-          messages={messages.slice(-8).map((m) => ({
-            username: m.profiles?.username ?? "unknown",
-            body: m.body,
-            nameColor: m.profiles?.name_color,
-          }))}
         />
       )}
       {!chatTerminal && (
