@@ -31,6 +31,7 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 - [x] **Admin bans — permanent**: on permanent ban: hard-delete all messages + reactions, anonymise profile (username → `[deleted]`, avatar/bio/name_color → null)
 - [x] **Chat polish pass**: footnote sidenotes (`[^1]` tufte-style), ephemeral emote glow (canvas-sampled dominant colour), message density/scale presets (compact/comfortable/spacious + S/M/L), terminal mode (full CLI overlay with boot screen, command suite, emote autocomplete, command history, rich rendering)
 - [x] **API key platform**: SHA-256 hashed keys, `sk_` prefix, CF Worker `verifyAuth` fallthrough, `POST/GET/DELETE /api/keys` endpoints — enables headless/third-party chat clients
+- [x] **Terminal polish pass**: boot/chat sequencing fix (mutually exclusive render), static `SPLASH_LOGO` block-char header at top of chat view, reactions in terminal (emote imgs + count badge), reply rendering (`↳` inline preview + reply bar), ANSI-inspired colour classes in boot lines, centred layout matching boot sequence width
 
 ### Terminal Mode — Remaining / Future
 
