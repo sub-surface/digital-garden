@@ -10,6 +10,7 @@
   font-size: 0.7rem;
   color: var(--color-text-muted);
   white-space: nowrap;
+  transition: right 0.15s ease;
 
   :global(.quick-icon-btn) {
     background: none;
@@ -47,6 +48,11 @@
     opacity: 1;
     color: var(--color-accent-base);
   }
+}
+
+.chatToggleActive {
+  opacity: 1;
+  color: var(--color-accent-base);
 }
 
 .themeDot {

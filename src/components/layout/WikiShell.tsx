@@ -12,22 +12,6 @@ import { SideChat } from "@/components/ui/SideChat"
 import { NotificationBanner } from "@/components/ui/NotificationBanner"
 import styles from "./WikiShell.module.scss"
 
-function SideChatToggle() {
-  const isSideChatOpen = useStore((s) => s.isSideChatOpen)
-  const toggleSideChat = useStore((s) => s.toggleSideChat)
-
-  return (
-    <button
-      className={`${styles.sideChatToggle} ${isSideChatOpen ? styles.sideChatToggleActive : ""}`}
-      onClick={toggleSideChat}
-      title={isSideChatOpen ? "Close chat" : "Open chat"}
-      aria-label="Toggle side chat"
-    >
-      chat
-    </button>
-  )
-}
-
 export function WikiShell() {
   const activeLayout = useStore((s) => s.activeLayout)
   const isSideChatOpen = useStore((s) => s.isSideChatOpen)
@@ -53,7 +37,6 @@ export function WikiShell() {
 
         <NotificationBanner />
         <TerminalTitle context="wiki" />
-        <SideChatToggle />
 
         {breadcrumb.length > 0 && (
           <nav className={styles.breadcrumb} aria-label="Breadcrumb">

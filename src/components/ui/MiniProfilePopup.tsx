@@ -94,6 +94,7 @@ export function MiniProfilePopup({ username, anchorEl, onClose }: Props) {
                   src={profile.avatar_url}
                   alt={profile.username}
                   className={styles.avatarImg}
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
                 />
               ) : (
                 initials(profile.username)

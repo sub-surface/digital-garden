@@ -132,20 +132,51 @@ function ProfileButton() {
   )
 }
 
+function SideChatToggle() {
+  const shell = useShell()
+  const isSideChatOpen = useStore((s) => s.isSideChatOpen)
+  const toggleSideChat = useStore((s) => s.toggleSideChat)
+
+  if (shell !== "wiki") return null
+
+  return (
+    <button
+      className={`${styles.iconBtn} ${isSideChatOpen ? styles.chatToggleActive : ""}`}
+      onClick={toggleSideChat}
+      title={isSideChatOpen ? "Close chat" : "Open chat"}
+      aria-label="Toggle side chat"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </button>
+  )
+}
+
 export function QuickControls({ variant = "full" }: QuickControlsProps) {
   const [time, setTime] = useState(() => formatDateTime())
   const theme = useStore((s) => s.theme)
   const accentBase = useStore((s) => s.accentBase)
   const cycleAccent = useStore((s) => s.cycleAccent)
   const setTheme = (t: "light" | "dark") => useStore.getState().setTheme(t)
+  const shell = useShell()
+  const isSideChatOpen = useStore((s) => s.isSideChatOpen)
+  const sideChatWidth = useStore((s) => s.sideChatWidth)
 
   useEffect(() => {
     const id = setInterval(() => setTime(formatDateTime()), 1000)
     return () => clearInterval(id)
   }, [])
 
+  // Shift QuickControls left when side chat is open on wiki shell
+  const rightOffset = shell === "wiki" && isSideChatOpen ? sideChatWidth + 16 : undefined
+
   return (
-    <div className={styles.quickControls} data-panel-ignore>
+    <div
+      className={styles.quickControls}
+      data-panel-ignore
+      style={rightOffset ? { right: `${rightOffset}px` } : undefined}
+    >
       {variant === "full" && <MusicBar />}
 
       {variant === "full" && <SearchButton />}
@@ -168,6 +199,9 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
       />
 
       <BgModeToggle />
+
+      {/* Side Chat Toggle (wiki only) */}
+      <SideChatToggle />
 
       {/* Profile Icon */}
       <ProfileButton />

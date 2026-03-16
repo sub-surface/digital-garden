@@ -2,6 +2,7 @@ export type MessageToken =
   | { type: "text"; value: string }
   | { type: "emote"; name: string }
   | { type: "image"; url: string }
+  | { type: "video"; url: string }
   | { type: "youtube"; videoId: string; url: string }
   | { type: "twitter"; username: string; url: string }
   | { type: "url"; url: string; label: string };
@@ -9,6 +10,7 @@ export type MessageToken =
 const EMOTE_RE = /^:[a-z0-9-]+:$/;
 const MARKDOWN_IMAGE_RE = /^!\[([^\]]*)\]\(([^)]+)\)$/;
 const IMAGE_EXT_RE = /\.(?:jpg|jpeg|png|gif|webp)(?:[?#].*)?$/i;
+const VIDEO_EXT_RE = /\.(?:mp4|webm|mov|ogg)(?:[?#].*)?$/i;
 const IMAGE_CDN_HOSTS = new Set([
   "i.imgur.com",
   "pbs.twimg.com",
@@ -60,6 +62,15 @@ function isImageUrl(url: string): boolean {
     // malformed URL
   }
   return false;
+}
+
+function isVideoUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return VIDEO_EXT_RE.test(parsed.pathname);
+  } catch {
+    return false;
+  }
 }
 
 function getHostname(url: string): string {
@@ -117,6 +128,14 @@ function classifyWord(
     return { type: "url", url, label: getHostname(url) }
   }
 
+  // Video URL
+  if (isVideoUrl(url)) {
+    if (!embedUsed) {
+      return { type: "video", url };
+    }
+    return { type: "url", url, label: getHostname(url) };
+  }
+
   // Image URL
   if (isImageUrl(url)) {
     if (!embedUsed) {
@@ -172,7 +191,7 @@ export function parseMessageBody(text: string): MessageToken[] {
       if (classified !== null) {
         flushText();
         tokens.push(classified);
-        if (classified.type === "image" || classified.type === "youtube" || classified.type === "twitter") {
+        if (classified.type === "image" || classified.type === "video" || classified.type === "youtube" || classified.type === "twitter") {
           embedUsed = true;
         }
         // If the original word had trailing punctuation that was stripped,
@@ -182,6 +201,8 @@ export function parseMessageBody(text: string): MessageToken[] {
             classified.type === "url"
               ? classified.url
               : classified.type === "image"
+              ? classified.url
+              : classified.type === "video"
               ? classified.url
               : classified.type === "youtube"
               ? classified.url

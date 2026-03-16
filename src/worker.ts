@@ -375,6 +375,14 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
     }
   }
 
+  // Wiki claim
+  let claimed_slug: string | null = null
+  const claimRes = await supabaseRest(env, `chatter_claims?user_id=eq.${auth.id}&select=wiki_slug`)
+  if (claimRes.ok) {
+    const claims = await claimRes.json<{ wiki_slug: string }[]>()
+    if (claims.length > 0) claimed_slug = claims[0].wiki_slug
+  }
+
   return jsonResponse({
     role: auth.role,
     email: auth.email,
@@ -384,6 +392,7 @@ async function handleAuthMe(request: Request, env: Env): Promise<Response> {
     created_at: auth.created_at,
     name_color: auth.name_color,
     stonk_balance,
+    claimed_slug,
   })
 }
 
@@ -1474,6 +1483,87 @@ async function handleChatUserMini(request: Request, env: Env, username: string):
   return jsonResponse({ ...rest, stonk_balance })
 }
 
+// ── POST /api/chat/claim ──
+
+async function handleChatClaim(request: Request, env: Env): Promise<Response> {
+  if (request.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405)
+
+  const auth = await verifyAuth(request, env)
+  if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+  if (!auth.username) return jsonResponse({ error: "Username required" }, 400)
+
+  let body: { wiki_slug?: string }
+  try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
+  if (!body.wiki_slug?.trim()) return jsonResponse({ error: "wiki_slug required" }, 400)
+
+  const slug = body.wiki_slug.trim()
+
+  // Verify the wiki page has matching username frontmatter
+  const index = await getContentIndex(env.ASSETS)
+  const meta = resolveMetaCaseInsensitive(index, slug)
+  if (!meta) return jsonResponse({ error: "Wiki page not found" }, 404)
+  if (!meta.username || meta.username.toLowerCase() !== auth.username.toLowerCase()) {
+    return jsonResponse({ error: "Username does not match wiki page" }, 403)
+  }
+
+  // Check if already claimed by someone else
+  const existing = await supabaseRest(env, `chatter_claims?wiki_slug=eq.${encodeURIComponent(slug)}&select=user_id`)
+  if (existing.ok) {
+    const rows = await existing.json<{ user_id: string }[]>()
+    if (rows.length > 0 && rows[0].user_id !== auth.id) {
+      return jsonResponse({ error: "Page already claimed by another user" }, 409)
+    }
+    if (rows.length > 0 && rows[0].user_id === auth.id) {
+      return jsonResponse({ ok: true, already_claimed: true })
+    }
+  }
+
+  // Insert claim
+  const res = await supabaseRest(env, "chatter_claims", "POST", {
+    user_id: auth.id,
+    wiki_slug: slug,
+  })
+  if (!res.ok) return jsonResponse({ error: "Failed to create claim" }, 500)
+  return jsonResponse({ ok: true }, 201)
+}
+
+// ── GET /api/users/:username/claim ──
+
+async function handleUserClaim(env: Env, username: string): Promise<Response> {
+  // Look up user_id from username
+  const userRes = await supabaseRest(env, `profiles?username=eq.${encodeURIComponent(username)}&select=id`)
+  if (!userRes.ok) return jsonResponse({ error: "Failed to fetch user" }, 500)
+  const users = await userRes.json<{ id: string }[]>()
+  if (!users.length) return jsonResponse({ error: "User not found" }, 404)
+
+  const claimRes = await supabaseRest(env, `chatter_claims?user_id=eq.${users[0].id}&select=wiki_slug,claimed_at`)
+  if (!claimRes.ok) return jsonResponse({ error: "Failed to fetch claim" }, 500)
+  const claims = await claimRes.json<{ wiki_slug: string; claimed_at: string }[]>()
+
+  return jsonResponse({ claim: claims.length > 0 ? claims[0] : null })
+}
+
+// ── GET /api/claims/by-slug/:slug ──
+
+async function handleClaimBySlug(env: Env, slug: string): Promise<Response> {
+  const claimRes = await supabaseRest(env, `chatter_claims?wiki_slug=eq.${encodeURIComponent(slug)}&select=user_id`)
+  if (!claimRes.ok) return jsonResponse({ error: "Failed to fetch claim" }, 500)
+  const claims = await claimRes.json<{ user_id: string }[]>()
+
+  if (!claims.length) return jsonResponse({ claim: null })
+
+  // Get the user's profile
+  const profileRes = await supabaseRest(env, `profiles?id=eq.${claims[0].user_id}&select=username,avatar_url`)
+  if (!profileRes.ok) return jsonResponse({ claim: null })
+  const profiles = await profileRes.json<{ username: string; avatar_url: string | null }[]>()
+
+  return jsonResponse({
+    claim: profiles.length > 0
+      ? { username: profiles[0].username, avatar_url: profiles[0].avatar_url }
+      : null
+  })
+}
+
 // ── POST /api/chat/ban — POST /api/chat/unban ──
 
 async function handleChatBan(request: Request, env: Env): Promise<Response> {
@@ -1562,7 +1652,7 @@ function addSecurityHeaders(headers: Headers) {
     "img-src 'self' data: blob: https:",
     "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com",
     "frame-src https://challenges.cloudflare.com",
-    "media-src 'self' blob:",
+    "media-src 'self' blob: https:",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
   ].join("; "))
@@ -1603,6 +1693,9 @@ export default {
       const username = decodeURIComponent(url.pathname.split("/")[4])
       return handleChatUserMini(request, env, username)
     }
+    if (url.pathname === "/api/chat/claim" && request.method === "POST") {
+      return handleChatClaim(request, env)
+    }
     if (url.pathname === "/api/chat/ban" || url.pathname === "/api/chat/unban") {
       return handleChatBan(request, env)
     }
@@ -1625,6 +1718,14 @@ export default {
     }
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
       return handleRegister(request, env)
+    }
+    if (url.pathname.match(/^\/api\/users\/[^/]+\/claim$/) && request.method === "GET") {
+      const username = decodeURIComponent(url.pathname.split("/")[3])
+      return handleUserClaim(env, username)
+    }
+    if (url.pathname.match(/^\/api\/claims\/by-slug\//) && request.method === "GET") {
+      const slug = decodeURIComponent(url.pathname.slice("/api/claims/by-slug/".length))
+      return handleClaimBySlug(env, slug)
     }
     if (url.pathname.startsWith("/api/user/") && request.method === "GET") {
       const username = decodeURIComponent(url.pathname.slice("/api/user/".length))
