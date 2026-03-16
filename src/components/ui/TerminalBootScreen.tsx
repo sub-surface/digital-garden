@@ -12,6 +12,11 @@ interface Props {
   messages?: BootMessage[]
 }
 
+interface TerminalBootLine {
+  text: string
+  cls?: "ok" | "warn" | "accent" | "dim" | "logo"
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
@@ -32,6 +37,26 @@ function pick<T>(arr: T[]): T {
 function pickSubset<T>(arr: T[], min: number, max: number): T[] {
   const count = min + Math.floor(Math.random() * (max - min + 1))
   return shuffle(arr).slice(0, count)
+}
+
+function classifyLine(text: string): TerminalBootLine["cls"] | undefined {
+  if (
+    text.endsWith("OK") ||
+    text.endsWith("✓") ||
+    text.includes("CONNECTED") ||
+    text.includes("ESTABLISHED") ||
+    text.includes("PASSED")
+  )
+    return "ok"
+  if (
+    text.includes("Supabase") ||
+    text.includes("Auth") ||
+    text.includes("Rooms") ||
+    text.includes("Messages") ||
+    text.includes("Reactions")
+  )
+    return "accent"
+  return undefined
 }
 
 // ── Static data ───────────────────────────────────────────────────────────────
@@ -116,7 +141,7 @@ const PERF_TESTS = [
   "RENDER_TOKEN",
 ]
 
-const SPLASH_LOGO = [
+export const SPLASH_LOGO = [
   " ██████╗ ██╗  ██╗██╗██╗      ██████╗██╗  ██╗ █████╗ ████████╗",
   " ██╔══██╗██║  ██║██║██║     ██╔════╝██║  ██║██╔══██╗╚══██╔══╝",
   " ██████╔╝███████║██║██║     ██║     ███████║███████║   ██║   ",
@@ -129,7 +154,7 @@ const SPLASH_LOGO = [
 
 export function TerminalBootScreen({ onDone, messages }: Props) {
   // lines[] = committed lines, currentLine = in-progress typed line
-  const [lines, setLines] = useState<string[]>([])
+  const [lines, setLines] = useState<TerminalBootLine[]>([])
   const [currentLine, setCurrentLine] = useState("")
   const [phase, setPhase] = useState<0 | 1 | 2>(0) // 0=bios, 1=splash, 2=rollIn
   const [splashLines, setSplashLines] = useState<string[]>([])
@@ -141,13 +166,18 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
   const skipPhase0Ref = useRef(false)
   const skipPhase2Ref = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const rollInMessagesRef = useRef<BootMessage[]>([])
+
+  // Keep a stable ref to onDone so Phase 2 effect has no dep on it
+  const onDoneRef = useRef(onDone)
+  useEffect(() => { onDoneRef.current = onDone }, [onDone])
 
   const dismiss = useCallback(() => {
     if (doneRef.current) return
     doneRef.current = true
     alive.current = false
-    onDone()
-  }, [onDone])
+    onDoneRef.current()
+  }, []) // stable — uses refs only
 
   // Auto-scroll
   useEffect(() => {
@@ -172,7 +202,8 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
       if (p === 0) {
         skipPhase0Ref.current = true
       } else if (p === 1) {
-        // advance to roll-in
+        // snapshot messages then advance to roll-in
+        rollInMessagesRef.current = messages?.slice(-8) ?? []
         setPhase(2)
         phaseRef.current = 2
       } else if (p === 2) {
@@ -186,16 +217,16 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
       window.removeEventListener("keydown", handleKey)
       window.removeEventListener("click", handleClick)
     }
-  }, [dismiss])
+  }, [dismiss, messages])
 
   // ── Phase 0: BIOS ──────────────────────────────────────────────────────────
   useEffect(() => {
     alive.current = true
     phaseRef.current = 0
 
-    const appendLine = (text: string) => {
+    const appendLine = (text: string, cls?: TerminalBootLine["cls"]) => {
       if (!alive.current) return
-      setLines((prev) => [...prev, text])
+      setLines((prev) => [...prev, { text, cls: cls ?? classifyLine(text) }])
     }
 
     const typeChar = async (text: string, delay = 15) => {
@@ -207,7 +238,7 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
         await sleep(delay)
       }
       if (!alive.current) return
-      setLines((prev) => [...prev, text])
+      setLines((prev) => [...prev, { text, cls: classifyLine(text) }])
       setCurrentLine("")
     }
 
@@ -226,7 +257,7 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
       ]
       for (const l of headerLines) {
         if (!alive.current || skipPhase0Ref.current) return
-        appendLine(l)
+        appendLine(l, "accent")
         await sleepOrSkip(30)
       }
     }
@@ -256,14 +287,14 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
         await sleep(20)
       }
       if (!alive.current) return
-      setLines((prev) => [...prev, "Memory Test:  65536K OK"])
+      setLines((prev) => [...prev, { text: "Memory Test:  65536K OK", cls: "ok" }])
       setCurrentLine("")
     }
 
     // ── ELEMENT: network_handshake ──
     async function elNetworkHandshake() {
       if (!alive.current || skipPhase0Ref.current) return
-      appendLine("Network:")
+      appendLine("Network:", "accent")
       const netLines = [
         "  TX >>> SYN [0x1A4F] ...  ACK",
         "  RX <<< SYN/ACK [0x4F1A] ...  ESTABLISHED",
@@ -315,7 +346,6 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
         "  ╱  ╲╱   ╲╱  ╲  ",
         "  ───────────────────",
       ]
-      // appear bottom-to-top means we add from index 0 (already reversed above)
       const displayed: string[] = []
       const startIdx = lines.length
       void startIdx
@@ -360,7 +390,7 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
       ]
       for (const l of hexLines) {
         if (!alive.current || skipPhase0Ref.current) return
-        appendLine(l)
+        appendLine(l, "dim")
         await sleepOrSkip(40)
       }
     }
@@ -377,7 +407,7 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
         out += mod + "... ok / "
       }
       if (!alive.current) return
-      setLines((prev) => [...prev, out.slice(0, -3)]) // trim trailing " / "
+      setLines((prev) => [...prev, { text: out.slice(0, -3), cls: "ok" }]) // trim trailing " / "
       setCurrentLine("")
     }
 
@@ -407,7 +437,7 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
         setCurrentLine(`  running ${name}  ${dots}`)
         await sleep(50 + Math.floor(Math.random() * 30))
         if (!alive.current) return
-        appendLine(`  running ${name}  ${dots}  ${ms}  [PASSED]`)
+        appendLine(`  running ${name}  ${dots}  ${ms}  [PASSED]`, "ok")
         setCurrentLine("")
         await sleepOrSkip(30)
       }
@@ -421,13 +451,13 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
       if (usBox) {
         const inner = `  tip: ${tip}  `
         const border = "─".repeat(inner.length)
-        appendLine(`┌${border}┐`)
+        appendLine(`┌${border}┐`, "dim")
         await sleepOrSkip(30)
-        appendLine(`│${inner}│`)
+        appendLine(`│${inner}│`, "dim")
         await sleepOrSkip(30)
-        appendLine(`└${border}┘`)
+        appendLine(`└${border}┘`, "dim")
       } else {
-        appendLine(`// tip: ${tip}`)
+        appendLine(`// tip: ${tip}`, "dim")
       }
     }
 
@@ -531,11 +561,12 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
 
     const appendL = (text: string) => {
       if (cancelled) return
-      setLines((prev) => [...prev, text])
+      setLines((prev) => [...prev, { text }])
     }
 
     async function runRollIn() {
-      const msgs = messages?.slice(-8) ?? []
+      // Use the snapshot captured at the moment of phase transition
+      const msgs = rollInMessagesRef.current
 
       for (const m of msgs) {
         if (cancelled) return
@@ -551,7 +582,7 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
         appendL("") // placeholder
         setLines((prev) => {
           const next = [...prev]
-          next[next.length - 1] = prefix
+          next[next.length - 1] = { text: prefix }
           return next
         })
 
@@ -560,7 +591,7 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
           if (skipPhase2Ref.current) {
             setLines((prev) => {
               const next = [...prev]
-              next[next.length - 1] = full
+              next[next.length - 1] = { text: full }
               return next
             })
             break
@@ -568,7 +599,7 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
           const partial = prefix + m.body.slice(0, i)
           setLines((prev) => {
             const next = [...prev]
-            next[next.length - 1] = partial
+            next[next.length - 1] = { text: partial }
             return next
           })
           await sleep(15)
@@ -585,13 +616,13 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
       await sleep(400)
       if (!cancelled && !doneRef.current) {
         doneRef.current = true
-        onDone()
+        onDoneRef.current()
       }
     }
 
     runRollIn()
     return () => { cancelled = true }
-  }, [phase, messages, onDone])
+  }, [phase]) // NO messages or onDone in deps — uses refs
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -624,12 +655,20 @@ export function TerminalBootScreen({ onDone, messages }: Props) {
     <div className={styles.terminalOverlay} style={{ color: "#e0e0e0" }}>
       <div ref={containerRef} className={styles.terminalInner}>
         {lines.map((line, i) => (
-          <span key={i} className={styles.terminalLine}>
-            {line}
+          <span
+            key={i}
+            className={`${styles.terminalLine} ${
+              line.cls === "ok" ? styles.terminalOk :
+              line.cls === "warn" ? styles.terminalWarn :
+              line.cls === "accent" ? styles.terminalAccent :
+              line.cls === "dim" ? styles.terminalDim : ""
+            }`}
+          >
+            {line.text}
           </span>
         ))}
         {currentLine !== "" && (
-          <span className={styles.terminalLine}>
+          <span className={`${styles.terminalLine} ${classifyLine(currentLine) === "ok" ? styles.terminalOk : classifyLine(currentLine) === "accent" ? styles.terminalAccent : ""}`}>
             {currentLine}
             <span className={styles.terminalCursor}>▋</span>
           </span>

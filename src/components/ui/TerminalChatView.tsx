@@ -13,6 +13,7 @@ interface Props {
   knownUsers: string[]
   bootEcho?: string
   lastReadTimestamp?: string | null
+  onReact?: (messageId: string, emote: string) => void
 }
 
 const NAME_COLOR_RE = /^#[0-9a-fA-F]{3,8}$/
@@ -51,7 +52,16 @@ interface TerminalLine {
   nameColor?: string | null
   isDeleted?: boolean
   timestamp?: string
+  replyTo?: { username: string; body: string } | null
+  reactions?: Array<{ emote: string; count: number; reacted: boolean }>
 }
+
+const SPLASH_LOGO_SMALL = [
+  "╔═══════════════════════════════╗",
+  "║   P H I L C H A T   v4.2.0   ║",
+  "║   realtime community terminal ║",
+  "╚═══════════════════════════════╝",
+]
 
 function renderMessageTokens(text: string): ReactNode {
   const tokens = parseMessageBody(text)
@@ -153,6 +163,7 @@ export function TerminalChatView({
   knownUsers,
   bootEcho,
   lastReadTimestamp,
+  onReact,
 }: Props) {
   const [input, setInput] = useState("")
   const [showTimestamps, setShowTimestamps] = useState(false)
@@ -162,6 +173,8 @@ export function TerminalChatView({
   const [acIndex, setAcIndex] = useState(-1)
   const [replyContext, setReplyContext] = useState<ChatMessage | null>(null)
   const [mutedTyping, setMutedTyping] = useState(false)
+  const [logoVisible, setLogoVisible] = useState(true)
+  const [logoFade, setLogoFade] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lineIdRef = useRef(0)
@@ -172,6 +185,13 @@ export function TerminalChatView({
   function mkId() {
     return String(++lineIdRef.current)
   }
+
+  // Ephemeral logo timers
+  useEffect(() => {
+    const t1 = setTimeout(() => setLogoFade(true), 2500)
+    const t2 = setTimeout(() => setLogoVisible(false), 4000)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
 
   // Fetch emotes once on mount
   useEffect(() => {
@@ -196,6 +216,13 @@ export function TerminalChatView({
     nameColor: m.profiles?.name_color,
     isDeleted: !!m.deleted_at,
     timestamp: m.created_at,
+    replyTo: m.reply_to_message
+      ? {
+          username: m.reply_to_message.profiles?.username ?? "unknown",
+          body: m.reply_to_message.body,
+        }
+      : null,
+    reactions: m.reactions?.filter((r) => r.count > 0) ?? [],
   }))
 
   // Boot echo line (if provided)
@@ -459,6 +486,10 @@ export function TerminalChatView({
     }
 
     if (e.key === "Escape") {
+      if (replyContext) {
+        setReplyContext(null)
+        return
+      }
       setAcIndex(-1)
       setInput("")
       return
@@ -471,50 +502,96 @@ export function TerminalChatView({
       onClick={() => inputRef.current?.focus()}
     >
       <div className={styles.terminalMessages}>
+        {logoVisible && (
+          <div className={styles.terminalLogoHeader} data-fade={logoFade ? "1" : undefined}>
+            {SPLASH_LOGO_SMALL.map((l, i) => <div key={i}>{l}</div>)}
+          </div>
+        )}
         {displayLines.map((line) => {
           if (line.kind === "boot") {
             return (
-              <span key={line.id} className={styles.terminalBoot}>
+              <div key={line.id} className={styles.terminalBoot}>
                 {line.text}
-              </span>
+              </div>
             )
           }
           if (line.kind === "system" || line.kind === "help") {
             return (
-              <span key={line.id} className={`${styles.terminalMsg} ${styles.terminalSystem}`}>
+              <div key={line.id} className={`${styles.terminalMsg} ${styles.terminalSystem}`}>
                 {line.text}
-              </span>
+              </div>
             )
           }
           // msg line
           const nameColor = isValidColor(line.nameColor) ? line.nameColor : undefined
           return (
-            <span key={line.id} className={styles.terminalMsg}>
-              {showTimestamps && line.timestamp && (
-                <span className={styles.terminalTimestamp}>
-                  {formatTimestamp(line.timestamp)}
+            <div key={line.id} className={styles.terminalMsg}>
+              {line.replyTo && (
+                <span className={styles.terminalReplyRef}>
+                  ↳ [{line.replyTo.username}]: {line.replyTo.body.slice(0, 40)}{line.replyTo.body.length > 40 ? "…" : ""}
                 </span>
               )}
-              <span
-                className={styles.terminalUsername}
-                style={nameColor ? { color: nameColor } : undefined}
-              >
-                [{line.username}]{" "}
+              <span>
+                {showTimestamps && line.timestamp && (
+                  <span className={styles.terminalTimestamp}>
+                    {formatTimestamp(line.timestamp)}
+                  </span>
+                )}
+                <span
+                  className={styles.terminalUsername}
+                  style={nameColor ? { color: nameColor } : undefined}
+                >
+                  [{line.username}]{" "}
+                </span>
+                {line.isDeleted ? (
+                  <span className={styles.terminalBodyDeleted}>[deleted]</span>
+                ) : (
+                  <span className={styles.terminalBody}>{renderMessageTokens(line.text)}</span>
+                )}
               </span>
-              {line.isDeleted ? (
-                <span className={styles.terminalBodyDeleted}>[deleted]</span>
-              ) : (
-                <span className={styles.terminalBody}>{renderMessageTokens(line.text)}</span>
+              {line.reactions && line.reactions.length > 0 && (
+                <span className={styles.terminalReactions}>
+                  {line.reactions.map((r) => (
+                    <button
+                      key={r.emote}
+                      className={`${styles.terminalReactionBtn} ${r.reacted ? styles.terminalReactionReacted : ""}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onReact?.(line.id, r.emote)
+                      }}
+                      title={`:${r.emote}:`}
+                    >
+                      <img
+                        src={`/emotes/${r.emote}.gif`}
+                        alt={`:${r.emote}:`}
+                        style={{ height: "13px", width: "auto", verticalAlign: "middle" }}
+                        onError={(e) => {
+                          const img = e.currentTarget
+                          if (!img.dataset.pngFallback) {
+                            img.dataset.pngFallback = "1"
+                            img.src = `/emotes/${r.emote}.png`
+                          } else {
+                            img.replaceWith(document.createTextNode(`:${r.emote}:`))
+                          }
+                        }}
+                      />
+                      {r.count > 1 && <span className={styles.terminalReactionCount}>{r.count}</span>}
+                    </button>
+                  ))}
+                </span>
               )}
-            </span>
+            </div>
           )
         })}
         <div ref={messagesEndRef} />
       </div>
 
       {replyContext && (
-        <div className={styles.terminalSystem} style={{ padding: "0 1rem 0.25rem", fontSize: "0.72rem", flexShrink: 0 }}>
-          replying to [{replyContext.profiles?.username ?? "unknown"}] — press Esc to cancel
+        <div className={styles.terminalReplyBar}>
+          ↩ replying to [{replyContext.profiles?.username ?? "unknown"}]: {replyContext.body.slice(0, 50)}{replyContext.body.length > 50 ? "…" : ""}
+          <button className={styles.terminalReplyCancel} onClick={() => setReplyContext(null)}>
+            [x]
+          </button>
         </div>
       )}
 

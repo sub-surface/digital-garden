@@ -414,6 +414,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
             knownUsers={knownUsers}
             bootEcho="PSYCHOGRAPH OS v3.1.4 — session active"
             lastReadTimestamp={lastReadRef.current}
+            onReact={handleReact}
           />
         </div>
       )}

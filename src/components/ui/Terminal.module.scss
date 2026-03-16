@@ -3,7 +3,7 @@
 .terminalOverlay {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 99; // below QuickControls (z-index: 100)
   background: #000;
   color: #fff;
   font-family: "IBM Plex Mono", "Courier New", monospace;
@@ -13,7 +13,7 @@
 }
 
 .terminalInner {
-  padding: 2rem;
+  padding: 1.5rem 2rem;
   max-width: 860px;
   margin: 0 auto;
   height: 100%;
@@ -49,6 +49,13 @@
   pointer-events: none;
 }
 
+// ── Boot colour classes ──
+
+.terminalOk { color: #4a9f6e; }
+.terminalWarn { color: #9f8a4a; }
+.terminalAccent { color: #7a9fbf; }
+.terminalDim { color: #555; }
+
 // ── Boot splash styles ──
 
 .terminalSplashLogo {
@@ -64,18 +71,18 @@
   display: block;
   white-space: pre-wrap;
   font-family: "IBM Plex Mono", "Courier New", monospace;
-  font-size: 0.82rem;
-  line-height: 1.5;
+  font-size: 0.85rem;
+  line-height: 1.6;
   color: #888;
-  min-height: 1.5em;
+  min-height: 1.6em;
 }
 
 .terminalSplashQuote {
   display: block;
   white-space: pre-wrap;
   font-family: "IBM Plex Mono", "Courier New", monospace;
-  font-size: 0.82rem;
-  line-height: 1.5;
+  font-size: 0.85rem;
+  line-height: 1.6;
   color: #bbb;
   font-style: italic;
 }
@@ -130,8 +137,8 @@
   background: #000;
   color: #e0e0e0;
   font-family: "IBM Plex Mono", "Courier New", monospace;
-  font-size: 0.82rem;
-  line-height: 1.5;
+  font-size: 0.85rem;
+  line-height: 1.6;
 }
 
 // Boot echo strip at top of messages area
@@ -146,10 +153,32 @@
   word-break: break-word;
 }
 
+// Ephemeral logo header
+.terminalLogoHeader {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #1a1a1a;
+  font-size: 0.65rem;
+  color: #444;
+  line-height: 1.3;
+  white-space: pre;
+  opacity: 1;
+  transition: opacity 1.5s ease;
+  overflow-x: auto;
+}
+
+.terminalLogoHeader[data-fade="1"] {
+  opacity: 0;
+}
+
 .terminalMessages {
   flex: 1;
   overflow-y: auto;
-  padding: 0.5rem 1rem;
+  padding: 1.5rem 2rem 0.5rem;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
 
@@ -193,10 +222,52 @@
   color: #555;
 }
 
+// Reply ref shown inline inside message
+.terminalReplyRef {
+  display: block;
+  color: #555;
+  font-size: 0.75rem;
+  margin-bottom: 1px;
+  padding-left: 0.5rem;
+  border-left: 2px solid #333;
+}
+
+// Reply context bar above input
+.terminalReplyBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.2rem 2rem;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  font-size: 0.75rem;
+  color: #7a9fbf;
+  border-top: 1px solid #1a1a1a;
+  flex-shrink: 0;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.terminalReplyCancel {
+  background: none;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  padding: 0 0 0 1rem;
+  &:hover { color: #999; }
+}
+
 .terminalInputRow {
   display: flex;
   align-items: center;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 2rem;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
   border-top: 1px solid #1a1a1a;
   flex-shrink: 0;
   position: relative;
@@ -216,7 +287,7 @@
   outline: none;
   color: #e0e0e0;
   font-family: "IBM Plex Mono", "Courier New", monospace;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   caret-color: #e0e0e0;
   min-width: 0;
 
@@ -228,8 +299,8 @@
 .terminalAutocomplete {
   position: absolute;
   bottom: 100%;
-  left: 1rem;
-  right: 1rem;
+  left: 0;
+  right: 0;
   background: #0d0d0d;
   border: 1px solid #2a2a2a;
   border-bottom: none;
@@ -258,4 +329,41 @@
 .terminalAutocompleteItemActive {
   background: #1a1a1a;
   color: #e0e0e0;
+}
+
+// ── Reactions ──
+
+.terminalReactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.terminalReactionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+  padding: 1px 5px;
+  cursor: pointer;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  color: #666;
+  transition: border-color 0.1s;
+  &:hover { border-color: #555; color: #999; }
+}
+
+.terminalReactionReacted {
+  border-color: #444;
+  color: #aaa;
+}
+
+.terminalReactionCount {
+  font-size: 0.68rem;
+  color: #666;
 }
