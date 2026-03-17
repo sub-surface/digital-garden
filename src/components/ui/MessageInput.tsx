@@ -42,6 +42,8 @@ interface Props {
   onTyping?: (typing: boolean) => void
   knownUsers?: string[]
   onOpenGifPicker?: () => void
+  onCommand?: (cmd: string, args: string[]) => Promise<{ output?: string } | void>
+  isAdmin?: boolean
 }
 
 export interface MessageInputHandle {
@@ -49,7 +51,7 @@ export interface MessageInputHandle {
 }
 
 export const MessageInput = forwardRef<MessageInputHandle, Props>(function MessageInput(
-  { onSend, onEditLast, replyTo, onCancelReply, onTyping, knownUsers = [], onOpenGifPicker },
+  { onSend, onEditLast, replyTo, onCancelReply, onTyping, knownUsers = [], onOpenGifPicker, onCommand, isAdmin },
   ref
 ) {
   const [body, setBody] = useState("")
@@ -58,7 +60,7 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const autocomplete = useAutocomplete({ body, cursorPos, knownUsers })
+  const autocomplete = useAutocomplete({ body, cursorPos, knownUsers, isAdmin })
 
   useImperativeHandle(ref, () => ({
     focus() {
@@ -101,6 +103,12 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
         setCursorPos(newBody.length - after.length)
         return
       }
+      if (cmdName === "flip") {
+        const newBody = before + "(╯°□°）╯︵ ┻━┻" + after
+        setBody(newBody)
+        setCursorPos(newBody.length - after.length)
+        return
+      }
       if (cmdName === "gif") {
         setBody("")
         setCursorPos(0)
@@ -112,6 +120,10 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
         setCursorPos((before + "/me ").length)
         return
       }
+      // For commands that need arguments, insert the command text so user can type args
+      setBody(before + item.value + after)
+      setCursorPos((before + item.value).length)
+      return
     }
 
     const newBody = before + item.value + after
@@ -171,6 +183,43 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
   function handleSubmit() {
     const trimmed = body.trim()
     if (!trimmed || trimmed.length > CHAR_LIMIT) return
+
+    if (trimmed.startsWith("/")) {
+      const parts = trimmed.split(" ")
+      const cmd = parts[0].toLowerCase()
+
+      if (cmd === "/shrug") {
+        setBody(""); setCursorPos(0)
+        onSend("¯\\_(ツ)_/¯", replyTo?.id)
+        return
+      }
+      if (cmd === "/flip") {
+        setBody(""); setCursorPos(0)
+        onSend("(╯°□°）╯︵ ┻━┻", replyTo?.id)
+        return
+      }
+      if (cmd === "/me") {
+        const action = parts.slice(1).join(" ")
+        if (action) { setBody(""); setCursorPos(0); onSend(`* ${action}`, replyTo?.id) }
+        return
+      }
+      if (cmd === "/mock") {
+        const text = parts.slice(1).join(" ")
+        if (text) {
+          const mocked = text.split("").map((c, i) => i % 2 === 0 ? c.toLowerCase() : c.toUpperCase()).join("")
+          setBody(""); setCursorPos(0); onSend(mocked, replyTo?.id)
+        }
+        return
+      }
+      // Delegate everything else to onCommand
+      if (onCommand) {
+        const args = parts.slice(1)
+        setBody(""); setCursorPos(0)
+        onCommand(cmd, args)
+        return
+      }
+    }
+
     onSend(trimmed, replyTo?.id ?? undefined)
     setBody("")
     setCursorPos(0)
@@ -255,7 +304,7 @@ export const MessageInput = forwardRef<MessageInputHandle, Props>(function Messa
           onKeyDown={handleKeyDown}
           onSelect={handleSelect}
           onClick={handleSelect}
-          placeholder="Message... (press / to focus)"
+          placeholder="Message... (press / for commands)"
           rows={1}
           maxLength={CHAR_LIMIT}
           autoComplete="off"

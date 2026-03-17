@@ -108,6 +108,10 @@
     "Wiki/chatters/myname1",
     "Wiki/chatters/papagaio"
   ],
+  "Wiki/Concepts": [
+    "Wiki/Concepts/Newcombs-Problem",
+    "Wiki/Concepts/The-Becoming-Document"
+  ],
   "Wiki/Philosophers": [
     "Wiki/Philosophers/rosi-braidotti",
     "Wiki/Philosophers/Spinoza"

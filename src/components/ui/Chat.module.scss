@@ -553,13 +553,13 @@
 .reactionBtn {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 0.3em;
   background: color-mix(in srgb, var(--color-bg-surface) 80%, transparent);
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  padding: 1px 6px;
+  padding: 0.15em 0.5em;
   font-family: var(--font-code);
-  font-size: 0.68rem;
+  font-size: calc(0.78rem * var(--chat-font-scale, 1));
   color: var(--color-text-muted);
   cursor: pointer;
   transition: border-color 0.1s, background 0.1s;
@@ -576,8 +576,8 @@
 }
 
 .reactionEmote {
-  width: 13px;
-  height: 13px;
+  width: 1.5em;
+  height: 1.5em;
   object-fit: contain;
 }
 
@@ -1525,5 +1525,22 @@
 }
 :global([data-density="comfortable"]) .messageRow {
   font-size: calc(1rem * var(--chat-font-scale, 1));
+}
+
+// ── Command output bar ──
+
+.commandOutput {
+  padding: 0.3rem 1rem;
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-bg-surface) 80%, transparent);
+  border-top: 1px solid var(--color-border);
+  cursor: pointer;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  &:hover { opacity: 1; }
 }
 

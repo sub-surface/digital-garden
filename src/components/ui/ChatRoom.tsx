@@ -83,6 +83,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
   const [showNewRoom, setShowNewRoom] = useState(false)
   const [newRoomName, setNewRoomName] = useState("")
   const [newRoomSlug, setNewRoomSlug] = useState("")
+  const [commandOutput, setCommandOutput] = useState<string | null>(null)
   const { role, name_color, updateProfile } = useAuth()
   const inputRef = useRef<{ focus: () => void }>(null)
   const lastReadRef = useRef<string | null>(null)
@@ -94,7 +95,9 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
 
   useEffect(() => {
     if (chatTerminal && !prevTerminal.current) {
-      setShowBoot(true)
+      if (localStorage.getItem("terminal-fastboot") !== "1") {
+        setShowBoot(true)
+      }
     }
     prevTerminal.current = chatTerminal
   }, [chatTerminal])
@@ -394,6 +397,246 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     }
   }
 
+  function showCommandOutput(msg: string) {
+    setCommandOutput(msg)
+    setTimeout(() => setCommandOutput(null), 4000)
+  }
+
+  const handleCommand = useCallback(async (cmd: string, args: string[]) => {
+    const visibleMessages = messages
+
+    // /whoami
+    if (cmd === "/whoami") {
+      showCommandOutput(`profile: https://subsurfaces.net/wiki/chatter/${currentUsername ?? "unknown"}`)
+      return
+    }
+
+    // /about
+    if (cmd === "/about") {
+      showCommandOutput("source: https://github.com/sub-surface/digital-garden")
+      return
+    }
+
+    // /color
+    if (cmd === "/color") {
+      const hex = args[0]?.trim()
+      if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) {
+        showToast("usage: /color #rrggbb")
+        return
+      }
+      try {
+        const res = await fetch("/api/auth/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ name_color: hex }),
+        })
+        if (!res.ok) throw new Error()
+        showCommandOutput(`name colour set to ${hex}`)
+      } catch {
+        showToast("Failed to update colour")
+      }
+      return
+    }
+
+    // /reply
+    if (cmd === "/reply") {
+      const n = parseInt(args[0] ?? "", 10)
+      if (isNaN(n) || n < 1 || n > visibleMessages.length) {
+        showToast("usage: /reply <n>  (1 = most recent)")
+        return
+      }
+      const target = visibleMessages[visibleMessages.length - n]
+      setReplyTo(target)
+      return
+    }
+
+    // /edit
+    if (cmd === "/edit") {
+      const n = parseInt(args[0] ?? "", 10)
+      const newText = args.slice(1).join(" ").trim()
+      if (isNaN(n) || n < 1 || n > visibleMessages.length || !newText) {
+        showToast("usage: /edit <n> <new text>")
+        return
+      }
+      const target = visibleMessages[visibleMessages.length - n]
+      if (target.profiles?.username !== currentUsername && !isAdmin) {
+        showToast("Cannot edit: not your message")
+        return
+      }
+      if (target.deleted_at) { showToast("Cannot edit deleted message"); return }
+      await handleEdit(target.id, newText)
+      return
+    }
+
+    // /delete
+    if (cmd === "/delete" || cmd === "/del") {
+      const n = parseInt(args[0] ?? "", 10)
+      if (isNaN(n) || n < 1 || n > visibleMessages.length) {
+        showToast("usage: /delete <n>")
+        return
+      }
+      const target = visibleMessages[visibleMessages.length - n]
+      if (target.profiles?.username !== currentUsername && !isAdmin) {
+        showToast("Cannot delete: not your message")
+        return
+      }
+      await handleDelete(target.id)
+      return
+    }
+
+    // /react
+    if (cmd === "/react") {
+      const n = parseInt(args[0] ?? "", 10)
+      const emote = args[1]?.replace(/^:|:$/g, "")
+      if (isNaN(n) || n < 1 || n > visibleMessages.length || !emote) {
+        showToast("usage: /react <n> <emote>")
+        return
+      }
+      const target = visibleMessages[visibleMessages.length - n]
+      await handleReact(target.id, emote)
+      return
+    }
+
+    // /pin [admin]
+    if (cmd === "/pin") {
+      if (!isAdmin) { showToast("/pin requires admin"); return }
+      const n = parseInt(args[0] ?? "", 10)
+      if (isNaN(n) || n < 1 || n > visibleMessages.length) {
+        showToast("usage: /pin <n>")
+        return
+      }
+      const target = visibleMessages[visibleMessages.length - n]
+      await handlePin(target.id)
+      return
+    }
+
+    // /unpin [admin]
+    if (cmd === "/unpin") {
+      if (!isAdmin) { showToast("/unpin requires admin"); return }
+      const n = parseInt(args[0] ?? "", 10)
+      if (isNaN(n) || n < 1 || n > visibleMessages.length) {
+        showToast("usage: /unpin <n>")
+        return
+      }
+      const target = visibleMessages[visibleMessages.length - n]
+      await handlePin(target.id)
+      return
+    }
+
+    // /pinned
+    if (cmd === "/pinned") {
+      const pinned = messages.filter(m => m.pinned_at && !m.deleted_at)
+      if (pinned.length === 0) { showCommandOutput("No pinned messages"); return }
+      const summary = pinned.map(m => `[${m.profiles?.username ?? "?"}]: ${m.body.slice(0, 40)}`).join(" | ")
+      showCommandOutput(`Pinned: ${summary}`)
+      return
+    }
+
+    // /quote
+    if (cmd === "/quote" || cmd === "/q") {
+      const n = parseInt(args[0] ?? "", 10)
+      if (isNaN(n) || n < 1 || n > visibleMessages.length) {
+        showToast("usage: /quote <n>")
+        return
+      }
+      const target = visibleMessages[visibleMessages.length - n]
+      const username = target.profiles?.username ?? "unknown"
+      const preview = target.body.slice(0, 80) + (target.body.length > 80 ? "…" : "")
+      await handleSend(`> [${username}]: ${preview}`)
+      return
+    }
+
+    // /goto
+    if (cmd === "/goto") {
+      const username = args[0]?.toLowerCase()
+      if (!username) { showToast("usage: /goto <username>"); return }
+      const target = [...visibleMessages].reverse().find(m => m.profiles?.username?.toLowerCase() === username)
+      if (!target) { showCommandOutput(`No messages from ${username} in view`); return }
+      const el = document.querySelector(`[data-message-id="${target.id}"]`) as HTMLElement | null
+      el?.scrollIntoView({ behavior: "smooth", block: "center" })
+      return
+    }
+
+    // /search
+    if (cmd === "/search" || cmd === "/s") {
+      const term = args.join(" ").trim()
+      if (!term) { showToast("usage: /search <term>"); return }
+      try {
+        const res = await fetch(`/api/chat/search?q=${encodeURIComponent(term)}&limit=10`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+        if (!res.ok) throw new Error()
+        const data = await res.json() as { results?: Array<{ body: string; profiles?: { username?: string }; created_at: string; deleted_at?: string | null }> }
+        const results = data.results ?? []
+        if (results.length === 0) {
+          showCommandOutput(`No results for "${term}"`)
+        } else {
+          setSearchQuery(term)
+          setSearchOpen(true)
+        }
+      } catch {
+        showToast("Search failed")
+      }
+      return
+    }
+
+    // /ban [admin]
+    if (cmd === "/ban") {
+      if (!isAdmin) { showToast("/ban requires admin"); return }
+      const username = args[0]
+      const reason = args.slice(1).join(" ") || undefined
+      if (!username) { showToast("usage: /ban <username> [reason]"); return }
+      try {
+        const res = await fetch("/api/chat/ban", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ username, reason }),
+        })
+        if (!res.ok) throw new Error()
+        showCommandOutput(`${username} banned`)
+      } catch {
+        showToast(`Failed to ban ${username}`)
+      }
+      return
+    }
+
+    // /unban [admin]
+    if (cmd === "/unban") {
+      if (!isAdmin) { showToast("/unban requires admin"); return }
+      const username = args[0]
+      if (!username) { showToast("usage: /unban <username>"); return }
+      try {
+        const res = await fetch("/api/chat/unban", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ username }),
+        })
+        if (!res.ok) throw new Error()
+        showCommandOutput(`${username} unbanned`)
+      } catch {
+        showToast(`Failed to unban ${username}`)
+      }
+      return
+    }
+
+    // /kick [admin]
+    if (cmd === "/kick") {
+      if (!isAdmin) { showToast("/kick requires admin"); return }
+      const username = args[0]
+      if (!username) { showToast("usage: /kick <username>"); return }
+      const targets = visibleMessages.filter(
+        m => m.profiles?.username?.toLowerCase() === username.toLowerCase() && !m.deleted_at
+      )
+      if (targets.length === 0) { showCommandOutput(`No messages from ${username} in view`); return }
+      let deleted = 0
+      for (const m of targets) {
+        try { await handleDelete(m.id); deleted++ } catch { /* continue */ }
+      }
+      showCommandOutput(`Kicked ${username}: deleted ${deleted} message${deleted === 1 ? "" : "s"}`)
+      return
+    }
+  }, [messages, currentUsername, isAdmin, accessToken, handleDelete, handleEdit, handlePin, handleReact, handleSend, setReplyTo, showToast, setSearchQuery, setSearchOpen])
+
   const hasRoomSelector = rooms && rooms.length > 0 && onRoomChange
 
   return (
@@ -408,9 +651,14 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
             accessToken={accessToken}
             onSend={handleSend}
             knownUsers={knownUsers}
-            bootEcho="PSYCHOGRAPH OS v3.1.4 — session active"
+            bootEcho="PSYCHOGRAPH OS v1.1.4 — session active"
             lastReadTimestamp={lastReadRef.current}
             onReact={handleReact}
+            isAdmin={isAdmin}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
+            onPin={handlePin}
+            onBoot={() => setShowBoot(true)}
           />
         </div>
       )}
@@ -704,6 +952,12 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
 
           <TypingIndicator roomId={roomId} currentUserId={currentUserId} />
 
+          {commandOutput && (
+            <div className={styles.commandOutput} onClick={() => setCommandOutput(null)}>
+              {commandOutput}
+            </div>
+          )}
+
           <MessageInput
             ref={inputRef}
             roomId={roomId}
@@ -716,6 +970,8 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
             onCancelReply={() => setReplyTo(null)}
             onTyping={broadcastTyping}
             knownUsers={knownUsers}
+            onCommand={handleCommand}
+            isAdmin={isAdmin}
           />
         </>
       )}

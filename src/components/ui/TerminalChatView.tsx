@@ -17,6 +17,11 @@ interface Props {
   bootEcho?: string
   lastReadTimestamp?: string | null
   onReact?: (messageId: string, emote: string) => void
+  isAdmin?: boolean
+  onDelete?: (messageId: string) => Promise<void>
+  onEdit?: (messageId: string, newBody: string) => Promise<void>
+  onPin?: (messageId: string) => Promise<void>
+  onBoot?: () => void
 }
 
 const NAME_COLOR_RE = /^#[0-9a-fA-F]{3,8}$/
@@ -33,19 +38,41 @@ function formatTimestamp(iso: string): string {
 }
 
 const COMMAND_DEFS: Record<string, string> = {
-  "/help": "list available commands",
-  "/me": "/me <action>  — send an action message",
-  "/shrug": "append ¯\\_(ツ)_/¯ to your next message",
-  "/clear": "clear terminal display (local only)",
-  "/timestamps": "toggle timestamp display",
-  "/room": "show current room name",
-  "/whoami": "show your username",
-  "/users": "list users visible in current view",
-  "/reply": "/reply <n>  — reply to message #n in view",
-  "/unread": "show count of unread messages",
-  "/nick": "show your current username",
-  "/mute": "toggle typing indicator broadcast",
-  "/options": "set display options (density, scale)",
+  "/help":       "list available commands",
+  "/me":         "/me <action> — send an action message",
+  "/shrug":      "append ¯\\_(ツ)_/¯",
+  "/flip":       "append (╯°□°）╯︵ ┻━┻",
+  "/mock":       "/mock <text> — aLtErNaTiNg CaPs",
+  "/clear":      "clear terminal display (local only)",
+  "/timestamps": "toggle timestamp display  (alias: /ts)",
+  "/options":    "set display options (density, scale)  (alias: /opt)",
+  "/room":       "show current room",
+  "/whoami":     "show link to your profile",
+  "/about":      "show link to the source repo",
+  "/color":      "/color <#hex> — set your name colour",
+  "/boot":       "play the boot sequence",
+  "/fastboot":   "toggle skipping the boot sequence",
+  "/users":      "list users visible in current view",
+  "/mute":       "toggle typing indicator broadcast",
+  "/unread":     "show unread message count",
+  "/reply":      "/reply <n> — reply to message #n (1=most recent)",
+  "/edit":       "/edit <n> <text> — edit your message #n",
+  "/delete":     "/delete <n> — delete message #n  (alias: /del)",
+  "/react":      "/react <n> <emote> — react to message #n",
+  "/pin":        "/pin <n> — pin message #n  [admin]",
+  "/unpin":      "/unpin <n> — unpin message #n  [admin]",
+  "/pinned":     "show pinned messages in view",
+  "/quote":      "/quote <n> — re-post message #n as a quote  (alias: /q)",
+  "/goto":       "/goto <username> — scroll to last message from user",
+  "/search":     "/search <term> — search full message history  (alias: /s)",
+  "/ban":        "/ban <username> [reason] — ban user  [admin]",
+  "/unban":      "/unban <username> — unban user  [admin]",
+  "/kick":       "/kick <username> — delete all recent messages from user  [admin]",
+  "/ts":         "alias for /timestamps",
+  "/opt":        "alias for /options",
+  "/del":        "alias for /delete",
+  "/q":          "alias for /quote",
+  "/s":          "alias for /search",
 }
 
 // /options subcommands — used for autocomplete and dispatch
@@ -166,11 +193,17 @@ export function TerminalChatView({
   currentUserId,
   currentUsername,
   roomId,
+  accessToken,
   onSend,
   knownUsers,
   bootEcho,
   lastReadTimestamp,
   onReact,
+  isAdmin,
+  onDelete,
+  onEdit,
+  onPin,
+  onBoot,
 }: Props) {
   const chatDensity = useStore((s) => s.chatDensity)
   const setChatDensity = useStore((s) => s.setChatDensity)
@@ -259,11 +292,11 @@ export function TerminalChatView({
     if (input.startsWith("/")) {
       const parts = input.split(" ")
       // /options <subcommand> autocomplete
-      if (parts[0] === "/options" && parts.length >= 2) {
+      if ((parts[0] === "/options" || parts[0] === "/opt") && parts.length >= 2) {
         const partial = parts[1].toLowerCase()
         return Object.keys(OPTIONS_DEFS)
           .filter((k) => k.startsWith(partial))
-          .map((k) => `/options ${k}`)
+          .map((k) => `${parts[0]} ${k}`)
       }
       return Object.keys(COMMAND_DEFS).filter((k) => k.startsWith(parts[0]))
     }
@@ -336,6 +369,12 @@ export function TerminalChatView({
         return
       }
 
+      if (cmd === "/ts") {
+        setShowTimestamps((v) => !v)
+        appendLocalLine(`Timestamps ${showTimestamps ? "OFF" : "ON"}`)
+        return
+      }
+
       if (cmd === "/shrug") {
         setShrugPending(true)
         appendLocalLine("Next message will append ¯\\_(ツ)_/¯")
@@ -357,7 +396,12 @@ export function TerminalChatView({
       }
 
       if (cmd === "/whoami") {
-        appendLocalLine(`Username: ${currentUsername ?? "unknown"}  |  id: ${currentUserId}`)
+        appendLocalLine(`-- profile: https://subsurfaces.net/wiki/chatter/${currentUsername ?? "unknown"} --`)
+        return
+      }
+
+      if (cmd === "/about") {
+        appendLocalLine("-- source: https://github.com/sub-surface/digital-garden --")
         return
       }
 
@@ -392,11 +436,6 @@ export function TerminalChatView({
         return
       }
 
-      if (cmd === "/nick") {
-        appendLocalLine(`nick: ${currentUsername ?? "unknown"}`)
-        return
-      }
-
       if (cmd === "/mute") {
         setMutedTyping((v) => {
           const next = !v
@@ -406,7 +445,7 @@ export function TerminalChatView({
         return
       }
 
-      if (cmd === "/options") {
+      if (cmd === "/options" || cmd === "/opt") {
         const sub = parts[1]?.toLowerCase()
         if (!sub) {
           appendLocalLine("usage: /options <subcommand>", "help")
@@ -422,6 +461,270 @@ export function TerminalChatView({
         if (sub === "scale:m") { setChatFontScale(1.0);  appendLocalLine("-- text size: M --"); return }
         if (sub === "scale:l") { setChatFontScale(1.15); appendLocalLine("-- text size: L --"); return }
         appendLocalLine(`Unknown option: ${sub}  — type /options for list`)
+        return
+      }
+
+      if (cmd === "/flip") {
+        setShrugPending(false)
+        const body = parts.slice(1).join(" ")
+        if (body) {
+          await onSend(body + " (╯°□°）╯︵ ┻━┻")
+        } else {
+          await onSend("(╯°□°）╯︵ ┻━┻")
+        }
+        return
+      }
+
+      if (cmd === "/mock") {
+        const text = parts.slice(1).join(" ")
+        if (!text) { appendLocalLine("usage: /mock <text>"); return }
+        const mocked = text.split("").map((c, i) => i % 2 === 0 ? c.toLowerCase() : c.toUpperCase()).join("")
+        await onSend(mocked)
+        return
+      }
+
+      if (cmd === "/color") {
+        const hex = parts[1]?.trim()
+        if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) {
+          appendLocalLine("usage: /color #rrggbb")
+          return
+        }
+        try {
+          const res = await fetch("/api/auth/profile", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({ name_color: hex }),
+          })
+          if (!res.ok) throw new Error()
+          appendLocalLine(`-- name colour set to ${hex} --`)
+        } catch {
+          appendLocalLine("-- failed to update colour --")
+        }
+        return
+      }
+
+      if (cmd === "/boot") {
+        onBoot?.()
+        return
+      }
+
+      if (cmd === "/fastboot") {
+        const current = localStorage.getItem("terminal-fastboot") === "1"
+        const next = !current
+        localStorage.setItem("terminal-fastboot", next ? "1" : "0")
+        appendLocalLine(`-- fastboot ${next ? "ON (boot will be skipped)" : "OFF (boot will play)"} --`)
+        return
+      }
+
+      if (cmd === "/edit") {
+        const n = parseInt(parts[1] ?? "", 10)
+        const newText = parts.slice(2).join(" ").trim()
+        const visibleMessages = messages.slice(cleared)
+        if (isNaN(n) || n < 1 || n > visibleMessages.length) {
+          appendLocalLine("usage: /edit <n> <new text>  (1 = most recent)")
+          return
+        }
+        if (!newText) { appendLocalLine("usage: /edit <n> <new text>"); return }
+        const target = visibleMessages[visibleMessages.length - n]
+        if (target.profiles?.username !== currentUsername && !isAdmin) {
+          appendLocalLine("-- cannot edit: not your message --")
+          return
+        }
+        if (target.deleted_at) { appendLocalLine("-- cannot edit deleted message --"); return }
+        await onEdit?.(target.id, newText)
+        appendLocalLine(`-- message #${n} edited --`)
+        return
+      }
+
+      if (cmd === "/delete" || cmd === "/del") {
+        const n = parseInt(parts[1] ?? "", 10)
+        const visibleMessages = messages.slice(cleared)
+        if (isNaN(n) || n < 1 || n > visibleMessages.length) {
+          appendLocalLine("usage: /delete <n>  (1 = most recent)")
+          return
+        }
+        const target = visibleMessages[visibleMessages.length - n]
+        if (target.profiles?.username !== currentUsername && !isAdmin) {
+          appendLocalLine("-- cannot delete: not your message --")
+          return
+        }
+        await onDelete?.(target.id)
+        appendLocalLine(`-- message #${n} deleted --`)
+        return
+      }
+
+      if (cmd === "/react") {
+        const n = parseInt(parts[1] ?? "", 10)
+        const emote = parts[2]?.replace(/^:|:$/g, "")
+        const visibleMessages = messages.slice(cleared)
+        if (isNaN(n) || n < 1 || n > visibleMessages.length || !emote) {
+          appendLocalLine("usage: /react <n> <emote>  e.g. /react 1 kek")
+          return
+        }
+        const target = visibleMessages[visibleMessages.length - n]
+        await onReact?.(target.id, emote)
+        appendLocalLine(`-- reacted :${emote}: to message #${n} --`)
+        return
+      }
+
+      if (cmd === "/pin") {
+        if (!isAdmin) { appendLocalLine("-- /pin requires admin --"); return }
+        const n = parseInt(parts[1] ?? "", 10)
+        const visibleMessages = messages.slice(cleared)
+        if (isNaN(n) || n < 1 || n > visibleMessages.length) {
+          appendLocalLine("usage: /pin <n>  (1 = most recent)")
+          return
+        }
+        const target = visibleMessages[visibleMessages.length - n]
+        await onPin?.(target.id)
+        appendLocalLine(`-- message #${n} pinned --`)
+        return
+      }
+
+      if (cmd === "/unpin") {
+        if (!isAdmin) { appendLocalLine("-- /unpin requires admin --"); return }
+        const n = parseInt(parts[1] ?? "", 10)
+        const visibleMessages = messages.slice(cleared)
+        if (isNaN(n) || n < 1 || n > visibleMessages.length) {
+          appendLocalLine("usage: /unpin <n>  (1 = most recent)")
+          return
+        }
+        const target = visibleMessages[visibleMessages.length - n]
+        await onPin?.(target.id) // onPin toggles pin/unpin
+        appendLocalLine(`-- message #${n} unpinned --`)
+        return
+      }
+
+      if (cmd === "/pinned") {
+        const pinned = messages.filter(m => m.pinned_at && !m.deleted_at)
+        if (pinned.length === 0) {
+          appendLocalLine("-- no pinned messages --")
+          return
+        }
+        appendLocalLine(`-- ${pinned.length} pinned message${pinned.length === 1 ? "" : "s"} --`, "help")
+        for (const m of pinned) {
+          const preview = m.body.slice(0, 60) + (m.body.length > 60 ? "…" : "")
+          appendLocalLine(`  [${m.profiles?.username ?? "unknown"}]: ${preview}`, "help")
+        }
+        return
+      }
+
+      if (cmd === "/quote" || cmd === "/q") {
+        const n = parseInt(parts[1] ?? "", 10)
+        const visibleMessages = messages.slice(cleared)
+        if (isNaN(n) || n < 1 || n > visibleMessages.length) {
+          appendLocalLine("usage: /quote <n>  (1 = most recent)")
+          return
+        }
+        const target = visibleMessages[visibleMessages.length - n]
+        const username = target.profiles?.username ?? "unknown"
+        const preview = target.body.slice(0, 80) + (target.body.length > 80 ? "…" : "")
+        await onSend(`> [${username}]: ${preview}`)
+        return
+      }
+
+      if (cmd === "/goto") {
+        const username = parts[1]?.toLowerCase()
+        if (!username) { appendLocalLine("usage: /goto <username>"); return }
+        const visibleMessages = messages.slice(cleared)
+        const target = [...visibleMessages].reverse().find(m => m.profiles?.username?.toLowerCase() === username)
+        if (!target) {
+          appendLocalLine(`-- no messages from ${username} in view --`)
+          return
+        }
+        const el = document.querySelector(`[data-message-id="${target.id}"]`) as HTMLElement | null
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" })
+          appendLocalLine(`-- scrolled to last message from ${username} --`)
+        } else {
+          appendLocalLine(`-- message found but not rendered in view --`)
+        }
+        return
+      }
+
+      if (cmd === "/search" || cmd === "/s") {
+        const term = parts.slice(1).join(" ").trim()
+        if (!term) { appendLocalLine("usage: /search <term>"); return }
+        appendLocalLine(`-- searching for "${term}"… --`)
+        try {
+          const res = await fetch(`/api/chat/search?q=${encodeURIComponent(term)}&limit=10&include_deleted=true`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          })
+          if (!res.ok) throw new Error()
+          const data = await res.json() as { results?: Array<{ id: string; body: string; created_at: string; profiles?: { username?: string }; deleted_at?: string | null }> }
+          const results = data.results ?? []
+          if (results.length === 0) {
+            appendLocalLine(`-- no results for "${term}" --`)
+          } else {
+            appendLocalLine(`-- ${results.length} result${results.length === 1 ? "" : "s"} --`, "help")
+            for (const r of results) {
+              const user = r.profiles?.username ?? "unknown"
+              const d = new Date(r.created_at)
+              const date = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
+              const deleted = r.deleted_at ? " [deleted]" : ""
+              const preview = r.body.slice(0, 60) + (r.body.length > 60 ? "…" : "")
+              appendLocalLine(`  [${user}] ${date}${deleted}: ${preview}`, "help")
+            }
+          }
+        } catch {
+          appendLocalLine(`-- search failed --`)
+        }
+        return
+      }
+
+      if (cmd === "/ban") {
+        if (!isAdmin) { appendLocalLine("-- /ban requires admin --"); return }
+        const username = parts[1]
+        const reason = parts.slice(2).join(" ") || undefined
+        if (!username) { appendLocalLine("usage: /ban <username> [reason]"); return }
+        try {
+          const res = await fetch("/api/chat/ban", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({ username, reason }),
+          })
+          if (!res.ok) throw new Error()
+          appendLocalLine(`-- ${username} banned --`)
+        } catch {
+          appendLocalLine(`-- failed to ban ${username} --`)
+        }
+        return
+      }
+
+      if (cmd === "/unban") {
+        if (!isAdmin) { appendLocalLine("-- /unban requires admin --"); return }
+        const username = parts[1]
+        if (!username) { appendLocalLine("usage: /unban <username>"); return }
+        try {
+          const res = await fetch("/api/chat/unban", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({ username }),
+          })
+          if (!res.ok) throw new Error()
+          appendLocalLine(`-- ${username} unbanned --`)
+        } catch {
+          appendLocalLine(`-- failed to unban ${username} --`)
+        }
+        return
+      }
+
+      if (cmd === "/kick") {
+        if (!isAdmin) { appendLocalLine("-- /kick requires admin --"); return }
+        const username = parts[1]
+        if (!username) { appendLocalLine("usage: /kick <username>"); return }
+        const targets = messages.slice(cleared).filter(
+          m => m.profiles?.username?.toLowerCase() === username.toLowerCase() && !m.deleted_at
+        )
+        if (targets.length === 0) {
+          appendLocalLine(`-- no messages from ${username} in view --`)
+          return
+        }
+        let deleted = 0
+        for (const m of targets) {
+          try { await onDelete?.(m.id); deleted++ } catch { /* continue */ }
+        }
+        appendLocalLine(`-- kicked ${username}: deleted ${deleted} message${deleted === 1 ? "" : "s"} --`)
         return
       }
 
@@ -441,7 +744,7 @@ export function TerminalChatView({
     } else {
       await onSend(body)
     }
-  }, [input, messages, currentUserId, currentUsername, roomId, onSend, shrugPending, showTimestamps, cleared, replyContext, lastReadTimestamp, mutedTyping, chatDensity, setChatDensity, chatFontScale, setChatFontScale])
+  }, [input, messages, currentUserId, currentUsername, roomId, accessToken, onSend, onDelete, onEdit, onPin, onBoot, onReact, isAdmin, shrugPending, showTimestamps, cleared, replyContext, lastReadTimestamp, mutedTyping, chatDensity, setChatDensity, chatFontScale, setChatFontScale])
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
@@ -658,7 +961,7 @@ export function TerminalChatView({
                 )}
                 {c}
                 {(() => {
-                  const desc = COMMAND_DEFS[c] ?? OPTIONS_DEFS[c.replace("/options ", "")]
+                  const desc = COMMAND_DEFS[c] ?? OPTIONS_DEFS[c.replace("/options ", "").replace("/opt ", "")]
                   return desc ? <span style={{ color: "#555", marginLeft: "0.5rem" }}>{desc}</span> : null
                 })()}
               </div>

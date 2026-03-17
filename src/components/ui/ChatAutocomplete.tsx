@@ -73,10 +73,28 @@ export function fetchEmoteNames(): Promise<string[]> {
 
 // ── Static commands ──
 
-export const CHAT_COMMANDS: { name: string; description: string }[] = [
-  { name: "gif", description: "Search for a GIF" },
-  { name: "shrug", description: "¯\\_(ツ)_/¯" },
-  { name: "me", description: "Action text" },
+export const CHAT_COMMANDS: { name: string; description: string; adminOnly?: boolean }[] = [
+  { name: "gif",       description: "Search for a GIF" },
+  { name: "shrug",     description: "¯\\_(ツ)_/¯" },
+  { name: "flip",      description: "(╯°□°）╯︵ ┻━┻" },
+  { name: "me",        description: "Action text" },
+  { name: "mock",      description: "/mock <text> — aLtErNaTiNg CaPs" },
+  { name: "color",     description: "/color #hex — set your name colour" },
+  { name: "whoami",    description: "Link to your profile" },
+  { name: "about",     description: "Link to source repo" },
+  { name: "search",    description: "/search <term> — search message history" },
+  { name: "goto",      description: "/goto <username> — scroll to their last message" },
+  { name: "reply",     description: "/reply <n> — reply to message #n (1=most recent)" },
+  { name: "edit",      description: "/edit <n> <text> — edit your message #n" },
+  { name: "delete",    description: "/delete <n> — delete your message #n" },
+  { name: "react",     description: "/react <n> <emote> — react to message #n" },
+  { name: "quote",     description: "/quote <n> — re-post message #n as a quote" },
+  { name: "pinned",    description: "Show pinned messages" },
+  { name: "pin",       description: "/pin <n> — pin message #n", adminOnly: true },
+  { name: "unpin",     description: "/unpin <n> — unpin message #n", adminOnly: true },
+  { name: "ban",       description: "/ban <username> [reason]", adminOnly: true },
+  { name: "unban",     description: "/unban <username>", adminOnly: true },
+  { name: "kick",      description: "/kick <username> — delete their recent messages", adminOnly: true },
 ]
 
 // ── Hook to manage autocomplete state ──
@@ -85,6 +103,7 @@ interface UseAutocompleteOpts {
   body: string
   cursorPos: number
   knownUsers: string[]
+  isAdmin?: boolean
 }
 
 interface AutocompleteState {
@@ -93,7 +112,7 @@ interface AutocompleteState {
   trigger: { type: AutocompleteType; start: number; query: string } | null
 }
 
-export function useAutocomplete({ body, cursorPos, knownUsers }: UseAutocompleteOpts) {
+export function useAutocomplete({ body, cursorPos, knownUsers, isAdmin }: UseAutocompleteOpts) {
   const [emoteNames, setEmoteNames] = useState<string[]>([])
   const [state, setState] = useState<AutocompleteState>({
     items: [],
@@ -152,7 +171,7 @@ export function useAutocomplete({ body, cursorPos, knownUsers }: UseAutocomplete
     if (cmdMatch) {
       const query = cmdMatch[1].toLowerCase()
       const matches = CHAT_COMMANDS
-        .filter((c) => c.name.includes(query))
+        .filter((c) => c.name.includes(query) && (!c.adminOnly || isAdmin))
         .map((c): AutocompleteItem => ({
           type: "command",
           label: `${c.name} — ${c.description}`,
@@ -164,7 +183,7 @@ export function useAutocomplete({ body, cursorPos, knownUsers }: UseAutocomplete
 
     // No trigger
     setState({ items: [], selectedIndex: 0, trigger: null })
-  }, [body, cursorPos, emoteNames, knownUsers])
+  }, [body, cursorPos, emoteNames, knownUsers, isAdmin])
 
   const moveSelection = useCallback((delta: number) => {
     setState((prev) => {
