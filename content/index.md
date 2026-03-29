@@ -6,7 +6,7 @@ tags:
 id: blog
 ---
 
-#### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ [[Housekeeping]]
+#### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ [[Housekeeping]] ~ [Repository](https://github.com/sub-surface)
 
 > [[Bookshelf]] ~ [[Movieshelf]] ~ [[Music|Musicshelf]] ~ [[Photography|Photos]] ~ [[Chess]] ~ [[Wiki]] ~ [[Tags]]
 
