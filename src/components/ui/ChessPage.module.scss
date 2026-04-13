@@ -50,9 +50,20 @@
   }
 }
 
+.engineTag {
+  font-style: italic;
+  opacity: 0.7;
+}
+
 .difficultyGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.levelGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
 }
 
@@ -73,7 +84,7 @@
   }
 
   &[data-active="true"] {
-    background: rgba(var(--color-primary-rgb), 0.1);
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
     border-color: var(--color-primary);
     color: var(--color-primary);
   }
@@ -124,16 +135,68 @@
 
 .moveList {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  max-height: 150px;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-height: 200px;
   overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.movePair {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+}
+
+.moveNum {
+  font-size: 0.65rem;
+  opacity: 0.3;
+  min-width: 1.8em;
+  text-align: right;
 }
 
 .moveItem {
-  font-size: 0.7rem;
-  padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.75rem;
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 3px;
-  opacity: 0.6;
+  opacity: 0.7;
+  min-width: 3em;
+}
+
+.moveEmpty {
+  font-size: 0.7rem;
+  opacity: 0.25;
+  font-style: italic;
+}
+
+.exportSection {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.exportBtn {
+  flex: 1;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--color-text-muted);
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-code);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
 }
