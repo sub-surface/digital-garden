@@ -184,11 +184,13 @@ export function ChessPage() {
   }, [game])
 
   const hasHistory = game.history().length > 0
-  const historyEndRef = useRef<HTMLDivElement>(null)
+  const moveListRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll move list to bottom
+  // Auto-scroll ONLY the move list container, not the page
   useEffect(() => {
-    historyEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    const list = moveListRef.current
+    if (!list) return
+    list.scrollTop = list.scrollHeight
   }, [game])
 
   return (
@@ -274,7 +276,7 @@ export function ChessPage() {
 
           <div className={styles.history}>
             <h2>History</h2>
-            <div className={styles.moveList}>
+            <div className={styles.moveList} ref={moveListRef}>
               {moveHistory.length === 0 && <span className={styles.moveEmpty}>No moves yet</span>}
               {moveHistory.map((pair) => (
                 <div key={pair.num} className={styles.movePair}>
@@ -283,7 +285,6 @@ export function ChessPage() {
                   {pair.black && <span className={styles.moveItem}>{pair.black}</span>}
                 </div>
               ))}
-              <div ref={historyEndRef} />
             </div>
           </div>
 

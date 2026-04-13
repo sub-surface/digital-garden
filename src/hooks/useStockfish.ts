@@ -2,6 +2,22 @@ import { useEffect, useRef, useCallback, useState } from "react"
 
 const STOCKFISH_CDN = "https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm.js"
 
+/**
+ * Construct a Worker from a CDN script without triggering cross-origin
+ * SecurityError. Browsers disallow `new Worker(crossOriginURL)`, but a
+ * same-origin Blob Worker that `importScripts()`es the CDN URL works
+ * because importScripts honours CORS on the target.
+ */
+function createWorkerFromCDN(url: string): Worker {
+  const bootstrap = `importScripts(${JSON.stringify(url)});`
+  const blob = new Blob([bootstrap], { type: "application/javascript" })
+  const blobUrl = URL.createObjectURL(blob)
+  const worker = new Worker(blobUrl)
+  // Free the blob URL once the worker has loaded it
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+  return worker
+}
+
 // Map UI levels 1-8 to Stockfish Skill Level (0-20) and depth limits
 const LEVEL_CONFIG: Record<number, { skill: number; depth: number }> = {
   1: { skill: 0, depth: 1 },
@@ -33,7 +49,7 @@ export function useStockfish(difficulty: number) {
     let cancelled = false
 
     try {
-      const worker = new Worker(STOCKFISH_CDN)
+      const worker = createWorkerFromCDN(STOCKFISH_CDN)
       workerRef.current = worker
 
       worker.onmessage = (e: MessageEvent) => {

@@ -55,7 +55,7 @@ export function GraphView() {
       })
       
       if (!mounted || !currentContainer) {
-        app.destroy(true, { children: true, texture: true })
+        app.destroy(true, { children: true, texture: false })
         appRef.current = null
         return
       }
@@ -269,7 +269,11 @@ export function GraphView() {
         if (appRef.current) {
           try {
             appRef.current.ticker.stop()
-            appRef.current.destroy(true, { children: true, texture: true })
+            // NOTE: texture:true triggers a race when the TextPool tries to
+            // return cached atlas textures to an already-disposed pool.
+            // Leave texture cleanup to Pixi's own GC to avoid the push-on-
+            // undefined crash in Hh.returnTexture.
+            appRef.current.destroy(true, { children: true, texture: false })
           } catch (e) {
             console.warn("Pixi destruction failed:", e)
           }

@@ -83,7 +83,7 @@ export function LocalGraph({ slug }: Props) {
       })
       
       if (!mounted || !currentContainer) {
-        app.destroy(true, { children: true, texture: true })
+        app.destroy(true, { children: true, texture: false })
         appRef.current = null
         return
       }
@@ -277,7 +277,7 @@ export function LocalGraph({ slug }: Props) {
         if (appRef.current) {
           try {
             appRef.current.ticker.stop()
-            appRef.current.destroy(true, { children: true, texture: true })
+            appRef.current.destroy(true, { children: true, texture: false })
           } catch (e) {
             console.warn("Pixi destruction failed:", e)
           }
