@@ -1,0 +1,399 @@
+{
+  "base": "https://subsurfaces.net",
+  "timestamp": "2026-04-13T01:28:56.867Z",
+  "results": [
+    {
+      "route": "home",
+      "url": "https://subsurfaces.net/",
+      "navMs": 19878,
+      "navError": null,
+      "domSignals": {
+        "title": "Sub-Surface Territories",
+        "hasContent": true,
+        "imgCount": 0,
+        "imgBroken": 0,
+        "canvasCount": 2,
+        "workerRefs": true
+      },
+      "metrics": {
+        "cls": 0.142,
+        "lcpMs": 4040,
+        "longtasks": 6,
+        "longtaskTotalMs": 1072,
+        "longtaskMaxMs": 268
+      },
+      "errors": {
+        "console": [
+          {
+            "type": "warning",
+            "text": "[.WebGL-0x408c00118d00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+          },
+          {
+            "type": "warning",
+            "text": "[.WebGL-0x408c00118d00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+          },
+          {
+            "type": "warning",
+            "text": "[.WebGL-0x408c00118d00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+          },
+          {
+            "type": "warning",
+            "text": "[.WebGL-0x408c00118d00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+          }
+        ],
+        "pageErrors": [],
+        "workerErrors": [],
+        "failedRequests": [
+          {
+            "url": "https://subsurfaces.net/content/Media/Music/Aokigahara.mp3",
+            "method": "GET",
+            "resourceType": "media",
+            "failure": "net::ERR_ABORTED"
+          }
+        ],
+        "failedCount": 1
+      }
+    },
+    {
+      "route": "chess",
+      "url": "https://subsurfaces.net/chess",
+      "navMs": 16355,
+      "navError": null,
+      "domSignals": {
+        "title": "Chess — Sub-Surface Territories",
+        "hasContent": true,
+        "imgCount": 0,
+        "imgBroken": 0,
+        "canvasCount": 1,
+        "workerRefs": true
+      },
+      "metrics": {
+        "cls": 0.0099,
+        "lcpMs": 648,
+        "longtasks": 4,
+        "longtaskTotalMs": 279,
+        "longtaskMaxMs": 84
+      },
+      "errors": {
+        "console": [
+          {
+            "type": "error",
+            "text": "Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' https://challenges.cloudflare.com'. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked."
+          },
+          {
+            "type": "error",
+            "text": "Stockfish worker error: Uncaught NetworkError: Failed to execute 'importScripts' on 'WorkerGlobalScope': The script at 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm.js' failed to load."
+          },
+          {
+            "type": "warning",
+            "text": "The resource https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400&family=IBM+Plex+Mono:ital,wght@0,400;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+          }
+        ],
+        "pageErrors": [
+          {
+            "message": "Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support.",
+            "stack": "Error: Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support. |     at zt._unsafeEvalCheck (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:24669) |     at new Ko (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:21441) |     at new zt (https://subsurfaces.net/assets/WebGLRenderer-DgEEEAzK.js:156:25006) |     at jl (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:26698)"
+          },
+          {
+            "message": "Failed to execute 'importScripts' on 'WorkerGlobalScope': The script at 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm.js' failed to load.",
+            "stack": "NetworkError: Failed to execute 'importScripts' on 'WorkerGlobalScope': The script at 'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.wasm.js' failed to load. |     at blob:https://subsurfaces.net/614570a8-9c72-4575-b227-716067743864:1:1"
+          }
+        ],
+        "workerErrors": [],
+        "failedRequests": [
+          {
+            "url": "https://subsurfaces.net/content/Media/Music/Aokigahara.mp3",
+            "method": "GET",
+            "resourceType": "media",
+            "failure": "net::ERR_ABORTED"
+          }
+        ],
+        "failedCount": 1
+      }
+    },
+    {
+      "route": "graph",
+      "url": "https://subsurfaces.net/graph",
+      "navMs": 16235,
+      "navError": null,
+      "domSignals": {
+        "title": "Sub-Surface Territories",
+        "hasContent": true,
+        "imgCount": 0,
+        "imgBroken": 0,
+        "canvasCount": 1,
+        "workerRefs": true
+      },
+      "metrics": {
+        "cls": 0.0031,
+        "lcpMs": 580,
+        "longtasks": 3,
+        "longtaskTotalMs": 213,
+        "longtaskMaxMs": 81
+      },
+      "errors": {
+        "console": [
+          {
+            "type": "error",
+            "text": "Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' https://challenges.cloudflare.com'. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked."
+          },
+          {
+            "type": "warning",
+            "text": "The resource https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400&family=IBM+Plex+Mono:ital,wght@0,400;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+          }
+        ],
+        "pageErrors": [
+          {
+            "message": "Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support.",
+            "stack": "Error: Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support. |     at zt._unsafeEvalCheck (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:24669) |     at new Ko (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:21441) |     at new zt (https://subsurfaces.net/assets/WebGLRenderer-DgEEEAzK.js:156:25006) |     at jl (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:26698)"
+          },
+          {
+            "message": "Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support.",
+            "stack": "Error: Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support. |     at zt._unsafeEvalCheck (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:24669) |     at new Ko (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:21441) |     at new zt (https://subsurfaces.net/assets/WebGLRenderer-DgEEEAzK.js:156:25006) |     at jl (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:26698)"
+          }
+        ],
+        "workerErrors": [],
+        "failedRequests": [
+          {
+            "url": "https://subsurfaces.net/content/Media/Music/Aokigahara.mp3",
+            "method": "GET",
+            "resourceType": "media",
+            "failure": "net::ERR_ABORTED"
+          }
+        ],
+        "failedCount": 1
+      }
+    },
+    {
+      "route": "photography",
+      "url": "https://subsurfaces.net/photography",
+      "navMs": 16348,
+      "navError": null,
+      "domSignals": {
+        "title": "Photography — Sub-Surface Territories",
+        "hasContent": true,
+        "imgCount": 1,
+        "imgBroken": 0,
+        "canvasCount": 1,
+        "workerRefs": true
+      },
+      "metrics": {
+        "cls": 0.1496,
+        "lcpMs": 744,
+        "longtasks": 3,
+        "longtaskTotalMs": 224,
+        "longtaskMaxMs": 79
+      },
+      "errors": {
+        "console": [
+          {
+            "type": "error",
+            "text": "Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' https://challenges.cloudflare.com'. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked."
+          },
+          {
+            "type": "warning",
+            "text": "The resource https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400&family=IBM+Plex+Mono:ital,wght@0,400;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+          }
+        ],
+        "pageErrors": [
+          {
+            "message": "Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support.",
+            "stack": "Error: Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support. |     at zt._unsafeEvalCheck (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:24669) |     at new Ko (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:21441) |     at new zt (https://subsurfaces.net/assets/WebGLRenderer-DgEEEAzK.js:156:25006) |     at jl (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:26698)"
+          }
+        ],
+        "workerErrors": [],
+        "failedRequests": [
+          {
+            "url": "https://subsurfaces.net/content/Media/Music/Aokigahara.mp3",
+            "method": "GET",
+            "resourceType": "media",
+            "failure": "net::ERR_ABORTED"
+          }
+        ],
+        "failedCount": 1
+      }
+    },
+    {
+      "route": "bookshelf",
+      "url": "https://subsurfaces.net/bookshelf",
+      "navMs": 16429,
+      "navError": null,
+      "domSignals": {
+        "title": "Bookshelf — Sub-Surface Territories",
+        "hasContent": true,
+        "imgCount": 20,
+        "imgBroken": 0,
+        "canvasCount": 1,
+        "workerRefs": true
+      },
+      "metrics": {
+        "cls": 0.0099,
+        "lcpMs": 3240,
+        "longtasks": 5,
+        "longtaskTotalMs": 416,
+        "longtaskMaxMs": 114
+      },
+      "errors": {
+        "console": [
+          {
+            "type": "error",
+            "text": "Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' https://challenges.cloudflare.com'. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked."
+          },
+          {
+            "type": "warning",
+            "text": "The resource https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400&family=IBM+Plex+Mono:ital,wght@0,400;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+          }
+        ],
+        "pageErrors": [
+          {
+            "message": "Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support.",
+            "stack": "Error: Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support. |     at zt._unsafeEvalCheck (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:24669) |     at new Ko (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:21441) |     at new zt (https://subsurfaces.net/assets/WebGLRenderer-DgEEEAzK.js:156:25006) |     at jl (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:26698)"
+          }
+        ],
+        "workerErrors": [],
+        "failedRequests": [
+          {
+            "url": "https://subsurfaces.net/content/Media/Music/Aokigahara.mp3",
+            "method": "GET",
+            "resourceType": "media",
+            "failure": "net::ERR_ABORTED"
+          }
+        ],
+        "failedCount": 1
+      }
+    },
+    {
+      "route": "tags",
+      "url": "https://subsurfaces.net/tags",
+      "navMs": 16238,
+      "navError": null,
+      "domSignals": {
+        "title": "Sub-Surface Territories",
+        "hasContent": true,
+        "imgCount": 0,
+        "imgBroken": 0,
+        "canvasCount": 1,
+        "workerRefs": true
+      },
+      "metrics": {
+        "cls": 0.0031,
+        "lcpMs": 528,
+        "longtasks": 3,
+        "longtaskTotalMs": 170,
+        "longtaskMaxMs": 59
+      },
+      "errors": {
+        "console": [
+          {
+            "type": "error",
+            "text": "Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' https://challenges.cloudflare.com'. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked."
+          },
+          {
+            "type": "warning",
+            "text": "The resource https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400&family=IBM+Plex+Mono:ital,wght@0,400;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+          }
+        ],
+        "pageErrors": [
+          {
+            "message": "Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support.",
+            "stack": "Error: Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support. |     at zt._unsafeEvalCheck (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:24669) |     at new Ko (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:21441) |     at new zt (https://subsurfaces.net/assets/WebGLRenderer-DgEEEAzK.js:156:25006) |     at jl (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:26698)"
+          }
+        ],
+        "workerErrors": [],
+        "failedRequests": [
+          {
+            "url": "https://subsurfaces.net/content/Media/Music/Aokigahara.mp3",
+            "method": "GET",
+            "resourceType": "media",
+            "failure": "net::ERR_ABORTED"
+          }
+        ],
+        "failedCount": 1
+      }
+    },
+    {
+      "route": "folder-root",
+      "url": "https://subsurfaces.net/folder",
+      "navMs": 16352,
+      "navError": null,
+      "domSignals": {
+        "title": "Sub-Surface Territories",
+        "hasContent": true,
+        "imgCount": 0,
+        "imgBroken": 0,
+        "canvasCount": 1,
+        "workerRefs": true
+      },
+      "metrics": {
+        "cls": 0.0031,
+        "lcpMs": 648,
+        "longtasks": 3,
+        "longtaskTotalMs": 215,
+        "longtaskMaxMs": 75
+      },
+      "errors": {
+        "console": [
+          {
+            "type": "error",
+            "text": "Executing inline event handler violates the following Content Security Policy directive 'script-src 'self' https://challenges.cloudflare.com'. Either the 'unsafe-inline' keyword, a hash ('sha256-...'), or a nonce ('nonce-...') is required to enable inline execution. Note that hashes do not apply to event handlers, style attributes and javascript: navigations unless the 'unsafe-hashes' keyword is present. The action has been blocked."
+          },
+          {
+            "type": "warning",
+            "text": "The resource https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400&family=IBM+Plex+Mono:ital,wght@0,400;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+          }
+        ],
+        "pageErrors": [
+          {
+            "message": "Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support.",
+            "stack": "Error: Current environment does not allow unsafe-eval, please use pixi.js/unsafe-eval module to enable support. |     at zt._unsafeEvalCheck (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:24669) |     at new Ko (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:21441) |     at new zt (https://subsurfaces.net/assets/WebGLRenderer-DgEEEAzK.js:156:25006) |     at jl (https://subsurfaces.net/assets/transform-DTVXNOpG.js:23:26698)"
+          }
+        ],
+        "workerErrors": [],
+        "failedRequests": [
+          {
+            "url": "https://subsurfaces.net/content/Media/Music/Aokigahara.mp3",
+            "method": "GET",
+            "resourceType": "media",
+            "failure": "net::ERR_ABORTED"
+          }
+        ],
+        "failedCount": 1
+      }
+    },
+    {
+      "route": "wiki-home",
+      "url": "https://wiki.subsurfaces.net/",
+      "navMs": 16155,
+      "navError": null,
+      "domSignals": {
+        "title": "Sub-Surface Territories",
+        "hasContent": true,
+        "imgCount": 0,
+        "imgBroken": 0,
+        "canvasCount": 1,
+        "workerRefs": true
+      },
+      "metrics": {
+        "cls": 0.0407,
+        "lcpMs": 1068,
+        "longtasks": 3,
+        "longtaskTotalMs": 227,
+        "longtaskMaxMs": 105
+      },
+      "errors": {
+        "console": [],
+        "pageErrors": [],
+        "workerErrors": [],
+        "failedRequests": [
+          {
+            "url": "https://wiki.subsurfaces.net/content/Media/Music/Aokigahara.mp3",
+            "method": "GET",
+            "resourceType": "media",
+            "failure": "net::ERR_ABORTED"
+          }
+        ],
+        "failedCount": 1
+      }
+    }
+  ]
+}

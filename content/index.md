@@ -4,17 +4,21 @@ description: A growing collection of notes on philosophy, technology, and the hi
 tags:
   - home
 id: blog
+growth: becoming
 ---
 
-#### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ [[Housekeeping]] ~ [Repository](https://github.com/sub-surface)
+#### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ [[Housekeeping]] ~ [Github](https://github.com/sub-surface)
 
 > [[Bookshelf]] ~ [[Movieshelf]] ~ [[Music|Musicshelf]] ~ [[Photography|Photos]] ~ [[Chess]] ~ [[Wiki]] ~ [[Tags]]
 
 <AsciiAvatar label="glorp" align="right" interval={1500} />
 
+Below is a telescopic introduction to the garden, it can be expanded or closed using the buttons to the left of the starting line.
+
 ```telescopic
 Welcome to a node in the subsurface network.  
-- I'm Leon,
+- I'm Leon, 
+	- this is my digital garden, inspired by [gwern](https://www.gwern.net/), and built with [Obsidian](https://obsidian.md/). 
 	- I'm interested in the [[philosophy]] and history of images;
 		- in [[Quasars]],
 		- and in [[the suffering of light]].
@@ -30,10 +34,19 @@ Welcome to a node in the subsurface network.
 	- I've been working
 	- on [[maddoc - GHOST (ft Taran)|music videos]], [photo-projects](https://newplace2frown.com), and [university](https://open.spotify.com/episode/2ANgr7TSwipgj4rysfm7si).
 	- Oh, and of course:
-		  - my own music too! ([Hello](music:hello))
+		  - my own music too: [Hello!](music:hello)
 ```
 
-> [[ESA POSTER|CLICK ME]][^1] ~ [[The Suffering of Light|CLICK ME]][^2] ~ [[Quasars|CLICK ME]][^3]
+> [!note] This site is a work in progress.
+> These notes are a reflection of my current thoughts and interests, and they will evolve over time. Dont be surprised if you find some dead ends, partial notes, or stubs.  
+> Clicking [[getting lost|Links]] will open sidenotes, which are notes, on the side. Sidenotes can be closed or expanded in the tab bar between notes.  
+> ![[laoma.png]]  
+> **Notes are ephemeral**, but tending the garden takes *time and effort* - sometimes you may return here to find things completely different - note the changing [[chess]], the orphaned islands of [[coming to know the world as it is|unfinished ideas]], *it's all part of the process*.
+
+
+**Some places to get started:**
+
+<Query filter="folder=Writing" sort="-date" limit="8" display="list" />
 
 
 
@@ -44,11 +57,11 @@ Welcome to a node in the subsurface network.
 	- a growing collection of 
 		- [[tags\thoughts|thoughts]], [[tags\games|games]], [tools](https://avatar.subsurfaces.net),
 		- and 
-			- [[Vector Playground|experiments]]
+			- [[Vector Playground|experiments]] & [[Stand Alone Complex]]
 ```
 
 ```telescopic
-A space for [[thinking in public]],
+A virtual space for [[thinking in public]],
 - or just thinking. 
 	- Explore with the graph view, 
 		- or search for topics with `Ctrl+K`.  
@@ -59,9 +72,5 @@ A space for [[thinking in public]],
 		- or just have fun [[getting lost]].
 ```
 
-Find me on [Insta](https://Instagram.com/le.on_photos), [Soundcloud](https://soundcloud.com/m0rvidd), or check out my [Shop](https://newplace2frown.myshopify.com/) ~ [See Housekeeping](Housekeeping.md)
+Find me on [Insta](https://Instagram.com/le.on_photos), [Soundcloud](https://soundcloud.com/m0rvidd), or check out my [Print Shop](https://newplace2frown.myshopify.com/) ~ [See Housekeeping](Housekeeping.md)
 
-
-[^1]: A poster for the European Space Agency's 2024 conference on space exploration.
-[^2]: A photo-project exploring the history of images and the philosophy of light.
-[^3]: An article on quasars, their history, and their significance in the universe.
