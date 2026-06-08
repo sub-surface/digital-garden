@@ -26,11 +26,11 @@ Based in the United States, Charlie holds a B.S. in Philosophy and is looking to
 
 ### Influences
 
-- **Gilles Deleuze** — Primary allegiance; defender of the philosophy of difference
-- **G.W.F. Hegel** — Dialectics, Absolute Idealism
-- **Immanuel Kant** — Critical Philosophy
-- **Baruch Spinoza** — Monism, Ethics
-- **Salomon Maimon** — Post-Kantian rationalism
+- **Gilles Deleuze**
+- **G.W.F. Hegel** 
+- **Immanuel Kant**
+- **Baruch Spinoza** 
+- **Salomon Maimon** 
 
 ### Top 5 Works
 
