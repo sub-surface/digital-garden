@@ -112,15 +112,17 @@ function BgCanvasInner() {
     h: 0
   })
 
-  // Automatically switch to chess background on chess page
+  // Automatically switch to the matching board background on game pages
   useEffect(() => {
-    if (activeSlug.toLowerCase() === "chess") {
-      if (bgMode !== "chess") {
-        useStore.getState().setBgMode("chess")
+    const slug = activeSlug.toLowerCase()
+    const gameMode = slug === "chess" ? "chess" : slug === "hexo" ? "hexo" : null
+    if (gameMode) {
+      if (bgMode !== gameMode) {
+        useStore.getState().setBgMode(gameMode)
       }
     } else {
-      // Revert if we were in chess mode because of the slug
-      if (bgMode === "chess") {
+      // Revert if we were in a game-board mode because of the slug
+      if (bgMode === "chess" || bgMode === "hexo") {
         const lastMode = useStore.getState().lastBgMode
         useStore.getState().setBgMode(lastMode)
       }
@@ -214,6 +216,8 @@ function BgCanvasInner() {
         } else if (bgMode === "chess") {
 
           drawChess(ctx, state)
+        } else if (bgMode === "hexo") {
+          drawHexo(ctx, state)
         } else if (bgMode === "graph") {
           drawGraph(ctx, state, config)
         }
@@ -396,6 +400,39 @@ function drawChess(ctx: CanvasRenderingContext2D, state: any) {
       ctx.globalAlpha = (((r + c) % 2 ? 0.035 : 0.015) + prox) * state.readerAlpha
       ctx.fillStyle = state.colorCache.secondary
       ctx.fillRect(x, y, cell, cell)
+    }
+  }
+}
+
+function drawHexo(ctx: CanvasRenderingContext2D, state: any) {
+  // Faint pointy-top hexagonal grid, mirroring drawChess's proximity glow.
+  const size = Math.max(state.w, state.h) / 22 // hex radius
+  const hw = Math.sqrt(3) * size                // horizontal spacing
+  const vh = 1.5 * size                         // vertical spacing
+  const cols = Math.ceil(state.w / hw) + 2
+  const rows = Math.ceil(state.h / vh) + 2
+
+  ctx.strokeStyle = state.colorCache.secondary
+  ctx.lineWidth = 1
+
+  for (let r = -1; r < rows; r++) {
+    for (let c = -1; c < cols; c++) {
+      const cx = c * hw + (r % 2 ? hw / 2 : 0)
+      const cy = r * vh
+      const d = Math.hypot(cx - state.mx, cy - state.my)
+      const prox = d < 220 ? (1 - d / 220) * 0.06 : 0
+      ctx.globalAlpha = (0.025 + prox) * state.readerAlpha
+
+      ctx.beginPath()
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 180) * (60 * i - 30)
+        const x = cx + size * Math.cos(a)
+        const y = cy + size * Math.sin(a)
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+      ctx.closePath()
+      ctx.stroke()
     }
   }
 }

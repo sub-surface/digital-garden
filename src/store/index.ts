@@ -101,8 +101,8 @@ interface GardenStore {
   setIsPlaylistExpanded: (expanded: boolean) => void
 
   // Background
-  bgMode: "graph" | "vectors" | "dots" | "terminal" | "chess"
-  lastBgMode: "graph" | "vectors" | "dots" | "terminal" | "chess"
+  bgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo"
+  lastBgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo"
   bgStyle: "vectors" | "glyphs" | "off"
   setBgMode: (mode: GardenStore["bgMode"]) => void
   toggleGraphBackground: () => void
@@ -240,7 +240,7 @@ export const useStore = create<GardenStore>((set) => ({
   setBgMode: (bgMode) =>
     set((s) => ({
       bgMode,
-      lastBgMode: bgMode === "chess" ? s.lastBgMode : bgMode,
+      lastBgMode: bgMode === "chess" || bgMode === "hexo" ? s.lastBgMode : bgMode,
     })),
   toggleGraphBackground: () =>
     set((s) => ({

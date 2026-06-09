@@ -3,6 +3,30 @@
   margin: 0 auto;
   padding: var(--space-8) 0;
   font-family: var(--font-code);
+
+  // Wide view: break out of the article column to fill the window width.
+  &[data-wide="true"] {
+    max-width: none;
+    width: 96vw;
+    margin-left: calc(-48vw + 50%);
+    margin-right: calc(-48vw + 50%);
+
+    .layout {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .boardWrapper { max-width: none; }
+    .controls {
+      width: 100%;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-start;
+
+      .statusBox { flex: 1 1 220px; }
+      .zoomRow { flex: 0 0 auto; }
+      .legend, .rules { flex: 1 1 200px; }
+    }
+  }
 }
 
 .header {
@@ -64,6 +88,26 @@
 .stoneP1 { fill: var(--color-accent-base); }
 .stoneP2 { fill: var(--color-text); }
 .stoneWin { stroke: var(--color-accent-base); stroke-width: 2.5; }
+
+// X mark inside player-1 stones — light stroke for contrast on the accent fill
+.mark {
+  pointer-events: none;
+  line {
+    stroke: var(--color-bg);
+    stroke-width: 2;
+    stroke-linecap: round;
+    opacity: 0.85;
+  }
+}
+
+// O mark inside player-2 stones — dark stroke for contrast on the light fill
+.markO {
+  pointer-events: none;
+  fill: none;
+  stroke: var(--color-bg);
+  stroke-width: 2;
+  opacity: 0.85;
+}
 
 .controls {
   width: 240px;
