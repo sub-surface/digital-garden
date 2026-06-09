@@ -92,6 +92,21 @@ export function ChessPage() {
     return "Thinking…"
   }, [game, playerColor])
 
+  // Check / checkmate flourish flags (transient pulse on the board wrapper)
+  const [flourish, setFlourish] = useState<"check" | "mate" | null>(null)
+  useEffect(() => {
+    if (game.isCheckmate()) {
+      setFlourish("mate")
+      return
+    }
+    if (game.isCheck()) {
+      setFlourish("check")
+      const t = setTimeout(() => setFlourish(null), 600)
+      return () => clearTimeout(t)
+    }
+    setFlourish(null)
+  }, [game])
+
   // Board theme colors from CSS variables
   const boardRef = useRef<HTMLDivElement>(null)
   const accentBase = useStore((s) => s.accentBase)
@@ -171,7 +186,7 @@ export function ChessPage() {
       </header>
 
       <div className={styles.gameLayout}>
-        <div className={styles.boardWrapper} ref={boardRef}>
+        <div className={styles.boardWrapper} ref={boardRef} data-flourish={flourish ?? undefined}>
           <Chessboard
             options={{
               position: game.fen(),
