@@ -1726,6 +1726,27 @@ async function handleChatBan(request: Request, env: Env): Promise<Response> {
   return jsonResponse({ ok: true })
 }
 
+// ── POST /api/chess/gif — proxy Lichess GIF export (avoids browser CORS) ──
+
+async function handleChessGif(request: Request): Promise<Response> {
+  const pgn = await request.text()
+  if (!pgn.trim()) return jsonResponse({ error: "Empty PGN" }, 400)
+
+  const upstream = await fetch("https://lichess1.org/game/export/gif", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-chess-pgn" },
+    body: pgn,
+  })
+
+  if (!upstream.ok) {
+    return jsonResponse({ error: `Lichess GIF export failed: ${upstream.status}` }, 502)
+  }
+
+  const headers = new Headers(corsHeaders())
+  headers.set("Content-Type", "image/gif")
+  return new Response(upstream.body, { status: 200, headers })
+}
+
 async function handleGifSearch(request: Request, env: Env, url: URL): Promise<Response> {
   if (!env.KLIPY_API_KEY) {
     return jsonResponse({ error: "GIF search not configured" }, 503)
@@ -1808,6 +1829,9 @@ export default {
     }
     if (url.pathname === "/api/chat/gif-search" && request.method === "GET") {
       return handleGifSearch(request, env, url)
+    }
+    if (url.pathname === "/api/chess/gif" && request.method === "POST") {
+      return handleChessGif(request)
     }
 
     // API routes
