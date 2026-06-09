@@ -2,10 +2,8 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { Chess } from "chess.js"
 import { Chessboard } from "react-chessboard"
 import { useStore } from "@/store"
-import { useStockfish } from "@/hooks/useStockfish"
+import { pickBotMove, BOT_FLAVOURS } from "@/lib/chessBot"
 import styles from "./ChessPage.module.scss"
-
-const DIFFICULTY_LABELS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"]
 
 /** Clone a Chess instance preserving full move history via PGN */
 function cloneGame(g: Chess): Chess {
@@ -30,10 +28,8 @@ export function ChessPage() {
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white")
   const [exporting, setExporting] = useState<"pgn" | "gif" | null>(null)
 
-  const difficulty = useStore((s) => s.chessDifficulty)
-  const setDifficulty = useStore((s) => s.setChessDifficulty)
-
-  const { getBestMove, state: engineState } = useStockfish(difficulty)
+  const botFlavour = useStore((s) => s.chessBot)
+  const setBotFlavour = useStore((s) => s.setChessBot)
 
   const makeAMove = useCallback((move: any) => {
     try {
@@ -49,47 +45,21 @@ export function ChessPage() {
     return null
   }, [game])
 
-  // Fallback random move when Stockfish isn't available
-  const makeRandomMove = useCallback(() => {
-    const possibleMoves = game.moves()
-    if (game.isGameOver() || game.isDraw() || possibleMoves.length === 0) return
-
-    const randomIndex = Math.floor(Math.random() * possibleMoves.length)
-    makeAMove(possibleMoves[randomIndex])
-  }, [game, makeAMove])
-
-  // Stockfish move via UCI (returns long algebraic like "e2e4")
-  const makeEngineMove = useCallback(async () => {
+  // Homemade bot move (synchronous)
+  const makeBotMove = useCallback(() => {
     if (game.isGameOver() || game.isDraw()) return
+    const move = pickBotMove(game, botFlavour)
+    if (move) makeAMove({ from: move.from, to: move.to, promotion: move.promotion })
+  }, [game, botFlavour, makeAMove])
 
-    try {
-      const bestMove = await getBestMove(game.fen())
-      // UCI returns long algebraic: "e2e4" or "e7e8q" for promotion
-      const from = bestMove.slice(0, 2)
-      const to = bestMove.slice(2, 4)
-      const promotion = bestMove.length > 4 ? bestMove[4] : undefined
-      makeAMove({ from, to, promotion })
-    } catch {
-      // Stockfish failed, fall back to random
-      makeRandomMove()
-    }
-  }, [game, getBestMove, makeAMove, makeRandomMove])
-
-  // Trigger AI move if it's not the player's turn
+  // Trigger bot move when it's not the player's turn
   useEffect(() => {
     const turn = game.turn() === "w" ? "white" : "black"
     if (turn !== playerColor && !game.isGameOver()) {
-      const delay = engineState === "ready" ? 300 + difficulty * 50 : 400
-      const timer = setTimeout(() => {
-        if (engineState === "ready" || engineState === "thinking") {
-          makeEngineMove()
-        } else {
-          makeRandomMove()
-        }
-      }, delay)
+      const timer = setTimeout(() => makeBotMove(), 350)
       return () => clearTimeout(timer)
     }
-  }, [game, playerColor, makeEngineMove, makeRandomMove, engineState, difficulty])
+  }, [game, playerColor, makeBotMove])
 
   function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) {
     const turn = game.turn() === "w" ? "white" : "black"
@@ -119,8 +89,8 @@ export function ChessPage() {
     const isPlayerTurn =
       (game.turn() === "w" && playerColor === "white") || (game.turn() === "b" && playerColor === "black")
     if (isPlayerTurn) return `${turn}'s Turn (You)`
-    return engineState === "thinking" ? "Machine is thinking..." : "Machine's turn"
-  }, [game, playerColor, engineState])
+    return "Thinking…"
+  }, [game, playerColor])
 
   // Board theme colors from CSS variables
   const boardRef = useRef<HTMLDivElement>(null)
@@ -197,7 +167,7 @@ export function ChessPage() {
     <div className={styles.chessContainer}>
       <header className={styles.header}>
         <h1>Chess</h1>
-        <p>Encounter the machine-god.</p>
+        <p>A small handmade machine that plays chess.</p>
       </header>
 
       <div className={styles.gameLayout}>
@@ -221,21 +191,17 @@ export function ChessPage() {
 
         <div className={styles.controls}>
           <div className={styles.difficultySection}>
-            <span className={styles.label}>
-              Stockfish Level
-              {engineState === "loading" && <span className={styles.engineTag}> (loading...)</span>}
-              {engineState === "error" && <span className={styles.engineTag}> (fallback)</span>}
-            </span>
-            <div className={styles.levelGrid}>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((level, i) => (
+            <span className={styles.label}>Opponent</span>
+            <div className={styles.difficultyGrid}>
+              {BOT_FLAVOURS.map((f) => (
                 <button
-                  key={level}
+                  key={f.value}
                   className={styles.diffBtn}
-                  data-active={difficulty === level}
-                  onClick={() => setDifficulty(level)}
-                  title={`Level ${level}`}
+                  data-active={botFlavour === f.value}
+                  onClick={() => setBotFlavour(f.value)}
+                  title={f.label}
                 >
-                  {DIFFICULTY_LABELS[i]}
+                  {f.label}
                 </button>
               ))}
             </div>
