@@ -114,14 +114,18 @@ export function useBookmarks() {
         const data = await res.json() as { slug: string; title: string; added_at: string }[]
         setBookmarks(data.map((b) => ({ slug: b.slug, title: b.title, addedAt: b.added_at })))
       }
-    } catch {}
+    } catch (e) {
+      console.warn("useBookmarks: server load failed:", e)
+    }
   }
 
   async function migrateLocal(local: Bookmark[]) {
     try {
       await apiFetch("/api/bookmarks/migrate", "POST", { bookmarks: local })
       await loadFromServer()
-    } catch {}
+    } catch (e) {
+      console.warn("useBookmarks: local migration failed:", e)
+    }
   }
 
   const isBookmarked = useCallback((slug: string) =>

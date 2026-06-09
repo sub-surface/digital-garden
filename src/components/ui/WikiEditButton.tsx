@@ -17,7 +17,7 @@ export function WikiEditButton({ slug }: Props) {
     fetch(`/api/lock-status?slug=${encodeURIComponent(slug)}`)
       .then((r) => r.ok ? r.json() as Promise<{ locked: boolean; reason?: string }> : { locked: false })
       .then(setLocked)
-      .catch(() => {})
+      .catch((e) => console.warn("WikiEditButton: lock-status check failed:", e))
   }, [slug])
 
   if (loading) return null

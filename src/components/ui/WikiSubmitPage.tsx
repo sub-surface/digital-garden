@@ -437,7 +437,9 @@ export function WikiSubmitForm() {
     try {
       const stored = localStorage.getItem(DRAFT_KEY)
       if (stored) return { ...INITIAL_FORM, ...JSON.parse(stored) }
-    } catch {}
+    } catch (e) {
+      console.warn("WikiSubmitForm: discarding corrupt saved draft:", e)
+    }
     return INITIAL_FORM
   })
   const [turnstileToken, setTurnstileToken] = useState("")

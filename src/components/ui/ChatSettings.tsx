@@ -92,7 +92,7 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
     fetch("/api/admin/stonk-config", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then((data: StonkConfigRow[]) => setStonkConfig(data))
-      .catch(() => {})
+      .catch((e) => console.warn("ChatSettings: stonk-config load failed:", e))
       .finally(() => setStonkLoading(false))
   }, [tab, isAdmin, accessToken])
 
@@ -103,7 +103,7 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
     fetch("/api/admin/api-keys", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then((data: ApiKey[]) => setApiKeys(data.filter(k => !k.revoked_at)))
-      .catch(() => {})
+      .catch((e) => console.warn("ChatSettings: API keys load failed:", e))
       .finally(() => setKeysLoading(false))
   }, [tab, accessToken])
 
@@ -132,7 +132,7 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
     fetch("/api/admin/api-keys", { headers: { Authorization: `Bearer ${accessToken}` } })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then((d: ApiKey[]) => setApiKeys(d.filter(k => !k.revoked_at)))
-      .catch(() => {})
+      .catch((e) => console.warn("ChatSettings: API keys refresh failed:", e))
   }
 
   async function handleRevokeKey(id: string) {
@@ -324,7 +324,7 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
                             method: "PUT",
                             headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
                             body: JSON.stringify({ key: row.key, value: row.value }),
-                          }).catch(() => {})
+                          }).catch((e) => console.error("ChatSettings: stonk-config save failed:", e))
                         }}
                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
                       />

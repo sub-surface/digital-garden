@@ -195,7 +195,7 @@ function BgCanvasInner() {
           nodes.forEach((n: any) => map.set(n.id, n))
           stateRef.current.nodeMap = map
         })
-        .catch(() => {})
+        .catch((e) => console.warn("BgCanvas: graph data prefetch failed:", e))
     }
 
     let animationId: number

@@ -174,7 +174,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       })
         .then((r) => (r.ok ? r.json() : Promise.reject()))
         .then((data) => { setPinnedMessages(data.pins ?? []); setShowPinTicker(true) })
-        .catch(() => {})
+        .catch((e) => console.warn("ChatRoom: pinned-messages refresh failed:", e))
     } catch {
       showToast(isPinned ? "Failed to unpin" : "Failed to pin")
     }
