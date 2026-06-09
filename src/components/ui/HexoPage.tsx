@@ -27,6 +27,7 @@ export function HexoPage() {
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null)
+  const [wide, setWide] = useState(false)
 
   // Visible cell set: all placed cells ∪ neighbours ∪ margin ring, min 9×9 patch at origin.
   const cells = useMemo(() => {
@@ -73,7 +74,7 @@ export function HexoPage() {
     : `Player ${state.turn} — place ${state.stonesPerTurn} stone${state.stonesPerTurn > 1 ? "s" : ""} (${stonesLeft(state)} left)`
 
   return (
-    <div className={styles.hexoContainer}>
+    <div className={styles.hexoContainer} data-wide={wide ? "true" : undefined}>
       <header className={styles.header}>
         <h1>heXO</h1>
         <p>Connect six on an endless field of hexes.</p>
@@ -83,13 +84,13 @@ export function HexoPage() {
         <div className={styles.boardWrapper} data-win={state.winner ? "true" : undefined}>
           <svg
             className={styles.board}
-            viewBox="0 0 600 480"
+            viewBox={wide ? "0 0 1200 560" : "0 0 600 480"}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerLeave={onPointerUp}
           >
-            <g transform={`translate(${300 + pan.x}, ${240 + pan.y}) scale(${zoom})`}>
+            <g transform={`translate(${(wide ? 600 : 300) + pan.x}, ${(wide ? 280 : 240) + pan.y}) scale(${zoom})`}>
               {cells.map(({ q, r, k }) => {
                 const { x, y } = hexToPixel(q, r)
                 const owner = state.stones.get(k)
@@ -102,12 +103,24 @@ export function HexoPage() {
                       onClick={() => onCellClick(q, r)}
                     />
                     {owner && (
-                      <circle
-                        cx={x}
-                        cy={y}
-                        r={HEX_SIZE * 0.62}
-                        className={`${styles.stone} ${owner === 1 ? styles.stoneP1 : styles.stoneP2} ${isWin ? styles.stoneWin : ""}`}
-                      />
+                      <>
+                        <circle
+                          cx={x}
+                          cy={y}
+                          r={HEX_SIZE * 0.62}
+                          className={`${styles.stone} ${owner === 1 ? styles.stoneP1 : styles.stoneP2} ${isWin ? styles.stoneWin : ""}`}
+                        />
+                        {owner === 1 ? (
+                          // X mark for player 1 (black)
+                          <g className={styles.mark} transform={`translate(${x},${y})`}>
+                            <line x1={-HEX_SIZE * 0.28} y1={-HEX_SIZE * 0.28} x2={HEX_SIZE * 0.28} y2={HEX_SIZE * 0.28} />
+                            <line x1={-HEX_SIZE * 0.28} y1={HEX_SIZE * 0.28} x2={HEX_SIZE * 0.28} y2={-HEX_SIZE * 0.28} />
+                          </g>
+                        ) : (
+                          // O mark for player 2 (white)
+                          <circle cx={x} cy={y} r={HEX_SIZE * 0.3} className={styles.markO} />
+                        )}
+                      </>
                     )}
                   </g>
                 )
@@ -127,6 +140,7 @@ export function HexoPage() {
             <button className={styles.zoomBtn} onClick={() => setZoom((z) => Math.max(0.5, z - 0.15))} title="Zoom out">−</button>
             <button className={styles.zoomBtn} onClick={() => setZoom((z) => Math.min(2, z + 0.15))} title="Zoom in">+</button>
             <button className={styles.zoomBtn} onClick={() => setPan({ x: 0, y: 0 })} title="Recenter">⌖</button>
+            <button className={styles.zoomBtn} onClick={() => setWide((w) => !w)} title={wide ? "Exit wide view" : "Wide view"}>{wide ? "⤧" : "⤢"}</button>
           </div>
           <div className={styles.legend}>
             <span><span className={`${styles.swatch} ${styles.stoneP1}`} /> Player 1</span>
