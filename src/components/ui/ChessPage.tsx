@@ -27,6 +27,7 @@ export function ChessPage() {
   const [playerColor, setPlayerColor] = useState<"white" | "black">("white")
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white")
   const [exporting, setExporting] = useState<"pgn" | "gif" | null>(null)
+  const [exportError, setExportError] = useState(false)
 
   const botFlavour = useStore((s) => s.chessBot)
   const setBotFlavour = useStore((s) => s.setChessBot)
@@ -144,28 +145,49 @@ export function ChessPage() {
     downloadBlob(blob, `game-${Date.now()}.pgn`)
   }, [game])
 
-  // Export GIF via Lichess API
+  // Export GIF via Worker proxy (avoids browser CORS against Lichess)
   const exportGif = useCallback(async () => {
     const pgn = game.pgn()
     if (!pgn.trim()) return
 
     setExporting("gif")
+    setExportError(false)
     try {
-      const res = await fetch("https://lichess1.org/game/export/gif", {
+      const res = await fetch("/api/chess/gif", {
         method: "POST",
         headers: { "Content-Type": "application/x-chess-pgn" },
         body: pgn,
       })
 
-      if (!res.ok) throw new Error(`Lichess API error: ${res.status}`)
+      if (!res.ok) throw new Error(`GIF export error: ${res.status}`)
 
       const blob = await res.blob()
       downloadBlob(blob, `game-${Date.now()}.gif`)
     } catch (err) {
       console.error("GIF export failed:", err)
+      setExportError(true)
+      setTimeout(() => setExportError(false), 2500)
     } finally {
       setExporting(null)
     }
+  }, [game])
+
+  // Open the current game in Lichess analysis (POST form handles long PGNs)
+  const openInLichess = useCallback(() => {
+    const pgn = game.pgn()
+    if (!pgn.trim()) return
+    const form = document.createElement("form")
+    form.method = "POST"
+    form.action = "https://lichess.org/import"
+    form.target = "_blank"
+    const field = document.createElement("input")
+    field.type = "hidden"
+    field.name = "pgn"
+    field.value = pgn
+    form.appendChild(field)
+    document.body.appendChild(form)
+    form.submit()
+    form.remove()
   }, [game])
 
   const hasHistory = game.history().length > 0
@@ -278,7 +300,10 @@ export function ChessPage() {
               onClick={exportGif}
               disabled={!hasHistory || exporting === "gif"}
             >
-              {exporting === "gif" ? "Generating..." : "Export GIF"}
+              {exportError ? "Export failed" : exporting === "gif" ? "Generating..." : "Export GIF"}
+            </button>
+            <button className={styles.exportBtn} onClick={openInLichess} disabled={!hasHistory}>
+              Analyse on Lichess
             </button>
           </div>
         </div>
