@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, lazy, Suspense } from "react"
+import { useState, useMemo, useEffect, Suspense } from "react"
 import { useStore } from "@/store"
 import { ArticleLayout } from "./ArticleLayout"
 import { NoteLayout } from "./NoteLayout"
@@ -9,14 +9,8 @@ import { resolveSlug } from "@/lib/content-loader"
 import { WikiEditButton } from "./WikiEditButton"
 import { BookmarkButton } from "./BookmarkButton"
 import { useIsWiki } from "@/hooks/useIsWiki"
+import { SYSTEM_PAGES } from "@/config/system-pages"
 import type { NoteMetadata } from "@/types/content"
-
-// Lazy system pages
-const GraphView = lazy(() => import("./GraphView").then(m => ({ default: m.GraphView })))
-const ChessPage = lazy(() => import("./ChessPage").then(m => ({ default: m.ChessPage })))
-const BookshelfPage = lazy(() => import("./BookshelfPage").then(m => ({ default: m.BookshelfPage })))
-const MovieshelfPage = lazy(() => import("./MovieshelfPage").then(m => ({ default: m.MovieshelfPage })))
-const MusicPage = lazy(() => import("./MusicPage").then(m => ({ default: m.MusicPage })))
 
 interface Props {
   slug: string
@@ -34,8 +28,8 @@ function resolveLayout(
   if (type && ["book", "movie", "chatter", "philosopher"].includes(type)) return "article"
   if (slug.toLowerCase() === "wiki" || slug.toLowerCase().startsWith("wiki/")) return "article"
   if (slug.toLowerCase().startsWith("writing/")) return "article"
-  if (slug.toLowerCase() === "chess") return "article"
-  if (["graph", "bookshelf", "movieshelf", "music-library"].includes(slug.toLowerCase())) return "article"
+  const sysPage = SYSTEM_PAGES[slug.toLowerCase()]
+  if (sysPage) return sysPage.layout
 
   return "note"
 }
@@ -95,13 +89,13 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
   // System Page Fallback Logic
   const renderContent = () => {
     const s = slug.toLowerCase()
-    if (s === "graph") return <Suspense fallback={<div>Loading map...</div>}><GraphView /></Suspense>
-    if (s === "chess") return <Suspense fallback={<div>Loading board...</div>}><ChessPage /></Suspense>
     // photography is no longer a system page — Photography.md renders normally with <PhotoAlbums />
-    if (s === "bookshelf") return <Suspense fallback={<div>Loading shelf...</div>}><BookshelfPage /></Suspense>
-    if (s === "movieshelf") return <Suspense fallback={<div>Loading shelf...</div>}><MovieshelfPage /></Suspense>
-    if (s === "music-library") return <Suspense fallback={<div>Loading library...</div>}><MusicPage /></Suspense>
-    
+    const sysPage = SYSTEM_PAGES[s]
+    if (sysPage) {
+      const SysComponent = sysPage.component
+      return <Suspense fallback={<div>{sysPage.loading}</div>}><SysComponent /></Suspense>
+    }
+
     return <NoteBody slug={slug} onLoad={handleLoad} />
   }
 
