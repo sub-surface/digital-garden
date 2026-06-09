@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import type { PanelCard, ContentIndex, NoteMetadata } from "@/types/content"
 import { SITE_DEFAULTS, type SiteConfig } from "@/config/site-defaults"
+import type { BotFlavour } from "@/lib/chessBot"
 
 function hexToHsl(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16) / 255
@@ -109,8 +110,8 @@ interface GardenStore {
   setBgStyle: (style: GardenStore["bgStyle"]) => void
 
   // Chess
-  chessDifficulty: number
-  setChessDifficulty: (level: number) => void
+  chessBot: BotFlavour
+  setChessBot: (flavour: BotFlavour) => void
 
   // Panel navigation
   panelStack: PanelCard[]
@@ -261,8 +262,13 @@ export const useStore = create<GardenStore>((set) => ({
   setBgStyle: (bgStyle) => set({ bgStyle }),
 
   // Chess
-  chessDifficulty: 1,
-  setChessDifficulty: (chessDifficulty) => set({ chessDifficulty }),
+  chessBot: (typeof localStorage !== "undefined"
+    ? (localStorage.getItem("chessBot") as BotFlavour | null) ?? "casual"
+    : "casual"),
+  setChessBot: (chessBot) => {
+    localStorage.setItem("chessBot", chessBot)
+    set({ chessBot })
+  },
 
   // Panel navigation
   panelStack: [],
