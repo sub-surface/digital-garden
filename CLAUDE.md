@@ -6,7 +6,7 @@ Quick-start for AI agents working on this codebase. Read this first, refer to `d
 
 ## What This Is
 
-Custom React 19 + Vite 6 SPA. A digital garden (notes, essays, collections) at `subsurfaces.net` with a wiki subdomain at `wiki.subsurfaces.net`. Deployed as a Cloudflare Worker (not Pages — despite the name).
+Custom React 19 + Vite 6 SPA. A digital garden (notes, essays, collections) at `subsurfaces.net`, with a wiki subdomain at `wiki.subsurfaces.net` and a chat subdomain at `chat.subsurfaces.net`. Three shells, one codebase — see [Three Shells](#three-shells). Deployed as a Cloudflare Worker (not Pages — despite the name).
 
 **Not Quartz, not Next.js, not Astro.** Fully custom.
 
