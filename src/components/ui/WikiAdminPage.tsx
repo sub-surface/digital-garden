@@ -105,7 +105,9 @@ function UsersTab({ authHeader }: { authHeader: Record<string, string> }) {
         const data = await res.json() as Profile[]
         setUsers(data)
       }
-    } catch {}
+    } catch (e) {
+      console.warn("WikiAdminPage: user list fetch failed:", e)
+    }
   }, [])
 
   useEffect(() => { fetchUsers() }, [fetchUsers])
@@ -122,7 +124,9 @@ function UsersTab({ authHeader }: { authHeader: Record<string, string> }) {
         body: JSON.stringify({ userId, role: newRole }),
       })
       if (res.ok) await fetchUsers()
-    } catch {}
+    } catch (e) {
+      console.error("WikiAdminPage: role update failed:", e)
+    }
     setLoadingAction(null)
   }
 
@@ -230,7 +234,7 @@ function EditLogTab({ authHeader }: { authHeader: Record<string, string> }) {
     fetch("/api/admin/log", { headers: authHeader })
       .then((r) => r.ok ? r.json() as Promise<EditLogEntry[]> : [])
       .then(setEntries)
-      .catch(() => {})
+      .catch((e) => console.warn("WikiAdminPage: edit log load failed:", e))
   }, [])
 
   return (
@@ -279,7 +283,9 @@ function LocksTab({ authHeader }: { authHeader: Record<string, string> }) {
     try {
       const res = await fetch("/api/admin/locks", { headers: authHeader })
       if (res.ok) setLocks(await res.json() as PageLock[])
-    } catch {}
+    } catch (e) {
+      console.warn("WikiAdminPage: locks load failed:", e)
+    }
   }, [])
 
   useEffect(() => { fetchLocks() }, [fetchLocks])

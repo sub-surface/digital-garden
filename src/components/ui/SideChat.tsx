@@ -36,7 +36,7 @@ export function SideChat() {
           setRoom(active.find((r) => r.name === "general") ?? active[0])
         }
       })
-      .catch(() => {})
+      .catch((e) => console.warn("SideChat: room list fetch failed:", e))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, session])
 

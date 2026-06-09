@@ -24,7 +24,7 @@ export function ChatPage() {
           setActiveRoom(active[0])
         }
       })
-      .catch(() => {})
+      .catch((e) => console.warn("ChatPage: room list fetch failed:", e))
   }
 
   useEffect(() => {

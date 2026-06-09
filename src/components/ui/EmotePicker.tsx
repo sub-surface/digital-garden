@@ -49,7 +49,7 @@ export function EmotePicker({ onSelect, onSelectGif, onClose }: Props) {
           setEmotes(data as EmoteEntry[])
         }
       })
-      .catch(() => {})
+      .catch((e) => console.warn("EmotePicker: emote index fetch failed:", e))
   }, [])
 
   // Dismiss on outside click

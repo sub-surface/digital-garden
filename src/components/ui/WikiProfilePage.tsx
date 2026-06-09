@@ -159,7 +159,9 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
         body: JSON.stringify({ wiki_slug: matchingWikiSlug }),
       })
       if (res.ok) setClaimedSlug(matchingWikiSlug)
-    } catch {}
+    } catch (e) {
+      console.error("WikiProfilePage: profile claim failed:", e)
+    }
     setClaiming(false)
   }
 

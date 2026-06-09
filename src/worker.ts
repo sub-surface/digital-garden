@@ -26,7 +26,9 @@ async function getContentIndex(assetsFetcher: Fetcher | undefined): Promise<Reco
   try {
     const res = await assetsFetcher.fetch("https://assets.internal/content-index.json")
     if (res.ok) contentIndexCache = await res.json()
-  } catch {}
+  } catch (e) {
+    console.error("content-index fetch failed (OG meta will be skipped):", e)
+  }
   return contentIndexCache ?? {}
 }
 
@@ -335,7 +337,7 @@ async function verifyAuth(request: Request, env: Env): Promise<AuthUser | null> 
       Prefer: "return=minimal",
     },
     body: JSON.stringify({ last_used_at: new Date().toISOString() }),
-  }).catch(() => {})
+  }).catch((e) => console.error("api-key last_used_at update failed:", e))
 
   return buildAuthUser(env, keyRows[0].user_id, null)
 }
@@ -1282,7 +1284,7 @@ async function handleChatReactions(request: Request, env: Env): Promise<Response
     })
     if (!res.ok) return jsonResponse({ error: "Failed to add reaction" }, 500)
     // Fire-and-forget stonk processing
-    processStonkReaction(env, body.message_id.trim(), body.emote.trim(), auth.id, false).catch(() => {})
+    processStonkReaction(env, body.message_id.trim(), body.emote.trim(), auth.id, false).catch((e) => console.error("stonk reaction processing failed:", e))
     return jsonResponse({ ok: true })
   }
 
@@ -1294,7 +1296,7 @@ async function handleChatReactions(request: Request, env: Env): Promise<Response
     )
     if (!res.ok) return jsonResponse({ error: "Failed to remove reaction" }, 500)
     // Fire-and-forget stonk reversal
-    processStonkReaction(env, body.message_id.trim(), body.emote.trim(), auth.id, true).catch(() => {})
+    processStonkReaction(env, body.message_id.trim(), body.emote.trim(), auth.id, true).catch((e) => console.error("stonk reaction reversal failed:", e))
     return jsonResponse({ ok: true })
   }
 
