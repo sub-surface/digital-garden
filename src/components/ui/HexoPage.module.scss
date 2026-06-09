@@ -1,0 +1,150 @@
+.hexoContainer {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-8) 0;
+  font-family: var(--font-code);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: var(--space-12);
+
+  h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  p { opacity: 0.5; font-size: 0.9rem; letter-spacing: 1px; }
+}
+
+.layout {
+  display: flex;
+  gap: var(--space-12);
+  align-items: flex-start;
+
+  @media (max-width: 800px) {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.boardWrapper {
+  flex: 1;
+  max-width: 600px;
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+  touch-action: none;
+
+  &[data-win="true"] {
+    animation: hexoWinGlow 0.6s ease-out;
+    box-shadow: 0 0 24px 4px color-mix(in srgb, var(--color-accent-base) 50%, transparent);
+  }
+}
+
+.board {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: grab;
+  &:active { cursor: grabbing; }
+}
+
+.cell {
+  fill: transparent;
+  stroke: color-mix(in srgb, var(--color-border) 80%, transparent);
+  stroke-width: 1;
+  cursor: pointer;
+  &:hover { fill: color-mix(in srgb, var(--color-accent-base) 12%, transparent); }
+}
+
+.stone {
+  pointer-events: none;
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+.stoneP1 { fill: var(--color-accent-base); }
+.stoneP2 { fill: var(--color-text); }
+.stoneWin { stroke: var(--color-accent-base); stroke-width: 2.5; }
+
+.controls {
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.statusBox {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.statusText {
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+  color: var(--color-primary);
+}
+
+.resetBtn {
+  width: 100%;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text-muted);
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  &:hover { background: rgba(255, 255, 255, 0.05); color: var(--color-text); }
+}
+
+.zoomRow { display: flex; gap: 0.5rem; }
+.zoomBtn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--color-text-muted);
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-code);
+  &:hover { background: rgba(255, 255, 255, 0.06); color: var(--color-text); }
+}
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  span { display: inline-flex; align-items: center; gap: 0.35rem; }
+}
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+
+  &.stoneP1 { background: var(--color-accent-base); }
+  &.stoneP2 { background: var(--color-text); }
+}
+
+.rules {
+  font-size: 0.7rem;
+  opacity: 0.5;
+  line-height: 1.5;
+}
+
+@keyframes hexoWinGlow {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boardWrapper[data-win="true"] { animation: none; }
+}
