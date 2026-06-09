@@ -28,6 +28,35 @@
   flex: 1;
   max-width: 500px;
   width: 100%;
+  border-radius: 6px;
+
+  &[data-flourish="check"] {
+    animation: chessCheckPulse 0.6s ease-out;
+  }
+  &[data-flourish="mate"] {
+    animation: chessMateGlow 0.5s ease-in-out;
+    box-shadow: 0 0 24px 4px color-mix(in srgb, var(--color-accent-base) 50%, transparent);
+  }
+}
+
+@keyframes chessCheckPulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent-base) 60%, transparent); }
+  100% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--color-accent-base) 0%, transparent); }
+}
+
+@keyframes chessMateGlow {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boardWrapper[data-flourish="check"],
+  .boardWrapper[data-flourish="mate"] {
+    animation: none;
+  }
 }
 
 .controls {
@@ -50,20 +79,9 @@
   }
 }
 
-.engineTag {
-  font-style: italic;
-  opacity: 0.7;
-}
-
 .difficultyGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-}
-
-.levelGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
 }
 
