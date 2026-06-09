@@ -8,6 +8,12 @@ Items that are explicitly deferred, low priority, or pending design work. Groupe
 
 Priority work to improve code quality, performance, and shell isolation. Items are ordered so that earlier items unblock later ones.
 
+### Tier 0: Org review (reviewed 2026-06-09)
+
+- [x] **systemPages registry**: `src/config/system-pages.ts` is now the single source of truth for system-page slug → component + layout, consumed by `NoteRenderer.resolveLayout`/`renderContent`. Adding a system page (e.g. an arcade game) is now one registry line. (2026-06-09)
+- [ ] **Split `src/worker.ts`** (1888 lines, ~55 functions) into `worker/{chat,auth,wiki,stonks,admin,meta}.ts` + a thin dispatcher. Highest manageability win; needs a verification deploy to confirm CF handles a multi-file Worker entry. Deliberately deferred 2026-06-09.
+- [ ] **Group `src/components/ui/`** (56 flat files) into `ui/{chat,wiki,games,shelves}/`. Pure tidiness, no functional gain, churns every import path. Low priority. Deferred 2026-06-09.
+
 ### Tier 1: Shell Isolation (unblocks everything else)
 
 - [x] **Lazy-load shell components in router**: wrapped in `lazy()` — ChatPage now code-splits into own 30KB chunk
