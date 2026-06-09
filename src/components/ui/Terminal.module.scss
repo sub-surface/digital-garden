@@ -195,6 +195,12 @@
   line-height: 1.6;
 }
 
+.terminalWatched {
+  background: color-mix(in srgb, var(--color-accent-base) 12%, transparent);
+  border-left: 2px solid var(--color-accent-base);
+  padding-left: 4px;
+}
+
 .terminalUsername {
   font-weight: 400;
 }

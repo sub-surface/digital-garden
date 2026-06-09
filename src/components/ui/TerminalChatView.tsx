@@ -65,6 +65,9 @@ const COMMAND_DEFS: Record<string, string> = {
   "/quote":      "/quote <n> — re-post message #n as a quote  (alias: /q)",
   "/goto":       "/goto <username> — scroll to last message from user",
   "/search":     "/search <term> — search full message history  (alias: /s)",
+  "/log":        "/log <n> — dump last N messages as plain text (default 20)",
+  "/grep":       "/grep <pattern> — search messages in view",
+  "/watch":      "/watch <username> — highlight a user's lines (repeat to unwatch)",
   "/ban":        "/ban <username> [reason] — ban user  [admin]",
   "/unban":      "/unban <username> — unban user  [admin]",
   "/kick":       "/kick <username> — delete all recent messages from user  [admin]",
@@ -218,6 +221,7 @@ export function TerminalChatView({
   const [acIndex, setAcIndex] = useState(-1)
   const [replyContext, setReplyContext] = useState<ChatMessage | null>(null)
   const [mutedTyping, setMutedTyping] = useState(false)
+  const [watched, setWatched] = useState<Set<string>>(new Set())
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lineIdRef = useRef(0)
@@ -408,6 +412,51 @@ export function TerminalChatView({
       if (cmd === "/users") {
         const unique = [...new Set(messages.map((m) => m.profiles?.username).filter(Boolean))]
         appendLocalLine(`Users in view: ${unique.join(", ") || "(none)"}`)
+        return
+      }
+
+      if (cmd === "/log") {
+        const n = parseInt(parts[1] ?? "20", 10)
+        const count = isNaN(n) ? 20 : Math.max(1, Math.min(n, 200))
+        const recent = messages.slice(cleared).slice(-count)
+        if (recent.length === 0) { appendLocalLine("-- no messages in view --"); return }
+        appendLocalLine(`-- last ${recent.length} message(s) --`, "help")
+        for (const m of recent) {
+          const u = m.profiles?.username ?? "unknown"
+          appendLocalLine(`[${u}] ${m.deleted_at ? "[deleted]" : m.body}`, "help")
+        }
+        return
+      }
+
+      if (cmd === "/grep") {
+        const pattern = parts.slice(1).join(" ").toLowerCase()
+        if (!pattern) { appendLocalLine("Usage: /grep <pattern>"); return }
+        const hits = messages.slice(cleared).filter(
+          (m) => !m.deleted_at && m.body.toLowerCase().includes(pattern),
+        )
+        if (hits.length === 0) { appendLocalLine(`-- no matches for "${pattern}" --`); return }
+        appendLocalLine(`-- ${hits.length} match(es) for "${pattern}" --`, "help")
+        for (const m of hits) {
+          const u = m.profiles?.username ?? "unknown"
+          appendLocalLine(`[${u}] ${m.body}`, "help")
+        }
+        return
+      }
+
+      if (cmd === "/watch") {
+        const username = (parts[1] ?? "").toLowerCase().replace(/^@/, "")
+        if (!username) {
+          appendLocalLine(
+            watched.size ? `Watching: ${[...watched].join(", ")}` : "Usage: /watch <username>  (repeat to unwatch)",
+          )
+          return
+        }
+        setWatched((prev) => {
+          const next = new Set(prev)
+          if (next.has(username)) { next.delete(username); appendLocalLine(`-- no longer watching ${username} --`) }
+          else { next.add(username); appendLocalLine(`-- watching ${username} --`) }
+          return next
+        })
         return
       }
 
@@ -851,8 +900,9 @@ export function TerminalChatView({
           }
           // msg line
           const nameColor = isValidColor(line.nameColor) ? line.nameColor : undefined
+          const isWatched = !!line.username && watched.has(line.username.toLowerCase())
           return (
-            <div key={line.id} className={styles.terminalMsg}>
+            <div key={line.id} className={`${styles.terminalMsg} ${isWatched ? styles.terminalWatched : ""}`}>
               {line.replyTo && (
                 <span className={styles.terminalReplyRef}>
                   ↳ [{line.replyTo.username}]: {line.replyTo.body.slice(0, 40)}{line.replyTo.body.length > 40 ? "…" : ""}
