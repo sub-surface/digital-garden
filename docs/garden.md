@@ -6,7 +6,7 @@
 - [x] MDX build-time compilation via `@mdx-js/rollup` (120 notes)
 - [x] Prebuild pipeline: content-index, graph, slug-map, music, folders, photography manifests
 - [x] Catch-all routing with system page slugs (graph, chess, photography, bookshelf, movieshelf, music-library)
-- [x] CF Workers deployment with custom domains (subsurfaces.net, www, wiki)
+- [x] CF Workers deployment with custom domains (subsurfaces.net, www, wiki, chat)
 
 ---
 
@@ -36,7 +36,7 @@
 - [x] Music player: persistent audio, FFT visualiser, mobile strip
 - [x] Search: FlexSearch + Ctrl+K overlay
 - [x] Graph: D3 force sim + PixiJS renderer, local radar + global overlay
-- [x] Chess: chess.js + custom board + Stockfish WASM
+- [x] Chess: chess.js + custom board + homemade three-flavour bot (drunk/casual/sharp), Worker-proxied GIF export, Lichess analysis link
 - [x] Photography: masonry grid + lightbox
 - [x] Collections: bookshelf, movieshelf, music library (auto-collected from frontmatter)
 - [x] Theme system: dark/light toggle, ROYGBIV accent cycle, palette generation

@@ -35,9 +35,9 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 
 ### Terminal Mode — Remaining / Future
 
-- [ ] `/log <n>` — dump last N messages as plain text (exportable)
-- [ ] `/grep <pattern>` — local search across visible messages
-- [ ] `/watch <username>` — highlight lines from a specific user
+- [x] `/log <n>` — dump last N messages as plain text (2026-06-09)
+- [x] `/grep <pattern>` — local search across visible messages (2026-06-09)
+- [x] `/watch <username>` — highlight lines from a specific user (2026-06-09)
 - [ ] `/emotes off` — pure ASCII fallback mode (no inline images)
 - [ ] `/ping` — display Supabase Realtime round-trip latency
 - [ ] Screensaver mode: idle N minutes → replay ASCII animation (inspired by TerminalTitle idle snippets)
@@ -48,8 +48,8 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 
 ## Garden
 
-- [ ] Improve chess UI to match site themes, optimise WASM performance, public leaderboard
-- [ ] **Chess performance**: investigate Stockfish WASM latency on local builds
+- [x] **Chess: homemade three-flavour bot** (drunk/casual/sharp) replaces the unreliable CDN-loaded Stockfish; GIF export now proxied through the Worker (`POST /api/chess/gif`); "Analyse on Lichess" button; accent-aware check/mate board flourish; softened framing. (2026-06-09)
+- [ ] Chess: public leaderboard (deferred — needs a results table)
 - [ ] **Pre-render SSG**: build-time HTML generation for all notes
 - [ ] **Image optimisation**: sharp WebP variants + `<picture>` srcsets
 - [ ] **Lighthouse CI**: GitHub Actions target 95+ desktop
@@ -58,7 +58,7 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 - [ ] **OG caching not working**: `0 cached` on every build. Investigate cache key logic; CF builds may not persist cache dir.
 - [ ] **Prebuild runs twice per CF deploy**: investigate deduplication
 - [ ] **`glob@11` deprecation warning**: track — update when fix is released upstream
-- [ ] **37 broken wikilinks**: see [garden.md](garden.md) for cluster breakdown
+- [ ] **41 broken wikilinks** (as of 2026-06-09): see [garden.md](garden.md) for cluster breakdown. Includes case-mismatch duplicates (e.g. `Lars-von-Trier` vs `Lars-Von-Trier`) and leftover `Sample-Article` scaffolding links.
 - [ ] **Detailed documentation**: comprehensive docs for the codebase
 - [ ] Fix CLS fully: image `width`/`height` attributes (Gallery, sidenotes, link preview, lightbox)
 
