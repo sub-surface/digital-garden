@@ -87,9 +87,11 @@ function HexoBoard({ state, onPlace, annotations, setAnnotations, wide }: BoardP
   }, [eventToBoard])
 
   // Visible cell set: all placed cells ∪ margin ring, min patch at origin.
+  // Zen/fullscreen starts from a larger base grid so the board feels expansive.
   const cells = useMemo(() => {
     const set = new Set<string>()
-    let minQ = -4, maxQ = 4, minR = -4, maxR = 4
+    const base = wide ? 8 : 4
+    let minQ = -base, maxQ = base, minR = -base, maxR = base
     for (const k of state.stones.keys()) {
       const [q, r] = k.split(",").map(Number)
       minQ = Math.min(minQ, q - MARGIN_RING); maxQ = Math.max(maxQ, q + MARGIN_RING)
@@ -99,7 +101,25 @@ function HexoBoard({ state, onPlace, annotations, setAnnotations, wide }: BoardP
       for (let q = minQ; q <= maxQ; q++)
         set.add(key(q, r))
     return [...set].map((k) => { const [q, r] = k.split(",").map(Number); return { q, r, k } })
-  }, [state.stones])
+  }, [state.stones, wide])
+
+  // On entering zen, fit the whole board into the viewBox (scale with viewport).
+  useEffect(() => {
+    if (!wide) return
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+    for (const c of cells) {
+      const { x, y } = hexToPixel(c.q, c.r)
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x)
+      minY = Math.min(minY, y); maxY = Math.max(maxY, y)
+    }
+    const spanX = maxX - minX + HEX_SIZE * 3
+    const spanY = maxY - minY + HEX_SIZE * 3
+    const fit = Math.min(vbW / spanX, vbH / spanY)
+    setZoom(Math.max(0.5, Math.min(2.5, fit)))
+    setPan({ x: 0, y: 0 })
+    // re-fit only when the board's extent changes, not on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wide, cells.length])
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0 && e.button !== 2) return

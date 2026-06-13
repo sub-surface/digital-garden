@@ -227,7 +227,9 @@
 .zenClose {
   position: absolute;
   top: 1.25rem;
-  right: 1.5rem;
+  // Anchored top-LEFT so it doesn't collide with the fixed build-stamp / clock
+  // cluster (QuickControls) pinned to the top-right corner.
+  left: 1.5rem;
   z-index: 1;
   width: 36px;
   height: 36px;
