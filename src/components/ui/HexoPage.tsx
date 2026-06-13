@@ -284,7 +284,7 @@ export function HexoPage() {
   if (zen) {
     return (
       <div className={styles.zenOverlay}>
-        <button className={styles.zenClose} onClick={() => setZen(false)} title="Exit zen mode (Esc)">✕</button>
+        <button className={styles.zenClose} onClick={() => setZen(false)} title="Exit zen mode (Esc)" aria-label="Exit zen mode">✕</button>
         <div className={styles.zenBoard} data-win={state.winner ? "true" : undefined}>
           {boardEl}
         </div>
