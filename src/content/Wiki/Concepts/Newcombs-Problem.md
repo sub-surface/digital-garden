@@ -36,7 +36,7 @@ The Rules:
 
 To the **Spinozist**, the "choice" is an illusion. Spinoza writes that men believe themselves free "because they are conscious of their volitions and appetite, but think not of the causes by which they are disposed to wanting and willing."[^1]
 
-The Predictor is simply a being with knowledge of the causes acting upon you. To "Two-Box" is to deny the causal chain—to believe you are a "kingdom within a kingdom," separate from the data that constitutes you. It is a refusal of **[[Stand Alone Complex|The Apparatus]]**.
+The Predictor is simply a being with knowledge of the causes acting upon you. To "Two-Box" is to deny the causal chain—to believe you are a "kingdom within a kingdom," separate from the data that constitutes you. It is a refusal of the apparatus.
 
 > [!danger] The Illusion of the Second Box
 > The "Second Box" (the $1,000) represents the **humanist wage**—the small, guaranteed payout we get for pretending we have free will. We cling to it because to let it go is to admit we are transparent to the machine.[^2]
@@ -49,10 +49,7 @@ We are now living in a Newcomb's Problem at scale. The algorithm (YouTube, TikTo
 > *The illusion of free choice in a deterministic system, visualized through modern algorithmic architecture.*
 
 ## Related Concepts
-*   [[Stand Alone Complex]]
-*   [[The Becoming-Document]]
-*   `[[acausal trade with the machine]]`
-*   `[[determinism is a comfort]]`
+*   [[Wiki/Concepts/The Becoming-Document|The Becoming-Document]]
 
 [^1]: Spinoza, B. (1677). *Ethics*, Part I, Appendix. (Curley, E. Trans., 1994, Penguin Classics, p. 27).
 [^2]: ![[Media/pepe-wave.gif]] *Wave goodbye to the illusion of choice.*

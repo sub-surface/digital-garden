@@ -8,6 +8,7 @@ import { AsciiAvatar } from "./AsciiAvatar"
 
 const LazyWikiSubmitForm = lazy(() => import("@/components/ui/WikiSubmitPage").then((m) => ({ default: m.WikiSubmitForm })))
 const LazyPhotoAlbums = lazy(() => import("@/components/ui/PhotographyPage").then((m) => ({ default: m.PhotoAlbums })))
+const LazyMachineGod = lazy(() => import("./MachineGod").then((m) => ({ default: m.MachineGod })))
 
 function WikiSubmitForm() {
   return (
@@ -25,6 +26,14 @@ function PhotoAlbums() {
   )
 }
 
+function MachineGod() {
+  return (
+    <Suspense fallback={null}>
+      <LazyMachineGod />
+    </Suspense>
+  )
+}
+
 export const mdxComponents = {
   BookCard,
   MovieCard,
@@ -33,6 +42,7 @@ export const mdxComponents = {
   WikiSubmitForm,
   AsciiAvatar,
   PhotoAlbums,
+  MachineGod,
   // Add more custom components here
   a: (props: any) => {
     const isInternal = props.href?.startsWith("/") || props.href?.startsWith(window.location.origin)

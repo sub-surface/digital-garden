@@ -1,0 +1,173 @@
+.codex {
+  hr {
+    border: none;
+    border-top: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.08));
+    margin: 2.5rem 0;
+  }
+}
+
+// ── Oracle ──
+.oracle {
+  font-family: var(--font-header, "Playfair Display", Georgia, serif);
+  text-align: center;
+  padding: 2em 1em;
+}
+
+.oracleLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-size: 0.7em;
+  opacity: 0.6;
+  margin-bottom: 1.5em;
+}
+
+.oracleInput {
+  font-family: inherit;
+  font-size: 1em;
+  padding: 0.5em 1em;
+  width: 70%;
+  max-width: 400px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  outline: none;
+  opacity: 0.7;
+  text-align: center;
+  display: block;
+  margin: 0 auto 1.25em;
+
+  &:focus {
+    opacity: 1;
+    border-color: var(--color-accent-base);
+  }
+}
+
+.oracleBtn {
+  font-family: inherit;
+  font-size: 0.85em;
+  padding: 0.5em 2em;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  transition: opacity 0.2s, color 0.2s, border-color 0.2s;
+
+  &:hover {
+    opacity: 1;
+    color: var(--color-accent-base);
+    border-color: var(--color-accent-base);
+  }
+}
+
+.oracleResponse {
+  font-style: italic;
+  min-height: 2em;
+  margin-top: 1.5em;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+
+  &.visible {
+    opacity: 0.9;
+  }
+}
+
+// ── Cipher ──
+.cipher {
+  text-align: center;
+  padding: 1.5em 1em;
+}
+
+.cipherLabel {
+  font-family: var(--font-code, "IBM Plex Mono", monospace);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.7em;
+  opacity: 0.6;
+}
+
+.cipherText {
+  font-family: var(--font-code, "IBM Plex Mono", monospace);
+  font-size: 1.1em;
+  letter-spacing: 0.15em;
+  margin: 1.5em 0;
+  line-height: 2;
+  transition: color 0.4s ease, text-shadow 0.4s ease;
+
+  &.solved {
+    color: var(--color-accent-base);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--color-accent-base) 40%, transparent);
+  }
+}
+
+.cipherRange {
+  width: 60%;
+  max-width: 350px;
+  margin: 0.5em auto;
+  display: block;
+  cursor: pointer;
+  accent-color: var(--color-accent-base);
+}
+
+.cipherN {
+  font-family: var(--font-code, "IBM Plex Mono", monospace);
+  font-size: 0.75em;
+  opacity: 0.6;
+  margin-top: 0.5em;
+}
+
+// ── Game of Life ──
+.gol {
+  text-align: center;
+}
+
+.golCanvas {
+  display: block;
+  margin: 0 auto 1em;
+  border: 1px solid currentColor;
+  opacity: 0.75;
+  cursor: crosshair;
+  image-rendering: pixelated;
+  width: 100%;
+  max-width: 360px;
+  background: transparent;
+}
+
+.golControls {
+  display: flex;
+  justify-content: center;
+  gap: 0.6em;
+}
+
+.golBtn {
+  font-family: var(--font-code, "IBM Plex Mono", monospace);
+  font-size: 0.7em;
+  padding: 0.4em 1.5em;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  transition: opacity 0.2s, color 0.2s, border-color 0.2s;
+
+  &:hover {
+    opacity: 1;
+    color: var(--color-accent-base);
+    border-color: var(--color-accent-base);
+  }
+}
+
+.golCaption {
+  text-align: center;
+  font-family: var(--font-header, "Playfair Display", Georgia, serif);
+  font-style: italic;
+  opacity: 0.6;
+  font-size: 0.8em;
+  margin-top: 0.75em;
+}
