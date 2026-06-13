@@ -8,6 +8,30 @@ import styles from "./QuickControls.module.scss"
 
 const ProfileControl = lazy(() => import("./ProfileControl").then((m) => ({ default: m.ProfileControl })))
 
+const COMMIT_SHA = __COMMIT_SHA__
+const COMMIT_URL =
+  __COMMIT_SHA_FULL__ === "dev"
+    ? null
+    : `https://github.com/sub-surface/digital-garden/commit/${__COMMIT_SHA_FULL__}`
+
+/** Build stamp: the commit this bundle was built from, linking to GitHub. */
+function BuildStamp() {
+  if (!COMMIT_URL) {
+    return <span className={styles.commit} title="Local dev build">{COMMIT_SHA}</span>
+  }
+  return (
+    <a
+      className={styles.commit}
+      href={COMMIT_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`Running commit ${__COMMIT_SHA_FULL__} — view on GitHub`}
+    >
+      {COMMIT_SHA}
+    </a>
+  )
+}
+
 function formatDateTime(): string {
   const d = new Date()
   const dayName = d.toLocaleDateString("en-GB", { weekday: "long" })
@@ -136,9 +160,10 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
         </Suspense>
       )}
 
-      {/* Clock */}
+      {/* Clock + build stamp */}
       <div className={styles.clockGroup}>
         <span className={styles.clock}>{time}</span>
+        <BuildStamp />
       </div>
     </div>
   )
