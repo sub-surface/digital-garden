@@ -10,14 +10,16 @@ Thumbs.db
 # Generated at build time
 public/content-index.json
 public/graph.json
-public/music.json
 public/search-index.json
 public/content/
 public/og/
+# NOTE: public/music.json is NOT generated at build time — it is the committed
+# source of truth, written by `npm run sync:music` (SoundCloud → R2). Tracked.
 
 .dev.vars
 .wrangler/
 .playwright-mcp/
+.music-sync-tmp/
 
 # Automation / agent tooling output (not source)
 daily-report.md

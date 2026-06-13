@@ -1,8 +1,15 @@
 import { useMusic } from "./MusicContext"
+import { useStore } from "@/store"
 import styles from "./Collections.module.scss"
 
 export function MusicPage() {
   const { tracks, currentTrackIndex, isPlaying, playTrack } = useMusic()
+  const contentIndex = useStore((s) => s.contentIndex)
+
+  // A track may optionally have a backing note (liner notes). Only link to it
+  // when one actually exists in the content index.
+  const hasNote = (slug: string) =>
+    Boolean(contentIndex && (contentIndex as Record<string, unknown>)[slug])
 
   return (
     <div className={styles.collectionPage}>
@@ -16,14 +23,14 @@ export function MusicPage() {
           <p>No tracks found.</p>
         ) : (
           tracks.map((track, index) => (
-            <div 
-              key={track.slug} 
+            <div
+              key={track.slug}
               className={`${styles.musicItem} ${index === currentTrackIndex ? styles.active : ""}`}
             >
               <div className={styles.musicCover}>
                 {track.cover ? <img src={track.cover} alt={track.title} /> : <div className={styles.placeholder} />}
-                <button 
-                  className={styles.playButton} 
+                <button
+                  className={styles.playButton}
                   onClick={() => playTrack(index)}
                   aria-label={index === currentTrackIndex && isPlaying ? "Pause" : "Play"}
                 >
@@ -41,7 +48,22 @@ export function MusicPage() {
               <div className={styles.musicInfo}>
                 <h2>{track.title}</h2>
                 <p>{track.artist}</p>
-                <a href={`/${track.slug}`} className={styles.noteLink}>View Note →</a>
+                <div className={styles.trackLinks}>
+                  {hasNote(track.slug) && (
+                    <a href={`/${track.slug}`} className={styles.noteLink}>View Note →</a>
+                  )}
+                  {track.scUrl && (
+                    <a
+                      href={track.scUrl}
+                      className={styles.noteLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      data-panel-ignore
+                    >
+                      SoundCloud ↗
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           ))

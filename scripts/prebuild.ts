@@ -146,7 +146,10 @@ function main() {
       path.join(PUBLIC_DIR, "graph.json"),
       '{"nodes":[],"links":[]}',
     )
-    fs.writeFileSync(path.join(PUBLIC_DIR, "music.json"), "[]")
+    // music.json is owned by `npm run sync:music` (SoundCloud -> R2). Only
+    // seed an empty manifest if none exists; never clobber a synced one.
+    const musicPath = path.join(PUBLIC_DIR, "music.json")
+    if (!fs.existsSync(musicPath)) fs.writeFileSync(musicPath, "[]")
     return
   }
 
@@ -299,26 +302,23 @@ function main() {
   )
   console.log(`  graph.json: ${nodes.length} nodes, ${links.length} links`)
 
-  // Write music manifest
-  const tracks = Object.values(index)
-    .filter((n) => n.type === "music")
-    .map((n) => {
-      // Re-read frontmatter for audio/cover fields
-      const file = files.find((f) => slugify(f) === n.slug)!
-      const { data } = matter(fs.readFileSync(file, "utf-8"))
-      return {
-        title: n.title,
-        artist: (data.artist as string) ?? "Unknown",
-        audio: (data.audio as string) ?? "",
-        cover: (data.cover as string) ?? "",
-        slug: n.slug,
+  // music.json is owned by `npm run sync:music` (SoundCloud -> R2), NOT by
+  // prebuild. We only seed an empty manifest on a fresh checkout so the app
+  // always has a valid file to fetch. Never overwrite a synced manifest.
+  const musicPath = path.join(PUBLIC_DIR, "music.json")
+  if (!fs.existsSync(musicPath)) {
+    fs.writeFileSync(musicPath, "[]")
+    console.log("  music.json: seeded empty (run `npm run sync:music`)")
+  } else {
+    const count = (() => {
+      try {
+        return JSON.parse(fs.readFileSync(musicPath, "utf-8")).length
+      } catch {
+        return "?"
       }
-    })
-  fs.writeFileSync(
-    path.join(PUBLIC_DIR, "music.json"),
-    JSON.stringify(tracks, null, 2),
-  )
-  console.log(`  music.json: ${tracks.length} tracks`)
+    })()
+    console.log(`  music.json: left as-is (${count} tracks, managed by sync:music)`)
+  }
 
   // Generate folders manifest
   const folders: Record<string, string[]> = {}
