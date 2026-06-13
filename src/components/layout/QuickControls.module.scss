@@ -101,6 +101,24 @@
   opacity: 0.8;
 }
 
+.commit {
+  margin-left: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--color-border-light);
+  font-family: var(--font-code);
+  font-size: 0.85em;
+  letter-spacing: 0.03em;
+  color: inherit;
+  opacity: 0.45;
+  text-decoration: none;
+  transition: opacity 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+    color: var(--color-accent-base);
+  }
+}
+
 // ── Profile Button ──
 
 .profileWrapper {
