@@ -100,6 +100,12 @@ export function MusicPlayer() {
       </div>
 
       <div className={styles.mainContent}>
+        {currentTrack?.cover && (
+          <div className={styles.coverWrap}>
+            <img src={currentTrack.cover} alt={currentTrack.title} className={styles.cover} />
+          </div>
+        )}
+
         <div className={styles.visualiserWrap}>
           <canvas ref={canvasRef} width="240" height="40" className={styles.canvas} />
         </div>

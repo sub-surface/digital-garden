@@ -41,6 +41,13 @@ export interface Track {
   audio: string
   cover: string
   slug: string
+  /** SoundCloud track id — dedupe key for the sync script */
+  scId?: string
+  /** SoundCloud permalink */
+  scUrl?: string
+  year?: number
+  /** Length in seconds */
+  duration?: number
 }
 
 export interface PanelCard {

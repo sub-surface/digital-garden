@@ -1,0 +1,4 @@
+---
+title: Blackjack
+tags: [games]
+---

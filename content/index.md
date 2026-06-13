@@ -7,13 +7,14 @@ id: blog
 growth: becoming
 ---
 
-#### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ [[Housekeeping]] ~ [Github](https://github.com/sub-surface)
+#### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ **[Star](https://star.subsurfaces.net)** ~ **[heXO](/hexo)** ~ [[Housekeeping]] ~ [Github](https://github.com/sub-surface)
 
 > [[Bookshelf]] ~ [[Movieshelf]] ~ [Musicshelf](/music-library) ~ [[Photography|Photos]] ~ [[Chess]] ~ [[Wiki]] ~ [Tags](/tags)
 
 <AsciiAvatar label="glorp" align="right" interval={1500} />
 
-Below is a telescopic introduction to the garden, it can be expanded or closed using the buttons to the left of the starting line.
+Hey there!  
+Below is a telescopic text block, it can be expanded or closed using the `+/-` buttons to the left of each block. 
 
 ```telescopic
 Welcome to a node in the subsurface network.  
@@ -37,6 +38,10 @@ Welcome to a node in the subsurface network.
 		  - my own music too: [Hello!](music:hello)
 ```
 
+**Some places[^1] to get started:**
+
+<Query filter="folder=Writing" sort="-date" limit="8" display="list" />
+
 ```telescopic
 - This is an 
 - *intersection* 
@@ -44,7 +49,7 @@ Welcome to a node in the subsurface network.
 	- a growing collection of 
 		- [[tags\thoughts|thoughts]], [[tags\games|games]], [tools](https://avatar.subsurfaces.net),
 		- and 
-			- [[Vector Playground|experiments]] & [[Stand Alone Complex]]
+			- [[Vector Playground|experiments]] & [[the machine-god in the future|strange artifacts]]
 ```
 
 ```telescopic
@@ -59,18 +64,17 @@ A virtual space for [[thinking in public]],
 		- or just have fun [[getting lost]].
 ```
 
-> [!note] This site is a work in progress.
+
+
+
+
+
+[^1]: 
+> ## This site is a work in progress. 
 > These notes are a reflection of my current thoughts and interests, and they will evolve over time. Dont be surprised if you find some dead ends, partial notes, or stubs.<br />
 > Clicking [[getting lost|Links]] will open sidenotes, which are notes, on the side. Sidenotes can be closed or expanded in the tab bar between notes.<br />
-> ![[laoma.png]]
-> **Notes are ephemeral**, but tending the garden takes *time and effort* - sometimes you may return here to find things completely different - note the changing [[chess]], the orphaned islands of [[coming to know the world as it is|unfinished ideas]], *it's all part of the process*.
-
-
-**Some places to get started:**
-
-<Query filter="folder=Writing" sort="-date" limit="8" display="list" />
-
-
+> ![[laoma.png]]  
+> **Please be patient.** I'm Acoustic.
 
 
 

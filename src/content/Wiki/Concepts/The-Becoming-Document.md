@@ -35,18 +35,15 @@ Harun Farocki coined the term "Operative Image" to describe images made *by* mac
 ![](https://www.youtube.com/watch?v=3nIq29-u6R0)
 > *Harun Farocki's investigation into the operative image: 'Eye/Machine' (2001).*
 
-This is where **[[The Becoming-Document]]** becomes terrifying. The image gains **agency**. `[[images that watch you back]]`. The document looks at *you*.
+This is where the Becoming-Document becomes terrifying. The image gains **agency** — it watches you back. The document looks at *you*.
 
 ## Data-Rot and Resistance
 
 If the image is a weapon, then **decay** is a form of pacifism.
-Digital images are fragile. `[[digital rot]]` (bit rot, compression artifacts) is the only thing that strips the operative image of its power.[^2]
+Digital images are fragile. Bit rot and compression artifacts — *digital rot* — may be the only thing that strips the operative image of its power.[^2]
 
 ## Related Concepts
 *   [[Wiki/Concepts/Newcombs Problem]]
-*   [[memories are just data]]
-*   `[[photography is a weapon]]`
-*   `[[the decisive moment is dead]]`
 
 [^1]: Farocki, H. (2004). *Phantom Images*. Public, No. 5, p. 14.
 [^2]: ![[Media/ESA-Gaia.gif]] *The operative gaze of the Gaia satellite, mapping the stars into data.*

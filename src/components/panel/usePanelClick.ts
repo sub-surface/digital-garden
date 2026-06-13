@@ -1,7 +1,6 @@
 import { useEffect } from "react"
 import { useStore } from "@/store"
 import { parseMarkdown } from "@/lib/markdown"
-import { useMusic } from "@/components/ui/MusicContext"
 import { useShell } from "@/hooks/useShell"
 
 /**
@@ -12,9 +11,7 @@ export function usePanelClick() {
   const pushCard = useStore((s) => s.pushCard)
   const popCard = useStore((s) => s.popCard)
   const contentIndex = useStore((s) => s.contentIndex)
-  const toggleMusic = useStore((s) => s.toggleMusic)
   const setActiveGraphSlug = useStore((s) => s.setActiveGraphSlug)
-  const { tracks, playTrack } = useMusic()
   const shell = useShell()
 
   useEffect(() => {
@@ -34,24 +31,9 @@ export function usePanelClick() {
       // We check the store for the active layout.
       if (useStore.getState().activeLayout === "article") return
 
-      // Handle music: protocol
-// ...
-      if (href.startsWith("music:")) {
-        event.preventDefault()
-        event.stopPropagation()
-
-        const trackTitle = decodeURIComponent(href.slice(6))
-        const trackIndex = tracks.findIndex(t => t.title.toLowerCase() === trackTitle.toLowerCase())
-
-        if (trackIndex !== -1) {
-          playTrack(trackIndex)
-          // Ensure player is open
-          if (!useStore.getState().isMusicOpen) {
-            toggleMusic()
-          }
-        }
-        return
-      }
+      // music: links are handled by NoteBody (works in every layout); don't
+      // also intercept them here or open them as panel cards.
+      if (href.startsWith("music:")) return
 
       // Skip hash links (they should scroll within the page)
       if (href.startsWith("#")) return
@@ -112,7 +94,7 @@ export function usePanelClick() {
     return () => {
       document.removeEventListener("click", handleClick, true)
     }
-  }, [pushCard, contentIndex, tracks])
+  }, [pushCard, contentIndex])
 
   // Escape key: pop rightmost card
   useEffect(() => {

@@ -48,11 +48,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     fetch("/music.json")
       .then((res) => res.json())
       .then((data: Track[]) => {
-        // Adjust paths if they don't start with /content
+        // Audio/cover are absolute URLs (R2) by default. Legacy local paths
+        // under /Media are still rewritten to /content/Media for back-compat.
+        const fix = (p: string) =>
+          p && p.startsWith("/Media") ? `/content${p}` : p
         const adjusted = data.map((t) => ({
           ...t,
-          audio: t.audio.startsWith("/Media") ? `/content${t.audio}` : t.audio,
-          cover: t.cover.startsWith("/Media") ? `/content${t.cover}` : t.cover,
+          audio: fix(t.audio),
+          cover: fix(t.cover),
         }))
         setTracks(adjusted)
       })
@@ -213,6 +216,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       <audio
         ref={audioRef}
         src={currentTrack?.audio}
+        crossOrigin="anonymous"
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         onLoadedMetadata={handleTimeUpdate}

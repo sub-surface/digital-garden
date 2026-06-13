@@ -101,6 +101,21 @@
   gap: 1rem;
 }
 
+.coverWrap {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .visualiserWrap {
   height: 30px;
   opacity: 0.3;
