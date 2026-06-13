@@ -18,3 +18,7 @@ public/og/
 .dev.vars
 .wrangler/
 .playwright-mcp/
+
+# Automation / agent tooling output (not source)
+daily-report.md
+.codex/
