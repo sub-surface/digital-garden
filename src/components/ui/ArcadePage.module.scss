@@ -1,4 +1,5 @@
 .arcadeContainer {
+  width: 100%;
   max-width: 760px;
   margin: 0 auto;
   padding: var(--space-8) 0;
@@ -11,6 +12,12 @@
 
   h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
   p { opacity: 0.5; font-size: 0.9rem; letter-spacing: 1px; }
+
+  // Tighter header when embedded in a narrow panel card
+  @container panel (max-width: 560px) {
+    margin-bottom: var(--space-6);
+    h1 { font-size: 1.8rem; }
+  }
 }
 
 .grid {
@@ -19,6 +26,8 @@
   gap: 1rem;
 
   @media (max-width: 600px) { grid-template-columns: 1fr; }
+  // Collapse to one column inside a narrow panel regardless of viewport
+  @container panel (max-width: 560px) { grid-template-columns: 1fr; }
 }
 
 .card {
@@ -39,10 +48,25 @@
   }
 }
 
+.cardFeatured {
+  grid-column: 1 / -1;
+  padding: 1.75rem;
+  background: color-mix(in srgb, var(--color-accent-base) 5%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent-base) 25%, var(--color-border));
+
+  .cardName { font-size: 1.35rem; }
+  .cardBlurb { font-size: 0.85rem; line-height: 1.5; }
+}
+
 .cardDisabled {
   opacity: 0.4;
   pointer-events: none;
   &:hover { border-color: var(--color-border); background: rgba(255, 255, 255, 0.02); }
+}
+
+.ext {
+  opacity: 0.5;
+  font-size: 0.8em;
 }
 
 .cardName {

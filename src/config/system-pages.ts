@@ -14,4 +14,6 @@ export const SYSTEM_PAGES: Record<string, SystemPage> = {
   movieshelf:      { component: lazy(() => import("@/components/ui/MovieshelfPage").then(m => ({ default: m.MovieshelfPage }))), layout: "article", loading: "Loading shelf..." },
   "music-library": { component: lazy(() => import("@/components/ui/MusicPage").then(m => ({ default: m.MusicPage }))),         layout: "article", loading: "Loading library..." },
   arcade:          { component: lazy(() => import("@/components/ui/ArcadePage").then(m => ({ default: m.ArcadePage }))),       layout: "article", loading: "Loading arcade..." },
+  snake:           { component: lazy(() => import("@/components/ui/SnakePage").then(m => ({ default: m.SnakePage }))),         layout: "article", loading: "Loading snake..." },
+  blackjack:       { component: lazy(() => import("@/components/ui/BlackjackPage").then(m => ({ default: m.BlackjackPage }))), layout: "article", loading: "Loading table..." },
 }

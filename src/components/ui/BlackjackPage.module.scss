@@ -1,0 +1,187 @@
+.bjContainer {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--space-8) 0;
+  font-family: var(--font-code);
+  text-align: center;
+}
+
+.header {
+  margin-bottom: var(--space-8);
+
+  h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  p { opacity: 0.5; font-size: 0.85rem; letter-spacing: 0.5px; }
+
+  @container panel (max-width: 560px) {
+    h1 { font-size: 1.8rem; }
+  }
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-height: 280px;
+  justify-content: space-between;
+}
+
+.seat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.seatLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  opacity: 0.5;
+}
+
+.total {
+  margin-left: 0.6em;
+  color: var(--color-accent-base);
+  opacity: 1;
+  font-weight: 600;
+}
+
+.cards {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 84px;
+}
+
+.card {
+  width: 58px;
+  height: 80px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-surface, #1a1a1f);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  animation: dealIn 0.25s ease backwards;
+
+  .rank { font-size: 1.4rem; font-weight: 500; line-height: 1; }
+  .suit { font-size: 1rem; opacity: 0.8; }
+
+  &.red { color: var(--color-accent-base); }
+}
+
+.faceDown {
+  background: color-mix(in srgb, var(--color-accent-base) 10%, var(--color-bg-surface, #1a1a1f));
+  border-style: dashed;
+}
+
+.cardBack {
+  font-size: 1.6rem;
+  opacity: 0.35;
+}
+
+.cardPlaceholder {
+  width: 58px;
+  height: 80px;
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+  opacity: 0.3;
+}
+
+@keyframes dealIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+.message {
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  min-height: 1.4em;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.controls {
+  margin-top: var(--space-8);
+  min-height: 48px;
+  display: flex;
+  justify-content: center;
+}
+
+.betRow, .actionRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.betStepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 0.2rem;
+
+  button {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+    font-size: 1rem;
+    &:hover { color: var(--color-accent-base); }
+  }
+}
+
+.betAmt {
+  min-width: 2.5em;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+}
+
+%btn {
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.6em 2em;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s, opacity 0.2s;
+}
+
+.primary {
+  @extend %btn;
+  border: 1px solid var(--color-accent-base);
+  background: color-mix(in srgb, var(--color-accent-base) 12%, transparent);
+  color: var(--color-text);
+
+  &:hover { background: color-mix(in srgb, var(--color-accent-base) 22%, transparent); }
+  &:disabled { opacity: 0.35; cursor: not-allowed; }
+}
+
+.secondary {
+  @extend %btn;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+
+  &:hover { border-color: var(--color-accent-base); color: var(--color-accent-base); }
+}
+
+.chipBar {
+  margin-top: var(--space-6);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+
+  strong {
+    color: var(--color-accent-base);
+    margin-left: 0.4em;
+    font-weight: 600;
+  }
+}

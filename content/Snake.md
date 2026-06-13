@@ -1,0 +1,4 @@
+---
+title: Snake
+tags: [games]
+---
