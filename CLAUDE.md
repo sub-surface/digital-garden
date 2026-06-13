@@ -16,10 +16,18 @@ Custom React 19 + Vite 6 SPA. A digital garden (notes, essays, collections) at `
 
 ```bash
 npm run dev          # prebuild + Vite HMR + nodemon watching content/
-npm run build        # prebuild + tsc --noEmit + vite build → dist/
+npm run build        # prebuild (via npm lifecycle) + tsc --noEmit + vite build → dist/
+npm test             # lightweight script checks (slug parity + sidenote order + package scripts)
+npm run typecheck:worker  # type-check the Cloudflare Worker entry point
+npm run check        # npm test + Worker typecheck + full build
 npm run prebuild     # content index rebuild
 PROCESS_OG=true npm run prebuild  # + OG image generation (slow)
 ```
+
+**Build note:** the `build` script is `tsc --noEmit && vite build` — it does NOT call `prebuild`
+explicitly. Prebuild runs only via npm's `prebuild` lifecycle hook (fires before any script named
+`build`). CF is safe because `wrangler.toml [build] command = "npm run build"`. Never run
+`vite build` directly for a real build — it skips prebuild and ships a stale content index.
 
 Dev dashboard: `/__dev` (dev mode only).
 
@@ -41,7 +49,8 @@ Dev dashboard: `/__dev` (dev mode only).
 | `src/styles/` | SCSS modules + global styles | Yes |
 | `src/store/` | Zustand store (single flat store) | Yes |
 | `src/router.tsx` | Hand-written route tree (not file-based) | Yes |
-| `functions/` | CF Workers functions (compiled separately by CF, NOT by Vite) | Yes |
+| `src/config/system-pages.ts` | System page slug → component/layout registry | Yes |
+| `src/worker.ts` | Cloudflare Worker entry: API routes + asset/meta handling (`tsconfig.worker.json`) | Yes |
 | `scripts/` | prebuild.ts, og-gen.ts (NOT type-checked by tsconfig) | Yes |
 | `public/` | Static assets + generated manifests | Manifests are generated |
 
@@ -72,7 +81,7 @@ Dev dashboard: `/__dev` (dev mode only).
 | `/wiki/submit` | WikiSubmitPage | Must be before catch-all |
 | `$` (catch-all) | NoteRenderer | Handles everything else |
 
-**System page slugs** (in NoteRenderer): `graph`, `chess`, `photography`, `bookshelf`, `movieshelf`, `music-library`.
+**System page slugs** live in `src/config/system-pages.ts`: `graph`, `chess`, `hexo`, `bookshelf`, `movieshelf`, `music-library`, `arcade`.
 
 ---
 
@@ -82,8 +91,10 @@ Dev dashboard: `/__dev` (dev mode only).
 1. `frontmatter.layout` explicit override → wins
 2. `type` is `book`/`movie`/`chatter`/`philosopher` → article
 3. Slug starts with `wiki/` → article
-4. System page slugs → article
+4. System page slugs → article (layout supplied by `SYSTEM_PAGES`)
 5. Default → note
+
+System-page layout comes from `SYSTEM_PAGES`; `resolveLayout()` still owns the frontmatter/type/wiki/default rules.
 
 **Article layout:** 900px body, right margin column (TOC + sidenotes), WikiInfobox for chatter/philosopher. Justified text.
 
@@ -112,7 +123,7 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 - **Build output:** `dist/`
 - **SPA routing:** `wrangler.toml` `[assets]` block + `public/_redirects` (`/* /index.html 200`)
 - **Custom domains:** `subsurfaces.net`, `www.subsurfaces.net`, `wiki.subsurfaces.net`, `chat.subsurfaces.net` (Worker custom domains)
-- **Functions:** `functions/api/submit.ts` — compiled by CF separately, not by Vite
+- **Worker/API:** `src/worker.ts` — one Cloudflare Worker serves API routes, static assets, and per-route OG/meta injection. Excluded from the Vite SPA build and `tsconfig.json`; compiled by Wrangler/CF and type-checked via `tsconfig.worker.json`.
 
 ---
 
@@ -122,8 +133,8 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 2. **`usePanelClick`** intercepts all internal link clicks at capture phase. Hash-only links (`#heading`) are skipped. `isWiki` bail-out added — wiki lets all links navigate normally.
 3. **`BgCanvas` is z-index 0.** All containers must be `background: transparent`. Global bg color on `body` only.
 4. **`import.meta.glob` is build-time.** New content files need a rebuild. `npm run dev` watches automatically.
-5. **`functions/` is NOT in the Vite build.** Don't add it to `vite.config.ts`. CF compiles it independently.
-6. **`resolveLayout` is the source of truth** for article vs note. Add new types there.
+5. **`src/worker.ts` is NOT in the Vite SPA build.** Excluded from `tsconfig.json`; compiled by Wrangler/CF. VS Code errors against it are ignorable — type-check it with `npm run typecheck:worker`.
+6. **`SYSTEM_PAGES` is the source of truth for system pages.** Add new game/tool pages in `src/config/system-pages.ts` (one line). Add new content-driven layout rules in `NoteRenderer.resolveLayout()`.
 7. **Sidenote footnotes:** `rehype-sidenotes` unwraps first `<p>` inside footnotes. Don't wrap sidenote content in block elements.
 8. **Case sensitivity:** Routes are case-insensitive at runtime. CF is case-sensitive for static assets — keep media filenames consistent.
 9. **Graph route** exists as both a dedicated route AND a NoteRenderer system page. Dedicated route wins via router specificity.
@@ -140,12 +151,12 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 | Task | Where |
 |---|---|
 | New note | Drop `.md`/`.mdx` in `content/`, add `title` frontmatter, rebuild |
-| New system page | Add to `NoteRenderer.renderContent()` + `resolveLayout()` |
+| New system page | Add one entry to `src/config/system-pages.ts` |
 | New floating UI | `position: fixed` inside AppShell, correct z-index, no transform on parent |
 | New frontmatter field | `NoteMeta` in `prebuild.ts` + `NoteMetadata` in `src/types/content.ts` |
 | New MDX component | Register in `src/components/mdx/MDXProvider.tsx` |
 | New remark/rehype plugin | Add to `vite.config.ts` plugin array in correct order |
-| New wiki submit field | Update `WikiSubmitPage.tsx` form + `functions/api/submit.ts` formatter |
+| New wiki submit field | Update `WikiSubmitPage.tsx` form + `src/worker.ts` submit formatter |
 
 ---
 
