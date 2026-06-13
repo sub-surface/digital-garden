@@ -56,15 +56,21 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 
 - [x] **Chess: homemade three-flavour bot** (drunk/casual/sharp) replaces the unreliable CDN-loaded Stockfish; GIF export now proxied through the Worker (`POST /api/chess/gif`); "Analyse on Lichess" button; accent-aware check/mate board flourish; softened framing. (2026-06-09)
 - [ ] Chess: public leaderboard (deferred — needs a results table)
+- [ ] **Arcade: shared game cabinet shell**: small reusable wrapper for game status, new-game/reset, local bests, keyboard/touch hints, and a consistent route/card treatment. Keep game logic isolated in `src/lib/{game}.ts` where possible.
+- [ ] **Arcade: Snake**: lightweight grid game with keyboard + swipe controls, local best score, palette-aware board, optional "garden serpent" theme where food becomes note/tag tokens and special fruit briefly opens shortcut routes.
+- [ ] **Arcade: Blackjack**: local-only dealer game with clean hand-value logic, soft/hard total helper, tiny table personality, streak/bankroll saved to localStorage, and no gambling/money framing beyond toy chips.
+- [ ] **Arcade: Memory Garden**: small concentration game using note titles, tags, book/movie covers, or emotes as pairs. Good fit for the site's archive because it turns discovery into play without backend work.
+- [ ] **Arcade: Link Ladder**: word-ladder / concept-ladder puzzle seeded from existing note titles and tags. Player transforms one concept into another through valid linked notes; can be daily-seeded without a server.
+- [ ] **Arcade: Lights Out / Circuit Shrine**: 5x5 toggle puzzle with theme/accent-driven glow states. Very light implementation, mobile-friendly, and visually distinct from chess/heXO.
 - [ ] **Pre-render SSG**: build-time HTML generation for all notes
 - [ ] **Image optimisation**: sharp WebP variants + `<picture>` srcsets
 - [ ] **Lighthouse CI**: GitHub Actions target 95+ desktop
 - [ ] **OG gen: SVG image support**: satori cannot load `.svg` images — detect SVG URLs in `og-gen.ts` and skip or rasterise via `sharp`
 - [ ] **OG gen: external image fetch failures**: `covers.openlibrary.org` fetch fails in CF build. Catch per-image and fall back gracefully.
 - [ ] **OG caching not working**: `0 cached` on every build. Investigate cache key logic; CF builds may not persist cache dir.
-- [ ] **Prebuild runs twice per CF deploy**: investigate deduplication
+- [x] **Prebuild runs twice per CF deploy**: fixed by letting npm's `prebuild` lifecycle run once before `build` instead of also invoking `npm run prebuild` inside the build script. (2026-06-09)
 - [ ] **`glob@11` deprecation warning**: track — update when fix is released upstream
-- [ ] **41 broken wikilinks** (as of 2026-06-09): see [garden.md](garden.md) for cluster breakdown. Includes case-mismatch duplicates (e.g. `Lars-von-Trier` vs `Lars-Von-Trier`) and leftover `Sample-Article` scaffolding links.
+- [ ] **35 broken wikilinks** (as of 2026-06-09): see [garden.md](garden.md) for cluster breakdown. The remaining warnings are genuine missing-note/editorial-alias work after fixing route mismatches, wiki sample scaffolding links, and section-fragment false positives.
 - [ ] **Detailed documentation**: comprehensive docs for the codebase
 - [ ] Fix CLS fully: image `width`/`height` attributes (Gallery, sidenotes, link preview, lightbox)
 

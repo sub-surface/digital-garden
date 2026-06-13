@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react"
-import { emoteSrc } from "@/lib/emoteIndex"
+import { emoteSrc, fetchEmoteIndex, getEmoteCache } from "@/lib/emoteIndex"
 import styles from "./ChatAutocomplete.module.scss"
 
 export type AutocompleteType = "emote" | "mention" | "command"
@@ -66,9 +66,7 @@ export function ChatAutocomplete({ items, selectedIndex, onSelect, position }: P
 // ── Emote cache (shared across instances) ──
 
 export function fetchEmoteNames(): Promise<string[]> {
-  return import("@/lib/emoteIndex").then(({ fetchEmoteIndex, getEmoteCache }) =>
-    fetchEmoteIndex().then(() => getEmoteCache()?.map((e) => e.name) ?? [])
-  )
+  return fetchEmoteIndex().then(() => getEmoteCache()?.map((e) => e.name) ?? [])
 }
 
 // ── Static commands ──

@@ -3,6 +3,7 @@ import remarkParse from "remark-parse"
 import remarkGfm from "remark-gfm"
 import remarkRehype from "remark-rehype"
 import rehypeStringify from "rehype-stringify"
+import assert from "node:assert/strict"
 import { rehypeSidenotes } from "../src/lib/rehype-sidenotes.js"
 
 const processor = unified()
@@ -21,9 +22,20 @@ Testing footnotes here[^1] and another one[^2].
 
 async function run() {
   const result = await processor.process(markdown)
-  console.log("--- HTML Output ---")
-  console.log(String(result))
-  console.log("-------------------")
+  const html = String(result)
+  const sidenoteNumbers = Array.from(html.matchAll(/<aside class="sidenote" data-number="([^"]+)"/g))
+    .map((match) => match[1])
+
+  assert.deepEqual(
+    sidenoteNumbers,
+    ["1", "2"],
+    "sidenotes should render in the same order as their footnote references",
+  )
+
+  console.log("Footnote sidenote order is stable.")
 }
 
-run().catch(console.error)
+run().catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})

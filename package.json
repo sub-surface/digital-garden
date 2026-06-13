@@ -6,7 +6,10 @@
   "scripts": {
     "prebuild": "tsx scripts/prebuild.ts",
     "dev": "npm run prebuild && concurrently -n worker,vite,watch -c magenta,cyan,yellow \"wrangler dev --config wrangler.dev.toml --port 8787\" \"vite\" \"nodemon --watch content -e md,mdx,yaml --exec npm run prebuild\"",
-    "build": "npm run prebuild && tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build",
+    "typecheck:worker": "tsc -p tsconfig.worker.json",
+    "test": "node scripts/test-slugs.mjs && tsx scripts/test-footnotes.ts && node scripts/test-package-scripts.mjs",
+    "check": "npm test && npm run typecheck:worker && npm run build",
     "preview": "vite preview",
     "dash": "node dash.mjs"
   },

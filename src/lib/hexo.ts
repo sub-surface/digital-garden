@@ -8,6 +8,7 @@ export interface HexoState {
   moveNumber: number
   winner: Player | null
   winningLine: string[] | null
+  lastPlaced: string[]          // cells placed in the current/most-recent turn (for last-move ring)
 }
 
 export function key(q: number, r: number): string {
@@ -23,6 +24,7 @@ export function initialState(): HexoState {
     moveNumber: 1,
     winner: null,
     winningLine: null,
+    lastPlaced: [],
   }
 }
 
@@ -62,9 +64,12 @@ export function placeStone(state: HexoState, q: number, r: number): HexoState {
   const stones = new Map(state.stones)
   stones.set(k, state.turn)
 
+  // lastPlaced accumulates within a turn: reset on the turn's first stone, else append.
+  const lastPlaced = state.placedThisTurn === 0 ? [k] : [...state.lastPlaced, k]
+
   const winningLine = checkWin(stones, q, r, state.turn)
   if (winningLine) {
-    return { ...state, stones, placedThisTurn: state.placedThisTurn + 1, winner: state.turn, winningLine }
+    return { ...state, stones, placedThisTurn: state.placedThisTurn + 1, winner: state.turn, winningLine, lastPlaced }
   }
 
   const placedThisTurn = state.placedThisTurn + 1
@@ -77,9 +82,10 @@ export function placeStone(state: HexoState, q: number, r: number): HexoState {
       placedThisTurn: 0,
       stonesPerTurn: 2,
       moveNumber: state.moveNumber + 1,
+      lastPlaced,
     }
   }
-  return { ...state, stones, placedThisTurn }
+  return { ...state, stones, placedThisTurn, lastPlaced }
 }
 
 /** Stones remaining to place this turn. */

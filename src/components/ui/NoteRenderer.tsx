@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, Suspense } from "react"
+import { useState, useMemo, useEffect, Suspense, lazy } from "react"
 import { useStore } from "@/store"
 import { ArticleLayout } from "./ArticleLayout"
 import { NoteLayout } from "./NoteLayout"
@@ -6,8 +6,6 @@ import { NoteFooter } from "./NoteFooter"
 import { NoteBody } from "./NoteBody"
 import { WikiInfobox } from "./WikiInfobox"
 import { resolveSlug } from "@/lib/content-loader"
-import { WikiEditButton } from "./WikiEditButton"
-import { BookmarkButton } from "./BookmarkButton"
 import { useIsWiki } from "@/hooks/useIsWiki"
 import { SYSTEM_PAGES } from "@/config/system-pages"
 import type { NoteMetadata } from "@/types/content"
@@ -15,6 +13,9 @@ import type { NoteMetadata } from "@/types/content"
 interface Props {
   slug: string
 }
+
+const WikiEditButton = lazy(() => import("./WikiEditButton").then((m) => ({ default: m.WikiEditButton })))
+const BookmarkButton = lazy(() => import("./BookmarkButton").then((m) => ({ default: m.BookmarkButton })))
 
 function resolveLayout(
   frontmatter: Record<string, any>,
@@ -113,8 +114,10 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
       {layout === "article" && (
         <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.45, marginBottom: 'var(--space-2)', display: 'flex', gap: '0.4em', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: '0.4em', alignItems: 'center' }}>
-            {editableWikiSlugs && <WikiEditButton slug={slug} />}
-            <BookmarkButton slug={slug} title={title} />
+            <Suspense fallback={null}>
+              {editableWikiSlugs && <WikiEditButton slug={slug} />}
+              <BookmarkButton slug={slug} title={title} />
+            </Suspense>
           </div>
           <div style={{ display: 'flex', gap: '0.4em', alignItems: 'center' }}>
             {breadcrumbParts.map((part, i) => {

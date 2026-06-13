@@ -4,14 +4,14 @@ import { NotFound } from "./NotFound"
 import { useMusic } from "./MusicContext"
 import { useStore } from "@/store"
 import { mdxComponents } from "@/components/mdx/MDXProvider"
+import { TagPage } from "./TagPage"
+import { FolderPage } from "./FolderPage"
 
 // Lazy-load system page components — avoids pulling heavy deps (D3, chess.js, etc.) into the main chunk
 const BookshelfPage = lazy(() => import("./BookshelfPage").then(m => ({ default: m.BookshelfPage })))
 const MovieshelfPage = lazy(() => import("./MovieshelfPage").then(m => ({ default: m.MovieshelfPage })))
 const MusicPage = lazy(() => import("./MusicPage").then(m => ({ default: m.MusicPage })))
 const ChessPage = lazy(() => import("./ChessPage").then(m => ({ default: m.ChessPage })))
-const TagPage = lazy(() => import("./TagPage").then(m => ({ default: m.TagPage })))
-const FolderPage = lazy(() => import("./FolderPage").then(m => ({ default: m.FolderPage })))
 
 interface Props {
   slug: string

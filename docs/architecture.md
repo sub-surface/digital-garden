@@ -73,7 +73,7 @@ Three interlocking systems: Chat (Phase 1), Stonks (Phase 2), Identity & Avatar 
 
 ## Key Architectural Notes
 
-- `src/worker.ts` is the CF Worker entry point — excluded from main tsconfig, compiled by wrangler independently. VS Code errors are ignorable.
+- `src/worker.ts` is the CF Worker entry point — excluded from the SPA `tsconfig.json`, compiled by Wrangler independently, and typechecked by `tsconfig.worker.json` via `npm run typecheck:worker`.
 - `functions/` directory removed — API handled directly in `src/worker.ts`.
 - SPA routing: `wrangler.toml` `[assets]` + `not_found_handling = "single-page-application"` (not `_redirects`).
 - `VITE_WIKI_MODE` must never be `true` in CF build env vars.
@@ -82,4 +82,5 @@ Three interlocking systems: Chat (Phase 1), Stonks (Phase 2), Identity & Avatar 
 - MDX custom components (`Query`, `WikiSubmitForm`, `BookCard`, etc.) must be passed via `components` prop on `<MDXComponent>` in `NoteBody` as well as registered in `MDXProvider` — context alone is insufficient.
 - `contentPath` in content-index preserves original filename casing for `public/content/` fetches on CF's Linux filesystem.
 - GitHub API calls use `master` not `main` (repo default branch).
-- `NoteRenderer.resolveLayout()` is the source of truth for article vs note layout.
+- `src/config/system-pages.ts` is the source of truth for system-page slug -> component + layout wiring.
+- `NoteRenderer.resolveLayout()` remains the source of truth for frontmatter/type/wiki/default article vs note layout rules.
