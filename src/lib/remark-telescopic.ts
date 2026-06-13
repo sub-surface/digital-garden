@@ -42,7 +42,9 @@ function applyInlineFormatting(text: string): string {
 }
 
 function parseNodes(raw: string): ParsedNode[] {
-  const lines = raw.split("\n")
+  // Normalise line endings — CRLF (Windows/Obsidian) would otherwise leave a
+  // trailing \r that breaks the bullet regex and flattens the whole tree.
+  const lines = raw.replace(/\r\n?/g, "\n").split("\n")
   const root: ParsedNode[] = []
   const stack: { indent: number; children: ParsedNode[] }[] = [
     { indent: -1, children: root },
