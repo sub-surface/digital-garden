@@ -117,12 +117,12 @@
 
 ## Content Housekeeping
 
-- [ ] **37 broken wikilinks**: build log reports 37 unresolved `[[wikilinks]]` across 14 notes. Highest priority clusters:
-  - `Moltbook` → 10 broken links (private/draft notes not in repo: `[[OpenClaw]]`, `[[Hyperstition]]`, `[[The-Claude-Bliss-Attractor]]`, etc.) — consider either creating stub notes or removing links
-  - `Writing/On-Attention` → 5 broken links (`[[Philosophy-of-Mind]]`, `[[Wittgenstein]]`, `[[Wiki/Concepts/index]]`) — create stubs or fix slugs
-  - `index` → `[[Music]]`, `[[Tags]]` — slug mismatch; likely should be `music-library` and `tags`
-  - `Wiki/Concepts`, `Wiki/Movements` → `[[Sample-Article]]` — placeholder link from wiki template, remove or replace
-  - One-offs: `[[Walter-Benjamin]]`, `[[Kodachrome]]`, `[[Lars-von-Trier]]`, `[[Abbas]]`, `[[08-11-25]]`, `[[Thomas-Sauvin]]`, `[[Rabbit-Holes]]`, `[[Narrative-hooks]]`, `[[Literary-orientations]]`, `[[Rosi-Braidotti]]` — create stubs or fix slugs
+- [ ] **35 broken wikilinks**: build log reports 35 unresolved `[[wikilinks]]` after route/placeholder/fragment false-positive cleanup. Highest priority clusters:
+  - `Moltbook` → 15 unresolved references, including duplicated private/draft notes (`[[OpenClaw]]`, `[[Hyperstition]]`, `[[The-Claude-Bliss-Attractor]]`, `[[11---Scheming-and-Deceptive-Alignment]]`, etc.) — consider either publishing stubs or converting intentionally private references to plain text
+  - `The-Apparatus-is-the-only-subject` → 3 references from `algorithmic-synchronicity`, `cybernetic-superstition`, and `hyperstition-as-compiler` — likely wants a stub or alias target
+  - `Writing/On-Attention` / `Writing/Writing-Template` → `[[Philosophy-of-Mind]]` and `[[Wittgenstein]]` — create wiki/concept stubs or revise examples
+  - Starter/editorial missing notes: `[[Rabbit-Holes]]`, `[[Narrative-hooks]]`, `[[Literary-orientations]]`
+  - One-offs/person aliases: `[[Walter-Benjamin]]`, `[[Kodachrome]]`, `[[Lars-von-Trier]]`, `[[Lars-Von-Trier]]`, `[[Abbas]]`, `[[08-11-25]]`, `[[Thomas-Sauvin]]`, `[[Gilles-Deleuze]]`, `[[Michel-Foucault]]`
 
 ---
 

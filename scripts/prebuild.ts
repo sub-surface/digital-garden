@@ -102,8 +102,10 @@ function extractWikiLinks(content: string): string[] {
   let match: RegExpExecArray | null
   while ((match = regex.exec(stripped)) !== null) {
     const rawTarget = match[1].trim()
+    const targetWithoutFragment = rawTarget.replace(/#.*$/, "").trim()
+    if (!targetWithoutFragment) continue
     // Normalise the target to match our slug system (hyphenated)
-    const normalized = rawTarget.replace(/\s+/g, "-")
+    const normalized = targetWithoutFragment.replace(/\s+/g, "-")
     links.push(normalized)
   }
   return links

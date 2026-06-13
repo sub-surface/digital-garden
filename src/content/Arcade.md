@@ -1,0 +1,4 @@
+---
+title: Arcade
+tags: [games]
+---

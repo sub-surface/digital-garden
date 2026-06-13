@@ -47,6 +47,12 @@ export function rehypeSidenotes() {
       }
     })
 
+    const pendingInsertions: Array<{
+      parent: Element
+      index: number
+      nodes: Element[]
+    }> = []
+
     // 2. Inject sidenotes after the containing block of each <sup>
     visit(tree, "element", (node, index, parent) => {
       if (
@@ -100,21 +106,40 @@ export function rehypeSidenotes() {
 
       // Walk up to find the nearest block-level ancestor (not <p> or <span>)
       // and inject after the child that contains our <sup>
-      let inlineEl: Element = node
       let blockParent = parent as Element
       let blockIndex = index
 
       while (["p", "span", "em", "strong", "a", "sup"].includes(blockParent.tagName)) {
         const entry = parentMap.get(blockParent)
         if (!entry) break
-        inlineEl = blockParent
         blockParent = entry.parent
         blockIndex = entry.index
       }
 
-      blockParent.children.splice(blockIndex + 1, 0, checkbox, label, sidenote)
+      pendingInsertions.push({
+        parent: blockParent,
+        index: blockIndex,
+        nodes: [checkbox, label, sidenote],
+      })
       return SKIP
     })
+
+    const insertionsByParent = new Map<Element, Map<number, Element[]>>()
+    for (const insertion of pendingInsertions) {
+      let byIndex = insertionsByParent.get(insertion.parent)
+      if (!byIndex) {
+        byIndex = new Map()
+        insertionsByParent.set(insertion.parent, byIndex)
+      }
+      byIndex.set(insertion.index, [...(byIndex.get(insertion.index) ?? []), ...insertion.nodes])
+    }
+
+    for (const [parent, byIndex] of insertionsByParent) {
+      const indexes = [...byIndex.keys()].sort((a, b) => b - a)
+      for (const insertionIndex of indexes) {
+        parent.children.splice(insertionIndex + 1, 0, ...(byIndex.get(insertionIndex) ?? []))
+      }
+    }
   }
 }
 

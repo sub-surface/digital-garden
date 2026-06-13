@@ -6,7 +6,7 @@ tags: [wiki, concept]
 
 A shared knowledge base by and for the philchat community.
 
-Inspect the [[Sample Article]] below or [[Wiki/Submit|submit your own]].
+Read the [[Wiki/Style-Guide|style guide]] below or [[Wiki/Submit|submit your own]].
 
 ---
 

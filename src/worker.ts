@@ -961,13 +961,17 @@ async function handleAdmin(request: Request, env: Env, pathname: string): Promis
   return jsonResponse({ error: "Not found" }, 404)
 }
 
-// ── Admin: API keys ──
+// ── API keys ──
 
-async function handleAdminApiKeys(request: Request, env: Env, url: URL): Promise<Response> {
+async function handleApiKeys(request: Request, env: Env, url: URL): Promise<Response> {
   const pathname = url.pathname
+  const isKeyCollection = pathname === "/api/keys" || pathname === "/api/admin/api-keys"
+  const keyId =
+    pathname.match(/^\/api\/keys\/([^/]+)$/)?.[1] ??
+    pathname.match(/^\/api\/admin\/api-keys\/([^/]+)$/)?.[1]
 
-  // POST /api/admin/api-keys — generate new key
-  if (pathname === "/api/admin/api-keys" && request.method === "POST") {
+  // POST /api/keys — generate new key
+  if (isKeyCollection && request.method === "POST") {
     const authUser = await verifyAuth(request, env)
     if (!authUser) return jsonResponse({ error: "Unauthorized" }, 401)
     const body = await request.json<{ name?: string }>()
@@ -990,8 +994,8 @@ async function handleAdminApiKeys(request: Request, env: Env, url: URL): Promise
     return jsonResponse({ key: "sk_" + rawKey, name })
   }
 
-  // GET /api/admin/api-keys — list own keys (key_hash never returned)
-  if (pathname === "/api/admin/api-keys" && request.method === "GET") {
+  // GET /api/keys — list own keys (key_hash never returned)
+  if (isKeyCollection && request.method === "GET") {
     const authUser = await verifyAuth(request, env)
     if (!authUser) return jsonResponse({ error: "Unauthorized" }, 401)
     const res = await fetch(
@@ -1002,13 +1006,12 @@ async function handleAdminApiKeys(request: Request, env: Env, url: URL): Promise
     return jsonResponse(await res.json())
   }
 
-  // DELETE /api/admin/api-keys/:id — soft revoke
-  if (pathname.match(/^\/api\/admin\/api-keys\/[^/]+$/) && request.method === "DELETE") {
+  // DELETE /api/keys/:id — soft revoke
+  if (keyId && request.method === "DELETE") {
     const authUser = await verifyAuth(request, env)
     if (!authUser) return jsonResponse({ error: "Unauthorized" }, 401)
-    const keyId = pathname.split("/").pop()
     const res = await fetch(
-      env.SUPABASE_URL + "/rest/v1/api_keys?id=eq." + keyId + "&user_id=eq." + authUser.id,
+      env.SUPABASE_URL + "/rest/v1/api_keys?id=eq." + encodeURIComponent(keyId) + "&user_id=eq." + authUser.id,
       {
         method: "PATCH",
         headers: {
@@ -1876,9 +1879,11 @@ export default {
     if (url.pathname.startsWith("/api/bookmarks")) {
       return handleBookmarks(request, env, url.pathname)
     }
-    if (url.pathname === "/api/admin/api-keys" ||
+    if (url.pathname === "/api/keys" ||
+        url.pathname.match(/^\/api\/keys\/[^/]+$/) ||
+        url.pathname === "/api/admin/api-keys" ||
         url.pathname.match(/^\/api\/admin\/api-keys\/[^/]+$/)) {
-      return handleAdminApiKeys(request, env, url)
+      return handleApiKeys(request, env, url)
     }
     if (url.pathname.startsWith("/api/admin/")) {
       return handleAdmin(request, env, url.pathname)

@@ -66,16 +66,16 @@ export default defineConfig(({ command }) => ({
     rollupOptions: {
       output: {
         // Function form so heavy vendor deps split out of the main entry chunk
-        // regardless of where they're imported. Supabase + flexsearch were leaking
-        // into the main `index` chunk via eagerly-loaded auth/search UI (QuickControls,
-        // WikiEditButton, SearchOverlay); isolating them keeps the entry chunk lean.
+        // regardless of where they're imported. Keep Supabase in its own lazy dependency
+        // chunk for wiki/chat auth paths. FlexSearch is intentionally not forced into a
+        // manual chunk: SearchOverlay imports it dynamically so search stays off the
+        // initial preload graph.
         // d3 / pixi.js / chess.js are NOT listed — they co-bundle with their own
         // lazy-loaded pages (GraphView, ChessPage) and never reach the main chunk.
         manualChunks(id) {
           if (id.includes("node_modules")) {
             if (id.includes("react-dom") || id.includes("/react/") || id.includes("scheduler")) return "vendor-react"
             if (id.includes("@supabase") || id.includes("@gotrue") || id.includes("gotrue-js") || id.includes("realtime-js") || id.includes("postgrest-js") || id.includes("storage-js")) return "vendor-supabase"
-            if (id.includes("flexsearch")) return "vendor-search"
             if (id.includes("@mdx-js")) return "vendor-mdx"
           }
         },

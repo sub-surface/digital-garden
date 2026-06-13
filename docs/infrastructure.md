@@ -19,7 +19,7 @@
 > Measured on desktop. FCP 3.6s, LCP 6.8s, TBT 130ms, CLS 0.353. Total payload 7.2MB. Same root causes as mobile — sourcemaps shipping to clients, no code splitting.
 
 - [x] **Disable production sourcemaps**: `sourcemap: true` in `vite.config.ts` is shipping `.map` files to the browser — 4MB+ of the 7.2MB payload. Set `sourcemap: false` for production.
-- [x] **Code splitting**: add `build.rollupOptions.output.manualChunks` to split `d3`, `pixi.js`, `flexsearch`, `chess.js` into separate chunks — prevents all heavy libs loading on initial page paint
+- [x] **Code splitting**: route-level lazy imports plus targeted `manualChunks` keep heavy dependencies out of the entry chunk. D3, PixiJS, Chess, and FlexSearch now load through lazy page/search paths rather than initial HTML preloads.
 - [x] **Create robots.txt**: `public/robots.txt` is missing entirely — Lighthouse logged 25 errors. Add a valid file.
 - [x] **Font display swap**: verified — Google Fonts URL has `display=swap`; no local `@font-face` rules exist in SCSS
 - [x] **`<main>` landmark**: wrap main content in `<main>` element for accessibility + SEO (currently missing, flagged by both Lighthouse runs)
@@ -30,7 +30,7 @@
 > Measured on mobile. FCP 21.4s, LCP 43.6s, TBT 1,270ms, CLS 0.399. Total payload 7.2MB. Root cause: enormous unminified/unused JS bundle and eager loading of heavy libraries.
 
 - [x] **Enable Vite minification**: `sourcemap: false` + no disabled minify — fixed alongside sourcemap removal
-- [x] **Reduce unused JS**: split vendor chunks done — `d3`, `pixi.js`, `flexsearch`, `chess.js` in own chunks
+- [x] **Reduce unused JS**: split vendor/page chunks done — D3, PixiJS, Chess, FlexSearch, and Supabase no longer load with the main garden entry
 - [x] **BgCanvas: skip on mobile**: early return added — canvas never mounts on `≤800px`
 - [x] **Fix CLS (partial)**: added `@font-face` fallbacks with `size-adjust`, `ascent-override`, `descent-override` in `base.scss` for all three fonts; updated `--font-*` tokens to include fallbacks. Image `width`/`height` attributes remain TODO (affects Gallery, sidenotes, link preview, lightbox)
 - [x] **Fix render-blocking requests** (est. 300ms savings): `index.html` Google Fonts now use `rel="preload"` + `onload` swap + `<noscript>` fallback
@@ -44,21 +44,23 @@
 - [x] **LocalGraph: lazy import D3 + PixiJS**: moved to dynamic `import()` in AppShell — 570KB (D3 + PixiJS) no longer in the initial bundle
 - [x] **content-index.json deferred**: moved fetch out of `main.tsx` startup into AppShell `useEffect` — no longer blocks initial React render
 - [x] **Trim Google Font weights**: removed unused variants — EB Garamond down to 1 variant (was 6), Playfair down to 4 (was 5), IBM Plex Mono down to 2 (was 3); saves ~30-40KB of font data
-- [x] **FlexSearch index: defer to first search open**: index now only built on first `isOpen=true` — no CPU cost if user never searches
+- [x] **FlexSearch index/module: defer to first search open**: FlexSearch is dynamically imported and the index is only built on first `isOpen=true` — no network or CPU cost if user never searches
 - [x] **BgCanvas: skip graph.json fetch unless in graph mode**: `graph.json` (18KB) now only fetched when `bgMode === "graph"` — saves a network request on every other background mode
 - [x] **`<main>` landmark**: wrap main content area in `<main>` element — missing, flagged by Lighthouse for accessibility + SEO
 - [x] **Auto-deploy on merge**: CF Workers auto-builds on push via `wrangler.toml` `[build]` command — no GitHub Actions needed
 - [x] **`_template` compiled as MDX chunk**: `dist/assets/_template-c5OcOr94.js` appears in the bundle — `content/Photos/_template.md` is being picked up by `import.meta.glob` and compiled. Add `_template` to the MDX glob exclusion pattern in `vite.config.ts` or rename to avoid the glob.
-- [x] **Static/dynamic import conflict (5→2 warnings)**: `BookshelfPage`, `MovieshelfPage`, `MusicPage`, `ChessPage`, `GraphView` converted to lazy imports in `NoteBody` and `GraphOverlay`. 2 remaining warnings are `TagPage`/`FolderPage` (lightweight, statically imported in router — no perf impact).
+- [x] **Static/dynamic import conflict warnings cleared**: heavy system pages stay lazy; `TagPage`/`FolderPage` are statically imported consistently; `emoteIndex` no longer mixes static and dynamic imports.
 - [x] **Main bundle 698KB (212KB gzip)**: reduced from 1.13MB/350KB by fixing static/dynamic import conflicts — heavy modules (chess.js, D3, PixiJS) now properly split into lazy chunks.
-- [ ] **Chess performance**: investigate Stockfish WASM latency on local builds
+- [x] **Chess performance**: removed the unreliable Stockfish WASM path; Chess now uses the in-repo `chessBot` implementation.
+- [x] **Unified local verification command**: `npm test` runs lightweight slug/sidenote/package-script checks; `npm run check` runs those checks, Worker typechecking, and the full build.
+- [x] **Worker typechecking**: `tsconfig.worker.json` covers `src/worker.ts` with Cloudflare Worker types; `npm run typecheck:worker` is part of `npm run check`.
 - [ ] **Pre-render SSG**: build-time HTML generation for all notes
 - [ ] **Image optimisation**: sharp WebP variants + `<picture>` srcsets
 - [ ] **Lighthouse CI**: GitHub Actions target 95+ desktop
 - [ ] **OG gen: SVG image support**: satori cannot load `.svg` images from Wikipedia/external sources — throws "Unsupported image type: unknown". Affects any note whose `image`/`cover` frontmatter points to an SVG URL. Fix: detect SVG URLs in `og-gen.ts` and skip the image, or rasterise via `sharp` before passing to satori. Currently crashes silently and falls back to text-only OG card. Affected note: any using `https://upload.wikimedia.org/...svg` cover images.
 - [ ] **OG gen: external image fetch failures**: `https://covers.openlibrary.org/...` fetch fails in CF build environment (likely blocked). Fix: catch fetch errors per-image and fall back gracefully rather than crashing the OG generator. Both SVG and fetch-failure cases should be handled together.
 - [ ] **OG caching not working**: build log shows `132 image(s) to generate (0 cached)` on every build — cache is never hit. OG images are being regenerated from scratch each deploy (~90s added to build time). Investigate cache key / hash logic in `og-gen.ts` and ensure the cache directory persists between CF builds (may need to use CF build output cache or commit generated images).
-- [ ] **Prebuild runs twice per CF deploy**: build log shows prebuild running once standalone (for OG gen) and again as part of `npm run build`. Combined with `wrangler deploy` triggering its own `npm run build`, this means prebuild runs 3× total per deploy. Investigate deduplication — consider splitting OG gen into a separate script not called by `prebuild`.
+- [x] **Prebuild runs twice per CF deploy**: fixed by removing the explicit `npm run prebuild` from the `build` script and relying on npm's `prebuild` lifecycle hook. `npm run build -- --help` now reports one `Prebuild complete.` line.
 - [ ] **`glob@11` deprecation warning**: `npm warn deprecated glob@11.1.0` on every install. Not a breaking issue but should be tracked — update when a direct or transitive dependency releases a fix.
 
 ---

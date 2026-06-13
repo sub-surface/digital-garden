@@ -34,7 +34,7 @@ In a post-truth, post-representation, and post-identity world, why are we so inu
 - Thousands of name-less, face-less individuals find their communities in siloed digital spaces, safely air-gapped from the social contamination of the *outside world.* 
 Might it be that the end of history was itself an historical moment, soon to be washed away like the naivete of a first love, which seems only more folly as time and experience sobers our collective hearts? Perhaps, perhaps not.
 
-Are these the *white-man's laments* which [[Rosi Braidotti]] identifies as, "*the melancholia of privilage*" which beset so many critiques of contemporary society as women joined the workforce, as minorities got the vote? The death throws of a wavering patriarchy? The Swan Song of a fading empire? I suspect not.[^1]
+Are these the *white-man's laments* which [[Wiki/Philosophers/rosi-braidotti|Rosi Braidotti]] identifies as, "*the melancholia of privilage*" which beset so many critiques of contemporary society as women joined the workforce, as minorities got the vote? The death throws of a wavering patriarchy? The Swan Song of a fading empire? I suspect not.[^1]
 
 Why not? Well, that's why we're here, *you and I,* to find out whther the world, history, progress, the whole shebang of grand narratives has any value at all, and hasn't yet gone entirely up in flames, alongside the hope of a democratic, egalitarian, *post-scarcity* future. With God-Emperor Donald at the helm of a new war machine in the middle east, only time will tell the shape of us reflected on the other side of [[Photography|history's mirror]]. 
 

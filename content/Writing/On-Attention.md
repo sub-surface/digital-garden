@@ -8,7 +8,6 @@ date: 2026-03-07
 published: true
 growth: actual
 ---
-
 # On Attention
 
 <div className="dropcap">
@@ -86,4 +85,4 @@ None of these is adequate to the scale of the problem. But they are practices th
 
 ---
 
-*Further reading: [[Philosophy of Mind]], [[Wiki/Concepts/index|Concepts Index]]*
+*Further reading: [[Philosophy of Mind]], [[Wiki/Concepts|Concepts Index]]*

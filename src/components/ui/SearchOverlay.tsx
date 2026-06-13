@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { useStore } from "@/store"
-import { useMusic } from "./MusicContext"
 import { useIsWiki } from "@/hooks/useIsWiki"
 import { useNavigate } from "@tanstack/react-router"
-import { Document } from "flexsearch"
+import type { Document } from "flexsearch"
 import styles from "./SearchOverlay.module.scss"
 
 interface SearchResult {
@@ -19,6 +18,7 @@ export function SearchOverlay() {
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<SearchResult[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
+  const [indexVersion, setIndexVersion] = useState(0)
   const contentIndex = useStore((s) => s.contentIndex)
   const pushCard = useStore((s) => s.pushCard)
   const isWiki = useIsWiki()
@@ -31,24 +31,36 @@ export function SearchOverlay() {
   useEffect(() => {
     if (!isOpen || !contentIndex || searchIndexRef.current) return
 
-    const index = new Document<SearchResult>({
-      document: {
-        id: "id",
-        index: ["title", "excerpt"],
-        store: ["title", "excerpt"],
-      },
-      tokenize: "forward",
-    })
+    let cancelled = false
+    async function buildIndex() {
+      const { Document } = await import("flexsearch")
+      if (cancelled || !contentIndex) return
 
-    Object.entries(contentIndex).forEach(([slug, meta]) => {
-      index.add({
-        id: slug,
-        title: meta.title,
-        excerpt: meta.excerpt || "",
+      const index = new Document<SearchResult>({
+        document: {
+          id: "id",
+          index: ["title", "excerpt"],
+          store: ["title", "excerpt"],
+        },
+        tokenize: "forward",
       })
-    })
 
-    searchIndexRef.current = index
+      Object.entries(contentIndex).forEach(([slug, meta]) => {
+        index.add({
+          id: slug,
+          title: meta.title,
+          excerpt: meta.excerpt || "",
+        })
+      })
+
+      if (!cancelled) {
+        searchIndexRef.current = index
+        setIndexVersion((v) => v + 1)
+      }
+    }
+
+    buildIndex()
+    return () => { cancelled = true }
   }, [isOpen, contentIndex])
 
   // Ctrl+K handler
@@ -107,7 +119,7 @@ export function SearchOverlay() {
 
     setResults(flattened)
     setActiveIndex(0)
-  }, [query])
+  }, [query, indexVersion])
 
   const handleSelect = (result: SearchResult) => {
     if (isWiki) {
@@ -123,9 +135,11 @@ export function SearchOverlay() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
+      if (results.length === 0) return
       e.preventDefault()
       setActiveIndex((prev) => (prev + 1) % results.length)
     } else if (e.key === "ArrowUp") {
+      if (results.length === 0) return
       e.preventDefault()
       setActiveIndex((prev) => (prev - 1 + results.length) % results.length)
     } else if (e.key === "Enter") {

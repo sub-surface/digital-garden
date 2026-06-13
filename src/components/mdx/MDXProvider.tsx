@@ -1,12 +1,29 @@
-import React from "react"
+import React, { Suspense, lazy } from "react"
 import { MDXProvider as BaseMDXProvider } from "@mdx-js/react"
 import { BookCard } from "./BookCard"
 import { MovieCard } from "./MovieCard"
 import { Gallery } from "./Gallery"
 import { Query } from "./Query"
-import { WikiSubmitForm } from "@/components/ui/WikiSubmitPage"
 import { AsciiAvatar } from "./AsciiAvatar"
-import { PhotoAlbums } from "@/components/ui/PhotographyPage"
+
+const LazyWikiSubmitForm = lazy(() => import("@/components/ui/WikiSubmitPage").then((m) => ({ default: m.WikiSubmitForm })))
+const LazyPhotoAlbums = lazy(() => import("@/components/ui/PhotographyPage").then((m) => ({ default: m.PhotoAlbums })))
+
+function WikiSubmitForm() {
+  return (
+    <Suspense fallback={null}>
+      <LazyWikiSubmitForm />
+    </Suspense>
+  )
+}
+
+function PhotoAlbums() {
+  return (
+    <Suspense fallback={null}>
+      <LazyPhotoAlbums />
+    </Suspense>
+  )
+}
 
 export const mdxComponents = {
   BookCard,

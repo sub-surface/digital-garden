@@ -10,6 +10,8 @@ const PRESET_COLORS = [
   "#6442b4", "#b44282", "#42b4b4", "#b4b442", "#8a8a8a",
 ]
 
+const API_KEYS_ENDPOINT = "/api/keys"
+
 interface StonkConfigRow {
   key: string
   value: number
@@ -100,7 +102,7 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
   useEffect(() => {
     if (tab !== "keys" || !accessToken) return
     setKeysLoading(true)
-    fetch("/api/admin/api-keys", { headers: { Authorization: `Bearer ${accessToken}` } })
+    fetch(API_KEYS_ENDPOINT, { headers: { Authorization: `Bearer ${accessToken}` } })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then((data: ApiKey[]) => setApiKeys(data.filter(k => !k.revoked_at)))
       .catch((e) => console.warn("ChatSettings: API keys load failed:", e))
@@ -118,7 +120,7 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
   async function handleGenerateKey() {
     if (!accessToken) return
     const name = newKeyName.trim() || "API Key"
-    const res = await fetch("/api/admin/api-keys", {
+    const res = await fetch(API_KEYS_ENDPOINT, {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
@@ -129,7 +131,7 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
     setNewKeyName("")
     setKeyCopied(false)
     // Refresh list
-    fetch("/api/admin/api-keys", { headers: { Authorization: `Bearer ${accessToken}` } })
+    fetch(API_KEYS_ENDPOINT, { headers: { Authorization: `Bearer ${accessToken}` } })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then((d: ApiKey[]) => setApiKeys(d.filter(k => !k.revoked_at)))
       .catch((e) => console.warn("ChatSettings: API keys refresh failed:", e))
@@ -137,7 +139,7 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
 
   async function handleRevokeKey(id: string) {
     if (!accessToken) return
-    await fetch(`/api/admin/api-keys/${id}`, {
+    await fetch(`${API_KEYS_ENDPOINT}/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${accessToken}` },
     })
