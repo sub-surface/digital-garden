@@ -133,6 +133,7 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
         className={styles.iconBtn}
         onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+        aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
       >
         {theme === "dark" ? "\u263C" : "\u263E"}
       </button>
@@ -143,6 +144,7 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
         onClick={cycleAccent}
         style={{ backgroundColor: accentBase }}
         title="Cycle accent color"
+        aria-label="Cycle accent color"
       />
 
       <BgModeToggle />
