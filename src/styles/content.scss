@@ -372,5 +372,10 @@
   // Short nav-style headings shouldn't wrap — they're designed to fit one line
   h4 {
     white-space: nowrap;
+
+    // ...but on narrow screens, let the section nav wrap instead of overflowing
+    @media (max-width: 640px) {
+      white-space: normal;
+    }
   }
 }

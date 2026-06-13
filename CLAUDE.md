@@ -140,7 +140,8 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 9. **Graph route** exists as both a dedicated route AND a NoteRenderer system page. Dedicated route wins via router specificity.
 10. **MDX content files use JSX syntax for inline HTML.** Use `className` not `class`, `htmlFor` not `for`, etc. in any raw HTML inside `.md`/`.mdx` files — they are compiled as JSX by `@mdx-js/rollup`.
 11. **`remark-telescopic` wikilinks must be slugified.** The telescopic plugin processes its own wikilink syntax independently of `remark-wikilinks` — any wikilink href must be lowercased with spaces→hyphens manually (no slug-map access at build time).
-12. **`music:` links match by `t.title` (case-insensitive).** Both `usePanelClick` and `NoteBody` resolve `music:TrackName` by matching `tracks.findIndex(t => t.title.toLowerCase() === ...)`. Track slugs (`Music/Eden`) are not used for this.
+12. **`music:` links match by `t.title` (case-insensitive), handled in `NoteBody` only.** `NoteBody` resolves `music:TrackName` via `tracks.findIndex(t => t.title.toLowerCase() === ...)`. `usePanelClick` deliberately bails on `music:` (it used to duplicate this). Track slugs are not used for matching.
+12b. **Music is SoundCloud-driven, NOT note-driven.** `public/music.json` is the committed source of truth, written by `npm run sync:music` (SoundCloud → R2). `prebuild` does NOT generate it (only seeds `[]` if missing). Audio/covers live in the `subsurfaces-music` R2 bucket. See `docs/music-workflow.md`. Per-track `content/Music/*.md` notes are now optional liner notes only.
 13. **`BgCanvas` skips on mobile (`≤800px`).** Implemented via an outer `BgCanvas` shell component that returns `null` and an inner `BgCanvasInner` holding all hooks — required to avoid hooks-after-return violation.
 14. **`content-index.json` is fetched in `AppShell` `useEffect`, not `main.tsx`.** Deferred post-render to avoid blocking first paint. Do not move it back to startup.
 
@@ -157,6 +158,7 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 | New MDX component | Register in `src/components/mdx/MDXProvider.tsx` |
 | New remark/rehype plugin | Add to `vite.config.ts` plugin array in correct order |
 | New wiki submit field | Update `WikiSubmitPage.tsx` form + `src/worker.ts` submit formatter |
+| New music track | Upload to SoundCloud, run `npm run sync:music`, commit `public/music.json` (see `docs/music-workflow.md`) |
 
 ---
 
