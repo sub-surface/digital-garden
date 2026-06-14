@@ -16,4 +16,9 @@ export const SYSTEM_PAGES: Record<string, SystemPage> = {
   arcade:          { component: lazy(() => import("@/components/ui/ArcadePage").then(m => ({ default: m.ArcadePage }))),       layout: "article", loading: "Loading arcade..." },
   snake:           { component: lazy(() => import("@/components/ui/SnakePage").then(m => ({ default: m.SnakePage }))),         layout: "article", loading: "Loading snake..." },
   blackjack:       { component: lazy(() => import("@/components/ui/BlackjackPage").then(m => ({ default: m.BlackjackPage }))), layout: "article", loading: "Loading table..." },
+  tetris:          { component: lazy(() => import("@/components/ui/TetrisPage").then(m => ({ default: m.TetrisPage }))),       layout: "article", loading: "Loading well..." },
+  "2048":          { component: lazy(() => import("@/components/ui/Game2048Page").then(m => ({ default: m.Game2048Page }))),   layout: "article", loading: "Loading tiles..." },
+  murmuration:     { component: lazy(() => import("@/components/ui/BoidsPage").then(m => ({ default: m.BoidsPage }))),         layout: "article", loading: "Loading flock..." },
+  sandbox:         { component: lazy(() => import("@/components/ui/SandPage").then(m => ({ default: m.SandPage }))),           layout: "article", loading: "Loading sand..." },
+  "hex-mines":     { component: lazy(() => import("@/components/ui/HexMinesPage").then(m => ({ default: m.HexMinesPage }))),   layout: "article", loading: "Loading minefield..." },
 }

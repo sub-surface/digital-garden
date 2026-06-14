@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { sfx } from "@/lib/sfx"
 import styles from "./SnakePage.module.scss"
 
 /**
@@ -133,6 +134,7 @@ export function SnakePage() {
       const willGrow = pendingGrowth.current > 0
       const body = willGrow ? snake.current : snake.current.slice(0, -1)
       if (body.some((c) => eq(c, next))) {
+        sfx.play("death")
         setStatus("dead")
         setBest((b) => {
           const nb = Math.max(b, score)
@@ -146,12 +148,14 @@ export function SnakePage() {
         pendingGrowth.current += 1
         setScore((s) => s + 1)
         seed.current = randomCell([next, ...snake.current])
+        sfx.play("eat")
       } else if (bloom.current && eq(next, bloom.current)) {
         pendingGrowth.current += 3
         setScore((s) => s + 5)
         bloom.current = null
         bloomTimer.current = 2600 // ms of slow-mo
         sinceBloom.current = 0
+        sfx.play("bloom")
       }
 
       const newSnake = [next, ...snake.current]
