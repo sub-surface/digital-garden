@@ -7,7 +7,7 @@ id: blog
 growth: becoming
 ---
 
-#### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ **[Star](https://star.subsurfaces.net)** ~ **[heXO](/hexo)** ~ [[Housekeeping]] ~ [Github](https://github.com/sub-surface)
+#### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ **[Arcade](/arcade)** ~ [[Housekeeping]] ~ [Github](https://github.com/sub-surface)
 
 > [[Bookshelf]] ~ [[Movieshelf]] ~ [Musicshelf](/music-library) ~ [[Photography|Photos]] ~ [[Chess]] ~ [[Wiki]] ~ [Tags](/tags)
 
