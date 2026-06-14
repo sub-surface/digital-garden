@@ -14,7 +14,7 @@
     right: 2rem;
     width: 280px;
     height: 280px;
-    z-index: 90;
+    z-index: 150; // above ambient chrome (clock/quick-controls), below modals
     opacity: 0.33;
     backdrop-filter: blur(8px);
     transition: opacity 0.3s ease, transform 0.3s var(--ease-spring), width 0.3s ease, height 0.3s ease;

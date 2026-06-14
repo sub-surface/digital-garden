@@ -238,4 +238,11 @@
     width: 100%;
     max-width: 960px;
   }
+
+  // full-bleed pages (e.g. the constellation) opt out of the width cap
+  > div[data-fullbleed] {
+    max-width: none;
+    flex: 1;
+    min-height: 0;
+  }
 }

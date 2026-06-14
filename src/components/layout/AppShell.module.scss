@@ -16,6 +16,9 @@
   scroll-behavior: smooth;
   // NOTE: no scroll-snap here — combined with the sticky main pane it would
   // re-snap back to the left whenever a new panel card scrolls into view.
+  // overflow-anchor: none stops the browser from re-anchoring (and yanking the
+  // horizontal scroll back to 0) when the panel stack mutates.
+  overflow-anchor: none;
   -webkit-overflow-scrolling: touch;
 
   // Thin overlay scrollbar — hidden until hover

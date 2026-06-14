@@ -36,11 +36,22 @@ function hueForTag(tag: string): number {
 
 const norm = (t: string) => t.toLowerCase()
 
+interface Stats {
+  notes: number
+  links: number
+  tags: number
+  topTags: { tag: string; count: number }[]
+  hub: { title: string; id: string; degree: number } | null
+  orphans: number
+}
+
 export function ConstellationPage({ embedded = false }: { embedded?: boolean } = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const navigate = useNavigate()
   const [ready, setReady] = useState(false)
   const [hovered, setHovered] = useState<string | null>(null)
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [showStats, setShowStats] = useState(!embedded)
   const hoveredRef = useRef<string | null>(null)
   hoveredRef.current = hovered
 
@@ -95,11 +106,40 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
             hue: hueForTag(tag),
           }
         })
+
+        // ── garden statistics ──
+        const tagCounts = new Map<string, number>()
+        for (const n of data.nodes) {
+          for (const tg of n.tags ?? []) tagCounts.set(norm(tg), (tagCounts.get(norm(tg)) ?? 0) + 1)
+        }
+        const topTags = [...tagCounts.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([tag, count]) => ({ tag, count }))
+        let hub: Stats["hub"] = null
+        for (const s of stars.current) {
+          if (!hub || s.degree > hub.degree) hub = { title: s.title, id: s.id, degree: s.degree }
+        }
+        const orphans = stars.current.filter((s) => s.degree === 0).length
+        setStats({
+          notes: data.nodes.length,
+          links: data.links.length,
+          tags: tagCounts.size,
+          topTags,
+          hub: hub && hub.degree > 0 ? hub : null,
+          orphans,
+        })
+
         setReady(true)
       })
       .catch((e) => console.warn("Constellation: graph load failed", e))
     return () => { cancelled = true }
   }, [])
+
+  const resetView = () => { view.current = { x: 0, y: 0, zoom: 1 } }
+  const zoomBy = (factor: number) => {
+    view.current.zoom = Math.max(0.3, Math.min(6, view.current.zoom * factor))
+  }
 
   useEffect(() => {
     if (!ready) return
@@ -180,13 +220,27 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
           ctx.fill()
         }
 
-        // label for hovered (and its neighbours faintly)
-        if (isHov || (hov && isLit)) {
-          ctx.globalAlpha = isHov ? 0.95 : 0.5
-          ctx.fillStyle = isHov ? "#fff" : "rgba(255,255,255,0.7)"
-          ctx.font = `${(isHov ? 13 : 11) / v.zoom}px 'IBM Plex Mono', monospace`
-          ctx.textAlign = "center"
-          ctx.fillText(s.title, p.x, p.y - r - 6 / v.zoom)
+        // Labels: always for the hovered star + its neighbours; and once zoomed
+        // in past a threshold, reveal labels for every star (brighter for bigger
+        // / more-connected stars, fading in as you zoom further).
+        const zoomReveal = v.zoom >= 1.6
+        const showLabel = isHov || (hov && isLit) || zoomReveal
+        if (showLabel) {
+          let alpha: number
+          if (isHov) alpha = 0.95
+          else if (hov && isLit) alpha = 0.5
+          else {
+            // fade in between zoom 1.6 and 2.4, weighted by degree so hubs show first
+            const z = Math.min(1, (v.zoom - 1.6) / 0.8)
+            alpha = Math.min(0.85, z * (0.4 + Math.min(0.5, s.degree * 0.12)))
+          }
+          if (alpha > 0.04) {
+            ctx.globalAlpha = alpha
+            ctx.fillStyle = isHov ? "#fff" : "rgba(255,255,255,0.82)"
+            ctx.font = `${(isHov ? 13 : 10) / v.zoom}px 'IBM Plex Mono', monospace`
+            ctx.textAlign = "center"
+            ctx.fillText(s.title, p.x, p.y - r - 6 / v.zoom)
+          }
         }
       }
 
@@ -258,8 +312,18 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
     }
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1
-      view.current.zoom = Math.max(0.3, Math.min(3, view.current.zoom * factor))
+      const v = view.current
+      const rect = canvas.getBoundingClientRect()
+      // cursor position relative to the transform origin (canvas centre + pan)
+      const cxp = e.clientX - rect.left - rect.width / 2 - v.x
+      const cyp = e.clientY - rect.top - rect.height / 2 - v.y
+      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12
+      const nz = Math.max(0.3, Math.min(6, v.zoom * factor))
+      const ratio = nz / v.zoom
+      // keep the point under the cursor fixed while zooming
+      v.x -= cxp * (ratio - 1)
+      v.y -= cyp * (ratio - 1)
+      v.zoom = nz
     }
 
     canvas.addEventListener("pointerdown", onDown)
@@ -278,7 +342,10 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
   }, [ready, navigate, embedded])
 
   return (
-    <div className={`${styles.constellationContainer} ${embedded ? styles.embedded : ""}`}>
+    <div
+      className={`${styles.constellationContainer} ${embedded ? styles.embedded : ""}`}
+      data-fullbleed={!embedded || undefined}
+    >
       {!embedded && (
         <header className={styles.header}>
           <h1>Constellation</h1>
@@ -288,6 +355,39 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
       <div className={styles.sky}>
         <canvas ref={canvasRef} className={styles.canvas} />
         {hovered && <div className={styles.hint}>{stars.current.find((s) => s.id === hovered)?.title}</div>}
+
+        {/* Stats panel */}
+        {stats && showStats && (
+          <div className={styles.statsPanel}>
+            <button className={styles.statsClose} onClick={() => setShowStats(false)} aria-label="Hide stats">×</button>
+            <div className={styles.statsGrid}>
+              <div className={styles.stat}><strong>{stats.notes}</strong><span>notes</span></div>
+              <div className={styles.stat}><strong>{stats.links}</strong><span>links</span></div>
+              <div className={styles.stat}><strong>{stats.tags}</strong><span>tags</span></div>
+              <div className={styles.stat}><strong>{stats.orphans}</strong><span>orphans</span></div>
+            </div>
+            {stats.hub && (
+              <button className={styles.hubLink} onClick={() => navigate({ to: `/${stats.hub!.id}` })}>
+                ★ most-linked: <em>{stats.hub.title}</em> ({stats.hub.degree})
+              </button>
+            )}
+            {stats.topTags.length > 0 && (
+              <div className={styles.tagRow}>
+                {stats.topTags.map((t) => (
+                  <a key={t.tag} href={`/tags/${t.tag}`} className={styles.tagChip}>{t.tag} <span>{t.count}</span></a>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tools */}
+        <div className={styles.tools}>
+          <button onClick={() => zoomBy(1.25)} aria-label="Zoom in" title="Zoom in">+</button>
+          <button onClick={() => zoomBy(1 / 1.25)} aria-label="Zoom out" title="Zoom out">−</button>
+          <button onClick={resetView} aria-label="Reset view" title="Reset view">⌖</button>
+          {!showStats && <button onClick={() => setShowStats(true)} aria-label="Show stats" title="Show stats">ℹ</button>}
+        </div>
       </div>
     </div>
   )
