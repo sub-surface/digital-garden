@@ -2,7 +2,7 @@ import { useEffect, useRef, lazy, Suspense } from "react"
 import { useStore } from "@/store"
 import styles from "./GraphOverlay.module.scss"
 
-const GraphView = lazy(() => import("./GraphView").then(m => ({ default: m.GraphView })))
+const ConstellationPage = lazy(() => import("./ConstellationPage").then(m => ({ default: m.ConstellationPage })))
 
 export function GraphOverlay() {
   const isOpen = useStore((s) => s.isGraphOpen)
@@ -26,14 +26,14 @@ export function GraphOverlay() {
     <div className={styles.overlay} ref={overlayRef}>
       <div className={styles.container}>
         <div className={styles.header}>
-          <h2>Knowledge Map</h2>
+          <h2>Constellation</h2>
           <button className={styles.closeBtn} onClick={() => setOpen(false)}>
             &times;
           </button>
         </div>
         <div className={styles.content}>
-          <Suspense fallback={<div>Loading map...</div>}>
-            <GraphView />
+          <Suspense fallback={<div>Charting the sky...</div>}>
+            <ConstellationPage embedded />
           </Suspense>
         </div>
       </div>

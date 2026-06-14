@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
+import { useStore } from "@/store"
 import styles from "./ConstellationPage.module.scss"
 
 /**
@@ -35,7 +36,7 @@ function hueForTag(tag: string): number {
 
 const norm = (t: string) => t.toLowerCase()
 
-export function ConstellationPage() {
+export function ConstellationPage({ embedded = false }: { embedded?: boolean } = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const navigate = useNavigate()
   const [ready, setReady] = useState(false)
@@ -247,7 +248,11 @@ export function ConstellationPage() {
     const onUp = (e: PointerEvent) => {
       if (dragging && !moved) {
         const hit = hitTest(e.clientX, e.clientY)
-        if (hit) navigate({ to: `/${hit.id}` })
+        if (hit) {
+          // close the Knowledge Map overlay if we're inside it, then travel
+          if (embedded) useStore.getState().setGraphOpen(false)
+          navigate({ to: `/${hit.id}` })
+        }
       }
       dragging = false
     }
@@ -270,14 +275,16 @@ export function ConstellationPage() {
       canvas.removeEventListener("pointerup", onUp)
       canvas.removeEventListener("wheel", onWheel)
     }
-  }, [ready, navigate])
+  }, [ready, navigate, embedded])
 
   return (
-    <div className={styles.constellationContainer}>
-      <header className={styles.header}>
-        <h1>Constellation</h1>
-        <p>The garden as a night sky. Drift through it — each star a note, each line a link. Click a star to travel there.</p>
-      </header>
+    <div className={`${styles.constellationContainer} ${embedded ? styles.embedded : ""}`}>
+      {!embedded && (
+        <header className={styles.header}>
+          <h1>Constellation</h1>
+          <p>The garden as a night sky. Drift through it — each star a note, each line a link. Click a star to travel there.</p>
+        </header>
+      )}
       <div className={styles.sky}>
         <canvas ref={canvasRef} className={styles.canvas} />
         {hovered && <div className={styles.hint}>{stars.current.find((s) => s.id === hovered)?.title}</div>}

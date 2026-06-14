@@ -7,7 +7,7 @@ export interface SystemPage {
 }
 
 export const SYSTEM_PAGES: Record<string, SystemPage> = {
-  graph:           { component: lazy(() => import("@/components/ui/GraphView").then(m => ({ default: m.GraphView }))),         layout: "article", loading: "Loading map..." },
+  graph:           { component: lazy(() => import("@/components/ui/ConstellationPage").then(m => ({ default: m.ConstellationPage }))), layout: "game", loading: "Charting the sky..." },
   chess:           { component: lazy(() => import("@/components/ui/ChessPage").then(m => ({ default: m.ChessPage }))),         layout: "game",    loading: "Loading board..." },
   hexo:            { component: lazy(() => import("@/components/ui/HexoPage").then(m => ({ default: m.HexoPage }))),           layout: "game",    loading: "Loading board..." },
   bookshelf:       { component: lazy(() => import("@/components/ui/BookshelfPage").then(m => ({ default: m.BookshelfPage }))),   layout: "article", loading: "Loading shelf..." },

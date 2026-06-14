@@ -5,6 +5,14 @@
   flex-direction: column;
 }
 
+// Inside the Knowledge Map overlay: no page header, fill the modal.
+.embedded {
+  .sky {
+    margin-top: 0;
+    min-height: 0;
+  }
+}
+
 .header {
   text-align: center;
   padding: var(--space-4) 1rem 0;
