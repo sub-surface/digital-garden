@@ -17,3 +17,4 @@ Custom React 19 + Vite 6 SPA serving three domains: `subsurfaces.net` (garden), 
 | [future.md](future.md) | Deferred and low-priority items, grouped by domain |
 | [devlog/README.md](devlog/README.md) | Devlog format and YAML schema |
 | [devlog/2026-03-13.yaml](devlog/2026-03-13.yaml) | Session log: chat UI overhaul, inline search, emote-only rendering |
+| [devlog/2026-06-14.yaml](devlog/2026-06-14.yaml) | Session log: music→R2, arcade + toys, murmuration background, living constellation |
