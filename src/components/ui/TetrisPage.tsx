@@ -107,7 +107,8 @@ export function TetrisPage() {
 
   const lockAndClear = useCallback(() => {
     const g = grid.current
-    const a = active.current!
+    const a = active.current
+    if (!a) return // nothing to lock (e.g. before start / after game over)
     a.cells.forEach(([x, y]) => { if (y >= 0) g[y][x] = a.id })
     sfx.play("lock")
 
@@ -179,6 +180,7 @@ export function TetrisPage() {
   }, [])
 
   const hardDrop = useCallback(() => {
+    if (!active.current) return // no piece in play — nothing to drop
     let dropped = 0
     while (move(0, 1)) dropped++
     if (dropped > 0) setScore((s) => s + dropped * 2)
@@ -315,13 +317,14 @@ export function TetrisPage() {
         </div>
       </div>
 
-      {/* Touch controls — only shown on coarse-pointer devices via CSS */}
+      {/* Touch controls — only shown on coarse-pointer devices via CSS.
+          Disabled unless a round is in play (the handlers also no-op safely). */}
       <div className={styles.touchPad}>
-        <button onClick={() => { if (move(-1, 0)) sfx.play("move") }} aria-label="Move left">←</button>
-        <button onClick={tryRotate} aria-label="Rotate">⟳</button>
-        <button onClick={() => { if (move(1, 0)) sfx.play("move") }} aria-label="Move right">→</button>
-        <button onClick={() => { if (move(0, 1)) setScore((s) => s + 1) }} aria-label="Soft drop">↓</button>
-        <button onClick={hardDrop} aria-label="Hard drop">⤓</button>
+        <button disabled={status !== "playing"} onClick={() => { if (move(-1, 0)) sfx.play("move") }} aria-label="Move left">←</button>
+        <button disabled={status !== "playing"} onClick={tryRotate} aria-label="Rotate">⟳</button>
+        <button disabled={status !== "playing"} onClick={() => { if (move(1, 0)) sfx.play("move") }} aria-label="Move right">→</button>
+        <button disabled={status !== "playing"} onClick={() => { if (move(0, 1)) setScore((s) => s + 1) }} aria-label="Soft drop">↓</button>
+        <button disabled={status !== "playing"} onClick={hardDrop} aria-label="Hard drop">⤓</button>
       </div>
     </div>
   )
