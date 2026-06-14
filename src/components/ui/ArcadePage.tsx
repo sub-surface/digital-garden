@@ -30,7 +30,7 @@ const GAMES: GameCard[] = [
   { href: "hex-mines", name: "Hex Mines", blurb: "Minesweeper on hexes — six neighbours each.", live: true },
   { href: "murmuration", name: "Murmuration", blurb: "A flock of boids that flees your cursor. A toy.", live: true },
   { href: "sandbox", name: "Sandbox", blurb: "Falling sand: paint, flow, grow, burn. A toy.", live: true },
-  { href: null, name: "Ant Farm", blurb: "A simulator — watch a colony forage, dig, and drift. Coming soon.", live: false },
+  { href: "ant-farm", name: "Ant Farm", blurb: "A colony foraging by pheromone — paths emerge and fade. A toy.", live: true },
 ]
 
 export function ArcadePage() {

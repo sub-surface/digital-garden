@@ -1,0 +1,62 @@
+.antContainer {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: var(--space-8) 0;
+  font-family: var(--font-code);
+  text-align: center;
+}
+
+.header {
+  margin-bottom: var(--space-5);
+
+  h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  p { opacity: 0.5; font-size: 0.78rem; letter-spacing: 0.3px; }
+
+  @container panel (max-width: 560px) {
+    h1 { font-size: 1.8rem; }
+  }
+}
+
+.stage {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  line-height: 0;
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: pointer;
+}
+
+.bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: var(--space-5);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.85;
+
+  strong { color: var(--color-accent-base); margin-left: 0.4em; font-weight: 600; }
+
+  button {
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.4em 1.4em;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text);
+    border-radius: 4px;
+    cursor: pointer;
+    &:hover { border-color: var(--color-accent-base); color: var(--color-accent-base); }
+  }
+}
