@@ -83,6 +83,12 @@ export function SnakePage() {
   }, [reset])
 
   // input
+  // queue a turn (shared by keyboard + swipe); starts a game if not playing
+  const steer = useCallback((nd: Dir) => {
+    if (status !== "playing") { start(); return }
+    if (nd !== OPPOSITE[dir.current]) queued.current = nd
+  }, [status, start])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const map: Record<string, Dir> = {
@@ -92,9 +98,7 @@ export function SnakePage() {
       const nd = map[e.key]
       if (nd) {
         e.preventDefault()
-        if (status !== "playing") { start(); return }
-        // can't reverse directly into yourself
-        if (nd !== OPPOSITE[dir.current]) queued.current = nd
+        steer(nd)
       } else if ((e.key === " " || e.key === "Enter") && status !== "playing") {
         e.preventDefault()
         start()
@@ -102,7 +106,23 @@ export function SnakePage() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [status, start])
+  }, [status, start, steer])
+
+  // touch: swipe to steer
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const s = touchStart.current
+    if (!s) return
+    const dx = e.changedTouches[0].clientX - s.x
+    const dy = e.changedTouches[0].clientY - s.y
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) { if (status !== "playing") start(); return }
+    if (Math.abs(dx) > Math.abs(dy)) steer(dx > 0 ? "right" : "left")
+    else steer(dy > 0 ? "down" : "up")
+    touchStart.current = null
+  }
 
   // main loop
   useEffect(() => {
@@ -235,7 +255,13 @@ export function SnakePage() {
         <p>Walls wrap. Seeds grow you; the rare bloom is worth five and bends time.</p>
       </header>
 
-      <div className={styles.board} data-status={status}>
+      <div
+        className={styles.board}
+        data-status={status}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        style={{ touchAction: "none" }}
+      >
         <canvas ref={canvasRef} width={480} height={480} className={styles.canvas} />
         {status !== "playing" && (
           <div className={styles.overlay}>

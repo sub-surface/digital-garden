@@ -109,3 +109,22 @@
   user-select: none;
   pointer-events: none;
 }
+
+// ── Mobile: keep the title from running under the top-right controls ──
+@media (max-width: 800px) {
+  .container {
+    // leave room for QuickControls' icons on the right
+    max-width: calc(100vw - 110px);
+  }
+
+  .title {
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .clockWrap {
+    display: none; // redundant with QuickControls; hide on mobile
+  }
+}

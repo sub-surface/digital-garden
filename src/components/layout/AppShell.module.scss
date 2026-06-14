@@ -14,7 +14,8 @@
   overflow-y: hidden;
   background: transparent; // Reveal canvas
   scroll-behavior: smooth;
-  scroll-snap-type: x proximity;
+  // NOTE: no scroll-snap here — combined with the sticky main pane it would
+  // re-snap back to the left whenever a new panel card scrolls into view.
   -webkit-overflow-scrolling: touch;
 
   // Thin overlay scrollbar — hidden until hover
@@ -52,7 +53,6 @@
   border-right: 1px solid var(--color-border);
   overflow-y: auto;
   scroll-behavior: smooth;
-  scroll-snap-align: start;
 
   .shell[data-layout="article"] & {
     flex: 1;

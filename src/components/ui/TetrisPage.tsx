@@ -314,6 +314,15 @@ export function TetrisPage() {
           <div className={styles.stat}><span>best</span><strong>{best}</strong></div>
         </div>
       </div>
+
+      {/* Touch controls — only shown on coarse-pointer devices via CSS */}
+      <div className={styles.touchPad}>
+        <button onClick={() => { if (move(-1, 0)) sfx.play("move") }} aria-label="Move left">←</button>
+        <button onClick={tryRotate} aria-label="Rotate">⟳</button>
+        <button onClick={() => { if (move(1, 0)) sfx.play("move") }} aria-label="Move right">→</button>
+        <button onClick={() => { if (move(0, 1)) setScore((s) => s + 1) }} aria-label="Soft drop">↓</button>
+        <button onClick={hardDrop} aria-label="Hard drop">⤓</button>
+      </div>
     </div>
   )
 }

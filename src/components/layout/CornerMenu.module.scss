@@ -2,7 +2,7 @@
   position: fixed;
   bottom: var(--space-8);
   right: var(--space-8);
-  z-index: 1000;
+  z-index: 1200; // above the mobile music bar (z-1100)
   display: none; // Hidden by default (desktop)
   flex-direction: column;
   align-items: flex-end;
@@ -10,6 +10,9 @@
 
   @media (max-width: 800px) {
     display: flex; // Show on mobile
+    // Sit clear of the 48px mobile music bar at the very bottom, with safe-area.
+    bottom: calc(48px + var(--space-3) + env(safe-area-inset-bottom, 0px));
+    right: var(--space-4);
   }
 }
 
