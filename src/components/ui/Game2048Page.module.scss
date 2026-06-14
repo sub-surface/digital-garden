@@ -1,0 +1,117 @@
+.g2048Container {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: var(--space-8) 0;
+  font-family: var(--font-code);
+  text-align: center;
+}
+
+.header {
+  margin-bottom: var(--space-5);
+
+  h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  p { opacity: 0.5; font-size: 0.8rem; letter-spacing: 0.3px; }
+
+  @container panel (max-width: 560px) {
+    h1 { font-size: 1.8rem; }
+  }
+}
+
+.scoreBar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: var(--space-4);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.85;
+
+  strong { color: var(--color-accent-base); margin-left: 0.4em; font-weight: 600; }
+}
+
+.newBtn {
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.4em 1.2em;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  border-radius: 4px;
+  &:hover { border-color: var(--color-accent-base); color: var(--color-accent-base); }
+}
+
+.boardWrap {
+  position: relative;
+  touch-action: none;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  aspect-ratio: 1 / 1;
+}
+
+.tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: clamp(1rem, 6cqw, 1.6rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.12s ease, transform 0.08s ease;
+
+  &.filled {
+    animation: pop 0.12s ease;
+  }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.85); }
+  100% { transform: scale(1); }
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(2px);
+  border-radius: 8px;
+}
+
+.endMsg {
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  color: var(--color-accent-base);
+}
+
+.startBtn {
+  font-family: var(--font-code);
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.6em 2em;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  border-radius: 4px;
+  &:hover { color: var(--color-accent-base); border-color: var(--color-accent-base); }
+}

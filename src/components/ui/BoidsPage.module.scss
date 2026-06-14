@@ -1,0 +1,46 @@
+.boidsContainer {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: var(--space-8) 0;
+  font-family: var(--font-code);
+  text-align: center;
+}
+
+.header {
+  margin-bottom: var(--space-5);
+
+  h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  p { opacity: 0.5; font-size: 0.8rem; letter-spacing: 0.3px; }
+
+  @container panel (max-width: 560px) {
+    h1 { font-size: 1.8rem; }
+  }
+}
+
+.stage {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  line-height: 0;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: crosshair;
+}
+
+.controls {
+  margin-top: var(--space-5);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+
+  label { display: inline-flex; align-items: center; gap: 0.75rem; }
+  strong { color: var(--color-accent-base); min-width: 2.5em; display: inline-block; text-align: left; }
+  input[type="range"] { accent-color: var(--color-accent-base); width: 200px; cursor: pointer; }
+}

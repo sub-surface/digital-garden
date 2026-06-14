@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { sfx } from "@/lib/sfx"
 import styles from "./SnakePage.module.scss"
 
 /**
@@ -82,6 +83,12 @@ export function SnakePage() {
   }, [reset])
 
   // input
+  // queue a turn (shared by keyboard + swipe); starts a game if not playing
+  const steer = useCallback((nd: Dir) => {
+    if (status !== "playing") { start(); return }
+    if (nd !== OPPOSITE[dir.current]) queued.current = nd
+  }, [status, start])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const map: Record<string, Dir> = {
@@ -91,9 +98,7 @@ export function SnakePage() {
       const nd = map[e.key]
       if (nd) {
         e.preventDefault()
-        if (status !== "playing") { start(); return }
-        // can't reverse directly into yourself
-        if (nd !== OPPOSITE[dir.current]) queued.current = nd
+        steer(nd)
       } else if ((e.key === " " || e.key === "Enter") && status !== "playing") {
         e.preventDefault()
         start()
@@ -101,7 +106,23 @@ export function SnakePage() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [status, start])
+  }, [status, start, steer])
+
+  // touch: swipe to steer
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const s = touchStart.current
+    if (!s) return
+    const dx = e.changedTouches[0].clientX - s.x
+    const dy = e.changedTouches[0].clientY - s.y
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) { if (status !== "playing") start(); return }
+    if (Math.abs(dx) > Math.abs(dy)) steer(dx > 0 ? "right" : "left")
+    else steer(dy > 0 ? "down" : "up")
+    touchStart.current = null
+  }
 
   // main loop
   useEffect(() => {
@@ -133,6 +154,7 @@ export function SnakePage() {
       const willGrow = pendingGrowth.current > 0
       const body = willGrow ? snake.current : snake.current.slice(0, -1)
       if (body.some((c) => eq(c, next))) {
+        sfx.play("death")
         setStatus("dead")
         setBest((b) => {
           const nb = Math.max(b, score)
@@ -146,12 +168,14 @@ export function SnakePage() {
         pendingGrowth.current += 1
         setScore((s) => s + 1)
         seed.current = randomCell([next, ...snake.current])
+        sfx.play("eat")
       } else if (bloom.current && eq(next, bloom.current)) {
         pendingGrowth.current += 3
         setScore((s) => s + 5)
         bloom.current = null
         bloomTimer.current = 2600 // ms of slow-mo
         sinceBloom.current = 0
+        sfx.play("bloom")
       }
 
       const newSnake = [next, ...snake.current]
@@ -231,7 +255,13 @@ export function SnakePage() {
         <p>Walls wrap. Seeds grow you; the rare bloom is worth five and bends time.</p>
       </header>
 
-      <div className={styles.board} data-status={status}>
+      <div
+        className={styles.board}
+        data-status={status}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        style={{ touchAction: "none" }}
+      >
         <canvas ref={canvasRef} width={480} height={480} className={styles.canvas} />
         {status !== "playing" && (
           <div className={styles.overlay}>

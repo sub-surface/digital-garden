@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { sfx } from "@/lib/sfx"
 import styles from "./BlackjackPage.module.scss"
 
 /**
@@ -52,6 +53,14 @@ export function BlackjackPage() {
   const [message, setMessage] = useState("Place your bet.")
   const [holeHidden, setHoleHidden] = useState(true)
 
+  // pending timeouts so we can cancel the dealer's dramatic play-out on unmount
+  const timers = useRef<number[]>([])
+  const after = (ms: number, fn: () => void) => {
+    const id = window.setTimeout(fn, ms)
+    timers.current.push(id)
+  }
+  useEffect(() => () => { timers.current.forEach(clearTimeout) }, [])
+
   const saveChips = useCallback((n: number) => {
     setChips(n)
     localStorage.setItem("bj-chips", String(n))
@@ -64,16 +73,18 @@ export function BlackjackPage() {
     const dBJ = isBlackjack(d)
     let delta = 0
     let msg = ""
-    if (pv > 21) { delta = -betAmt; msg = "Bust. The house takes it." }
-    else if (pBJ && !dBJ) { delta = Math.round(betAmt * 1.5); msg = "Blackjack. 3:2." }
-    else if (dBJ && !pBJ) { delta = -betAmt; msg = "Dealer blackjack." }
-    else if (dv > 21) { delta = betAmt; msg = "Dealer busts. You win." }
-    else if (pv > dv) { delta = betAmt; msg = "You win." }
-    else if (pv < dv) { delta = -betAmt; msg = "Dealer wins." }
-    else { delta = 0; msg = "Push." }
+    let sound: Parameters<typeof sfx.play>[0] = "win"
+    if (pv > 21) { delta = -betAmt; msg = "Bust. The house takes it."; sound = "lose" }
+    else if (pBJ && !dBJ) { delta = Math.round(betAmt * 1.5); msg = "Blackjack. 3:2."; sound = "blackjack" }
+    else if (dBJ && !pBJ) { delta = -betAmt; msg = "Dealer blackjack."; sound = "lose" }
+    else if (dv > 21) { delta = betAmt; msg = "Dealer busts. You win."; sound = "win" }
+    else if (pv > dv) { delta = betAmt; msg = "You win."; sound = "win" }
+    else if (pv < dv) { delta = -betAmt; msg = "Dealer wins."; sound = "lose" }
+    else { delta = 0; msg = "Push."; sound = "push" }
     saveChips(chips + delta)
     setMessage(msg)
     setPhase("done")
+    sfx.play(sound)
   }, [chips, saveChips])
 
   const deal = useCallback(() => {
@@ -83,10 +94,13 @@ export function BlackjackPage() {
     const dl = [d.pop()!, d.pop()!]
     setDeck(d); setPlayer(p); setDealer(dl)
     setHoleHidden(true)
+    sfx.play("deal")
 
     if (isBlackjack(p) || isBlackjack(dl)) {
-      setHoleHidden(false)
-      settle(p, dl, bet)
+      after(450, () => { setHoleHidden(false); sfx.play("flip") })
+      after(900, () => settle(p, dl, bet))
+      setPhase("dealer")
+      setMessage("...")
     } else {
       setPhase("player")
       setMessage("Hit or stand.")
@@ -98,21 +112,43 @@ export function BlackjackPage() {
     const d = [...deck]
     const p = [...player, d.pop()!]
     setDeck(d); setPlayer(p)
+    sfx.play("deal")
     if (handValue(p) > 21) {
-      setHoleHidden(false)
-      settle(p, dealer, bet)
+      setPhase("dealer")
+      after(500, () => { setHoleHidden(false); sfx.play("flip") })
+      after(950, () => settle(p, dealer, bet))
     }
   }, [phase, deck, player, dealer, bet, settle])
 
+  /** Dealer's dramatic turn: flip the hole card, then draw one card at a time. */
   const stand = useCallback(() => {
     if (phase !== "player") return
     setPhase("dealer")
-    setHoleHidden(false)
+    setMessage("Dealer plays...")
+
+    // reveal the hole card first
+    after(450, () => { setHoleHidden(false); sfx.play("flip") })
+
+    // pre-compute the dealer's final hand, then reveal each draw on a timer
     const d = [...deck]
-    const dl = [...dealer]
-    while (handValue(dl) < 17) dl.push(d.pop()!)
-    setDeck(d); setDealer(dl)
-    settle(player, dl, bet)
+    const draws: Card[] = []
+    const working = [...dealer]
+    while (handValue(working) < 17) {
+      const c = d.pop()!
+      working.push(c)
+      draws.push(c)
+    }
+
+    let t = 950
+    const STEP = 650
+    draws.forEach((c) => {
+      after(t, () => {
+        setDealer((cur) => [...cur, c])
+        sfx.play("deal")
+      })
+      t += STEP
+    })
+    after(t + 200, () => { setDeck(d); settle(player, working, bet) })
   }, [phase, deck, dealer, player, bet, settle])
 
   const newRound = useCallback(() => {

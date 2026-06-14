@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://subsurfaces.net/2048</loc></url>
   <url><loc>https://subsurfaces.net/2026-03-11</loc></url>
   <url><loc>https://subsurfaces.net/a-place-I'll-always-call-home</loc></url>
   <url><loc>https://subsurfaces.net/a-place-to-start-writing</loc></url>
   <url><loc>https://subsurfaces.net/Abbas</loc></url>
   <url><loc>https://subsurfaces.net/Action-&-Voice</loc></url>
   <url><loc>https://subsurfaces.net/agent</loc></url>
+  <url><loc>https://subsurfaces.net/Ant-Farm</loc></url>
   <url><loc>https://subsurfaces.net/Arcade</loc></url>
   <url><loc>https://subsurfaces.net/Blackjack</loc></url>
   <url><loc>https://subsurfaces.net/Books/Alone-Together</loc></url>
@@ -37,11 +39,13 @@
   <url><loc>https://subsurfaces.net/Clippings/Quasars</loc></url>
   <url><loc>https://subsurfaces.net/Clippings/Sloan-DSS-Galaxies</loc></url>
   <url><loc>https://subsurfaces.net/coming-to-know-the-world-as-it-is</loc></url>
+  <url><loc>https://subsurfaces.net/Constellation</loc></url>
   <url><loc>https://subsurfaces.net/Early-Warning-System</loc></url>
   <url><loc>https://subsurfaces.net/Emergency-Alert-System</loc></url>
   <url><loc>https://subsurfaces.net/ESA-POSTER</loc></url>
   <url><loc>https://subsurfaces.net/getting-lost</loc></url>
   <url><loc>https://subsurfaces.net/Gilles-Deleuze</loc></url>
+  <url><loc>https://subsurfaces.net/Hex-Mines</loc></url>
   <url><loc>https://subsurfaces.net/heXO</loc></url>
   <url><loc>https://subsurfaces.net/history</loc></url>
   <url><loc>https://subsurfaces.net/Housekeeping</loc></url>
@@ -98,6 +102,7 @@
   <url><loc>https://subsurfaces.net/Movies/Whiplash</loc></url>
   <url><loc>https://subsurfaces.net/Movies/Wings-of-Desire</loc></url>
   <url><loc>https://subsurfaces.net/Movieshelf</loc></url>
+  <url><loc>https://subsurfaces.net/Murmuration</loc></url>
   <url><loc>https://subsurfaces.net/Music/Aokigahara</loc></url>
   <url><loc>https://subsurfaces.net/Music/CamsChords</loc></url>
   <url><loc>https://subsurfaces.net/Music/Eden</loc></url>
@@ -115,7 +120,9 @@
   <url><loc>https://subsurfaces.net/Philosophy-of-Mind</loc></url>
   <url><loc>https://subsurfaces.net/Photography</loc></url>
   <url><loc>https://subsurfaces.net/Photos/lancaster</loc></url>
+  <url><loc>https://subsurfaces.net/Sandbox</loc></url>
   <url><loc>https://subsurfaces.net/Snake</loc></url>
+  <url><loc>https://subsurfaces.net/Tetris</loc></url>
   <url><loc>https://subsurfaces.net/the-history-of-images</loc></url>
   <url><loc>https://subsurfaces.net/the-machine-god-in-the-future</loc></url>
   <url><loc>https://subsurfaces.net/thinking-in-public</loc></url>

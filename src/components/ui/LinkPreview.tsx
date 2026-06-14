@@ -18,7 +18,8 @@ interface PreviewState {
   depth: number
 }
 
-const DELAY = 350
+const DELAY = 320       // hover-in delay before a preview opens
+const HIDE_DELAY = 110  // grace period after leaving — just enough to reach the card
 const MAX_DEPTH = 4
 const PREVIEW_W = 300
 const PREVIEW_H = 200
@@ -230,7 +231,7 @@ export function LinkPreview() {
         const depth = parseInt(toPreview.getAttribute("data-depth") || "0")
         clearTimeout(timer.current)
         if (depth < stack.length - 1) {
-          timer.current = setTimeout(() => popTo(depth + 1), DELAY)
+          timer.current = setTimeout(() => popTo(depth + 1), HIDE_DELAY)
         }
         return
       }
@@ -242,7 +243,7 @@ export function LinkPreview() {
       timer.current = setTimeout(() => {
         if (!currentSlug.current) return
         popTo(0)
-      }, DELAY)
+      }, HIDE_DELAY)
     }
 
     document.addEventListener("mouseover", handleOver)

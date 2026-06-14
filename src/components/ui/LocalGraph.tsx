@@ -31,7 +31,7 @@ export function LocalGraph({ slug }: Props) {
   const pushCard = useStore((s) => s.pushCard)
   const clearStack = useStore((s) => s.clearStack)
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 800)
-  const [isMinimised, setIsMinimised] = useState(false)
+  const [isMinimised, setIsMinimised] = useState(true)
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 800)
@@ -298,7 +298,7 @@ export function LocalGraph({ slug }: Props) {
     <div className={styles.localGraph} data-floating={!isMobile || undefined} data-minimised={isMinimised || undefined}>
       {!isMinimised && <div ref={containerRef} className={styles.canvasWrapper} />}
       <div className={styles.header}>
-        <span className={styles.title}>{isMinimised ? "Radar" : "Radar Scope"}</span>
+        <span className={styles.title}>Neighborhood</span>
         <div className={styles.actions}>
           {!isMinimised && (
             <button 

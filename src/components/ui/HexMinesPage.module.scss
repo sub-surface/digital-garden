@@ -1,0 +1,101 @@
+.minesContainer {
+  width: 100%;
+  max-width: 660px;
+  margin: 0 auto;
+  padding: var(--space-8) 0;
+  font-family: var(--font-code);
+  text-align: center;
+}
+
+.header {
+  margin-bottom: var(--space-5);
+
+  h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  p { opacity: 0.5; font-size: 0.78rem; letter-spacing: 0.3px; }
+
+  @container panel (max-width: 560px) {
+    h1 { font-size: 1.8rem; }
+  }
+}
+
+.bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: var(--space-4);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.85;
+
+  strong { color: var(--color-accent-base); margin-left: 0.4em; font-weight: 600; }
+}
+
+.state {
+  min-width: 3em;
+  &[data-state="won"] { color: var(--color-accent-base); }
+  &[data-state="lost"] { color: #c8543a; }
+}
+
+.newBtn {
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.4em 1.2em;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  border-radius: 4px;
+  &:hover { border-color: var(--color-accent-base); color: var(--color-accent-base); }
+}
+
+.board {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  user-select: none;
+}
+
+.cellGroup { cursor: pointer; }
+
+.hex {
+  fill: rgba(255, 255, 255, 0.04);
+  stroke: var(--color-border);
+  stroke-width: 1;
+  transition: fill 0.12s;
+
+  &:hover { fill: color-mix(in srgb, var(--color-accent-base) 14%, transparent); }
+
+  &.revealed {
+    fill: transparent;
+    stroke: rgba(255, 255, 255, 0.06);
+    &:hover { fill: transparent; }
+  }
+
+  &.mine {
+    fill: color-mix(in srgb, #c8543a 30%, transparent);
+  }
+}
+
+.num {
+  fill: var(--color-accent-base);
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--font-code);
+  pointer-events: none;
+}
+
+.bomb {
+  fill: #c8543a;
+  font-size: 1.1rem;
+  pointer-events: none;
+}
+
+.flagMark {
+  fill: var(--color-accent-base);
+  font-size: 1rem;
+  pointer-events: none;
+}

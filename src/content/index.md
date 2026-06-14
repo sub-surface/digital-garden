@@ -9,7 +9,7 @@ growth: becoming
 
 #### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ **[Arcade](/arcade)** ~ [[Housekeeping]] ~ [Github](https://github.com/sub-surface)
 
-> [[Bookshelf]] ~ [[Movieshelf]] ~ [Musicshelf](/music-library) ~ [[Photography|Photos]] ~ [[Chess]] ~ [[Wiki]] ~ [Tags](/tags)
+> [[Bookshelf]] ~ [[Movieshelf]] ~ [Musicshelf](/music-library) ~ [[Photography|Photos]] ~ [[Chess]] ~ [[Wiki]] ~ [Constellation](/constellation) ~ [Tags](/tags)
 
 <AsciiAvatar label="glorp" align="right" interval={1500} />
 
@@ -38,7 +38,9 @@ Welcome to a node in the subsurface network.
 		  - my own music too: [Hello!](music:hello)
 ```
 
-**Some places[^1] to get started:**
+---
+
+**Some places to get started:**[^1]
 
 <Query filter="folder=Writing" sort="-date" limit="8" display="list" />
 
@@ -64,17 +66,16 @@ A virtual space for [[thinking in public]],
 		- or just have fun [[getting lost]].
 ```
 
+    ![[laoma.png]]
 
 
 
 
 
-[^1]: 
-> ## This site is a work in progress. 
-> These notes are a reflection of my current thoughts and interests, and they will evolve over time. Dont be surprised if you find some dead ends, partial notes, or stubs.<br />
-> Clicking [[getting lost|Links]] will open sidenotes, which are notes, on the side. Sidenotes can be closed or expanded in the tab bar between notes.<br />
-> ![[laoma.png]]  
-> **Please be patient.** I'm Acoustic.
+[^1]: **This site is a work in progress.**
+    These notes are a reflection of my current thoughts and interests, and they will evolve over time. Dont be surprised if you find some dead ends, partial notes, or stubs.
+    Clicking [[getting lost|Links]] will open sidenotes, which are notes, on the side. Sidenotes can be closed or expanded in the tab bar between notes.
+    **Please be patient.** I'm Acoustic.
 
 
 

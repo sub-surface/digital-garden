@@ -121,14 +121,14 @@ export function ThemePanel() {
               </button>
             </div>
             <div className={styles.scrollSelect}>
-              {(["graph", "vectors", "dots", "terminal"] as const).map((m) => (
-                <button 
+              {(["murmuration", "graph", "vectors", "dots", "terminal"] as const).map((m) => (
+                <button
                   key={m}
-                  className={styles.textLink} 
-                  data-active={bgMode === m} 
+                  className={styles.textLink}
+                  data-active={bgMode === m}
                   onClick={() => setBgMode(m)}
                 >
-                  {m === "graph" ? "Graph [Default]" : m}
+                  {m === "murmuration" ? "Murmuration [Default]" : m}
                 </button>
               ))}
             </div>

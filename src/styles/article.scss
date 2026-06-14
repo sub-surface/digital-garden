@@ -195,8 +195,54 @@
     grid-template-columns: 1fr;
     padding: 1.5rem;
   }
-  
+
   .article-body {
     grid-column: 1;
+  }
+}
+
+// ── Game layout ──
+// Bare, wide, vertically generous. Breaks out of the main-content padding so a
+// game gets the full pane width and room to breathe — no article column, no TOC.
+.game-layout {
+  // cancel the .mainContent padding (2rem 3rem) so games use the full pane
+  margin: -2rem -3rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+
+  // mainContent padding is 1.5rem on mobile — cancel exactly that
+  @media (max-width: 800px) {
+    margin: -1.5rem;
+  }
+}
+
+.game-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 2rem 1rem 3rem;
+  min-height: 100%;
+
+  // leave room for the mobile music bar + corner menu at the bottom
+  @media (max-width: 800px) {
+    padding: 1.25rem 0.75rem 5rem;
+  }
+
+  // Let game pages use the full available width inside the stage instead of
+  // their default narrow article max-widths. The inner container max-widths
+  // are bumped per-page below; this just removes the outer cap.
+  > div {
+    width: 100%;
+    max-width: 960px;
+  }
+
+  // full-bleed pages (e.g. the constellation) opt out of the width cap
+  > div[data-fullbleed] {
+    max-width: none;
+    flex: 1;
+    min-height: 0;
   }
 }

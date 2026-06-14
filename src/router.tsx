@@ -22,7 +22,7 @@ const WikiProfilePage = lazy(() => import("@/components/ui/WikiProfilePage").the
 const ChatPage = lazy(() => import("@/components/ui/ChatPage").then(m => ({ default: m.ChatPage })))
 
 // Lazy load heavy components
-const GraphView = lazy(() => import("@/components/ui/GraphView").then(m => ({ default: m.GraphView })))
+const ConstellationPage = lazy(() => import("@/components/ui/ConstellationPage").then(m => ({ default: m.ConstellationPage })))
 const ChessPage = lazy(() => import("@/components/ui/ChessPage").then(m => ({ default: m.ChessPage })))
 
 // Root layout
@@ -48,14 +48,13 @@ const graphRoute = createRoute({
     }, [setActiveGraphSlug])
 
     return (
-      <div className="article-layout">
-        <div className="note-header" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: 'var(--space-12)' }}>
-          <h1 style={{ margin: 'var(--space-2) 0' }}>Knowledge Graph</h1>
+      <article className="game-layout">
+        <div className="game-stage">
+          <Suspense fallback={<div className="loading-shimmer">Charting the sky...</div>}>
+            <ConstellationPage />
+          </Suspense>
         </div>
-        <Suspense fallback={<div className="loading-shimmer">Mapping territories...</div>}>
-          <GraphView />
-        </Suspense>
-      </div>
+      </article>
     )
   }
 })

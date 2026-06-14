@@ -17,10 +17,15 @@ export function PanelCard({ title, slug, index, onClose, onPromote }: Props) {
   // Attach telescopic text handlers to panel content
   useTelescopicHandlers(contentRef)
 
-  // Scroll card into view when it appears
+  // Scroll card into view when it appears. Defer to the next frame so layout
+  // (and the mount animation) has settled, otherwise the scroll target moves
+  // out from under us and the workspace snaps back to the left.
   const cardRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    cardRef.current?.scrollIntoView({ behavior: "smooth", inline: "end", block: "nearest" })
+    const id = requestAnimationFrame(() => {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", inline: "end", block: "nearest" })
+    })
+    return () => cancelAnimationFrame(id)
   }, [])
 
   return (
