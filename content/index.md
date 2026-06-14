@@ -69,12 +69,11 @@ A virtual space for [[thinking in public]],
 
 
 
-[^1]: 
-> ## This site is a work in progress. 
-> These notes are a reflection of my current thoughts and interests, and they will evolve over time. Dont be surprised if you find some dead ends, partial notes, or stubs.<br />
-> Clicking [[getting lost|Links]] will open sidenotes, which are notes, on the side. Sidenotes can be closed or expanded in the tab bar between notes.<br />
-> ![[laoma.png]]  
-> **Please be patient.** I'm Acoustic.
+[^1]: **This site is a work in progress.**
+    These notes are a reflection of my current thoughts and interests, and they will evolve over time. Dont be surprised if you find some dead ends, partial notes, or stubs.
+    Clicking [[getting lost|Links]] will open sidenotes, which are notes, on the side. Sidenotes can be closed or expanded in the tab bar between notes.
+    ![[laoma.png]]
+    **Please be patient.** I'm Acoustic.
 
 
 
