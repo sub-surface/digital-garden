@@ -150,5 +150,10 @@
       background: color-mix(in srgb, var(--color-accent-base) 20%, transparent);
       border-color: var(--color-accent-base);
     }
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
   }
 }
