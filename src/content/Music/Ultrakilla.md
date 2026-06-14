@@ -3,8 +3,6 @@ type: music
 title: Ultrakilla
 artist: m0rvidd
 year: 2025-03-20
-audio: /Media/Music/Ultrakilla.mp3
-cover: https://i1.sndcdn.com/artworks-L3syG5dnkEmw50v2-Bhsg5g-t500x500.png
 tags:
   - Photography
 ---
