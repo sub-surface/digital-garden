@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, Suspense, lazy } from "react"
+import React, { useEffect, useRef, useState, Suspense } from "react"
 import { useTelescopicHandlers } from "./TelescopicHandler"
 import { NotFound } from "./NotFound"
 import { useMusic } from "./MusicContext"
@@ -6,12 +6,10 @@ import { useStore } from "@/store"
 import { mdxComponents } from "@/components/mdx/MDXProvider"
 import { TagPage } from "./TagPage"
 import { FolderPage } from "./FolderPage"
+import { SYSTEM_PAGES } from "@/config/system-pages"
 
-// Lazy-load system page components — avoids pulling heavy deps (D3, chess.js, etc.) into the main chunk
-const BookshelfPage = lazy(() => import("./BookshelfPage").then(m => ({ default: m.BookshelfPage })))
-const MovieshelfPage = lazy(() => import("./MovieshelfPage").then(m => ({ default: m.MovieshelfPage })))
-const MusicPage = lazy(() => import("./MusicPage").then(m => ({ default: m.MusicPage })))
-const ChessPage = lazy(() => import("./ChessPage").then(m => ({ default: m.ChessPage })))
+// `music` is an alias for the music-library system page used in older links.
+const SYSTEM_ALIASES: Record<string, string> = { music: "music-library" }
 
 interface Props {
   slug: string
@@ -61,7 +59,11 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
   // Handle "System" pages that aren't MDX files
   const isTagPage = slug.toLowerCase() === "tags" || slug.toLowerCase().startsWith("tags/")
   const isFolderPage = slug.toLowerCase() === "folder" || slug.toLowerCase().startsWith("folder/")
-  const isSystemPage = isTagPage || isFolderPage || ["bookshelf", "movieshelf", "music", "chess"].includes(slug.toLowerCase())
+  // Source of truth: the SYSTEM_PAGES registry (so arcade, games, toys, etc.
+  // all render in embedded panels too — not just a hardcoded few).
+  const sysKey = SYSTEM_ALIASES[slug.toLowerCase()] ?? slug.toLowerCase()
+  const sysPage = SYSTEM_PAGES[sysKey]
+  const isSystemPage = isTagPage || isFolderPage || Boolean(sysPage)
 
   useEffect(() => {
     if (isSystemPage) {
@@ -76,11 +78,11 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
           const folder = slug.split("/").slice(1).join("/")
           systemTitle = folder ? `Folder: ${folder}` : "Folders"
         }
-        onLoad({ 
-          frontmatter: { 
-            title: systemTitle, 
-            layout: slug.toLowerCase() === "chess" ? "article" : "note"
-          } 
+        onLoad({
+          frontmatter: {
+            title: systemTitle,
+            layout: sysPage ? sysPage.layout : "note",
+          },
         })
       }
       return
@@ -157,19 +159,16 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
   if (notFound) return <NotFound />
 
   if (isSystemPage) {
-    const s = slug.toLowerCase()
     const tagPart = isTagPage ? slug.split("/")[1] : undefined
     const folderPart = isFolderPage ? slug.split("/").slice(1).join("/") : undefined
+    const SysComponent = sysPage?.component
 
     return (
       <div ref={contentRef} className="note-content">
-        <Suspense fallback={<div className="note-loading">Loading...</div>}>
+        <Suspense fallback={<div className="note-loading">{sysPage?.loading ?? "Loading..."}</div>}>
           {isTagPage && <TagPage tag={tagPart} />}
           {isFolderPage && <FolderPage folderPath={folderPart} />}
-          {s === "bookshelf" && <BookshelfPage />}
-          {s === "movieshelf" && <MovieshelfPage />}
-          {s === "music" && <MusicPage />}
-          {s === "chess" && <ChessPage />}
+          {!isTagPage && !isFolderPage && SysComponent && <SysComponent />}
         </Suspense>
       </div>
     )
