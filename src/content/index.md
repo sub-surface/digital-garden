@@ -9,7 +9,7 @@ growth: becoming
 
 #### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ **[Arcade](/arcade)** ~ [[Housekeeping]] ~ [Github](https://github.com/sub-surface)
 
-> [[Bookshelf]] ~ [[Movieshelf]] ~ [Musicshelf](/music-library) ~ [[Photography|Photos]] ~ [[Chess]] ~ [[Wiki]] ~ [Tags](/tags)
+> [[Bookshelf]] ~ [[Movieshelf]] ~ [Musicshelf](/music-library) ~ [[Photography|Photos]] ~ [[Chess]] ~ [[Wiki]] ~ [Constellation](/constellation) ~ [Tags](/tags)
 
 <AsciiAvatar label="glorp" align="right" interval={1500} />
 
