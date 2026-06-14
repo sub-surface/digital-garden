@@ -101,8 +101,8 @@ interface GardenStore {
   setIsPlaylistExpanded: (expanded: boolean) => void
 
   // Background
-  bgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo"
-  lastBgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo"
+  bgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo" | "murmuration"
+  lastBgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo" | "murmuration"
   bgStyle: "vectors" | "glyphs" | "off"
   setBgMode: (mode: GardenStore["bgMode"]) => void
   toggleGraphBackground: () => void
@@ -124,8 +124,8 @@ interface GardenStore {
   activeGraphSlug: string
   setActiveGraphSlug: (slug: string) => void
 
-  activeLayout: "article" | "note"
-  setActiveLayout: (layout: "article" | "note") => void
+  activeLayout: "article" | "note" | "game"
+  setActiveLayout: (layout: "article" | "note" | "game") => void
 
   // Content index (loaded at startup)
   contentIndex: ContentIndex | null
@@ -234,8 +234,8 @@ export const useStore = create<GardenStore>((set) => ({
   setIsPlaylistExpanded: (isPlaylistExpanded) => set({ isPlaylistExpanded }),
 
   // Background
-  bgMode: "terminal",
-  lastBgMode: "terminal",
+  bgMode: "murmuration",
+  lastBgMode: "murmuration",
   bgStyle: "vectors",
   setBgMode: (bgMode) =>
     set((s) => ({
@@ -249,6 +249,7 @@ export const useStore = create<GardenStore>((set) => ({
   cycleBgMode: () =>
     set((s) => {
       const modes: GardenStore["bgMode"][] = [
+        "murmuration",
         "graph",
         "vectors",
         "dots",

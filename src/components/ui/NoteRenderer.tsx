@@ -21,9 +21,10 @@ function resolveLayout(
   frontmatter: Record<string, any>,
   meta: NoteMetadata | undefined,
   slug: string,
-): "article" | "note" {
+): "article" | "note" | "game" {
   if (frontmatter.layout === "article") return "article"
   if (frontmatter.layout === "note") return "note"
+  if (frontmatter.layout === "game") return "game"
 
   const type = (frontmatter.type as string) ?? meta?.type
   if (type && ["book", "movie", "chatter", "philosopher"].includes(type)) return "article"
@@ -153,6 +154,16 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
       )}
     </div>
   )
+
+  // Game layout: bare, wide, centered — no header chrome, TOC, infobox or
+  // backlink footer. Just the interactive component, room to breathe.
+  if (layout === "game") {
+    return (
+      <article className="game-layout">
+        <div className="game-stage">{renderContent()}</div>
+      </article>
+    )
+  }
 
   return (
     <article className={`${layout}-layout`}>

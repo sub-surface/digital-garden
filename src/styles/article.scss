@@ -195,8 +195,40 @@
     grid-template-columns: 1fr;
     padding: 1.5rem;
   }
-  
+
   .article-body {
     grid-column: 1;
+  }
+}
+
+// ── Game layout ──
+// Bare, wide, vertically generous. Breaks out of the main-content padding so a
+// game gets the full pane width and room to breathe — no article column, no TOC.
+.game-layout {
+  // cancel the .mainContent padding (2rem 3rem) so games use the full pane
+  margin: -2rem -3rem;
+  min-height: calc(100vh - 0px);
+  display: flex;
+  flex-direction: column;
+
+  @media (max-width: 800px) {
+    margin: -1rem;
+  }
+}
+
+.game-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 2.5rem 1.5rem 3rem;
+  min-height: 100%;
+
+  // Let game pages use the full available width inside the stage instead of
+  // their default narrow article max-widths.
+  > div {
+    width: 100%;
+    max-width: 760px;
   }
 }

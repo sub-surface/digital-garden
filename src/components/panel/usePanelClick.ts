@@ -27,9 +27,10 @@ export function usePanelClick() {
       const href = anchor.getAttribute("href")
       if (!href) return
 
-      // In article mode, we don't want to open side panels.
+      // In article / game mode, we don't want to open side panels.
       // We check the store for the active layout.
-      if (useStore.getState().activeLayout === "article") return
+      const al = useStore.getState().activeLayout
+      if (al === "article" || al === "game") return
 
       // music: links are handled by NoteBody (works in every layout); don't
       // also intercept them here or open them as panel cards.
