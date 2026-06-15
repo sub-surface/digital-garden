@@ -1,4 +1,5 @@
 import { TableOfContents } from "./TableOfContents"
+import { ReadingProgress } from "./ReadingProgress"
 
 interface Props {
   children: React.ReactNode
@@ -10,6 +11,7 @@ interface Props {
 export function ArticleLayout({ children, headings, infobox, header }: Props) {
   return (
     <div className="article-layout-wrapper" style={{ display: 'contents' }}>
+      <ReadingProgress />
       <div className="article-body">
         {header}
         <div className="body-side-group" style={{ float: 'right', clear: 'right', marginLeft: 'var(--space-8)', marginBottom: 'var(--space-6)', width: '300px' }}>

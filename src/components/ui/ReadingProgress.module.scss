@@ -1,0 +1,29 @@
+// Thin reading-progress line at the very top of the viewport. Sits above the
+// shell chrome but below modals/overlays. The bar scales on the X axis from a
+// left origin so it fills left→right; transform is GPU-cheap and avoids reflow.
+.track {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 90;
+  pointer-events: none;
+  background: transparent;
+}
+
+.bar {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  transform: scaleX(0);
+  background: var(--color-accent-base, #b4424c);
+  will-change: transform;
+  transition: transform 0.08s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
+}
