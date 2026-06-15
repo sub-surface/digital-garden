@@ -64,6 +64,7 @@ export function ProgressionsPage() {
   const [best, setBest] = useState<{ red: number; blue: number }>({ red: 0, blue: 0 })
   const bestRef = useRef({ red: 0, blue: 0 })
   const dirtyRef = useRef(false)   // set when any display ref changes
+  const renderDirtyRef = useRef(true)   // set when the board needs a repaint (step/seed/reset while paused)
   const [topo, setTopo] = useState<Topo>("hex")
   const topoRef = useRef<Topo>(topo); topoRef.current = topo
   const dirsRef = useRef<ReadonlyArray<readonly [number, number]>>(DIRS_HEX)
@@ -91,6 +92,7 @@ export function ProgressionsPage() {
     bestRef.current = { red: 0, blue: 0 }
     statsRef.current = { stones: 0, order: 0, forks: 0, anisotropy: 0 }
     turnRef.current = 1
+    renderDirtyRef.current = true
     setScores(scoresRef.current)
     setBest(bestRef.current)
     setStats(statsRef.current)
@@ -291,6 +293,7 @@ export function ProgressionsPage() {
     }
     turnRef.current = who === 1 ? 2 : 1
     dirtyRef.current = true
+    renderDirtyRef.current = true
     // Periodically (every ~16 moves) run the full O(n²) passes — spectral stats
     // plus an authoritative longest-run/highlight refresh that corrects any drift
     // from the cheap local tracking. Amortised, this keeps per-step cost low.
@@ -313,6 +316,22 @@ export function ProgressionsPage() {
     // view transform: cell size (zoom) + pan offset (px). Start centred on the grid.
     let cell = 12
     const view = { x: 0, y: 0, init: false }
+    let viewDirty = true   // redraw when the camera (pan/zoom/resize) changes
+    const SQ3_2 = Math.sqrt(3) / 2
+
+    // Hexagon vertex offsets are constant for a given `cell`; recompute only when
+    // the zoom changes, not per cell per frame (was 6 cos/sin × 8100 cells/frame).
+    let hexR = -1
+    const hexPts: Array<[number, number]> = Array.from({ length: 6 }, () => [0, 0])
+    const rebuildHex = (gap: number) => {
+      const r = cell * 0.56 - gap
+      if (r === hexR) return
+      hexR = r
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 180) * (60 * i - 90)
+        hexPts[i] = [r * Math.cos(a), r * Math.sin(a)]
+      }
+    }
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
@@ -324,11 +343,12 @@ export function ProgressionsPage() {
         const mid = GRID / 2
         const isHex = topoRef.current === "hex"
         const cx = isHex ? (mid + mid / 2) * cell : mid * cell
-        const cy = isHex ? mid * (Math.sqrt(3) / 2) * cell : mid * cell
+        const cy = isHex ? mid * SQ3_2 * cell : mid * cell
         view.x = canvas.clientWidth / 2 - cx
         view.y = canvas.clientHeight / 2 - cy
         view.init = true
       }
+      viewDirty = true
     }
     resize()
 
@@ -339,35 +359,54 @@ export function ProgressionsPage() {
       const hot = hotRef.current   // cached; recomputed only on board change
       const gap = cell > 6 ? 1 : 0
       const isHex = topoRef.current === "hex"
-      const fillFor = (o: number, hotCell: boolean) =>
-        o === 0 ? "rgba(255,255,255,0.03)"
-          : o === 1 ? (hotCell ? "#e8584e" : "#a23a36")
-            : (hotCell ? "#4e8fe8" : "#3a5fa2")
+      if (isHex) rebuildHex(gap)
 
-      // viewport culling. Square: cell (x,y) lives at x*cell. Hex: AXIAL coords —
-      // cell (q,r) lives at px = cell*(q + r/2), py = cell*(√3/2)*r. Using axial
-      // here means the line-walk deltas [1,0]/[0,1]/[1,-1] are genuine straight
-      // hex lines, so the progression checker and the render finally AGREE.
-      const SQ3_2 = Math.sqrt(3) / 2
-      for (let y = 0; y < GRID; y++) for (let x = 0; x < GRID; x++) {
-        const px = isHex ? (x + y / 2) * cell + view.x : x * cell + view.x
-        const py = isHex ? y * SQ3_2 * cell + view.y : y * cell + view.y
-        if (px < -cell || px > W + cell || py < -cell || py > H + cell) continue
-        const o = g[idx(x, y)]
-        ctx.fillStyle = fillFor(o, o !== 0 && hot.has(idx(x, y)))
-        if (isHex) {
-          const cx = px + cell / 2, cy = py + cell / 2
-          const r = cell * 0.56 - gap
-          ctx.beginPath()
-          for (let i = 0; i < 6; i++) {
-            const a = Math.PI / 180 * (60 * i - 90)
-            const hx = cx + r * Math.cos(a), hy = cy + r * Math.sin(a)
-            if (i === 0) ctx.moveTo(hx, hy); else ctx.lineTo(hx, hy)
+      // Compute the visible cell-index window from the inverse view transform and
+      // iterate ONLY those rows/cols, instead of all GRID×GRID cells every frame.
+      // Square: x = (px−view.x)/cell. Hex axial: y = (py−view.y)/(√3/2·cell),
+      // x = (px−view.x)/cell − y/2. We bound x and y generously (±2) to cover the
+      // half-cell skew and partial edge cells, then clamp to the grid.
+      let x0: number, x1: number, y0: number, y1: number
+      if (isHex) {
+        y0 = Math.floor((-view.y) / (SQ3_2 * cell)) - 2
+        y1 = Math.ceil((H - view.y) / (SQ3_2 * cell)) + 2
+        // x range depends on y (skew); widen by the full y-span half-shift
+        const xLeft = Math.floor((-view.x) / cell - Math.max(y1, 0) / 2) - 2
+        const xRight = Math.ceil((W - view.x) / cell - Math.min(y0, GRID) / 2) + 2
+        x0 = xLeft; x1 = xRight
+      } else {
+        x0 = Math.floor((-view.x) / cell) - 1
+        x1 = Math.ceil((W - view.x) / cell) + 1
+        y0 = Math.floor((-view.y) / cell) - 1
+        y1 = Math.ceil((H - view.y) / cell) + 1
+      }
+      x0 = Math.max(0, x0); x1 = Math.min(GRID - 1, x1)
+      y0 = Math.max(0, y0); y1 = Math.min(GRID - 1, y1)
+
+      // One flat background pass for the visible grid area (cheaper than a faint
+      // fill per empty cell). Stones are drawn over it.
+      ctx.fillStyle = "rgba(255,255,255,0.03)"
+      const RED = "#a23a36", RED_HOT = "#e8584e", BLU = "#3a5fa2", BLU_HOT = "#4e8fe8"
+      const half = cell / 2
+
+      for (let y = y0; y <= y1; y++) {
+        for (let x = x0; x <= x1; x++) {
+          const px = isHex ? (x + y / 2) * cell + view.x : x * cell + view.x
+          const py = isHex ? y * SQ3_2 * cell + view.y : y * cell + view.y
+          const o = g[idx(x, y)]
+          const isHot = o !== 0 && hot.has(idx(x, y))
+          if (isHex) {
+            const cx = px + half, cy = py + half
+            ctx.beginPath()
+            ctx.moveTo(cx + hexPts[0][0], cy + hexPts[0][1])
+            for (let i = 1; i < 6; i++) ctx.lineTo(cx + hexPts[i][0], cy + hexPts[i][1])
+            ctx.closePath()
+            ctx.fillStyle = o === 0 ? "rgba(255,255,255,0.03)" : o === 1 ? (isHot ? RED_HOT : RED) : (isHot ? BLU_HOT : BLU)
+            ctx.fill()
+          } else {
+            ctx.fillStyle = o === 0 ? "rgba(255,255,255,0.03)" : o === 1 ? (isHot ? RED_HOT : RED) : (isHot ? BLU_HOT : BLU)
+            ctx.fillRect(px + gap, py + gap, cell - gap * 2, cell - gap * 2)
           }
-          ctx.closePath()
-          ctx.fill()
-        } else {
-          ctx.fillRect(px + gap, py + gap, cell - gap * 2, cell - gap * 2)
         }
       }
     }
@@ -380,12 +419,22 @@ export function ProgressionsPage() {
       acc += t - last
       last = t
       const stepMs = 1000 / Math.max(1, speedRef.current)
+      let stepped = false
       if (runningRef.current) {
         let n = 0
-        while (acc >= stepMs && n < MAX_STEPS_PER_FRAME) { stepOnce(); acc -= stepMs; n++ }
+        while (acc >= stepMs && n < MAX_STEPS_PER_FRAME) { stepOnce(); acc -= stepMs; n++; stepped = true }
         if (acc > stepMs * MAX_STEPS_PER_FRAME) acc = 0  // drop backlog
+      } else {
+        acc = 0   // don't accumulate a backlog while paused
       }
-      render()
+      // Only repaint when the board advanced, the camera moved, or an out-of-loop
+      // mutation (Step / seed / reset / topo) flagged a repaint — a paused,
+      // un-touched board costs nothing per frame now.
+      if (stepped || viewDirty || renderDirtyRef.current) {
+        render()
+        viewDirty = false
+        renderDirtyRef.current = false
+      }
       // push display refs → React state once per frame, only when changed
       if (dirtyRef.current) {
         dirtyRef.current = false
@@ -421,6 +470,7 @@ export function ProgressionsPage() {
       const dx = e.clientX - start.x, dy = e.clientY - start.y
       if (Math.abs(dx) + Math.abs(dy) > 3) moved = true
       view.x = start.vx + dx; view.y = start.vy + dy
+      viewDirty = true
     }
     const up = (e: MouseEvent) => {
       if (dragging && !moved) {
@@ -432,6 +482,7 @@ export function ProgressionsPage() {
           if (y < bb.minY) bb.minY = y; if (y > bb.maxY) bb.maxY = y
           turnRef.current = turnRef.current === 1 ? 2 : 1
           setTurn(turnRef.current)
+          viewDirty = true   // repaint to show the seeded stone even while paused
         }
       }
       dragging = false
@@ -446,6 +497,7 @@ export function ProgressionsPage() {
       cell = next
       // keep the same world point under the cursor after zoom
       view.x = mx - wx * cell; view.y = my - wy * cell
+      viewDirty = true
     }
 
     canvas.addEventListener("mousedown", down)
