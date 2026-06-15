@@ -4,6 +4,7 @@ import * as crypto from "crypto"
 import { fileURLToPath } from "url"
 import satori from "satori"
 import { Resvg } from "@resvg/resvg-js"
+import { generateSystemCards } from "./og-system"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PUBLIC_DIR = path.resolve(__dirname, "../public")
@@ -58,15 +59,20 @@ async function main() {
     return cache[slug] !== hash || !fs.existsSync(outPath)
   })
 
+  console.log(`  ${slugsToGenerate.length} note image(s) to generate (${Object.keys(index).length - slugsToGenerate.length} cached)`)
+
+  // Load font (shared with the system-page cards below)
+  const fontData = await fetch("https://github.com/google/fonts/raw/main/ofl/ibmplexmono/IBMPlexMono-Medium.ttf").then(res => res.arrayBuffer())
+
+  // System / custom pages (arcade, graph, chess, …) aren't in content-index.json,
+  // so they never get a note card — generate their bespoke procedural cards here.
+  const systemCount = await generateSystemCards(fontData)
+  console.log(`  ${systemCount} system-page card(s) generated`)
+
   if (slugsToGenerate.length === 0) {
-    console.log("OG images up to date — nothing to generate.")
+    console.log("Note OG images up to date.")
     return
   }
-
-  console.log(`  ${slugsToGenerate.length} image(s) to generate (${Object.keys(index).length - slugsToGenerate.length} cached)`)
-
-  // Load font
-  const fontData = await fetch("https://github.com/google/fonts/raw/main/ofl/ibmplexmono/IBMPlexMono-Medium.ttf").then(res => res.arrayBuffer())
 
   for (const slug of slugsToGenerate) {
     const note = index[slug]
