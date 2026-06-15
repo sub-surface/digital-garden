@@ -36,6 +36,24 @@
   }
 }
 
+.arcadeBack {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.5rem;
+  opacity: 0.6;
+  transition: opacity var(--duration-fast), color var(--duration-fast);
+
+  &:hover {
+    opacity: 1;
+    color: var(--color-accent-base);
+  }
+}
+
 .iconBtn {
   background: none;
   border: none;

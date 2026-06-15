@@ -1,0 +1,20 @@
+- date: 2026-06-15
+  area: garden
+  title: Persian carpet loom added to arcade; Predictor plan noted
+  status: done
+  files:
+    - public/games/persian-carpet.html
+    - src/components/ui/PersianCarpetPage.tsx
+    - src/components/ui/PersianCarpetPage.module.scss
+    - src/config/system-pages.ts
+    - src/components/ui/ArcadePage.tsx
+    - ROADMAP.md
+  changes:
+    - "Added 'The Knotted Field' (Persian carpet loom) to the arcade as a new game page at /persian-carpet. The toy is a p5.js woven-symmetry engine: seed → deterministic carpet with medallion, corner pendants, running vine border, abrash dye drift, pile texture, age patina, and exactly one deliberate flaw hidden in the field. Served as a static HTML file in public/games/ and embedded in a fullscreen iframe (same viewport-takeover z-index pattern as HexLifePage). Renamed the CSS variables from --anthropic-* to --loom-* so the file is decoupled from Anthropic branding. Listed on the ArcadePage grid."
+    - "Added ROADMAP note for The Predictor: Mass — a more complex orbital escape roguelike with a shoggoth faction and localStorage Core memory. Deferred to Leon: subdomain name (leading options: predict.subsurfaces.net, mass.subsurfaces.net, omega.subsurfaces.net) and whether it gets a garden note linking to it."
+  decisions:
+    - "iframe over port: the carpet has ~700 lines of p5.js sketch + a rich sidebar UI with its own layout and fonts. Rewriting it as a React canvas component would be fragile and lose nothing. Static HTML in public/games/ + thin iframe wrapper is the clean path — no bundle impact, p5.js stays on CDN, the original file is preserved verbatim (modulo CSS var rename)."
+    - "Fullscreen iframe (position:fixed; inset:0; z-index:1500) matches the HexLifePage pattern. The carpet's own sidebar+canvas layout already handles responsive at ≤600px."
+    - "sandbox='allow-scripts allow-downloads' on the iframe: allow-scripts is required for p5.js, allow-downloads is needed for the 'Download PNG' button (saveCanvas calls the browser download API). No allow-same-origin — the iframe has no need to access the parent's DOM or storage."
+    - "The Predictor uses overflow:hidden on <html> for its own full-viewport loop and has no sidebar structure — it would feel cramped in an iframe nested inside the garden layout. A standalone Worker serving the HTML directly at its own subdomain is the right model, paralleling star.subsurfaces.net."
+  next: "Leon to pick subdomain name for The Predictor, then a Worker stub can be wired up in wrangler.toml."

@@ -151,10 +151,18 @@ Extract the cabinet *before* building the next game.
 
 ### New arcade games queued (future.md)
 Shipped: Snake, Tetris, 2048, Blackjack, Hex Mines, Murmuration/Boids, Sandbox, Ant Farm,
-Hex Life, Progressions. Remaining ideas:
+Hex Life, Progressions, The Knotted Field (Persian carpet loom — 2026-06-15). Remaining ideas:
 - [ ] **Memory Garden** — concentration game on note titles / tags / covers / emotes. No backend.
 - [ ] **Link Ladder** — word/concept-ladder seeded from note titles & tags; daily-seedable, no server.
 - [ ] **Lights Out / Circuit Shrine** — 5×5 toggle puzzle, theme/accent glow. Very light, mobile-friendly.
+- [ ] **The Predictor: Mass** — orbital escape roguelike (see `downloads/the_predictor_mass_shoggoth_artifact.html`).
+  Self-contained single HTML with localStorage-persisted "Core memory" (Markov move predictor) + a shoggoth faction mechanic.
+  Too large and complex for the in-garden arcade wrapper model; needs its own shell.
+  **Leading option: a dedicated subdomain** — `predict.subsurfaces.net` (or `mass.subsurfaces.net`, `omega.subsurfaces.net`).
+  Serve as a standalone Worker with the HTML as the root response — no React/Vite needed.
+  Alternatively, could live as an iframe game like The Knotted Field, but it uses `overflow:hidden` on `<html>` for its
+  own full-viewport loop, and the sidebar-less "whole screen" contract is cleaner as its own domain.
+  **Decision deferred to Leon** — subdomain name, and whether it gets a content/lore note on the garden to link to it.
 
 ---
 

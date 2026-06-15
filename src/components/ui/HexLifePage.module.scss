@@ -5,6 +5,18 @@
   background: var(--color-bg);
   overflow: hidden;
   font-family: var(--font-code);
+
+  // Inside a panel card (container-name: panel), don't escape the card.
+  // Bleed out of contentScroll's padding so the canvas fills edge-to-edge,
+  // then re-add just enough top clearance for the QuickControls row.
+  @container panel (min-width: 0px) {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    margin: calc(-4rem + 2.5rem) -3rem -2rem;
+    height: calc(100vh - 24px - 2.5rem);
+    overflow: hidden;
+  }
 }
 
 .canvas {

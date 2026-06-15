@@ -1,0 +1,29 @@
+.carpet {
+  // Full viewport takeover when rendered as the main page.
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  background: transparent;
+
+  // When rendered inside a panel card (container-name: panel), don't escape the
+  // card — fill the panel's scrollable content area with a small top gap so the
+  // game doesn't collide with the fixed QuickControls cluster.
+  @container panel (min-width: 0px) {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    // Bleed out of contentScroll's padding so the game fills edge-to-edge,
+    // keeping 2.5rem at top to clear the fixed QuickControls cluster.
+    // Card header is 24px; contentScroll padding is 4rem top / 3rem sides / 2rem bottom.
+    margin: calc(-4rem + 2.5rem) -3rem -2rem;
+    height: calc(100vh - 24px - 2.5rem);
+    overflow: hidden;
+  }
+}
+
+.frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}

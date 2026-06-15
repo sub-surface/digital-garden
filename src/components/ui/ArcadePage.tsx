@@ -21,6 +21,14 @@ const GAMES: GameCard[] = [
     featured: true,
     external: true,
   },
+  {
+    href: "https://lines.subsurfaces.net",
+    name: "Lines of Flight",
+    blurb: "A dot that stays, a line that leaves. Draw living ink through an invisible field, with a voice from Deleuze. A meditation.",
+    live: true,
+    featured: true,
+    external: true,
+  },
   { href: "hexo", name: "HeXO", blurb: "Connect six on an endless hex field, against a handmade opponent.", live: true, featured: true },
   { href: "chess", name: "Chess", blurb: "A small handmade machine to play against.", live: true },
   { href: "tetris", name: "Tetris", blurb: "The falling well, themed in accent monochrome.", live: true },
@@ -33,6 +41,7 @@ const GAMES: GameCard[] = [
   { href: "ant-farm", name: "Ant Farm", blurb: "A colony foraging by pheromone — paths emerge and fade. A toy.", live: true },
   { href: "hex-life", name: "Hex Life", blurb: "Cellular automata on a hex grid — simple rules, emergent worlds. A toy.", live: true },
   { href: "progressions", name: "Progressions", blurb: "Two agents race to build the longest arithmetic progression. A toy.", live: true },
+  { href: "persian-carpet", name: "The Knotted Field", blurb: "A woven symmetry engine. Seed a loom, choose a dye lot, find the deliberate flaw. A toy.", live: true },
 ]
 
 export function ArcadePage() {

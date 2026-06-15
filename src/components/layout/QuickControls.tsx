@@ -1,4 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react"
+import { useNavigate } from "@tanstack/react-router"
 import { useStore } from "@/store"
 import { useShell } from "@/hooks/useShell"
 import { MusicBar } from "@/components/ui/MusicBar"
@@ -6,6 +7,26 @@ import { SearchButton } from "@/components/ui/SearchButton"
 import { RandomNoteButton } from "@/components/ui/RandomNoteButton"
 import { BgModeToggle } from "@/components/ui/BgModeToggle"
 import styles from "./QuickControls.module.scss"
+
+const NON_ARCADE_SLUGS = new Set(["graph", "constellation"])
+
+function ArcadeBackButton() {
+  const activeLayout = useStore((s) => s.activeLayout)
+  const slug = useStore((s) => s.activeGraphSlug)
+  const navigate = useNavigate()
+  if (activeLayout !== "game") return null
+  if (NON_ARCADE_SLUGS.has(slug.toLowerCase())) return null
+  return (
+    <button
+      className={styles.arcadeBack}
+      onClick={() => navigate({ to: "/$", params: { _splat: "arcade" } as any })}
+      title="Back to the arcade"
+      aria-label="Back to the arcade"
+    >
+      ‹ Arcade
+    </button>
+  )
+}
 
 const ProfileControl = lazy(() => import("./ProfileControl").then((m) => ({ default: m.ProfileControl })))
 
@@ -125,6 +146,8 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
       data-panel-ignore
       style={rightOffset ? { right: `${rightOffset}px` } : undefined}
     >
+      <ArcadeBackButton />
+
       {variant === "full" && <MusicBar />}
 
       {variant === "full" && <SearchButton />}

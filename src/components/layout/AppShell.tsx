@@ -5,6 +5,7 @@ import { PanelStack } from "@/components/panel/PanelStack"
 import { usePanelClick } from "@/components/panel/usePanelClick"
 import { useHotkeys } from "@/hooks/useHotkeys"
 import { useShell } from "@/hooks/useShell"
+import { useDynamicFavicon } from "@/hooks/useDynamicFavicon"
 const WikiShell = lazy(() => import("./WikiShell").then(m => ({ default: m.WikiShell })))
 const ChatShell = lazy(() => import("./ChatShell").then(m => ({ default: m.ChatShell })))
 import { TerminalTitle } from "./TerminalTitle"
@@ -64,6 +65,7 @@ export function AppShell() {
 
   usePanelClick()
   useHotkeys()
+  useDynamicFavicon()
 
   if (shell === "wiki") return <Suspense fallback={null}><WikiShell /><GlobalOverlays /><CookieConsent /></Suspense>
   if (shell === "chat") return <Suspense fallback={null}><ChatShell /><GlobalOverlays /><CookieConsent /></Suspense>

@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Knotted Field — Persian Carpet Loom</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --loom-orange: #d97757;
+            --loom-blue: #6a9bcc;
+            --loom-green: #788c5d;
+            /* dark glass (default) */
+            --loom-glass-bg: rgba(14, 14, 12, 0.72);
+            --loom-glass-text: #ddd9d0;
+            --loom-glass-muted: #7a786f;
+            --loom-glass-border: rgba(255, 255, 255, 0.08);
+            --loom-glass-input-bg: rgba(255, 255, 255, 0.06);
+            --loom-glass-input-border: rgba(255, 255, 255, 0.12);
+            --loom-scrollbar-thumb: rgba(255,255,255,0.18);
+            --loom-scrollbar-track: rgba(255,255,255,0.04);
+        }
+        :root[data-theme="light"] {
+            --loom-glass-bg: rgba(248, 246, 240, 0.82);
+            --loom-glass-text: #1a1916;
+            --loom-glass-muted: #7a786f;
+            --loom-glass-border: rgba(0, 0, 0, 0.08);
+            --loom-glass-input-bg: rgba(0, 0, 0, 0.04);
+            --loom-glass-input-border: rgba(0, 0, 0, 0.12);
+            --loom-scrollbar-thumb: rgba(0,0,0,0.18);
+            --loom-scrollbar-track: rgba(0,0,0,0.04);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: transparent;
+            min-height: 100vh;
+            color: var(--loom-glass-text);
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+            padding: 64px 20px 20px;
+            gap: 20px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            flex-shrink: 0;
+            background: var(--loom-glass-bg);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border: 1px solid var(--loom-glass-border);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: calc(100vh - 84px);
+            color: var(--loom-glass-text);
+        }
+
+        .sidebar h1 {
+            font-family: 'Lora', serif;
+            font-size: 24px;
+            font-weight: 500;
+            color: var(--loom-glass-text);
+            margin-bottom: 8px;
+        }
+
+        .sidebar .subtitle {
+            color: var(--loom-glass-muted);
+            font-size: 14px;
+            margin-bottom: 32px;
+            line-height: 1.4;
+        }
+
+        /* Control Sections */
+        .control-section {
+            margin-bottom: 32px;
+        }
+
+        .control-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--loom-glass-text);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-section h3::before {
+            content: '•';
+            color: var(--loom-orange);
+            font-weight: bold;
+        }
+
+        /* Seed Controls */
+        .seed-input {
+            width: 100%;
+            background: var(--loom-glass-input-bg);
+            color: var(--loom-glass-text);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-bottom: 12px;
+            border: 1px solid var(--loom-glass-input-border);
+            text-align: center;
+        }
+
+        .seed-input:focus {
+            outline: none;
+            border-color: var(--loom-orange);
+            box-shadow: 0 0 0 2px rgba(217, 119, 87, 0.15);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .seed-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .regen-button {
+            margin-bottom: 0;
+        }
+
+        /* Parameter Controls */
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--loom-glass-text);
+            margin-bottom: 8px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .slider-container input[type="range"] {
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--loom-orange);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            background: #c86641;
+        }
+
+        .slider-container input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--loom-orange);
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .value-display {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--loom-glass-muted);
+            min-width: 60px;
+            text-align: right;
+        }
+
+        /* Palette swatches */
+        .palette-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+        .palette-chip {
+            border: 2px solid transparent;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            flex: 1 1 auto;
+            text-align: center;
+            transition: all 0.15s ease;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--loom-glass-text);
+        }
+        .palette-chip:hover { transform: translateY(-1px); }
+        .palette-chip.active {
+            border-color: var(--loom-orange);
+            box-shadow: 0 0 0 2px rgba(217,119,87,0.12);
+        }
+        .swatch-strip {
+            display: flex;
+            height: 10px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 6px;
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+        .swatch-strip span { flex: 1; }
+
+        /* Toggle */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .toggle-row label { font-size: 14px; font-weight: 500; color: var(--loom-glass-text); }
+        .switch { position: relative; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-toggle {
+            position: absolute; cursor: pointer; inset: 0;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 24px; transition: 0.2s;
+        }
+        .slider-toggle::before {
+            content: ""; position: absolute; height: 18px; width: 18px;
+            left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s;
+        }
+        .switch input:checked + .slider-toggle { background: var(--loom-orange); }
+        .switch input:checked + .slider-toggle::before { transform: translateX(20px); }
+
+        /* Buttons */
+        .button {
+            background: var(--loom-orange);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .button:hover {
+            background: #c86641;
+            transform: translateY(-1px);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button.secondary {
+            background: var(--loom-blue);
+        }
+
+        .button.secondary:hover {
+            background: #5a8bb8;
+        }
+
+        .button.tertiary {
+            background: var(--loom-green);
+        }
+
+        .button.tertiary:hover {
+            background: #6b7b52;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .button-row .button {
+            flex: 1;
+        }
+
+        /* Canvas Area */
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        #canvas-container {
+            width: 100%;
+            max-width: 900px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+            background: transparent;
+        }
+
+        #canvas-container canvas {
+            display: block;
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        /* Loading State */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            font-size: 18px;
+            color: var(--loom-glass-muted);
+        }
+
+        .flaw-note {
+            font-size: 11px;
+            color: var(--loom-glass-muted);
+            line-height: 1.5;
+            margin-top: -6px;
+        }
+
+        /* Responsive - Stack on mobile */
+        @media (max-width: 600px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .canvas-area {
+                padding: 20px;
+            }
+        }
+
+        /* Themed scrollbar */
+        .sidebar::-webkit-scrollbar { width: 5px; }
+        .sidebar::-webkit-scrollbar-track { background: var(--loom-scrollbar-track); border-radius: 3px; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--loom-scrollbar-thumb); border-radius: 3px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: var(--loom-orange); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Control Sidebar -->
+        <div class="sidebar">
+            <h1>The Knotted Field</h1>
+            <div class="subtitle">A woven symmetry engine — each seed is a different carpet pulled from the same loom. Knot by knot, mirrored across its axes, with one deliberate flaw hidden inside.</div>
+
+            <!-- Seed Section -->
+            <div class="control-section">
+                <h3>Seed</h3>
+                <input type="number" id="seed-input" class="seed-input" value="12345" onchange="updateSeed()">
+                <div class="seed-controls">
+                    <button class="button secondary" onclick="previousSeed()">← Prev</button>
+                    <button class="button secondary" onclick="nextSeed()">Next →</button>
+                </div>
+                <button class="button tertiary regen-button" onclick="randomSeedAndUpdate()">↻ Random Carpet</button>
+            </div>
+
+            <!-- Palette Section -->
+            <div class="control-section">
+                <h3>Dye Lot</h3>
+                <div class="palette-row" id="palette-row"></div>
+            </div>
+
+            <!-- Parameters Section -->
+            <div class="control-section">
+                <h3>Loom</h3>
+
+                <div class="control-group">
+                    <label>Aspect Ratio</label>
+                    <div class="slider-container">
+                        <input type="range" id="aspect" min="0.5" max="1.6" step="0.05" value="1.0" oninput="updateParam('aspect', this.value)">
+                        <span class="value-display" id="aspect-value">1:1 square</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Knot Density</label>
+                    <div class="slider-container">
+                        <input type="range" id="knots" min="48" max="120" step="4" value="80" oninput="updateParam('knots', this.value)">
+                        <span class="value-display" id="knots-value">80</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Medallion Points</label>
+                    <div class="slider-container">
+                        <input type="range" id="points" min="6" max="16" step="1" value="10" oninput="updateParam('points', this.value)">
+                        <span class="value-display" id="points-value">10</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Medallion Size</label>
+                    <div class="slider-container">
+                        <input type="range" id="medallion" min="0.20" max="0.52" step="0.02" value="0.36" oninput="updateParam('medallion', this.value)">
+                        <span class="value-display" id="medallion-value">0.36</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Field Motif Density</label>
+                    <div class="slider-container">
+                        <input type="range" id="field" min="2" max="8" step="1" value="5" oninput="updateParam('field', this.value)">
+                        <span class="value-display" id="field-value">5</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Border Width</label>
+                    <div class="slider-container">
+                        <input type="range" id="border" min="0.06" max="0.16" step="0.01" value="0.11" oninput="updateParam('border', this.value)">
+                        <span class="value-display" id="border-value">0.11</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Abrash (dye drift)</label>
+                    <div class="slider-container">
+                        <input type="range" id="abrash" min="0" max="1" step="0.05" value="0.45" oninput="updateParam('abrash', this.value)">
+                        <span class="value-display" id="abrash-value">0.45</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wool & Pile Section -->
+            <div class="control-section">
+                <h3>Wool &amp; Pile</h3>
+
+                <div class="control-group">
+                    <label>Pile Texture</label>
+                    <div class="slider-container">
+                        <input type="range" id="texture" min="0" max="1" step="0.05" value="0.5" oninput="updateParam('texture', this.value)">
+                        <span class="value-display" id="texture-value">0.5</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Age &amp; Patina</label>
+                    <div class="slider-container">
+                        <input type="range" id="patina" min="0" max="0.8" step="0.05" value="0.25" oninput="updateParam('patina', this.value)">
+                        <span class="value-display" id="patina-value">0.25</span>
+                    </div>
+                </div>
+
+                <div class="toggle-row">
+                    <label>Weft striation</label>
+                    <label class="switch">
+                        <input type="checkbox" id="weft" checked onchange="updateToggle('weft', this.checked)">
+                        <span class="slider-toggle"></span>
+                    </label>
+                </div>
+
+                <div class="toggle-row">
+                    <label>Hand-tied stitch</label>
+                    <label class="switch">
+                        <input type="checkbox" id="stitch" checked onchange="updateToggle('stitch', this.checked)">
+                        <span class="slider-toggle"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Tradition Section -->
+            <div class="control-section">
+                <h3>Tradition</h3>
+                <div class="toggle-row">
+                    <label>The deliberate flaw</label>
+                    <label class="switch">
+                        <input type="checkbox" id="flaw" checked onchange="updateFlaw(this.checked)">
+                        <span class="slider-toggle"></span>
+                    </label>
+                </div>
+                <div class="flaw-note">A true Persian carpet carries one intentional imperfection — because perfection belongs to the divine. Toggle to reveal it.</div>
+            </div>
+
+            <!-- Actions Section -->
+            <div class="control-section">
+                <h3>Actions</h3>
+                <div class="button-row">
+                    <button class="button" onclick="resetParameters()">Reset</button>
+                </div>
+                <div class="button-row">
+                    <button class="button tertiary" onclick="downloadCarpet()">⬇ Download PNG</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Canvas Area -->
+        <div class="canvas-area">
+            <div id="canvas-container">
+                <div class="loading">Stringing the loom…</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Theme sync (parent → iframe via ?theme param + postMessage) ──────
+        ;(function() {
+            function applyTheme(t) {
+                if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+                else document.documentElement.removeAttribute('data-theme');
+            }
+            // Initial theme from query param
+            const q = new URLSearchParams(location.search).get('theme');
+            applyTheme(q);
+            // Live updates when parent toggles
+            window.addEventListener('message', function(e) {
+                if (e.data && e.data.type === 'theme') applyTheme(e.data.value);
+            });
+        })();
+        // ─────────────────────────────────────────────────────────────────────
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // THE KNOTTED FIELD — a woven-symmetry carpet engine
+        //
+        // Philosophy: color is never painted, only *deposited* as knots onto a
+        // fixed integer lattice. One quadrant is composed, then mirrored exactly
+        // across both axes. Concentric architecture: medallion → corner pendants
+        // → seeded field → main border (running vine) → guard stripes. A dyer's
+        // palette is assigned by structural role, modulated by a faint per-row
+        // abrash drift. Exactly one deliberate flaw breaks the symmetry.
+        // ═══════════════════════════════════════════════════════════════════════
+
+        // ---- Curated dyer's palettes (deep, harmonious, region-assigned) -------
+        // Roles: ground, medallionFill, medallionGround, borderGround,
+        //        vine, motifA, motifB, accent, ivory, outline
+        const PALETTES = [
+            {
+                name: 'Kashan',
+                ground:'#8c2b22', medallionGround:'#173a5e', medallionFill:'#e8d9a8',
+                borderGround:'#173a5e', vine:'#cf9b3f', motifA:'#d9b14a',
+                motifB:'#3f7d6e', accent:'#c8632c', ivory:'#efe4c4', outline:'#1a120c'
+            },
+            {
+                name: 'Tabriz',
+                ground:'#1d3a55', medallionGround:'#9b2b25', medallionFill:'#ecdcaf',
+                borderGround:'#9b2b25', vine:'#d6b24a', motifA:'#c8772f',
+                motifB:'#5c8a6b', accent:'#e3c662', ivory:'#f0e7cc', outline:'#10161c'
+            },
+            {
+                name: 'Heriz',
+                ground:'#b14a2a', medallionGround:'#234a3a', medallionFill:'#ecdfb6',
+                borderGround:'#2a3b54', vine:'#d8b352', motifA:'#1f4d5e',
+                motifB:'#7a3220', accent:'#e8c463', ivory:'#f2e8cd', outline:'#1a120b'
+            },
+            {
+                name: 'Ivory',
+                ground:'#e7dcc0', medallionGround:'#8f2c25', medallionFill:'#214a63',
+                borderGround:'#7a2823', vine:'#326050', motifA:'#b8862f',
+                motifB:'#3a6f7d', accent:'#c0552a', ivory:'#f4ecd6', outline:'#241813'
+            },
+            {
+                name: 'Kerman',
+                ground:'#2b4a4d', medallionGround:'#c4673a', medallionFill:'#efe2bd',
+                borderGround:'#7d2f3a', vine:'#e0b85a', motifA:'#d28a44',
+                motifB:'#9d4a8c', accent:'#e7c96a', ivory:'#f3ead2', outline:'#141d1e'
+            },
+            {
+                name: 'Indigo',
+                ground:'#16263f', medallionGround:'#a8412c', medallionFill:'#dcc88a',
+                borderGround:'#2c4a2e', vine:'#c9a648', motifA:'#3f7fa3',
+                motifB:'#b85c33', accent:'#d9b65a', ivory:'#e9dcb4', outline:'#0b1320'
+            }
+        ];
+
+        let params = {
+            seed: 12345,
+            knots: 80,
+            points: 10,
+            medallion: 0.36,
+            field: 5,
+            border: 0.11,
+            abrash: 0.45,
+            aspect: 1.0,
+            texture: 0.5,
+            patina: 0.25,
+            weft: true,
+            stitch: true,
+            paletteIndex: 0,
+            showFlaw: true
+        };
+        let defaultParams = JSON.parse(JSON.stringify(params));
+
+        const MAXSIZE = 1200;
+        let SIZE = 1200;
+        let CW = 1200, CH = 1200;
+        let pal;
+        let knotGrid;
+        let GW, GH;
+        let cellW, cellH;
+        let flawCell = null;
+
+        function makeRNG(s) {
+            let a = (s >>> 0) || 1;
+            return function() {
+                a ^= a << 13; a >>>= 0;
+                a ^= a >> 17;
+                a ^= a << 5;  a >>>= 0;
+                return a / 4294967296;
+            };
+        }
+        let rng;
+        let grain;
+
+        function setup() {
+            let canvas = createCanvas(MAXSIZE, MAXSIZE);
+            canvas.parent('canvas-container');
+            pixelDensity(1);
+            noLoop();
+            buildPaletteUI();
+            const l = document.querySelector('.loading');
+            if (l) l.style.display = 'none';
+            weave();
+        }
+
+        function weave() {
+            randomSeed(params.seed);
+            noiseSeed(params.seed);
+            rng = makeRNG(params.seed * 2654435761 % 4294967296 + 1);
+            pal = PALETTES[params.paletteIndex];
+
+            const A = params.aspect;
+            GW = params.knots * 2;
+            GH = Math.max(8, Math.round(GW / A));
+            if (GH % 2 !== GW % 2) GH += 1;
+
+            if (A >= 1) { CW = MAXSIZE; CH = Math.round(MAXSIZE / A); }
+            else        { CH = MAXSIZE; CW = Math.round(MAXSIZE * A); }
+            SIZE = Math.max(CW, CH);
+            if (width !== CW || height !== CH) resizeCanvas(CW, CH, false);
+            cellW = CW / GW;
+            cellH = CH / GH;
+
+            knotGrid = new Array(GH);
+            for (let y = 0; y < GH; y++) {
+                knotGrid[y] = new Array(GW).fill('ground');
+            }
+
+            composeField();
+            composeMedallion();
+            composeCornerPendants();
+            composeBorders();
+            placeDeliberateFlaw();
+            buildGrain();
+            render();
+        }
+
+        function buildGrain() {
+            grain = new Float32Array(GW * GH * 2);
+            for (let i = 0; i < GW * GH; i++) {
+                const tone = (rng() + rng() + rng() - 1.5);
+                const wear = rng() * rng();
+                grain[i * 2]     = tone;
+                grain[i * 2 + 1] = wear;
+            }
+        }
+
+        function tieMirrored(gx, gy, key) {
+            const xs = [gx, GW - 1 - gx];
+            const ys = [gy, GH - 1 - gy];
+            for (const x of xs) for (const y of ys) {
+                if (x >= 0 && x < GW && y >= 0 && y < GH) knotGrid[y][x] = key;
+            }
+        }
+        function tie(gx, gy, key) {
+            if (gx >= 0 && gx < GW && gy >= 0 && gy < GH) knotGrid[gy][gx] = key;
+        }
+
+        const cx = () => (GW - 1) / 2;
+        const cy = () => (GH - 1) / 2;
+
+        function composeField() {
+            const halfW = GW / 2, halfH = GH / 2;
+            const step = Math.max(4, Math.floor(GW / (params.field * 2 + 2)));
+            let row = 0;
+            for (let gy = Math.floor(step * 0.6); gy < halfH; gy += step, row++) {
+                const off = (row % 2) * Math.floor(step / 2);
+                for (let gx = Math.floor(step * 0.6) + off; gx < halfW; gx += step) {
+                    const r = Math.hypot(gx - cx(), gy - cy());
+                    const medR = params.medallion * Math.min(GW, GH) * 0.5;
+                    if (r < medR * 0.92) continue;
+                    const pick = rng();
+                    if (pick < 0.46)      stampBoteh(gx, gy, 1);
+                    else if (pick < 0.78) stampRosette(gx, gy, 'motifB');
+                    else                  stampVineKnot(gx, gy);
+                }
+            }
+        }
+
+        function stampBoteh(gx, gy, dir) {
+            const body = 'motifA', edge = 'outline', heart = 'accent';
+            for (let dy = -2; dy <= 2; dy++) {
+                const w = 2 - Math.floor(Math.abs(dy) * 0.7);
+                for (let dx = -w; dx <= w; dx++) {
+                    tieMirrored(gx + dx, gy + dy, body);
+                }
+            }
+            tieMirrored(gx, gy - 3, body);
+            tieMirrored(gx - dir, gy - 4, body);
+            tieMirrored(gx - dir * 2, gy - 4, edge);
+            tieMirrored(gx, gy, heart);
+            tieMirrored(gx + 2, gy, edge);
+            tieMirrored(gx - 2, gy, edge);
+        }
+
+        function stampRosette(gx, gy, fill) {
+            tieMirrored(gx, gy, 'accent');
+            const petals = 6;
+            for (let i = 0; i < petals; i++) {
+                const a = (Math.PI * 2 * i) / petals;
+                const px = Math.round(gx + Math.cos(a) * 2);
+                const py = Math.round(gy + Math.sin(a) * 2);
+                tieMirrored(px, py, fill);
+            }
+            for (let i = 0; i < petals * 2; i++) {
+                const a = (Math.PI * i) / petals;
+                tieMirrored(Math.round(gx + Math.cos(a) * 3), Math.round(gy + Math.sin(a) * 3), 'vine');
+            }
+        }
+
+        function stampVineKnot(gx, gy) {
+            tieMirrored(gx, gy, 'vine');
+            tieMirrored(gx + 1, gy, 'motifB');
+            tieMirrored(gx - 1, gy, 'motifB');
+            tieMirrored(gx, gy + 1, 'motifB');
+            tieMirrored(gx, gy - 1, 'motifB');
+        }
+
+        function composeMedallion() {
+            const ccx = cx(), ccy = cy();
+            const R = params.medallion * Math.min(GW, GH) * 0.5;
+            const pts = params.points;
+            const twist = rng() * Math.PI;
+
+            const radiusAt = (ang) => {
+                const k = pts;
+                const lobe = Math.cos(k * (ang - twist));
+                const serr = 0.10 * Math.cos(k * 3 * (ang - twist));
+                return R * (0.80 + 0.20 * lobe + serr);
+            };
+
+            for (let gy = 0; gy <= Math.ceil(ccy); gy++) {
+                for (let gx = 0; gx <= Math.ceil(ccx); gx++) {
+                    const dx = gx - ccx, dy = gy - ccy;
+                    const r = Math.hypot(dx, dy);
+                    const ang = Math.atan2(dy, dx);
+                    const edge = radiusAt(ang);
+                    if (r <= edge) {
+                        const t = r / edge;
+                        let key;
+                        if (t < 0.16)      key = 'accent';
+                        else if (t < 0.30) key = 'medallionFill';
+                        else if (t < 0.40) key = 'outline';
+                        else if (t < 0.70) key = 'medallionGround';
+                        else if (t < 0.80) key = 'medallionFill';
+                        else               key = 'outline';
+                        tieMirrored(gx, gy, key);
+                    }
+                }
+            }
+
+            const spokes = pts;
+            for (let s = 0; s < spokes; s++) {
+                const a = twist + (Math.PI * 2 * s) / spokes;
+                for (let rr = 1; rr < R * 0.62; rr++) {
+                    const gx = Math.round(ccx + Math.cos(a) * rr);
+                    const gy = Math.round(ccy + Math.sin(a) * rr);
+                    const key = (rr % 6 < 3) ? 'vine' : 'medallionFill';
+                    tieMirrored(gx, gy, key);
+                }
+            }
+            stampRosette(Math.round(ccx), Math.round(ccy), 'medallionFill');
+
+            const pendL = R * 0.75;
+            for (let rr = R * 0.78; rr < R * 0.78 + pendL; rr++) {
+                const taper = 1 - (rr - R * 0.78) / pendL;
+                const w = Math.max(1, Math.round(3 * taper));
+                for (let dx = -w; dx <= w; dx++) {
+                    const key = (dx === 0) ? 'accent' : (Math.abs(dx) === w ? 'outline' : 'medallionFill');
+                    tieMirrored(Math.round(ccx + dx), Math.round(ccy - rr), key);
+                }
+            }
+        }
+
+        function composeCornerPendants() {
+            const borderKnots = Math.round(params.border * GW) + guardTotal();
+            const margin = borderKnots + 1;
+            const ox = margin, oy = margin;
+            const R = params.medallion * Math.min(GW, GH) * 0.5 * 0.72;
+            const pts = params.points;
+            const twist = rng() * Math.PI;
+
+            const radiusAt = (ang) => {
+                const lobe = Math.cos(pts * (ang - twist));
+                return R * (0.78 + 0.22 * lobe);
+            };
+
+            const reach = Math.round(R * 1.15);
+            for (let gy = oy; gy < oy + reach; gy++) {
+                for (let gx = ox; gx < ox + reach; gx++) {
+                    const dx = gx - ox, dy = gy - oy;
+                    const r = Math.hypot(dx, dy);
+                    const ang = Math.atan2(dy, dx);
+                    if (ang < 0 || ang > Math.PI / 2 + 0.05) continue;
+                    const edge = radiusAt(ang);
+                    if (r <= edge) {
+                        const t = r / edge;
+                        let key;
+                        if (t < 0.30)      key = 'medallionGround';
+                        else if (t < 0.42) key = 'medallionFill';
+                        else if (t < 0.74) key = 'medallionGround';
+                        else if (t < 0.85) key = 'vine';
+                        else               key = 'outline';
+                        tieMirrored(gx, gy, key);
+                    }
+                }
+            }
+            stampRosette(ox + Math.round(R * 0.34), oy + Math.round(R * 0.34), 'medallionFill');
+        }
+
+        const GUARDS = [
+            { w: 2, key: 'outline' },
+            { w: 4, key: 'guardA' },
+            { w: 2, key: 'outline' }
+        ];
+        function guardTotal() { return GUARDS.reduce((a, g) => a + g.w, 0); }
+
+        function composeBorders() {
+            const mainW = Math.round(params.border * GW);
+            let ring = 0;
+
+            paintRing(ring, 1, 'outline'); ring += 1;
+
+            for (const g of GUARDS) { paintGuard(ring, g.w, g.key); ring += g.w; }
+
+            paintRing(ring, mainW, 'borderGround');
+            paintRunningVine(ring, mainW);
+            ring += mainW;
+
+            for (let i = GUARDS.length - 1; i >= 0; i--) { paintGuard(ring, GUARDS[i].w, GUARDS[i].key); ring += GUARDS[i].w; }
+
+            paintRing(ring, 1, 'outline');
+        }
+
+        function paintRing(inset, w, key) {
+            for (let d = 0; d < w; d++) {
+                const i = inset + d;
+                for (let gx = i; gx < GW - i; gx++) { tie(gx, i, key); tie(gx, GH - 1 - i, key); }
+                for (let gy = i; gy < GH - i; gy++) { tie(i, gy, key); tie(GW - 1 - i, gy, key); }
+            }
+        }
+
+        function paintGuard(inset, w, key) {
+            const col = (key === 'guardA') ? 'vine' : key;
+            paintRing(inset, w, (key === 'guardA') ? 'borderGround' : key);
+            if (key !== 'guardA') return;
+            const period = 3;
+            const lay = (gx, gy, idx) => { if ((idx % period) === 0) tie(gx, gy, 'ivory'); else if ((idx % period) === 1) tie(gx, gy, col); };
+            let idx = 0;
+            const mid = inset + Math.floor(w / 2);
+            for (let gx = inset; gx < GW - inset; gx++, idx++) { lay(gx, mid, idx); lay(gx, GH - 1 - mid, idx); }
+            idx = 0;
+            for (let gy = inset; gy < GH - inset; gy++, idx++) { lay(mid, gy, idx); lay(GW - 1 - mid, gy, idx); }
+        }
+
+        function paintRunningVine(inset, w) {
+            const mid = inset + w / 2;
+            const amp = w * 0.30;
+            const period = Math.max(8, Math.round(w * 1.6));
+            const lay = (gx, gy, phase) => {
+                const wave = Math.sin((phase / period) * Math.PI * 2) * amp;
+                const sy = Math.round(gy + wave);
+                tie(gx, sy, 'vine');
+                tie(gx, sy + 1, 'vine');
+                if (phase % period === Math.floor(period / 2)) {
+                    stampBorderFlower(gx, sy, 'motifA');
+                } else if (phase % period === 0) {
+                    stampBorderLeaf(gx, sy);
+                }
+            };
+            let phase = 0;
+            for (let gx = inset + 2; gx < GW - inset - 2; gx++, phase++) {
+                lay(gx, Math.round(mid), phase);
+                const wave = Math.sin((phase / period) * Math.PI * 2) * amp;
+                const by = Math.round(GH - 1 - mid - wave);
+                tie(gx, by, 'vine'); tie(gx, by - 1, 'vine');
+                if (phase % period === Math.floor(period / 2)) stampBorderFlower(gx, by, 'motifA');
+                else if (phase % period === 0) stampBorderLeaf(gx, by);
+            }
+            phase = 0;
+            for (let gy = inset + 2; gy < GH - inset - 2; gy++, phase++) {
+                const wave = Math.sin((phase / period) * Math.PI * 2) * amp;
+                const lx = Math.round(mid + wave);
+                tie(lx, gy, 'vine'); tie(lx + 1, gy, 'vine');
+                const rx = Math.round(GW - 1 - mid - wave);
+                tie(rx, gy, 'vine'); tie(rx - 1, gy, 'vine');
+                if (phase % period === Math.floor(period / 2)) { stampBorderFlower(lx, gy, 'motifA'); stampBorderFlower(rx, gy, 'motifA'); }
+                else if (phase % period === 0) { stampBorderLeaf(lx, gy); stampBorderLeaf(rx, gy); }
+            }
+        }
+
+        function stampBorderFlower(gx, gy, fill) {
+            tie(gx, gy, 'accent');
+            for (let i = 0; i < 5; i++) {
+                const a = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+                tie(Math.round(gx + Math.cos(a) * 1.6), Math.round(gy + Math.sin(a) * 1.6), fill);
+            }
+        }
+        function stampBorderLeaf(gx, gy) {
+            tie(gx, gy, 'motifB');
+            tie(gx, gy - 1, 'motifB');
+            tie(gx + 1, gy, 'motifB');
+            tie(gx - 1, gy, 'motifB');
+        }
+
+        function placeDeliberateFlaw() {
+            flawCell = null;
+            if (!params.showFlaw) return;
+            const borderKnots = Math.round(params.border * GW) + guardTotal() + 2;
+            const inner = borderKnots + 4;
+            for (let tries = 0; tries < 400; tries++) {
+                const gx = inner + Math.floor(rng() * (GW - inner * 2));
+                const gy = inner + Math.floor(rng() * (GH - inner * 2));
+                const r = Math.hypot(gx - cx(), gy - cy());
+                const medR = params.medallion * Math.min(GW, GH) * 0.5;
+                if (r < medR * 1.1) continue;
+                if (knotGrid[gy][gx] !== 'ground') continue;
+                const nearMotif =
+                    knotGrid[gy][gx - 1] !== 'ground' || knotGrid[gy][gx + 1] !== 'ground' ||
+                    knotGrid[gy - 1][gx] !== 'ground' || knotGrid[gy + 1][gx] !== 'ground';
+                if (!nearMotif) continue;
+                tie(gx, gy, 'flaw');
+                flawCell = { x: gx, y: gy };
+                return;
+            }
+        }
+
+        function colorFor(key, gx, gy) {
+            const hex = (key === 'flaw') ? pal.accent : (pal[key] || pal.ground);
+            let r = red(color(hex)), g = green(color(hex)), b = blue(color(hex));
+
+            if ((key === 'ground' || key === 'borderGround' || key === 'medallionGround') && params.abrash > 0) {
+                const drift = (noise(gy * 0.06, key.length * 3.1) - 0.5) * 2;
+                const amt = drift * 14 * params.abrash;
+                r += amt; g += amt * 0.9; b += amt * 0.8;
+            }
+
+            const gi = (gy * GW + gx) * 2;
+            if (params.texture > 0) {
+                const t = grain[gi] * 10 * params.texture;
+                r += t; g += t; b += t;
+            }
+
+            if (params.patina > 0) {
+                const wear = grain[gi + 1] * params.patina * 0.5;
+                r += (236 - r) * wear; g += (228 - g) * wear; b += (200 - b) * wear;
+            }
+
+            if (params.weft && (gy & 1)) { r -= 6; g -= 6; b -= 5; }
+
+            return color(constrain(r,0,255), constrain(g,0,255), constrain(b,0,255));
+        }
+
+        function render() {
+            background(pal.ground);
+            noStroke();
+            rectMode(CORNER);
+
+            const r = Math.min(cellW, cellH) * 0.22;
+            const jit = params.stitch ? Math.min(cellW, cellH) * 0.16 : 0;
+            for (let gy = 0; gy < GH; gy++) {
+                for (let gx = 0; gx < GW; gx++) {
+                    const key = knotGrid[gy][gx];
+                    fill(colorFor(key, gx, gy));
+                    const gi = (gy * GW + gx) * 2;
+                    const jx = jit ? grain[gi] * jit : 0;
+                    const jy = jit ? grain[gi + 1] * jit * 1.4 : 0;
+                    rect(gx * cellW + jx, gy * cellH + jy, cellW + 0.8, cellH + 0.8, r);
+                }
+            }
+
+            drawPileSheen();
+            drawFringe();
+            drawFrame();
+        }
+
+        function drawPileSheen() {
+            push();
+            blendMode(SCREEN);
+            noStroke();
+            for (let i = 0; i < CW; i += 4) {
+                const a = map(Math.sin(i * 0.004 + 0.6), -1, 1, 2, 16);
+                fill(255, 255, 240, a);
+                rect(i, 0, 2, CH);
+            }
+            pop();
+            push();
+            blendMode(MULTIPLY);
+            const rad = Math.max(CW, CH);
+            const g = drawingContext.createRadialGradient(CW/2, CH/2, rad*0.2, CW/2, CH/2, rad*0.62);
+            g.addColorStop(0, 'rgba(255,255,255,0)');
+            g.addColorStop(1, 'rgba(20,16,12,0.22)');
+            drawingContext.fillStyle = g;
+            drawingContext.fillRect(0, 0, CW, CH);
+            pop();
+        }
+
+        function drawFringe() {
+            stroke(pal.ivory);
+            strokeWeight(Math.max(1, cellW * 0.30));
+            const fringeLen = cellH * 1.6;
+            for (let gx = 1; gx < GW; gx += 2) {
+                const x = gx * cellW + cellW * 0.5;
+                const j1 = (noise(gx * 0.3) - 0.5) * cellW;
+                line(x, 0, x + j1, -fringeLen * (0.6 + 0.4 * noise(gx * 0.7)));
+                const j2 = (noise(gx * 0.3 + 99) - 0.5) * cellW;
+                line(x, CH, x + j2, CH + fringeLen * (0.6 + 0.4 * noise(gx * 0.7 + 5)));
+            }
+            noStroke();
+        }
+
+        function drawFrame() {
+            noFill();
+            stroke(pal.outline);
+            strokeWeight(Math.max(CW, CH) * 0.006);
+            rect(0, 0, CW, CH);
+            noStroke();
+        }
+
+        function buildPaletteUI() {
+            const row = document.getElementById('palette-row');
+            row.innerHTML = '';
+            PALETTES.forEach((p, i) => {
+                const chip = document.createElement('div');
+                chip.className = 'palette-chip' + (i === params.paletteIndex ? ' active' : '');
+                const swatch = [p.ground, p.medallionGround, p.medallionFill, p.vine, p.accent]
+                    .map(c => `<span style="background:${c}"></span>`).join('');
+                chip.innerHTML = `${p.name}<div class="swatch-strip">${swatch}</div>`;
+                chip.onclick = () => {
+                    params.paletteIndex = i;
+                    [...row.children].forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    weave();
+                };
+                row.appendChild(chip);
+            });
+        }
+
+        const INT_PARAMS = ['points', 'field', 'knots'];
+        function updateParam(name, value) {
+            params[name] = INT_PARAMS.includes(name) ? parseInt(value) : parseFloat(value);
+            const disp = document.getElementById(name + '-value');
+            if (disp) disp.textContent = (name === 'aspect') ? aspectLabel(params.aspect) : value;
+            weave();
+        }
+
+        function aspectLabel(a) {
+            if (Math.abs(a - 1) < 0.03) return '1:1 square';
+            if (a < 1) return '1:' + (1 / a).toFixed(2) + ' runner';
+            return a.toFixed(2) + ':1 wide';
+        }
+
+        function updateToggle(name, checked) { params[name] = checked; weave(); }
+        function updateFlaw(checked) { params.showFlaw = checked; weave(); }
+
+        function updateSeedDisplay() { document.getElementById('seed-input').value = params.seed; }
+
+        function updateSeed() {
+            const v = parseInt(document.getElementById('seed-input').value);
+            if (v && v > 0) { params.seed = v; weave(); } else updateSeedDisplay();
+        }
+        function previousSeed() { params.seed = Math.max(1, params.seed - 1); updateSeedDisplay(); weave(); }
+        function nextSeed() { params.seed += 1; updateSeedDisplay(); weave(); }
+
+        function randomSeedAndUpdate() {
+            const seed = Math.floor(Math.random() * 999999) + 1;
+            params.seed = seed;
+            const r = makeRNG(seed * 40503 + 7);
+            const choice = (arr) => arr[Math.floor(r() * arr.length)];
+            const range = (lo, hi, step) => {
+                const n = Math.round((lo + r() * (hi - lo)) / step) * step;
+                return Math.round(n * 1e6) / 1e6;
+            };
+            params.paletteIndex = Math.floor(r() * PALETTES.length);
+            params.knots     = range(56, 112, 4);
+            params.points    = range(6, 16, 1);
+            params.medallion = range(0.24, 0.48, 0.02);
+            params.field     = range(3, 7, 1);
+            params.border    = range(0.08, 0.15, 0.01);
+            params.abrash    = range(0.1, 0.9, 0.05);
+            params.aspect    = choice([0.55, 0.7, 0.8, 1.0, 1.0, 1.25, 1.45]);
+            params.texture   = range(0.2, 0.9, 0.05);
+            params.patina    = range(0, 0.6, 0.05);
+            params.weft      = r() < 0.7;
+            params.stitch    = r() < 0.8;
+            syncUI();
+            weave();
+        }
+
+        const SLIDERS = ['knots','points','medallion','field','border','abrash','aspect','texture','patina'];
+        function syncUI() {
+            for (const id of SLIDERS) {
+                const el = document.getElementById(id);
+                if (!el) continue;
+                el.value = params[id];
+                const disp = document.getElementById(id + '-value');
+                if (disp) disp.textContent = (id === 'aspect') ? aspectLabel(params.aspect) : params[id];
+            }
+            document.getElementById('weft').checked = params.weft;
+            document.getElementById('stitch').checked = params.stitch;
+            document.getElementById('flaw').checked = params.showFlaw;
+            buildPaletteUI();
+            updateSeedDisplay();
+        }
+
+        function resetParameters() {
+            params = JSON.parse(JSON.stringify(defaultParams));
+            syncUI();
+            weave();
+        }
+
+        function downloadCarpet() {
+            saveCanvas('knotted-field-' + pal.name.toLowerCase() + '-seed' + params.seed, 'png');
+        }
+
+        window.addEventListener('load', updateSeedDisplay);
+    </script>
+</body>
+</html>
