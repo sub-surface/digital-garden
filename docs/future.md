@@ -2,6 +2,9 @@
 
 Items that are explicitly deferred, low priority, or pending design work. Grouped by domain. Write to main docs when completed.
 
+> **For the prioritised, sequenced view across all docs, see [`../ROADMAP.md`](../ROADMAP.md).**
+> This file remains the full per-domain backlog (detail backer for the roadmap).
+
 ---
 
 ## Refactoring & Technical Debt (dependency-ordered)

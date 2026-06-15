@@ -8,6 +8,7 @@ Custom React 19 + Vite 6 SPA serving three domains: `subsurfaces.net` (garden), 
 
 | File | Description |
 |---|---|
+| [../ROADMAP.md](../ROADMAP.md) | **Consolidated outstanding work** — merges index.md wishlist + future.md + iteration-spec + HeXO pipeline. Start here for "what's next". |
 | [architecture.md](architecture.md) | Three-shell system, layering rules, domain routing, build pipeline |
 | [garden.md](garden.md) | Garden (`subsurfaces.net`) — platform, layout, features, content, UX |
 | [wiki.md](wiki.md) | Wiki (`wiki.subsurfaces.net`) — infrastructure, submission, contributor experience |
