@@ -287,6 +287,12 @@ function drawField(
     ctx.textBaseline = "middle"
   }
 
+  // Dots render as a living constellation: each node drifts off its grid point on
+  // a noise current, and nearby nodes are linked — an aperiodic lattice that
+  // echoes the graph view and the quasicrystal aesthetic. Positions are collected
+  // here, links drawn in a pass afterwards.
+  const dotNodes: Array<{ x: number; y: number; r: number; ci: number; alpha: number }> = []
+
   for (let x = step / 2 - pad; x < state.w + pad; x += step) {
     for (let vy = step / 2 - sy0 - pad; vy < state.h + pad; vy += step) {
       const docY = vy + (window.scrollY || 0)
@@ -340,10 +346,42 @@ function drawField(
       } else if (mode === "dots") {
         const ci = PM[(Math.floor(x * 7) + PM[Math.floor(docY * 3) & 255]) & 255] % state.colorCache.palette.length
         const dotR = p.minSize + intensity * (p.maxSize - p.minSize)
+        // Drift each node off its grid cell along the same field angle `a`, by up
+        // to ~40% of a step — enough to break the rigid lattice into something
+        // organic without nodes overlapping.
+        const drift = step * 0.4 * (simplex(nx * 1.5, ny * 1.5 - t) * 0.5 + 0.5)
+        const dxp = x + Math.cos(a) * drift
+        const dyp = vy + Math.sin(a) * drift
+        dotNodes.push({ x: dxp, y: dyp, r: dotR, ci, alpha: finalAlpha })
         ctx.fillStyle = state.colorCache.palette[ci]
         ctx.beginPath()
-        ctx.arc(x, vy, dotR, 0, Math.PI * 2)
+        ctx.arc(dxp, dyp, dotR, 0, Math.PI * 2)
         ctx.fill()
+      }
+    }
+  }
+
+  // Constellation links: connect each dot to neighbours within ~1.6 steps. Only
+  // scan the local window (next few columns/rows) so this stays O(n·k), not O(n²).
+  if (mode === "dots" && dotNodes.length > 1) {
+    const maxD = step * 1.6
+    const maxD2 = maxD * maxD
+    ctx.lineWidth = 1
+    for (let i = 0; i < dotNodes.length; i++) {
+      const a0 = dotNodes[i]
+      // grid order means near-neighbours are within a small index window
+      for (let j = i + 1; j < Math.min(i + 24, dotNodes.length); j++) {
+        const b0 = dotNodes[j]
+        const ddx = a0.x - b0.x, ddy = a0.y - b0.y
+        const d2 = ddx * ddx + ddy * ddy
+        if (d2 > maxD2) continue
+        const closeness = 1 - Math.sqrt(d2) / maxD
+        ctx.globalAlpha = closeness * 0.35 * Math.min(a0.alpha, b0.alpha)
+        ctx.strokeStyle = state.colorCache.palette[a0.ci]
+        ctx.beginPath()
+        ctx.moveTo(a0.x, a0.y)
+        ctx.lineTo(b0.x, b0.y)
+        ctx.stroke()
       }
     }
   }

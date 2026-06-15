@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react"
-import { initialState, placeStone, key, stonesLeft, type HexoState } from "@/lib/hexo"
+import { initialState, placeStone, botMove, key, stonesLeft, type HexoState } from "@/lib/hexo"
 import styles from "./HexoPage.module.scss"
 
 const HEX_SIZE = 22 // px radius
@@ -275,10 +275,29 @@ export function HexoPage() {
   const [state, setState] = useState<HexoState>(initialState())
   const [annotations, setAnnotations] = useState<Annotations>({ highlights: new Set(), arrows: [] })
   const [zen, setZen] = useState(false)
+  const [vsBot, setVsBot] = useState(true) // bot is Player 2
 
   const onPlace = useCallback((q: number, r: number) => {
-    setState((s) => placeStone(s, q, r))
-  }, [])
+    setState((s) => {
+      // In bot mode, ignore clicks while it's the bot's turn.
+      if (vsBot && s.turn === 2 && s.winner === null) return s
+      return placeStone(s, q, r)
+    })
+  }, [vsBot])
+
+  // Bot auto-plays its stones whenever it's Player 2's turn (bot mode only).
+  // One stone per tick so the placements animate and the 1-2-2 rule is respected.
+  useEffect(() => {
+    if (!vsBot || state.winner !== null || state.turn !== 2) return
+    const t = setTimeout(() => {
+      setState((s) => {
+        if (!vsBot || s.winner !== null || s.turn !== 2) return s
+        const mv = botMove(s)
+        return mv ? placeStone(s, mv.q, mv.r) : s
+      })
+    }, 320)
+    return () => clearTimeout(t)
+  }, [vsBot, state])
 
   const newGame = useCallback(() => {
     setState(initialState())
@@ -293,9 +312,11 @@ export function HexoPage() {
     return () => window.removeEventListener("keydown", onKey)
   }, [zen])
 
+  const nameFor = (p: 1 | 2) => (vsBot ? (p === 1 ? "You" : "Bot") : `Player ${p}`)
+  const winVerb = (p: 1 | 2) => (vsBot && p === 1 ? "win" : "wins") // "You win!" vs "Bot wins!"
   const status = state.winner
-    ? `Player ${state.winner} wins!`
-    : `Player ${state.turn} — place ${state.stonesPerTurn} stone${state.stonesPerTurn > 1 ? "s" : ""} (${stonesLeft(state)} left)`
+    ? `${nameFor(state.winner)} ${winVerb(state.winner)}!`
+    : `${nameFor(state.turn)} — place ${state.stonesPerTurn} stone${state.stonesPerTurn > 1 ? "s" : ""} (${stonesLeft(state)} left)`
 
   const boardEl = (
     <HexoBoard state={state} onPlace={onPlace} annotations={annotations} setAnnotations={setAnnotations} wide={zen} />
@@ -320,7 +341,7 @@ export function HexoPage() {
   return (
     <div className={styles.hexoContainer}>
       <header className={styles.header}>
-        <h1>heXO</h1>
+        <h1>HeXO</h1>
         <p>Connect six on an endless field of hexes.</p>
       </header>
 
@@ -335,11 +356,18 @@ export function HexoPage() {
             <button className={styles.resetBtn} onClick={newGame}>New Game</button>
           </div>
           <div className={styles.zoomRow}>
+            <button
+              className={styles.zoomBtn}
+              onClick={() => { setVsBot((v) => !v); newGame() }}
+              title="Toggle opponent"
+            >
+              {vsBot ? "● vs Bot" : "○ Hot-seat"}
+            </button>
             <button className={styles.zoomBtn} onClick={() => setZen(true)} title="Zen mode">⤢ Zen</button>
           </div>
           <div className={styles.legend}>
-            <span><span className={`${styles.swatch} ${styles.stoneP1}`} /> Player 1 (X)</span>
-            <span><span className={`${styles.swatch} ${styles.stoneP2}`} /> Player 2 (O)</span>
+            <span><span className={`${styles.swatch} ${styles.stoneP1}`} /> {vsBot ? "You" : "Player 1"} (X)</span>
+            <span><span className={`${styles.swatch} ${styles.stoneP2}`} /> {vsBot ? "Bot" : "Player 2"} (O)</span>
           </div>
           <p className={styles.rules}>
             Player 1 places one stone to open; after that, each player places two stones per

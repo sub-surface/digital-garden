@@ -22,5 +22,7 @@ export const SYSTEM_PAGES: Record<string, SystemPage> = {
   sandbox:         { component: lazy(() => import("@/components/ui/SandPage").then(m => ({ default: m.SandPage }))),           layout: "game",    loading: "Loading sand..." },
   "hex-mines":     { component: lazy(() => import("@/components/ui/HexMinesPage").then(m => ({ default: m.HexMinesPage }))),   layout: "game",    loading: "Loading minefield..." },
   "ant-farm":      { component: lazy(() => import("@/components/ui/AntFarmPage").then(m => ({ default: m.AntFarmPage }))),     layout: "game",    loading: "Loading colony..." },
+  "hex-life":      { component: lazy(() => import("@/components/ui/HexLifePage").then(m => ({ default: m.HexLifePage }))),   layout: "game",    loading: "Seeding the grid..." },
+  progressions:    { component: lazy(() => import("@/components/ui/ProgressionsPage").then(m => ({ default: m.ProgressionsPage }))), layout: "game", loading: "Setting the board..." },
   constellation:   { component: lazy(() => import("@/components/ui/ConstellationPage").then(m => ({ default: m.ConstellationPage }))), layout: "game", loading: "Charting the sky..." },
 }

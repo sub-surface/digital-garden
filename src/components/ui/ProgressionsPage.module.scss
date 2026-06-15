@@ -1,0 +1,187 @@
+.fsRoot {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  font-family: var(--font-code);
+}
+
+.stage {
+  width: 100%;
+  max-width: 1100px;
+  padding: var(--space-6) 1.5rem var(--space-8);
+  text-align: center;
+}
+
+.header {
+  margin-bottom: var(--space-5);
+  h1 { font-family: var(--font-header); font-size: 2.4rem; margin-bottom: 0.4rem; }
+  p { opacity: 0.55; font-size: 0.78rem; line-height: 1.5; max-width: 540px; margin: 0 auto; }
+}
+
+.scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: var(--space-4);
+}
+
+.scoreCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 1.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  min-width: 90px;
+
+  &.red { border-color: #a23a36; }
+  &.blue { border-color: #3a5fa2; }
+}
+.scoreName { font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; }
+.scoreVal { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+.scoreBest { font-size: 0.62rem; opacity: 0.5; }
+
+.turnTag {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.battlefield {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch;
+
+  @media (max-width: 760px) {
+    flex-direction: column;
+  }
+}
+
+.boardWrap {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.monitor {
+  flex: 0 0 210px;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.9rem 1rem;
+  background: color-mix(in srgb, var(--color-bg-surface) 60%, transparent);
+
+  @media (max-width: 760px) { flex-basis: auto; }
+}
+
+.monitorTitle {
+  font-family: var(--font-header);
+  font-size: 1rem;
+  margin: 0 0 0.7rem;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.28rem 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+.metricLabel { font-size: 0.66rem; opacity: 0.6; letter-spacing: 0.03em; }
+.metricVal { font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+
+.barRow { padding: 0.4rem 0 0.2rem; }
+.barHead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.25rem; }
+.barTrack {
+  height: 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-border) 60%, transparent);
+  overflow: hidden;
+}
+.barFill {
+  height: 100%;
+  background: var(--color-accent-base);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.monitorNote {
+  margin-top: 0.8rem;
+  font-size: 0.6rem;
+  line-height: 1.6;
+  opacity: 0.45;
+}
+
+.toggleOn {
+  border-color: var(--color-accent-base) !important;
+  color: var(--color-accent-base) !important;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: min(62vh, 620px);
+  cursor: grab;
+  touch-action: none;
+  &:active { cursor: grabbing; }
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: var(--space-5);
+
+  button {
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.45em 1.3em;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text);
+    border-radius: 5px;
+    cursor: pointer;
+    &:hover:not(:disabled) { border-color: var(--color-accent-base); color: var(--color-accent-base); }
+    &:disabled { opacity: 0.35; cursor: default; }
+  }
+}
+
+.primary {
+  border-color: var(--color-accent-base) !important;
+  background: color-mix(in srgb, var(--color-accent-base) 14%, transparent) !important;
+}
+
+.sliders {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+  }
+  input[type="range"] { accent-color: var(--color-accent-base); cursor: pointer; width: 160px; }
+}
+
+.note {
+  margin-top: var(--space-4);
+  font-size: 0.66rem;
+  line-height: 1.6;
+  opacity: 0.45;
+  max-width: 540px;
+  margin-left: auto;
+  margin-right: auto;
+}

@@ -21,7 +21,7 @@ const GAMES: GameCard[] = [
     featured: true,
     external: true,
   },
-  { href: "hexo", name: "heXO", blurb: "Connect six on an endless hex field, against a handmade opponent.", live: true, featured: true },
+  { href: "hexo", name: "HeXO", blurb: "Connect six on an endless hex field, against a handmade opponent.", live: true, featured: true },
   { href: "chess", name: "Chess", blurb: "A small handmade machine to play against.", live: true },
   { href: "tetris", name: "Tetris", blurb: "The falling well, themed in accent monochrome.", live: true },
   { href: "snake", name: "Snake", blurb: "Walls wrap; the rare bloom bends time.", live: true },
@@ -31,6 +31,8 @@ const GAMES: GameCard[] = [
   { href: "murmuration", name: "Murmuration", blurb: "A flock of boids that flees your cursor. A toy.", live: true },
   { href: "sandbox", name: "Sandbox", blurb: "Falling sand: paint, flow, grow, burn. A toy.", live: true },
   { href: "ant-farm", name: "Ant Farm", blurb: "A colony foraging by pheromone — paths emerge and fade. A toy.", live: true },
+  { href: "hex-life", name: "Hex Life", blurb: "Cellular automata on a hex grid — simple rules, emergent worlds. A toy.", live: true },
+  { href: "progressions", name: "Progressions", blurb: "Two agents race to build the longest arithmetic progression. A toy.", live: true },
 ]
 
 export function ArcadePage() {

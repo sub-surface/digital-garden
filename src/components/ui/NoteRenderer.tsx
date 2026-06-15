@@ -5,6 +5,7 @@ import { NoteLayout } from "./NoteLayout"
 import { NoteFooter } from "./NoteFooter"
 import { NoteBody } from "./NoteBody"
 import { WikiInfobox } from "./WikiInfobox"
+import { BackToArcade } from "./BackToArcade"
 import { resolveSlug } from "@/lib/content-loader"
 import { useIsWiki } from "@/hooks/useIsWiki"
 import { SYSTEM_PAGES } from "@/config/system-pages"
@@ -160,6 +161,7 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
   if (layout === "game") {
     return (
       <article className="game-layout">
+        <BackToArcade slug={slug} />
         <div className="game-stage">{renderContent()}</div>
       </article>
     )

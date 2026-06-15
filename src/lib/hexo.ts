@@ -92,3 +92,119 @@ export function placeStone(state: HexoState, q: number, r: number): HexoState {
 export function stonesLeft(state: HexoState): number {
   return state.stonesPerTurn - state.placedThisTurn
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bot opponent
+//
+// A handmade heuristic player — no search tree, no network. It scores every
+// candidate cell by how much it helps the bot and how much it denies the human,
+// using the same "live line" idea as the theory repo's Erdős–Selfridge potential:
+// a length-6 window is only worth anything while it contains no opponent stone,
+// and its value grows steeply with how many of your own stones already sit in it.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ALL_DIRS: Array<[number, number]> = [
+  [1, 0], [0, 1], [1, -1],
+]
+
+function other(p: Player): Player {
+  return p === 1 ? 2 : 1
+}
+
+/** Candidate cells = all empty cells within 1 hex of any stone (plus origin on an empty board). */
+function candidates(stones: Map<string, Player>): Array<[number, number]> {
+  if (stones.size === 0) return [[0, 0]]
+  const seen = new Set<string>()
+  const out: Array<[number, number]> = []
+  const ring: Array<[number, number]> = [
+    [1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, 1],
+  ]
+  for (const k of stones.keys()) {
+    const [q, r] = k.split(",").map(Number)
+    for (const [dq, dr] of ring) {
+      const nq = q + dq, nr = r + dr
+      const nk = key(nq, nr)
+      if (stones.has(nk) || seen.has(nk)) continue
+      seen.add(nk)
+      out.push([nq, nr])
+    }
+  }
+  return out
+}
+
+/**
+ * Heuristic value of placing `player` at (q,r): summed over every length-6 window
+ * through the cell, along all three axes. A window contributes only if the
+ * opponent has no stone in it; its weight rises sharply with the count of
+ * `player` stones already inside (4^own), so completing/extending threats and
+ * blocking the opponent both fall out of one number when we score for both sides.
+ */
+function cellScore(stones: Map<string, Player>, q: number, r: number, player: Player): number {
+  const opp = other(player)
+  let score = 0
+  for (const [dq, dr] of ALL_DIRS) {
+    // slide a 6-window so that (q,r) is each of its 6 positions
+    for (let offset = -5; offset <= 0; offset++) {
+      let own = 0, blocked = false
+      for (let i = 0; i < 6; i++) {
+        const cq = q + dq * (offset + i)
+        const cr = r + dr * (offset + i)
+        if (cq === q && cr === r) continue // the cell we're hypothetically filling
+        const occ = stones.get(key(cq, cr))
+        if (occ === opp) { blocked = true; break }
+        if (occ === player) own++
+      }
+      if (blocked) continue
+      score += Math.pow(4, own)
+    }
+  }
+  return score
+}
+
+/**
+ * Pick the bot's move for the current player. Pure: depends only on `state`.
+ * Strategy, in priority order:
+ *   1. take an immediate win,
+ *   2. block the opponent's immediate win,
+ *   3. otherwise place where (my offence + a share of their offence-denied) is largest.
+ * Deterministic given the state (ties broken by scan order) — easy to test and
+ * to swap out later for a champion bred in the competition harness.
+ */
+export function botMove(state: HexoState): { q: number; r: number } | null {
+  if (state.winner !== null) return null
+  const me = state.turn
+  const opp = other(me)
+  const cells = candidates(state.stones)
+  if (cells.length === 0) return null
+
+  let best: [number, number] | null = null
+  let bestScore = -Infinity
+
+  for (const [q, r] of cells) {
+    // 1. immediate win?
+    const mineNext = new Map(state.stones)
+    mineNext.set(key(q, r), me)
+    if (checkWin(mineNext, q, r, me)) return { q, r }
+
+    // 2/3. combined offence + defence score.
+    const offence = cellScore(state.stones, q, r, me)
+    const defence = cellScore(state.stones, q, r, opp)
+    // Weight defence slightly above raw offence so the bot reliably blocks a
+    // five-in-a-row even when it has an equal-looking build of its own.
+    const score = offence + defence * 1.1
+    if (score > bestScore) {
+      bestScore = score
+      best = [q, r]
+    }
+  }
+
+  // 2 (hard guarantee): if the opponent has an immediate win anywhere in the
+  // candidate set, block it outright even if the blended score chose elsewhere.
+  for (const [q, r] of cells) {
+    const oppNext = new Map(state.stones)
+    oppNext.set(key(q, r), opp)
+    if (checkWin(oppNext, q, r, opp)) return { q, r }
+  }
+
+  return best ? { q: best[0], r: best[1] } : null
+}

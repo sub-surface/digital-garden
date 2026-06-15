@@ -57,7 +57,8 @@
   overflow-y: auto;
   scroll-behavior: smooth;
 
-  .shell[data-layout="article"] & {
+  .shell[data-layout="article"] &,
+  .shell[data-layout="game"] & {
     flex: 1;
     min-width: 100vw;
     border-right: none;
