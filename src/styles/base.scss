@@ -263,6 +263,12 @@ th {
   background: var(--color-highlight);
 }
 
+// The main content landmark is only programmatically focusable (tabIndex -1)
+// as the skip-to-content target; it should not draw a focus ring of its own.
+#main-content:focus {
+  outline: none;
+}
+
 // ── Responsive ──
 
 @media (max-width: 800px) {

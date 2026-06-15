@@ -14,6 +14,7 @@ import { ThemePanel } from "./ThemePanel"
 import { QuickControls } from "./QuickControls"
 import { GlobalOverlays } from "./GlobalOverlays"
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
+import { SkipToContent } from "@/components/ui/SkipToContent"
 import { LinkPreview } from "@/components/ui/LinkPreview"
 import { MusicPlayer } from "@/components/ui/MusicPlayer"
 import { MobileMusicBar } from "@/components/ui/MobileMusicBar"
@@ -78,6 +79,7 @@ export function AppShell() {
         data-layout={activeLayout}
         data-testid="app-shell"
       >
+        <SkipToContent />
         <BgCanvas />
         <ThemePanel />
         <LinkPreview />
@@ -93,7 +95,7 @@ export function AppShell() {
 
         {/* Horizontal workspace: main pane + panel cards */}
         <div className={styles.workspace} data-testid="workspace">
-          <main className={styles.mainPane} data-testid="main-pane">
+          <main id="main-content" tabIndex={-1} className={styles.mainPane} data-testid="main-pane">
             <div className={styles.mainContent}>
               <ErrorBoundary label="note" resetKeys={[location.pathname]}>
                 <Outlet />

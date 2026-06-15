@@ -1,0 +1,33 @@
+// Skip link: off-screen until focused, then pinned to the top-left as a
+// terminal-style chip. Square corners, accent fill, mono font — no glow.
+.skipLink {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100000;
+  // Pull it out of view without removing it from the tab order.
+  transform: translateY(-120%);
+  padding: 0.5rem 0.9rem;
+  background: var(--color-accent-base, #b4424c);
+  color: var(--color-bg, #0a0a0a);
+  font-family: var(--font-code, "IBM Plex Mono", monospace);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  border-radius: 0;
+  transition: transform 0.12s ease;
+
+  &:focus,
+  &:focus-visible {
+    transform: translateY(0);
+    outline: 2px solid var(--color-text, #e0e0e0);
+    outline-offset: -2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skipLink {
+    transition: none;
+  }
+}

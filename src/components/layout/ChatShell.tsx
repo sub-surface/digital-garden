@@ -6,6 +6,7 @@ import { TerminalTitle } from "./TerminalTitle"
 import { QuickControls } from "./QuickControls"
 import { NotificationBanner } from "@/components/ui/NotificationBanner"
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
+import { SkipToContent } from "@/components/ui/SkipToContent"
 import styles from "./ChatShell.module.scss"
 
 export function ChatShell() {
@@ -24,6 +25,7 @@ export function ChatShell() {
       style={{ "--chat-font-scale": chatFontScale } as React.CSSProperties}
       data-testid="chat-shell"
     >
+      <SkipToContent />
       <BgCanvas />
       <ThemePanel />
 
@@ -31,7 +33,7 @@ export function ChatShell() {
       <TerminalTitle context="chat" />
       <QuickControls variant="chat" />
 
-      <main className={styles.mainPane} data-testid="main-pane">
+      <main id="main-content" tabIndex={-1} className={styles.mainPane} data-testid="main-pane">
         <ErrorBoundary label="chat">
           <Outlet />
         </ErrorBoundary>

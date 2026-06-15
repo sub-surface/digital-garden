@@ -11,6 +11,7 @@ import { MDXProvider } from "@/components/mdx/MDXProvider"
 import { SideChat } from "@/components/ui/SideChat"
 import { NotificationBanner } from "@/components/ui/NotificationBanner"
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
+import { SkipToContent } from "@/components/ui/SkipToContent"
 import styles from "./WikiShell.module.scss"
 
 export function WikiShell() {
@@ -30,6 +31,7 @@ export function WikiShell() {
         data-layout={activeLayout}
         data-testid="wiki-shell"
       >
+        <SkipToContent />
         <BgCanvas />
         <ThemePanel />
         <QuickControls />
@@ -52,6 +54,8 @@ export function WikiShell() {
 
         <div className={styles.dockedLayout}>
           <main
+            id="main-content"
+            tabIndex={-1}
             className={styles.mainPane}
             data-testid="main-pane"
             style={isSideChatOpen ? { width: `calc(100% - ${sideChatWidth}px)` } : undefined}
