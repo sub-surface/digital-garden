@@ -3,6 +3,7 @@ import * as path from "path"
 import { fileURLToPath } from "url"
 import matter from "gray-matter"
 import { execSync } from "child_process"
+import { imageSize } from "image-size"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CONTENT_DIR = path.resolve(__dirname, "../content")
@@ -417,6 +418,38 @@ function main() {
     }
     copyDirRecursive(mediaDir, path.join(publicContent, "Media"))
     console.log("  public/content/Media/: media assets copied")
+
+    // Emit intrinsic image dimensions so <img> tags can reserve layout space
+    // (fixes Cumulative Layout Shift). Keyed by the same /content/Media/... path
+    // that rehype-image-paths produces at runtime. Header-only read via image-size.
+    const DIMENSION_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif", ".svg"])
+    const dimensions: Record<string, { width: number; height: number }> = {}
+
+    function scanDimensions(dir: string, relPrefix: string) {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const abs = path.join(dir, entry.name)
+        const rel = relPrefix ? `${relPrefix}/${entry.name}` : entry.name
+        if (entry.isDirectory()) {
+          scanDimensions(abs, rel)
+        } else if (DIMENSION_EXTS.has(path.extname(entry.name).toLowerCase())) {
+          try {
+            const { width, height } = imageSize(fs.readFileSync(abs))
+            if (width && height) {
+              dimensions[`/content/Media/${rel}`] = { width, height }
+            }
+          } catch {
+            // Unreadable/corrupt image — skip; the <img> simply won't reserve space.
+          }
+        }
+      }
+    }
+
+    scanDimensions(mediaDir, "")
+    fs.writeFileSync(
+      path.join(PUBLIC_DIR, "image-dimensions.json"),
+      JSON.stringify(dimensions, null, 2),
+    )
+    console.log(`  public/image-dimensions.json: ${Object.keys(dimensions).length} images measured`)
   }
 
   // Generate emote index from public/emotes/
