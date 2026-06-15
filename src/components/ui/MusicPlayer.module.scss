@@ -63,6 +63,7 @@
   overflow: hidden;
 
   .title {
+    display: block;
     margin: 0;
     font-size: 0.65rem;
     text-transform: uppercase;
@@ -72,6 +73,11 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-decoration: none;   // when rendered as a SoundCloud <a>
+  }
+  a.title:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .artist {
@@ -158,6 +164,8 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
+  text-decoration: none;   // when rendered as a SoundCloud <a>
+  color: inherit;
   // vinyl body + grooves: a near-black base with fine concentric rings
   background:
     repeating-radial-gradient(
@@ -196,10 +204,19 @@
   border-radius: 50%;
   object-fit: cover;
   display: block;
+  transition: box-shadow 0.2s ease;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.6),
     0 0 0 4px var(--color-bg, #0a0a0a),
     0 0 0 5px rgba(255, 255, 255, 0.08);
+}
+
+// the disc-as-link gets an accent ring on hover so it's discoverable
+a.disc:hover .label {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 0 4px var(--color-bg, #0a0a0a),
+    0 0 0 6px var(--color-primary);
 }
 
 .spindle {
@@ -212,6 +229,11 @@
   z-index: 2;
 }
 
+.vinyl {
+  cursor: grab;
+  touch-action: none;   // let pointer-drag scratch instead of scrolling on touch
+}
+
 .vinyl .disc {
   animation: spin 4s linear infinite;
   animation-play-state: paused;
@@ -219,6 +241,13 @@
 
 .vinyl.spinning .disc {
   animation-play-state: running;
+}
+
+// While scratching we drive rotation manually on .vinyl via inline transform,
+// so the CSS auto-spin must yield.
+.vinyl.scratching {
+  cursor: grabbing;
+  .disc { animation-play-state: paused; }
 }
 
 @keyframes spin {
@@ -237,37 +266,65 @@
   gap: 0.5rem;
 }
 
+// Progress bar styled as a side-on view of the record: a thin 2px "edge" line,
+// the played portion in accent, with a tiny playhead (the tonearm needle just
+// touching the groove). The hit area is taller than the visible line.
+$track-h: 2px;
+$bar-h: 14px;
+$thumb: 8px;
+
 .progressBar {
   width: 100%;
-  height: 3px;
+  height: $bar-h;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
+  background:
+    linear-gradient(
+      to right,
+      var(--color-primary) 0,
+      var(--color-primary) var(--pct, 0%),
+      rgba(255, 255, 255, 0.13) var(--pct, 0%),
+      rgba(255, 255, 255, 0.13) 100%
+    );
+  background-size: 100% $track-h;
+  background-position: 0 center;
+  background-repeat: no-repeat;
+  background-clip: content-box;   // keep the line vertically centred in the hit area
+  border-radius: 1px;
   outline: none;
   cursor: pointer;
-  padding: 7px 0;
-  background-clip: content-box;
 
   &::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 10px;
-    height: 10px;
+    width: $thumb;
+    height: $thumb;
+    margin-top: calc((#{$bar-h} - #{$thumb}) / -2);   // centre on the line
     background: var(--color-primary);
-    border: 2px solid var(--color-bg, #0a0a0a);
+    border: 1.5px solid var(--color-bg, #0a0a0a);
     border-radius: 50%;
     cursor: grab;
-    transition: transform 0.12s ease;
+    transition: transform 0.12s ease, box-shadow 0.15s ease;
   }
-  &::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.3); }
+  &:hover::-webkit-slider-thumb { box-shadow: 0 0 7px 1px var(--color-primary); }
+  &::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.35); box-shadow: 0 0 11px 2px var(--color-primary); }
 
-  &::-moz-range-thumb {
-    width: 10px;
-    height: 10px;
+  &::-moz-range-progress {
+    height: $track-h;
     background: var(--color-primary);
-    border: 2px solid var(--color-bg, #0a0a0a);
+    border-radius: 1px;
+  }
+  &::-moz-range-thumb {
+    width: $thumb;
+    height: $thumb;
+    background: var(--color-primary);
+    border: 1.5px solid var(--color-bg, #0a0a0a);
     border-radius: 50%;
+  }
+  &::-moz-range-track {
+    height: $track-h;
+    background: rgba(255, 255, 255, 0.13);
+    border-radius: 1px;
   }
 }
 
@@ -328,19 +385,19 @@
 
 .volumeSlider {
   flex: 1;
-  height: 4px;
+  height: 18px;            // tall hit area; the visible track is painted via content-box
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.14);
   border-radius: 2px;
   outline: none;
   cursor: pointer;
-  // a generous transparent hit area so the thin track is easy to grab
-  padding: 8px 0;
+  // paint the 4px track inside a generous transparent hit area (7px top/bottom)
+  padding: 7px 0;
   background-clip: content-box;
   transition: background-color 0.15s ease;
 
-  &:hover { background-color: rgba(255, 255, 255, 0.18); }
+  &:hover { background-color: rgba(255, 255, 255, 0.22); }
 
   &::-webkit-slider-thumb {
     -webkit-appearance: none;
@@ -351,9 +408,14 @@
     border: 2px solid var(--color-bg, #0a0a0a);
     border-radius: 50%;
     cursor: grab;
-    transition: transform 0.12s ease;
+    transition: transform 0.12s ease, box-shadow 0.15s ease;
   }
-  &::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.25); }
+  &:hover::-webkit-slider-thumb { box-shadow: 0 0 8px 1px var(--color-primary); }
+  &::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.25);
+    box-shadow: 0 0 12px 2px var(--color-primary);
+  }
 
   &::-moz-range-thumb {
     width: 12px;
@@ -362,10 +424,13 @@
     border: 2px solid var(--color-bg, #0a0a0a);
     border-radius: 50%;
     cursor: grab;
+    transition: box-shadow 0.15s ease;
   }
+  &:hover::-moz-range-thumb { box-shadow: 0 0 8px 1px var(--color-primary); }
+  &:active::-moz-range-thumb { box-shadow: 0 0 12px 2px var(--color-primary); }
   &::-moz-range-track {
     height: 4px;
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.14);
     border-radius: 2px;
   }
 }

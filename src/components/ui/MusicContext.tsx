@@ -17,6 +17,8 @@ interface MusicContextType {
   seek: (time: number) => void
   currentTrack: Track | null
   analyser: AnalyserNode | null
+  /** Live <audio> element — for direct, render-lag-free scrubbing (scratch). */
+  audioRef: React.RefObject<HTMLAudioElement | null>
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined)
@@ -214,6 +216,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         seek,
         currentTrack,
         analyser: analyserRef.current,
+        audioRef,
       }}
     >
       {children}
