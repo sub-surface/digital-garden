@@ -66,11 +66,50 @@ interface CardSpec {
 /** Node-and-edge constellation (graph, constellation). */
 function constellationMotif(accent: string, seed: number): Node {
   const r = rng(seed)
-  const points = Array.from({ length: 11 }, () => ({
-    x: 30 + r() * 280,
-    y: 30 + r() * 480,
-    s: 6 + r() * 14,
+  const points = Array.from({ length: 10 }, () => ({
+    x: 36 + r() * 250,
+    y: 40 + r() * 470,
+    s: 8 + r() * 12,
   }))
+  // Centre of each node — edges must start and end exactly here so the lines
+  // visibly touch the dots.
+  const cx = (p: { x: number; s: number }) => p.x + p.s / 2
+  const cy = (p: { y: number; s: number }) => p.y + p.s / 2
+
+  // Connect each node to its nearest neighbour: short edges that read as a real
+  // constellation rather than long crossing diagonals that miss the dots.
+  const edges: Node[] = []
+  for (let i = 0; i < points.length; i += 1) {
+    let best = -1
+    let bestDist = Infinity
+    for (let j = 0; j < points.length; j += 1) {
+      if (j === i) continue
+      const d = (cx(points[i]) - cx(points[j])) ** 2 + (cy(points[i]) - cy(points[j])) ** 2
+      if (d < bestDist) {
+        bestDist = d
+        best = j
+      }
+    }
+    const a = points[i]
+    const b = points[best]
+    const dx = cx(b) - cx(a)
+    const dy = cy(b) - cy(a)
+    const len = Math.sqrt(dx * dx + dy * dy)
+    const angle = (Math.atan2(dy, dx) * 180) / Math.PI
+    edges.push(
+      el("div", {
+        position: "absolute",
+        left: `${cx(a)}px`,
+        top: `${cy(a)}px`,
+        width: `${len}px`,
+        height: "2px",
+        backgroundColor: accent,
+        opacity: 0.35,
+        transform: `rotate(${angle}deg)`,
+        transformOrigin: "0 1px",
+      }),
+    )
+  }
   const dots = points.map((p) =>
     el("div", {
       position: "absolute",
@@ -82,29 +121,6 @@ function constellationMotif(accent: string, seed: number): Node {
       backgroundColor: accent,
     }),
   )
-  // Edges as thin rotated bars between consecutive-ish points.
-  const edges: Node[] = []
-  for (let i = 0; i < points.length - 1; i += 1) {
-    const a = points[i]
-    const b = points[(i + 3) % points.length]
-    const dx = b.x - a.x
-    const dy = b.y - a.y
-    const len = Math.sqrt(dx * dx + dy * dy)
-    const angle = (Math.atan2(dy, dx) * 180) / Math.PI
-    edges.push(
-      el("div", {
-        position: "absolute",
-        left: `${a.x + 3}px`,
-        top: `${a.y + 3}px`,
-        width: `${len}px`,
-        height: "1px",
-        backgroundColor: accent,
-        opacity: 0.28,
-        transform: `rotate(${angle}deg)`,
-        transformOrigin: "0 0",
-      }),
-    )
-  }
   return el("div", { display: "flex", position: "relative", width: "340px", height: "100%" }, [
     ...edges,
     ...dots,
@@ -141,36 +157,63 @@ function chessMotif(accent: string): Node {
   )
 }
 
-/** Honeycomb of hexagons (hexo). */
-function hexMotif(accent: string, seed: number): Node {
+/**
+ * Honeycomb of cells in hex-packed offset rows. satori has no clip-path, so a
+ * true hexagon polygon isn't drawable — circles in a hex lattice read as a hex
+ * grid far better than rotated squares did. Shared by hexo and hex-life.
+ *
+ * `filled` decides each cell's state: outlined rings (hexo board) vs solid
+ * on/off cells (hex-life). Deterministic from the seed.
+ */
+function honeycomb(accent: string, seed: number, style: "ring" | "life"): Node {
   const r = rng(seed)
-  const hexes: Node[] = []
-  for (let i = 0; i < 14; i += 1) {
-    const col = i % 4
-    const rowN = Math.floor(i / 4)
-    hexes.push(
-      el(
-        "div",
-        {
-          position: "absolute",
-          left: `${30 + col * 74 + (rowN % 2) * 37}px`,
-          top: `${40 + rowN * 64}px`,
-          width: "64px",
-          height: "64px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          // Hexagon via clip-path is unsupported in satori; fake with a rotated square.
-          transform: "rotate(45deg)",
-          border: `2px solid ${accent}`,
-          opacity: 0.3 + r() * 0.7,
-          borderRadius: "8px",
-        },
-        [],
-      ),
-    )
+  const cell = 52
+  const gapX = cell + 8 // horizontal spacing between cell centres
+  const rowH = cell * 0.86 // hex rows overlap vertically
+  const cols = 4
+  const rows = 7
+  const cells: Node[] = []
+  for (let row = 0; row < rows; row += 1) {
+    const offset = (row % 2) * (gapX / 2)
+    for (let col = 0; col < cols; col += 1) {
+      const live = r() > 0.5
+      const left = 18 + offset + col * gapX
+      const top = 8 + row * rowH
+      if (left + cell > 340) continue
+      cells.push(
+        style === "ring"
+          ? el("div", {
+              position: "absolute",
+              left: `${left}px`,
+              top: `${top}px`,
+              width: `${cell}px`,
+              height: `${cell}px`,
+              borderRadius: "50%",
+              border: `2px solid ${accent}`,
+              opacity: 0.3 + r() * 0.6,
+            })
+          : el("div", {
+              position: "absolute",
+              left: `${left}px`,
+              top: `${top}px`,
+              width: `${cell}px`,
+              height: `${cell}px`,
+              borderRadius: "50%",
+              backgroundColor: live ? accent : "#161616",
+              opacity: live ? 0.55 + r() * 0.45 : 1,
+            }),
+      )
+    }
   }
-  return el("div", { display: "flex", position: "relative", width: "340px", height: "100%" }, hexes)
+  return el("div", { display: "flex", position: "relative", width: "340px", height: "100%" }, cells)
+}
+
+function hexMotif(accent: string, seed: number): Node {
+  return honeycomb(accent, seed, "ring")
+}
+
+function hexLifeMotif(accent: string, seed: number): Node {
+  return honeycomb(accent, seed, "life")
 }
 
 /** Equalizer bars (music-library). */
@@ -323,9 +366,9 @@ const CARDS: CardSpec[] = [
   { slug: "blackjack", kicker: "Sub-Surface Arcade", title: "Blackjack", subtitle: "Beat the dealer to 21", accent: "#b4424c", motif: arcadeMotif },
   { slug: "murmuration", kicker: "Sub-Surface Arcade", title: "Murmuration", subtitle: "A flock that follows your cursor", accent: "#8ed7e8", motif: arcadeMotif },
   { slug: "sandbox", kicker: "Sub-Surface Arcade", title: "Sandbox", subtitle: "Falling-sand cellular toys", accent: "#c8a84c", motif: arcadeMotif },
-  { slug: "hex-mines", kicker: "Sub-Surface Arcade", title: "Hex Mines", subtitle: "Minesweeper on hexagons", accent: "#b4424c", motif: arcadeMotif },
+  { slug: "hex-mines", kicker: "Sub-Surface Arcade", title: "Hex Mines", subtitle: "Minesweeper on hexagons", accent: "#b4424c", motif: hexMotif },
   { slug: "ant-farm", kicker: "Sub-Surface Arcade", title: "Ant Farm", subtitle: "A small emergent colony", accent: "#6a9955", motif: arcadeMotif },
-  { slug: "hex-life", kicker: "Sub-Surface Arcade", title: "Hex Life", subtitle: "Conway's Life on a hex grid", accent: "#8ed7e8", motif: arcadeMotif },
+  { slug: "hex-life", kicker: "Sub-Surface Arcade", title: "Hex Life", subtitle: "Conway's Life on a hex grid", accent: "#8ed7e8", motif: hexLifeMotif },
   { slug: "progressions", kicker: "Sub-Surface Arcade", title: "Progressions", subtitle: "A generative harmonic board", accent: "#d2a3e8", motif: arcadeMotif },
 ]
 

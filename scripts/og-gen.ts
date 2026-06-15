@@ -74,28 +74,55 @@ async function main() {
     return
   }
 
+  let generated = 0
   for (const slug of slugsToGenerate) {
     const note = index[slug]
     const outPath = path.join(OG_DIR, `${slug.replace(/\//g, "-")}.png`)
 
+    // Coerce to strings: a purely-numeric frontmatter title (e.g. "2048") parses
+    // as a number, and satori chokes on a non-string text child. Tags likewise.
+    const title = String(note.title ?? slug)
+    const tags: string[] = Array.isArray(note.tags) ? note.tags.map((t: unknown) => String(t)) : []
+
     const thumbnail: string | null = note.image || note.cover || note.poster || null
 
-    // Resolve relative image paths to absolute file URLs
+    // satori only accepts data: or http(s) image sources (not file://) and only
+    // raster formats it can decode (PNG/JPEG/WebP — not SVG/GIF). Inline anything
+    // we host as a base64 data URI: that covers /content/Media paths AND our own
+    // https://subsurfaces.net/Media/... URLs (which have local copies), so we
+    // never depend on a live fetch. Truly-external http(s) URLs pass through and
+    // degrade to a text-only card if satori can't load them (see retry below).
+    const MIME: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" }
+    function localPathForThumb(t: string): string | null {
+      // Normalise our own URLs / bare /Media paths / bare filenames to a public/
+      // file path. Frontmatter image fields range from "/content/Media/x.png" to
+      // "/Media/x.png" to a full subsurfaces.net URL to just "Lancaster (2).jpeg".
+      const ownMedia = t.match(/^https?:\/\/(?:www\.)?subsurfaces\.net(\/.*)$/i)
+      const rel = ownMedia ? ownMedia[1] : t.startsWith("http") ? null : t
+      if (rel === null) return null
+      let stripped = rel.replace(/^\//, "")
+      if (/^Media\//i.test(stripped)) stripped = stripped.replace(/^Media\//i, "content/Media/")
+      else if (!stripped.startsWith("content/")) stripped = `content/Media/${stripped}`
+      return path.join(path.resolve(__dirname, "../public"), stripped)
+    }
+
     let thumbnailUrl: string | null = null
     if (thumbnail) {
-      if (thumbnail.startsWith("http")) {
-        thumbnailUrl = thumbnail
-      } else {
-        // Local path e.g. /content/Media/... → public/content/Media/...
-        const localPath = path.join(path.resolve(__dirname, "../public"), thumbnail.replace(/^\//, ""))
-        if (fs.existsSync(localPath)) {
-          thumbnailUrl = `file://${localPath.replace(/\\/g, "/")}`
+      const localPath = localPathForThumb(thumbnail)
+      if (localPath) {
+        const ext = path.extname(localPath).toLowerCase()
+        if (MIME[ext] && fs.existsSync(localPath)) {
+          thumbnailUrl = `data:${MIME[ext]};base64,${fs.readFileSync(localPath).toString("base64")}`
         }
       }
+      // Truly-external thumbnails (not ours) are left out: satori's fetch can't
+      // reliably decode arbitrary remote images (and CI shouldn't depend on the
+      // network), so the card renders text-only rather than failing.
     }
 
     const textMaxWidth = thumbnailUrl ? '680px' : '900px'
 
+    try {
     const svg = await satori(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ({
@@ -138,7 +165,7 @@ async function main() {
                     type: 'div',
                     props: {
                       style: { fontSize: thumbnailUrl ? 56 : 72, fontWeight: 700, color: '#ffffff', marginBottom: '24px', lineHeight: 1.1, maxWidth: textMaxWidth },
-                      children: note.title,
+                      children: title,
                     },
                   },
                   {
@@ -152,7 +179,7 @@ async function main() {
                     type: 'div',
                     props: {
                       style: { display: 'flex', marginTop: '40px', gap: '12px' },
-                      children: (note.tags || []).slice(0, 4).map((t: string) => ({
+                      children: tags.slice(0, 4).map((t: string) => ({
                         type: 'span',
                         props: {
                           style: { fontSize: 20, color: '#666', border: '1px solid #333', padding: '4px 12px', borderRadius: '4px' },
@@ -206,6 +233,12 @@ async function main() {
 
     fs.writeFileSync(outPath, pngBuffer)
     cache[slug] = hashNote(note)
+    generated += 1
+    } catch (err) {
+      // One bad note (unsupported style, unreachable remote image) must not abort
+      // the whole run — log and carry on so every other card still generates.
+      console.warn(`  ⚠ skipped OG for "${slug}": ${err instanceof Error ? err.message : err}`)
+    }
   }
 
   // Prune stale cache entries for deleted slugs
@@ -214,7 +247,8 @@ async function main() {
   }
 
   fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2))
-  console.log(`Successfully generated ${slugsToGenerate.length} OG image(s) in public/og/ (${Object.keys(index).length} total)`)
+  const skipped = slugsToGenerate.length - generated
+  console.log(`Successfully generated ${generated} note OG image(s) in public/og/${skipped > 0 ? ` (${skipped} skipped)` : ""}`)
 }
 
 main().catch(console.error)
