@@ -25,7 +25,11 @@ async function getContentIndex(assetsFetcher: Fetcher | undefined): Promise<Reco
   if (contentIndexCache) return contentIndexCache
   try {
     const res = await assetsFetcher.fetch("https://assets.internal/content-index.json")
-    if (res.ok) contentIndexCache = await res.json()
+    if (res.ok) {
+      contentIndexCache = await res.json()
+    } else {
+      console.error(`content-index fetch non-ok (${res.status}) — OG meta will be skipped`)
+    }
   } catch (e) {
     console.error("content-index fetch failed (OG meta will be skipped):", e)
   }

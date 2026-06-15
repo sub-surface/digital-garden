@@ -24,6 +24,7 @@ const ChatPage = lazy(() => import("@/components/ui/ChatPage").then(m => ({ defa
 // Lazy load heavy components
 const ConstellationPage = lazy(() => import("@/components/ui/ConstellationPage").then(m => ({ default: m.ConstellationPage })))
 const ChessPage = lazy(() => import("@/components/ui/ChessPage").then(m => ({ default: m.ChessPage })))
+const BootPage = lazy(() => import("@/features/boot/BootPage").then(m => ({ default: m.BootPage })))
 
 // Root layout
 const rootRoute = createRootRoute({
@@ -165,6 +166,19 @@ const editRoute = createRoute({
   },
 })
 
+// Boot sequence route — must be before catch-all note route
+const bootRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/boot",
+  component: function BootRouteComponent() {
+    return (
+      <Suspense fallback={<div className="loading-shimmer">Waking the small processes…</div>}>
+        <BootPage />
+      </Suspense>
+    )
+  },
+})
+
 // Catch-all note route — handles /Books/foo, /Movies/bar, etc.
 // On the chat shell this renders ChatPage regardless of path.
 const noteRoute = createRoute({
@@ -208,6 +222,7 @@ const routeTree = rootRoute.addChildren([
   userRoute,
   privacyRoute,
   editRoute,
+  bootRoute,
   noteRoute,
 ])
 

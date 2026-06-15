@@ -131,6 +131,130 @@ async function* echoFade(): AsyncGenerator<string, void, unknown> {
   }
 }
 
+async function* breathing(): AsyncGenerator<string, void, unknown> {
+  const frames = ["breathe in", "breathe in .", "breathe in ..", "breathe in ...", "breathe out", "breathe out .", "breathe out ..", "breathe out ..."]
+  for (let i = 0; i < 2; i++) {
+    for (const f of frames) {
+      yield f
+      await sleep(150)
+    }
+  }
+}
+
+async function* plantGrowth(): AsyncGenerator<string, void, unknown> {
+  const frames = ["\u00a0\u00a0\u00a0*", "\u00a0\u00a0*\u00a0*", "\u00a0*\u00a0\u00a0*", "*\u00a0\u00a0\u00a0*", "*\u00a0~\u00a0*", "*\u00a0~\u00a0*", "|\u00a0~\u00a0|"]
+  for (const f of frames) {
+    yield f
+    await sleep(250)
+  }
+}
+
+async function* starfield(): AsyncGenerator<string, void, unknown> {
+  const W = 24
+  for (let i = 0; i < 6; i++) {
+    let row = ""
+    for (let j = 0; j < W; j++) {
+      const rand = (i + j * 7 + i * 13) % 5
+      if (rand === 0) row += "*"
+      else if (rand === 1) row += "·"
+      else row += " "
+    }
+    yield row
+    await sleep(100)
+  }
+}
+
+async function* spiral(): AsyncGenerator<string, void, unknown> {
+  const frames = ["\\", "|", "/", "\u2014"]
+  for (let i = 0; i < 8; i++) {
+    yield `\u00a0\u00a0${frames[i % frames.length]}`
+    await sleep(120)
+  }
+}
+
+async function* bookPages(): AsyncGenerator<string, void, unknown> {
+  yield "\u00a0\u00a0\u00a0[\u00a0]"
+  await sleep(200)
+  yield "\u00a0\u00a0[-\u00a0]"
+  await sleep(200)
+  yield "\u00a0[==\u00a0]"
+  await sleep(200)
+  yield "[===\u00a0]"
+  await sleep(200)
+  yield "[====]"
+  await sleep(200)
+  yield "[===\u00a0]"
+  await sleep(200)
+  yield "[==\u00a0]"
+  await sleep(200)
+  yield "[-\u00a0]"
+  await sleep(200)
+  yield "[\u00a0]"
+  await sleep(200)
+}
+
+async function* waterWave(): AsyncGenerator<string, void, unknown> {
+  const frames = [
+    "~\u00a0\u00a0\u00a0~\u00a0\u00a0\u00a0~",
+    "\u00a0~\u00a0\u00a0\u00a0~\u00a0\u00a0\u00a0~",
+    "\u00a0\u00a0~\u00a0\u00a0\u00a0~\u00a0\u00a0\u00a0~",
+  ]
+  for (let i = 0; i < 4; i++) {
+    for (const f of frames) {
+      yield f
+      await sleep(140)
+    }
+  }
+}
+
+async function* seedPulse(): AsyncGenerator<string, void, unknown> {
+  yield "\u00a0\u00a0\u00a0\u00a0o"
+  await sleep(180)
+  yield "\u00a0\u00a0\u00a0O\u00a0o"
+  await sleep(180)
+  yield "\u00a0\u00a0o\u00a0o\u00a0o"
+  await sleep(180)
+  yield "\u00a0o\u00a0o\u00a0o\u00a0o"
+  await sleep(180)
+  yield "o\u00a0o\u00a0o\u00a0o\u00a0o"
+  await sleep(180)
+}
+
+async function* rainDrop(): AsyncGenerator<string, void, unknown> {
+  yield "\u00a0\u00a0\u00a0\u00a0."
+  await sleep(100)
+  yield "\u00a0\u00a0\u00a0."
+  await sleep(100)
+  yield "\u00a0\u00a0."
+  await sleep(100)
+  yield "\u00a0."
+  await sleep(100)
+  yield "."
+  await sleep(100)
+  yield "\u00a0~"
+  await sleep(100)
+}
+
+async function* spinner(): AsyncGenerator<string, void, unknown> {
+  const frames = ["\u25dc", "\u25dd", "\u25de", "\u25df"]
+  for (let i = 0; i < 6; i++) {
+    for (const f of frames) {
+      yield f
+      await sleep(100)
+    }
+  }
+}
+
+async function* morseHello(): AsyncGenerator<string, void, unknown> {
+  const morse = ["··· ", "\u2014\u2014\u2014 ", "·· ", "·· ", "\u2014\u2014\u2014 "]
+  for (let i = 0; i < 2; i++) {
+    for (const m of morse) {
+      yield m
+      await sleep(200)
+    }
+  }
+}
+
 const IDLE_SNIPPETS: Snippet[] = [
   { gen: loadingBar, tooltip: "Calibrating systems..." },
   { gen: asciiPulse, tooltip: "Pulse detected." },
@@ -142,6 +266,16 @@ const IDLE_SNIPPETS: Snippet[] = [
   { gen: thinkingDots, tooltip: "Deep thought engaged." },
   { gen: coffeeTime, tooltip: "Re-caffeinating core." },
   { gen: ghostDance, tooltip: "Spectral activity high." },
+  { gen: breathing, tooltip: "Centering..." },
+  { gen: plantGrowth, tooltip: "Growing..." },
+  { gen: starfield, tooltip: "Stars aligned." },
+  { gen: spiral, tooltip: "Spiraling..." },
+  { gen: bookPages, tooltip: "Turning pages..." },
+  { gen: waterWave, tooltip: "Waves flowing." },
+  { gen: seedPulse, tooltip: "Seeds spreading." },
+  { gen: rainDrop, tooltip: "Rain falling..." },
+  { gen: spinner, tooltip: "Processing..." },
+  { gen: morseHello, tooltip: "Morse code..." },
 ]
 
 function sleep(ms: number): Promise<void> {

@@ -75,6 +75,16 @@ interface GardenStore {
   isReaderMode: boolean
   toggleReaderMode: () => void
 
+  // Keyboard cheat sheet (? overlay)
+  isCheatSheetOpen: boolean
+  toggleCheatSheet: () => void
+  setCheatSheet: (open: boolean) => void
+
+  // Command palette (Ctrl/Cmd+P)
+  isCommandPaletteOpen: boolean
+  toggleCommandPalette: () => void
+  setCommandPalette: (open: boolean) => void
+
   // Search
   isSearchOpen: boolean
   setSearchOpen: (open: boolean) => void
@@ -130,6 +140,9 @@ interface GardenStore {
   // Content index (loaded at startup)
   contentIndex: ContentIndex | null
   setContentIndex: (index: ContentIndex) => void
+  /** True when the content-index fetch failed — search/graph/random go dark silently otherwise. */
+  contentIndexError: boolean
+  setContentIndexError: (failed: boolean) => void
 
   // Chat display
   chatDensity: "compact" | "comfortable" | "spacious"
@@ -206,6 +219,14 @@ export const useStore = create<GardenStore>((set) => ({
   toggleReaderMode: () => set((s) => ({ isReaderMode: !s.isReaderMode })),
 
   // Search
+  isCheatSheetOpen: false,
+  toggleCheatSheet: () => set((s) => ({ isCheatSheetOpen: !s.isCheatSheetOpen })),
+  setCheatSheet: (isCheatSheetOpen) => set({ isCheatSheetOpen }),
+
+  isCommandPaletteOpen: false,
+  toggleCommandPalette: () => set((s) => ({ isCommandPaletteOpen: !s.isCommandPaletteOpen })),
+  setCommandPalette: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
+
   isSearchOpen: false,
   setSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
   toggleSearch: () => set((s) => ({ isSearchOpen: !s.isSearchOpen })),
@@ -297,6 +318,8 @@ export const useStore = create<GardenStore>((set) => ({
   // Content index
   contentIndex: null,
   setContentIndex: (contentIndex) => set({ contentIndex }),
+  contentIndexError: false,
+  setContentIndexError: (contentIndexError) => set({ contentIndexError }),
 
   // Chat display
   chatDensity: (typeof localStorage !== "undefined"

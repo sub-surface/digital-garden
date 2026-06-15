@@ -1,0 +1,79 @@
+.container {
+  max-width: 520px;
+  margin: 12vh auto;
+  padding: 32px 28px;
+  text-align: center;
+  font-family: var(--font-code);
+  background: var(--glass-bg, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.glyph {
+  font-size: 1.6rem;
+  color: var(--color-accent-base);
+  letter-spacing: 0.2em;
+  margin-bottom: 14px;
+  opacity: 0.8;
+}
+
+.title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--font-code);
+}
+
+.message {
+  margin: 0 auto 20px;
+  max-width: 40ch;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  opacity: 0.7;
+  line-height: 1.55;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.button {
+  font-family: var(--font-code);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  padding: 9px 18px;
+  background: none;
+  color: var(--color-accent-base);
+  border: 1px solid var(--color-accent-base);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover {
+    background: var(--color-accent-base);
+    color: var(--color-bg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-base);
+    outline-offset: 2px;
+  }
+}
+
+.detail {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 0.68rem;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  opacity: 0.4;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+}

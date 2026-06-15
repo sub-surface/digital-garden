@@ -10,6 +10,7 @@ import { SearchOverlay } from "@/components/ui/SearchOverlay"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
 import { SideChat } from "@/components/ui/SideChat"
 import { NotificationBanner } from "@/components/ui/NotificationBanner"
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
 import styles from "./WikiShell.module.scss"
 
 export function WikiShell() {
@@ -56,7 +57,9 @@ export function WikiShell() {
             style={isSideChatOpen ? { width: `calc(100% - ${sideChatWidth}px)` } : undefined}
           >
             <div className={styles.mainContent}>
-              <Outlet />
+              <ErrorBoundary label="page" resetKeys={[location.pathname]}>
+                <Outlet />
+              </ErrorBoundary>
             </div>
           </main>
 

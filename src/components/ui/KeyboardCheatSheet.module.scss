@@ -1,0 +1,129 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+  z-index: 5200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5vh 16px;
+  animation: fade 0.15s var(--ease-out);
+}
+
+.modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--glass-bg-heavy);
+  backdrop-filter: blur(20px);
+  border: var(--glass-border);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  padding: 22px 24px 26px;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.7;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: var(--color-text);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.4;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: opacity 0.2s, background 0.2s;
+
+  &:hover { opacity: 0.9; }
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-base);
+    outline-offset: 2px;
+    opacity: 0.9;
+  }
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.group {}
+
+.groupTitle {
+  margin: 0 0 8px;
+  font-family: var(--font-code);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-accent-base);
+  opacity: 0.8;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 2px;
+  border-bottom: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.06));
+
+  &:last-child { border-bottom: none; }
+}
+
+.label {
+  font-size: 0.85rem;
+  font-family: var(--font-body);
+  opacity: 0.85;
+}
+
+.keys {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.kbd {
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  min-width: 1.4em;
+  text-align: center;
+  padding: 3px 7px;
+  background: var(--color-highlight, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--color-border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: var(--color-text);
+  letter-spacing: 0.04em;
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

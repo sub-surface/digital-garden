@@ -5,6 +5,7 @@ import { BgCanvas } from "./BgCanvas"
 import { TerminalTitle } from "./TerminalTitle"
 import { QuickControls } from "./QuickControls"
 import { NotificationBanner } from "@/components/ui/NotificationBanner"
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
 import styles from "./ChatShell.module.scss"
 
 export function ChatShell() {
@@ -31,7 +32,9 @@ export function ChatShell() {
       <QuickControls variant="chat" />
 
       <main className={styles.mainPane} data-testid="main-pane">
-        <Outlet />
+        <ErrorBoundary label="chat">
+          <Outlet />
+        </ErrorBoundary>
       </main>
 
     </div>

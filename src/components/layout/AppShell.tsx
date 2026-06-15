@@ -12,6 +12,8 @@ import { CornerMenu } from "./CornerMenu"
 import { BgCanvas } from "./BgCanvas"
 import { ThemePanel } from "./ThemePanel"
 import { QuickControls } from "./QuickControls"
+import { GlobalOverlays } from "./GlobalOverlays"
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
 import { LinkPreview } from "@/components/ui/LinkPreview"
 import { MusicPlayer } from "@/components/ui/MusicPlayer"
 import { MobileMusicBar } from "@/components/ui/MobileMusicBar"
@@ -31,20 +33,39 @@ export function AppShell() {
   const activeLayout = useStore((s) => s.activeLayout)
   const location = useLocation()
   const setContentIndex = useStore((s) => s.setContentIndex)
+  const setContentIndexError = useStore((s) => s.setContentIndexError)
 
-  // Defer content-index fetch — needed by Query components on all shells
+  // Defer content-index fetch — needed by Query components on all shells.
+  // A 404 (stale deploy) returns the SPA HTML fallback with a 200-but-not-JSON
+  // body, so check both res.ok and content-type before trusting it.
   useEffect(() => {
+    let cancelled = false
     fetch("/content-index.json")
-      .then((r) => r.json())
-      .then(setContentIndex)
-      .catch(() => console.warn("Content index not found — run prebuild first"))
-  }, [setContentIndex])
+      .then((r) => {
+        const ct = r.headers.get("content-type") ?? ""
+        if (!r.ok || !ct.includes("json")) {
+          throw new Error(`content-index ${r.status} (${ct || "no content-type"})`)
+        }
+        return r.json()
+      })
+      .then((idx) => {
+        if (cancelled) return
+        setContentIndex(idx)
+        setContentIndexError(false)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        console.warn("Content index failed to load:", err)
+        setContentIndexError(true)
+      })
+    return () => { cancelled = true }
+  }, [setContentIndex, setContentIndexError])
 
   usePanelClick()
   useHotkeys()
 
-  if (shell === "wiki") return <Suspense fallback={null}><WikiShell /><CookieConsent /></Suspense>
-  if (shell === "chat") return <Suspense fallback={null}><ChatShell /><CookieConsent /></Suspense>
+  if (shell === "wiki") return <Suspense fallback={null}><WikiShell /><GlobalOverlays /><CookieConsent /></Suspense>
+  if (shell === "chat") return <Suspense fallback={null}><ChatShell /><GlobalOverlays /><CookieConsent /></Suspense>
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 800
   const showFloatingGraph = !isMobile
@@ -65,6 +86,7 @@ export function AppShell() {
         <QuickControls />
         <SearchOverlay />
         <GraphOverlay />
+        <GlobalOverlays />
         
         {/* Terminal title — top-left */}
         <TerminalTitle />
@@ -73,7 +95,9 @@ export function AppShell() {
         <div className={styles.workspace} data-testid="workspace">
           <main className={styles.mainPane} data-testid="main-pane">
             <div className={styles.mainContent}>
-              <Outlet />
+              <ErrorBoundary label="note" resetKeys={[location.pathname]}>
+                <Outlet />
+              </ErrorBoundary>
             </div>
           </main>
           <PanelStack />
@@ -81,9 +105,11 @@ export function AppShell() {
 
         {/* Floating Local Graph (Desktop Only) */}
         {showFloatingGraph && (
-          <Suspense fallback={null}>
-            <LocalGraph slug={activeSlug} />
-          </Suspense>
+          <ErrorBoundary label="graph" fallback={() => null}>
+            <Suspense fallback={null}>
+              <LocalGraph slug={activeSlug} />
+            </Suspense>
+          </ErrorBoundary>
         )}
 
         {/* Corner menu — bottom-right (includes Theme toggle) */}
