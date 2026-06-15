@@ -37,14 +37,11 @@ Most of the original list resolved itself: `.gitattributes` exists (LF normalise
 rules), `daily-report.md` is now gitignored, the orphaned pasted image and `.codex/` are gone,
 tree is clean. Remaining:
 
-- [ ] **★ `AGENTS.md` vs `CLAUDE.md` drift.** Both tracked, already disagree — `AGENTS.md`
-  documents `npm test` / `typecheck:worker` / `check`; `CLAUDE.md`'s Commands block now covers
-  these too, so re-verify they match. Pick `CLAUDE.md` as canonical; reduce `AGENTS.md` to a
-  one-line pointer (or delete). Two drifting references is worse than one.
-- [ ] Document the implicit-prebuild build contract inline in the Commands block (memory
-  `build-prebuild-lifecycle`): `build` relies on npm's `prebuild` lifecycle hook; a rename
-  silently ships a stale index. `test-package-scripts.mjs` guards the string. *(CLAUDE.md already
-  has a "Build note" — confirm it's sufficient, then close.)*
+- [x] **★ `AGENTS.md` vs `CLAUDE.md` drift.** Resolved: `AGENTS.md` is now a 3-line pointer to
+  `CLAUDE.md` (single source of truth), so there is nothing left to drift. (verified 2026-06-15)
+- [x] Document the implicit-prebuild build contract inline in the Commands block — `CLAUDE.md`'s
+  "Build note" already covers it (prebuild fires via npm's `prebuild` lifecycle hook; a rename
+  ships a stale index; `test-package-scripts.mjs` guards the string). Sufficient; closed.
 
 ---
 
@@ -247,7 +244,10 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
   - Playlist reordering (drag), loop-all + single-track loop modes.
   - Scratch first-activation latency: prewarm decodes on open, but a cold first scratch can still
     fall back to silent scrub until decode lands — consider decoding to a smaller/again-cached form.
-- [ ] **"Random note" button** — jump to a random note. content-index is already loaded in AppShell.
+- [x] **"Random note" button** — dice icon in QuickControls (main shell) + `r` hotkey. Picks a
+  random eligible slug from the content-index (system/game/shelf/index pages excluded,
+  case-insensitively against `SYSTEM_PAGES`; `private` filtered), opens it as a panel card on the
+  garden / navigates on wiki. `useRandomNote` hook + `RandomNoteButton`. (2026-06-15)
 - [ ] **Generative-art section** — `[~]` partially: Boids/Sand/AntFarm/HexLife exist as toys and
   Murmuration is the default bg, but no dedicated "create your own & share" surface.
 - [ ] **Philosophy ↔ computation writing** — series of notes; analytic angle + Deleuze's unfinished

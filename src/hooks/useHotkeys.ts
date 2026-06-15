@@ -1,12 +1,14 @@
 import { useEffect } from "react"
 import { useStore } from "@/store"
 import { useMusic } from "@/components/ui/MusicContext"
+import { useRandomNote } from "@/hooks/useRandomNote"
 
 /**
  * Global hotkey listener for:
  * - \ (backslash) to open theme menu
  * - b to change background
  * - m to play/pause music
+ * - r to jump to a random note
  * All hotkeys are disabled while search is open.
  */
 export function useHotkeys() {
@@ -14,6 +16,7 @@ export function useHotkeys() {
   const cycleBgMode = useStore((s) => s.cycleBgMode)
   const isSearchOpen = useStore((s) => s.isSearchOpen)
   const { togglePlay } = useMusic()
+  const goRandom = useRandomNote()
 
   useEffect(() => {
     function handleKeydown(e: KeyboardEvent) {
@@ -43,6 +46,10 @@ export function useHotkeys() {
           e.preventDefault()
           togglePlay()
           break
+        case "r":
+          e.preventDefault()
+          goRandom()
+          break
       }
     }
 
@@ -50,5 +57,5 @@ export function useHotkeys() {
     return () => {
       document.removeEventListener("keydown", handleKeydown)
     }
-  }, [toggleThemePanel, cycleBgMode, togglePlay, isSearchOpen])
+  }, [toggleThemePanel, cycleBgMode, togglePlay, goRandom, isSearchOpen])
 }

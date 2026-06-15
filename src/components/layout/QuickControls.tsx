@@ -3,6 +3,7 @@ import { useStore } from "@/store"
 import { useShell } from "@/hooks/useShell"
 import { MusicBar } from "@/components/ui/MusicBar"
 import { SearchButton } from "@/components/ui/SearchButton"
+import { RandomNoteButton } from "@/components/ui/RandomNoteButton"
 import { BgModeToggle } from "@/components/ui/BgModeToggle"
 import styles from "./QuickControls.module.scss"
 
@@ -127,6 +128,8 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
       {variant === "full" && <MusicBar />}
 
       {variant === "full" && <SearchButton />}
+
+      {variant === "full" && <RandomNoteButton />}
 
       {/* Day/Night Toggle */}
       <button
