@@ -41,7 +41,7 @@ const GAMES: GameCard[] = [
   { href: "ant-farm", name: "Ant Farm", blurb: "A colony foraging by pheromone — paths emerge and fade. A toy.", live: true },
   { href: "hex-life", name: "Hex Life", blurb: "Cellular automata on a hex grid — simple rules, emergent worlds. A toy.", live: true },
   { href: "progressions", name: "Progressions", blurb: "Two agents race to build the longest arithmetic progression. A toy.", live: true },
-  { href: "persian-carpet", name: "The Knotted Field", blurb: "A woven symmetry engine. Seed a loom, choose a dye lot, find the deliberate flaw. A toy.", live: true },
+  { href: "persian-carpet", name: "Persian Carpet", blurb: "Born from a shower thought about asking Claude to weave cute rugs. Seed a loom, pick a dye lot, find the deliberate flaw.", live: true },
 ]
 
 export function ArcadePage() {
