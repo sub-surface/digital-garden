@@ -1,154 +1,218 @@
 /**
- * Seed resolution and validation.
- * Converts URL parameters, localStorage, and random generation into stable 32-bit seeds.
+ * Seed parsing, persistence and canonical URL helpers.
  */
 
-import type { ResolvedSeed } from "./bootTypes"
+import type {
+  ResolvedSeed,
+  ResolvedSeedSource,
+} from "./bootTypes"
 
+const STORAGE_KEY = "bootSeed"
+const UINT32_MAX = 0xffff_ffff
 const NON_ZERO_FALLBACK = 0x6d2b79f5
 
-/**
- * Generate a cryptographically random 32-bit seed.
- */
+function hasWindow(): boolean {
+  return typeof window !== "undefined"
+}
+
+function safeReadStoredSeed(): string | null {
+  if (!hasWindow()) return null
+  try {
+    return window.localStorage.getItem(STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+function safeStoreSeed(seed: number): void {
+  if (!hasWindow()) return
+  try {
+    window.localStorage.setItem(STORAGE_KEY, String(seed >>> 0))
+  } catch {
+    // Storage can be unavailable in private browsing or sandboxed contexts.
+  }
+}
+
 export function randomSeed(): number {
-  const value = new Uint32Array(1)
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
-    crypto.getRandomValues(value)
+  const values = new Uint32Array(1)
+  const cryptoApi = globalThis.crypto
+
+  if (cryptoApi?.getRandomValues) {
+    cryptoApi.getRandomValues(values)
   } else {
-    // Fallback for older browsers
-    value[0] = Math.floor(Math.random() * 0x1_0000_0000)
+    values[0] = Math.floor(Math.random() * 0x1_0000_0000)
   }
-  return value[0] || NON_ZERO_FALLBACK
+
+  return values[0] || NON_ZERO_FALLBACK
 }
 
-/**
- * Parse a seed from various input formats.
- */
-export function parseSeed(input: string | null): number | null {
-  if (!input || input.trim() === "") return null
-
-  const trimmed = input.trim()
-
-  // Try decimal
-  if (/^\d+$/.test(trimmed)) {
-    const parsed = parseInt(trimmed, 10)
-    if (!isNaN(parsed)) {
-      return parsed >>> 0
-    }
-  }
-
-  // Try hex with 0x prefix
-  if (/^0x[0-9a-fA-F]+$/.test(trimmed)) {
-    const parsed = parseInt(trimmed, 16)
-    if (!isNaN(parsed)) {
-      return parsed >>> 0
-    }
-  }
-
-  // Try hash a text seed
-  if (trimmed && trimmed !== "random") {
-    return hashString(trimmed) >>> 0
-  }
-
-  return null
-}
-
-/**
- * FNV-1a hash for string→number conversion.
- */
+/** Stable FNV-1a hash for human-readable text seeds. */
 export function hashString(value: string): number {
   let hash = 0x811c9dc5
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i)
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
     hash = Math.imul(hash, 0x01000193)
   }
   return hash >>> 0
 }
 
-/**
- * Mix a seed with a label to create a derived, independent seed.
- */
+/** Avalanche a root seed with a label to derive an independent sub-seed. */
 export function mixSeed(seed: number, label: string): number {
-  let x = ((seed >>> 0) ^ hashString(label)) >>> 0
-  x ^= x >>> 16
-  x = Math.imul(x, 0x7feb352d)
-  x ^= x >>> 15
-  x = Math.imul(x, 0x846ca68b)
-  x ^= x >>> 16
-  return x >>> 0
+  let mixed = ((seed >>> 0) ^ hashString(label)) >>> 0
+  mixed ^= mixed >>> 16
+  mixed = Math.imul(mixed, 0x7feb352d)
+  mixed ^= mixed >>> 15
+  mixed = Math.imul(mixed, 0x846ca68b)
+  mixed ^= mixed >>> 16
+  return mixed >>> 0
 }
 
 /**
- * Format a seed for display/URL.
+ * Parse decimal, 0x-prefixed hexadecimal, or named text seeds.
+ * Numeric inputs outside the unsigned 32-bit range are rejected.
  */
+export function parseSeed(input: string | null): number | null {
+  if (input === null) return null
+
+  const trimmed = input.trim()
+  if (trimmed === "") return null
+  if (trimmed.toLowerCase() === "random") return null
+
+  if (/^\d+$/.test(trimmed)) {
+    const parsed = Number(trimmed)
+    if (
+      Number.isSafeInteger(parsed) &&
+      parsed >= 0 &&
+      parsed <= UINT32_MAX
+    ) {
+      return parsed >>> 0
+    }
+    return null
+  }
+
+  if (/^0x[0-9a-f]+$/i.test(trimmed)) {
+    const hexDigits = trimmed.slice(2)
+    if (hexDigits.length > 8) return null
+    const parsed = Number.parseInt(hexDigits, 16)
+    return Number.isFinite(parsed) ? parsed >>> 0 : null
+  }
+
+  return hashString(trimmed)
+}
+
+export function normalizeSeed(seed: number): number {
+  const normalized = seed >>> 0
+  return normalized || NON_ZERO_FALLBACK
+}
+
 export function formatSeed(seed: number): string {
-  return `0x${(seed >>> 0).toString(16).toUpperCase().padStart(8, "0")}`
+  return `0x${normalizeSeed(seed)
+    .toString(16)
+    .toUpperCase()
+    .padStart(8, "0")}`
+}
+
+function writeCanonicalUrl(
+  seed: number,
+  historyMode: "replace" | "push" = "replace",
+): void {
+  if (!hasWindow()) return
+
+  const url = new URL(window.location.href)
+  url.searchParams.set("seed", formatSeed(seed))
+  const relativeUrl = `${url.pathname}${url.search}${url.hash}`
+
+  try {
+    if (historyMode === "push") {
+      window.history.pushState({}, "", relativeUrl)
+    } else {
+      window.history.replaceState({}, "", relativeUrl)
+    }
+  } catch {
+    // The page still works if history mutation is blocked.
+  }
+}
+
+export function persistResolvedSeed(
+  seed: number,
+  source: ResolvedSeedSource = "generated",
+  historyMode: "replace" | "push" = "replace",
+): ResolvedSeed {
+  const value = normalizeSeed(seed)
+  safeStoreSeed(value)
+  writeCanonicalUrl(value, historyMode)
+  return { source, value, display: formatSeed(value) }
+}
+
+export interface BootPalette {
+  name: string
+  /** Accent colour applied to the boot terminal for this seed. */
+  accent: string
 }
 
 /**
- * Resolve the active seed from URL parameters, localStorage, or generate new.
- * Updates the URL with the resolved seed if needed.
+ * One of four ambient palettes, chosen deterministically from the seed. Only
+ * the terminal accent is recoloured; the OLED-dark base stays constant so the
+ * page never clashes with the rest of the site.
+ */
+const BOOT_PALETTES: readonly BootPalette[] = [
+  { name: "phosphor", accent: "#8ef0a7" },
+  { name: "amber", accent: "#ffc66d" },
+  { name: "ice", accent: "#8ed7e8" },
+  { name: "violet", accent: "#d2a3e8" },
+]
+
+export function paletteForSeed(seed: number): BootPalette {
+  const index = mixSeed(seed, "palette") % BOOT_PALETTES.length
+  return BOOT_PALETTES[index]
+}
+
+export function canonicalSeedUrl(seed: number): string {
+  const display = formatSeed(seed)
+  if (!hasWindow()) return `/boot?seed=${encodeURIComponent(display)}`
+
+  const url = new URL(window.location.href)
+  url.searchParams.set("seed", display)
+  return url.toString()
+}
+
+/**
+ * Resolve URL -> storage -> generated seed, then canonicalise the URL.
+ * An explicit but invalid URL seed generates a fresh seed instead of silently
+ * falling back to a previous browser session.
  */
 export function resolveSeed(): ResolvedSeed {
+  if (!hasWindow()) {
+    const value = NON_ZERO_FALLBACK
+    return { source: "fallback", value, display: formatSeed(value) }
+  }
+
   const params = new URLSearchParams(window.location.search)
+  const hasSeedParam = params.has("seed")
   const seedParam = params.get("seed")
 
-  let resolved: number | null = null
-  let source = "unknown"
+  let source: ResolvedSeedSource
+  let value: number | null = null
 
-  // 1. Try URL parameter
-  if (seedParam) {
-    if (seedParam === "random") {
-      resolved = randomSeed()
+  if (hasSeedParam) {
+    if (seedParam?.trim().toLowerCase() === "random") {
+      value = randomSeed()
       source = "generated"
     } else {
-      resolved = parseSeed(seedParam)
-      if (resolved !== null) {
-        source = "url"
-      }
+      value = parseSeed(seedParam)
+      source = value === null ? "generated" : "url"
+      if (value === null) value = randomSeed()
+    }
+  } else {
+    const stored = parseSeed(safeReadStoredSeed())
+    if (stored !== null) {
+      value = stored
+      source = "stored"
+    } else {
+      value = randomSeed()
+      source = "generated"
     }
   }
 
-  // 2. Try localStorage
-  if (resolved === null) {
-    const stored = localStorage.getItem("bootSeed")
-    if (stored) {
-      resolved = parseSeed(stored)
-      if (resolved !== null) {
-        source = "stored"
-      }
-    }
-  }
-
-  // 3. Generate new
-  if (resolved === null) {
-    resolved = randomSeed()
-    source = "generated"
-  }
-
-  // Ensure non-zero
-  if (resolved === 0) {
-    resolved = NON_ZERO_FALLBACK
-    source = "fallback"
-  }
-
-  // Normalize to unsigned 32-bit
-  resolved = resolved >>> 0
-
-  // Store and update URL if needed
-  localStorage.setItem("bootSeed", resolved.toString())
-  const display = formatSeed(resolved)
-  
-  if (source === "generated" || (source === "url" && seedParam !== display)) {
-    const newParams = new URLSearchParams(window.location.search)
-    newParams.set("seed", display)
-    const newUrl = `${window.location.pathname}?${newParams.toString()}`
-    window.history.replaceState({}, "", newUrl)
-  }
-
-  return {
-    source,
-    value: resolved,
-    display,
-  }
+  return persistResolvedSeed(value, source, "replace")
 }

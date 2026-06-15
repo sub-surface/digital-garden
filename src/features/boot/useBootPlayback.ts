@@ -1,202 +1,372 @@
 /**
- * useBootPlayback.ts — Playback engine hook
- * Manages line reveal timing, reveal modes, and pause state
+ * Pause-aware playback state machine for declarative boot events.
  */
 
-import { useEffect, useRef, useState, useCallback } from "react"
-import { BootEvent, BootRenderedLine } from "./bootTypes"
+import { useCallback, useEffect, useRef, useState } from "react"
+import type { MutableRefObject } from "react"
 import { BootGenerator } from "./bootGenerators"
+import type {
+  BootEvent,
+  BootEventKind,
+  BootRenderedLine,
+  BootTone,
+  BootViewport,
+} from "./bootTypes"
+
+export interface UseBootPlaybackOptions {
+  seed: number | null
+  runId?: number
+  initialEpoch?: number
+  viewport?: BootViewport
+  reducedMotion?: boolean
+  speed?: number
+  maxLines?: number
+}
 
 export interface UseBootPlaybackResult {
-  lines: BootRenderedLine[]
+  lines: readonly BootRenderedLine[]
   activeText: string
+  activeTone: BootTone
+  activeKind: BootEventKind
+  activeAriaLabel?: string
+  phaseLabel: string
   isPaused: boolean
+  isRunning: boolean
   setPaused: (paused: boolean) => void
+  togglePaused: () => void
   epoch: number
   emittedCount: number
+  error: string | null
 }
 
-/**
- * Constants for playback timing
- */
-const REVEAL_TIMING = {
-  typeWpm: 1200, // Words per minute → chars per second (doubled for faster play)
-  burstDelay: 20, // 20ms for burst mode
-  lineSpacing: 40, // 40ms between lines
-  maxDomNodes: typeof window !== "undefined" && window.innerWidth <= 800 ? 110 : 180,
+interface ActiveLine {
+  text: string
+  tone: BootTone
+  kind: BootEventKind
+  ariaLabel?: string
 }
 
-// Compute derived timing after object creation
-REVEAL_TIMING.typeCharDelay = (60 / REVEAL_TIMING.typeWpm) * 1000 // ~50ms per char
+const EMPTY_ACTIVE: ActiveLine = {
+  text: "",
+  tone: "normal",
+  kind: "line",
+}
 
-export function useBootPlayback(seed: number): UseBootPlaybackResult {
-  const [lines, setLines] = useState<BootRenderedLine[]>([])
-  const [activeText, setActiveText] = useState("")
-  const [epoch, setEpoch] = useState(0)
+const DEFAULT_MAX_LINES = 180
+const MIN_SPEED = 0.25
+const MAX_SPEED = 8
+const CLOCK_SLICE_MS = 64
+
+class PlaybackAbortedError extends Error {
+  constructor() {
+    super("Boot playback aborted")
+    this.name = "PlaybackAbortedError"
+  }
+}
+
+function sanitizeSpeed(speed: number): number {
+  if (!Number.isFinite(speed)) return 1
+  return Math.min(MAX_SPEED, Math.max(MIN_SPEED, speed))
+}
+
+function sanitizeMaxLines(maxLines: number): number {
+  if (!Number.isFinite(maxLines)) return DEFAULT_MAX_LINES
+  return Math.max(20, Math.floor(maxLines))
+}
+
+function now(): number {
+  return typeof performance !== "undefined" ? performance.now() : Date.now()
+}
+
+function abortableDelay(milliseconds: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.reject(new PlaybackAbortedError())
+
+  return new Promise((resolve, reject) => {
+    const timeout: ReturnType<typeof setTimeout> = setTimeout(() => {
+      signal.removeEventListener("abort", handleAbort)
+      resolve()
+    }, Math.max(0, milliseconds))
+
+    function handleAbort(): void {
+      clearTimeout(timeout)
+      signal.removeEventListener("abort", handleAbort)
+      reject(new PlaybackAbortedError())
+    }
+
+    signal.addEventListener("abort", handleAbort, { once: true })
+  })
+}
+
+function documentIsHidden(): boolean {
+  return typeof document !== "undefined" && document.hidden
+}
+
+async function waitForActiveTime(
+  durationMs: number,
+  signal: AbortSignal,
+  pausedRef: MutableRefObject<boolean>,
+  speedRef: MutableRefObject<number>,
+): Promise<void> {
+  let remaining = Math.max(0, durationMs)
+  let previous = now()
+
+  while (remaining > 0) {
+    if (signal.aborted) throw new PlaybackAbortedError()
+
+    const inactiveBeforeWait = pausedRef.current || documentIsHidden()
+    const speed = speedRef.current
+    const realTimeNeeded = inactiveBeforeWait
+      ? CLOCK_SLICE_MS
+      : Math.min(CLOCK_SLICE_MS, remaining / speed)
+
+    await abortableDelay(Math.max(8, realTimeNeeded), signal)
+
+    const current = now()
+    const elapsed = Math.max(0, current - previous)
+    previous = current
+
+    if (!pausedRef.current && !documentIsHidden()) {
+      remaining -= elapsed * speedRef.current
+    }
+  }
+}
+
+interface SegmenterLike {
+  segment(value: string): Iterable<{ segment: string }>
+}
+
+interface SegmenterConstructorLike {
+  new (
+    locales?: string | string[],
+    options?: { granularity: "grapheme" },
+  ): SegmenterLike
+}
+
+function segmentGraphemes(text: string): string[] {
+  const Segmenter = (Intl as unknown as { Segmenter?: SegmenterConstructorLike })
+    .Segmenter
+
+  if (Segmenter) {
+    const segmenter = new Segmenter(undefined, { granularity: "grapheme" })
+    return Array.from(segmenter.segment(text), (entry) => entry.segment)
+  }
+
+  return Array.from(text)
+}
+
+function asRenderedLine(event: BootEvent): BootRenderedLine {
+  return {
+    id: event.id,
+    text: event.text,
+    tone: event.tone,
+    kind: event.kind,
+    ariaLabel: event.ariaLabel,
+  }
+}
+
+export function useBootPlayback({
+  seed,
+  runId = 0,
+  initialEpoch = 0,
+  viewport = "wide",
+  reducedMotion = false,
+  speed = 1,
+  maxLines = DEFAULT_MAX_LINES,
+}: UseBootPlaybackOptions): UseBootPlaybackResult {
+  const [lines, setLines] = useState<readonly BootRenderedLine[]>([])
+  const [active, setActive] = useState<ActiveLine>(EMPTY_ACTIVE)
+  const [phaseLabel, setPhaseLabel] = useState("awaiting seed")
+  const [isPaused, setPausedState] = useState(false)
+  const [isRunning, setRunning] = useState(false)
+  const [epoch, setEpoch] = useState(initialEpoch)
   const [emittedCount, setEmittedCount] = useState(0)
+  const [error, setError] = useState<string | null>(null)
 
   const pausedRef = useRef(false)
-  const generatorRef = useRef<BootEvent[]>([])
-  const currentEventIndexRef = useRef(0)
-  const currentCharIndexRef = useRef(0)
-  const timeoutRef = useRef<NodeJS.Timeout>()
-  const startTimeRef = useRef(Date.now())
+  const speedRef = useRef(sanitizeSpeed(speed))
+  const viewportRef = useRef<BootViewport>(viewport)
+  const reducedMotionRef = useRef(reducedMotion)
+  const maxLinesRef = useRef(sanitizeMaxLines(maxLines))
 
-  const handlePause = useCallback((paused: boolean) => {
+  useEffect(() => {
+    speedRef.current = sanitizeSpeed(speed)
+  }, [speed])
+
+  useEffect(() => {
+    viewportRef.current = viewport
+  }, [viewport])
+
+  useEffect(() => {
+    reducedMotionRef.current = reducedMotion
+  }, [reducedMotion])
+
+  useEffect(() => {
+    maxLinesRef.current = sanitizeMaxLines(maxLines)
+  }, [maxLines])
+
+  const setPaused = useCallback((paused: boolean) => {
     pausedRef.current = paused
+    setPausedState(paused)
   }, [])
 
-  // Generate content on mount
-  useEffect(() => {
-    const generator = new BootGenerator(seed)
-    generatorRef.current = generator.generate(150) // Pre-generate events
-    setEpoch(0)
-  }, [seed])
+  const togglePaused = useCallback(() => {
+    const next = !pausedRef.current
+    pausedRef.current = next
+    setPausedState(next)
+  }, [])
 
-  // Main playback loop
   useEffect(() => {
-    const processFrame = () => {
-      if (pausedRef.current) {
-        timeoutRef.current = setTimeout(processFrame, 50)
+    const controller = new AbortController()
+    const { signal } = controller
+    let effectIsCurrent = true
+
+    pausedRef.current = false
+    setPausedState(false)
+    setLines([])
+    setActive(EMPTY_ACTIVE)
+    setPhaseLabel(seed === null ? "awaiting seed" : "firmware")
+    setEpoch(initialEpoch)
+    setEmittedCount(0)
+    setError(null)
+    setRunning(seed !== null)
+
+    if (seed === null) {
+      return () => {
+        effectIsCurrent = false
+        controller.abort()
+      }
+    }
+
+    const generator = new BootGenerator(seed)
+
+    const commit = (event: BootEvent): void => {
+      if (!effectIsCurrent || signal.aborted || event.ephemeral) return
+
+      const rendered = asRenderedLine(event)
+      setLines((previous) => {
+        const next = [...previous, rendered]
+        const limit = maxLinesRef.current
+        return next.length > limit ? next.slice(-limit) : next
+      })
+      setEmittedCount((count) => count + 1)
+      setActive(EMPTY_ACTIVE)
+    }
+
+    const showActive = (event: BootEvent, text: string): void => {
+      if (!effectIsCurrent || signal.aborted) return
+      setActive({
+        text,
+        tone: event.tone,
+        kind: event.kind,
+        ariaLabel: event.ariaLabel,
+      })
+    }
+
+    const playEvent = async (event: BootEvent): Promise<void> => {
+      if (event.kind === "phase") {
+        setPhaseLabel(event.text.replace(/^phase\s*::\s*/i, ""))
+      }
+
+      if (reducedMotionRef.current) {
+        if (!event.ephemeral) commit(event)
+        await waitForActiveTime(
+          Math.max(80, Math.min(event.holdAfterMs, 260)),
+          signal,
+          pausedRef,
+          speedRef,
+        )
         return
       }
 
-      const events = generatorRef.current
-      let eventIdx = currentEventIndexRef.current
-      let charIdx = currentCharIndexRef.current
-
-      if (eventIdx >= events.length) {
-        // Loop: reset and continue
-        eventIdx = 0
-        charIdx = 0
-        currentEventIndexRef.current = 0
-        currentCharIndexRef.current = 0
-        setEpoch((e) => e + 1)
-      }
-
-      const event = events[eventIdx]
-      if (!event) return
-
-      // Determine reveal timing based on mode
-      let nextDelay = REVEAL_TIMING.lineSpacing
-      let lineComplete = false
-
       if (event.reveal === "instant") {
-        // Instant: commit entire line immediately
-        setLines((prev) => {
-          const newLines = [
-            ...prev,
-            { id: event.id, text: event.text, tone: event.tone, kind: event.kind },
-          ]
-          // Prune old lines to keep DOM bounded
-          if (newLines.length > REVEAL_TIMING.maxDomNodes) {
-            return newLines.slice(-REVEAL_TIMING.maxDomNodes)
-          }
-          return newLines
-        })
-        setEmittedCount((c) => c + 1)
-        setActiveText("")
-        lineComplete = true
-        nextDelay = REVEAL_TIMING.lineSpacing
-      } else if (event.reveal === "type") {
-        // Type: reveal char by char
-        if (charIdx < event.text.length) {
-          const partial = event.text.slice(0, charIdx + 1)
-          setActiveText(partial)
-          charIdx++
-          nextDelay = REVEAL_TIMING.typeCharDelay
-        } else {
-          // Finish typing
-          setLines((prev) => {
-            const newLines = [
-              ...prev,
-              { id: event.id, text: event.text, tone: event.tone, kind: event.kind },
-            ]
-            if (newLines.length > REVEAL_TIMING.maxDomNodes) {
-              return newLines.slice(-REVEAL_TIMING.maxDomNodes)
-            }
-            return newLines
-          })
-          setEmittedCount((c) => c + 1)
-          setActiveText("")
-          lineComplete = true
-          nextDelay = REVEAL_TIMING.lineSpacing
-        }
-      } else if (event.reveal === "burst") {
-        // Burst: reveal in chunks
-        const chunkSize = Math.max(1, Math.floor(event.text.length / 4))
-        if (charIdx < event.text.length) {
-          const end = Math.min(charIdx + chunkSize, event.text.length)
-          const partial = event.text.slice(0, end)
-          setActiveText(partial)
-          charIdx = end
-          nextDelay = REVEAL_TIMING.burstDelay
-        } else {
-          setLines((prev) => {
-            const newLines = [
-              ...prev,
-              { id: event.id, text: event.text, tone: event.tone, kind: event.kind },
-            ]
-            if (newLines.length > REVEAL_TIMING.maxDomNodes) {
-              return newLines.slice(-REVEAL_TIMING.maxDomNodes)
-            }
-            return newLines
-          })
-          setEmittedCount((c) => c + 1)
-          setActiveText("")
-          lineComplete = true
-          nextDelay = REVEAL_TIMING.lineSpacing
-        }
+        commit(event)
       } else if (event.reveal === "overwrite") {
-        // Overwrite: replace previous line
-        if (charIdx < event.text.length) {
-          const partial = event.text.slice(0, charIdx + 1)
-          setActiveText(partial)
-          charIdx++
-          nextDelay = REVEAL_TIMING.typeCharDelay
-        } else {
-          setLines((prev) => {
-            if (prev.length === 0) return prev
-            const newLines = [...prev]
-            newLines[newLines.length - 1] = {
-              ...newLines[newLines.length - 1],
-              text: event.text,
-              tone: event.tone,
-            }
-            return newLines
-          })
-          setActiveText("")
-          lineComplete = true
-          nextDelay = REVEAL_TIMING.lineSpacing
-        }
-      }
-
-      // Advance to next event if line complete
-      if (lineComplete) {
-        currentEventIndexRef.current++
-        currentCharIndexRef.current = 0
+        showActive(event, event.text)
+        if (!event.ephemeral) commit(event)
       } else {
-        currentCharIndexRef.current = charIdx
+        const graphemes = segmentGraphemes(event.text)
+        const chunkSize = event.reveal === "burst"
+          ? Math.max(2, Math.min(8, Math.ceil(graphemes.length / 8)))
+          : 1
+
+        for (let end = chunkSize; end <= graphemes.length + chunkSize - 1; end += chunkSize) {
+          const clampedEnd = Math.min(end, graphemes.length)
+          showActive(event, graphemes.slice(0, clampedEnd).join(""))
+
+          if (clampedEnd < graphemes.length) {
+            await waitForActiveTime(
+              event.charDelayMs,
+              signal,
+              pausedRef,
+              speedRef,
+            )
+          }
+        }
+
+        commit(event)
       }
 
-      timeoutRef.current = setTimeout(processFrame, nextDelay)
+      await waitForActiveTime(
+        event.holdAfterMs,
+        signal,
+        pausedRef,
+        speedRef,
+      )
     }
 
-    timeoutRef.current = setTimeout(processFrame, 100)
+    const run = async (): Promise<void> => {
+      let currentEpoch = initialEpoch
+
+      while (!signal.aborted) {
+        if (effectIsCurrent) setEpoch(currentEpoch)
+
+        const events = generator.generateEpoch(
+          currentEpoch,
+          viewportRef.current,
+        )
+
+        for (const event of events) {
+          await playEvent(event)
+        }
+
+        currentEpoch += 1
+      }
+    }
+
+    void run()
+      .catch((reason: unknown) => {
+        if (reason instanceof PlaybackAbortedError || signal.aborted) return
+        const message = reason instanceof Error
+          ? reason.message
+          : "Unknown playback error"
+        if (effectIsCurrent) {
+          setError(message)
+          setPhaseLabel("playback fault")
+        }
+      })
+      .finally(() => {
+        if (effectIsCurrent && !signal.aborted) setRunning(false)
+      })
 
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
+      effectIsCurrent = false
+      controller.abort()
     }
-  }, [])
+  }, [initialEpoch, runId, seed])
 
   return {
     lines,
-    activeText,
-    isPaused: pausedRef.current,
-    setPaused: handlePause,
+    activeText: active.text,
+    activeTone: active.tone,
+    activeKind: active.kind,
+    activeAriaLabel: active.ariaLabel,
+    phaseLabel,
+    isPaused,
+    isRunning,
+    setPaused,
+    togglePaused,
     epoch,
     emittedCount,
+    error,
   }
 }

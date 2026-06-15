@@ -23,7 +23,6 @@ const ChatPage = lazy(() => import("@/components/ui/ChatPage").then(m => ({ defa
 
 // Lazy load heavy components
 const ConstellationPage = lazy(() => import("@/components/ui/ConstellationPage").then(m => ({ default: m.ConstellationPage })))
-const ChessPage = lazy(() => import("@/components/ui/ChessPage").then(m => ({ default: m.ChessPage })))
 const BootPage = lazy(() => import("@/features/boot/BootPage").then(m => ({ default: m.BootPage })))
 
 // Root layout
@@ -171,8 +170,16 @@ const bootRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/boot",
   component: function BootRouteComponent() {
+    // BootPage portals to document.body and renders a fullscreen layer of its
+    // own, so it deliberately does NOT use the game-layout/game-stage shell.
     return (
-      <Suspense fallback={<div className="loading-shimmer">Waking the small processes…</div>}>
+      <Suspense
+        fallback={
+          <div className="loading-shimmer" role="status">
+            Waking the small processes…
+          </div>
+        }
+      >
         <BootPage />
       </Suspense>
     )
@@ -210,6 +217,7 @@ const noteRoute = createRoute({
 // Build the router
 const routeTree = rootRoute.addChildren([
   devRoute,
+  graphRoute,
   tagsRoute,
   tagRoute,
   foldersRoute,
