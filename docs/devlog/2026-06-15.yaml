@@ -1,0 +1,38 @@
+- date: 2026-06-15
+  area: garden
+  title: Boot TUI rescue, a11y + CLS + reading progress, generative OG cards for every page
+  status: done
+  files:
+    - src/features/boot/bootGenerators.ts
+    - src/features/boot/BootPage.tsx
+    - src/features/boot/bootSeed.ts
+    - src/router.tsx
+    - src/components/ui/SkipToContent.tsx
+    - src/components/layout/AppShell.tsx
+    - src/components/layout/WikiShell.tsx
+    - src/components/layout/ChatShell.tsx
+    - scripts/prebuild.ts
+    - src/lib/rehype-image-paths.ts
+    - src/components/ui/ReadingProgress.tsx
+    - src/components/ui/ArticleLayout.tsx
+    - scripts/og-gen.ts
+    - scripts/og-system.ts
+    - tsconfig.json
+    - public/image-dimensions.json
+  changes:
+    - "Boot TUI rescued. The /boot procedural terminal had been committed broken (2f741b5): an old generator/playback draft against a half-rewritten bootTypes, so tsc/build FAILED on master. Kept the strong rewrite (deterministic seeded fullscreen TUI), cleaned the router scope creep (dropped a pointless game-layout wrapper around the body-portalled BootPage; kept the incidental dead-ChessPage-import removal + graphRoute added to the tree), and deleted a hand-off INTEGRATION_NOTES.md. master builds green again."
+    - "Boot 'cool stuff' from the standalone terminal-ecology reference: deterministic animated ASCII set-pieces (blue-marble earth, differential butterfly, voronoi dream, network aurora, ice cathedral) as a new cosmicScene phase, plus a seed-derived palette (phosphor/amber/ice/violet) that recolours only the terminal accent so the OLED base never clashes."
+    - "Skip-to-content link across all three shells (AppShell/WikiShell/ChatShell) — first focusable element, targets a new id=main-content landmark on each <main> (tabIndex -1 so focus actually lands), visually hidden until focused."
+    - "CLS fix for content images. prebuild scans content/Media via image-size and writes public/image-dimensions.json; rehype-image-paths stamps intrinsic width/height on each content <img> at build time. The existing global img{max-width:100%;height:auto} keeps it responsive, so the attrs only reserve aspect-ratio space — no more reflow on image load."
+    - "Reading-progress bar on articles — a thin accent line at the top that fills as you read, measuring the .mainPane scroll container (not the window), rAF-throttled, aria-hidden, reduced-motion aware. Mounted by ArticleLayout."
+    - "Generative OG cards for system/custom pages (scripts/og-system.ts): arcade, graph, chess, hexo, music-library, bookshelf, movieshelf + every arcade game. Bespoke per-page satori motif, slug-seeded so it's deterministic — constellation (graph), checkerboard (chess), honeycomb of rings (hexo/hex-mines), honeycomb of on/off cells (hex-life), equalizer (music), book spines (bookshelf), film strip (movieshelf), seeded pixel sprite (games). The worker already pointed og:image at /og/<slug>.png, so no worker change was needed."
+    - "Fixed the OG note-card generator. It had been aborting the whole run on the first note with a numeric title (2048 parses as a number, which satori rejects as a text child) — effectively 0 fresh note cards. Now: titles/tags coerced to strings; anything we host (local /content/Media paths, bare filenames, our own subsurfaces.net/Media URLs) inlined as base64 data URIs (satori rejects file:// and can't reliably fetch remote images); truly-external images degrade to a text-only card; per-card try/catch so one bad note can't abort the batch. 157/157 note cards now generate."
+    - "tsconfig: dropped the deprecated baseUrl (TS 7.0 removal) in favour of the relative paths mapping '@/*': ['./src/*']. Vite resolves the @ alias independently, so the build is unaffected."
+  decisions:
+    - "Kept the GPT-5.5 boot rewrite rather than reverting to the committed Haiku draft — the rewrite is the consistent, building version; the committed one never compiled. src/features/boot/ is the right home (self-contained, lazy, architecturally unlike components/ui)."
+    - "Boot scenes ported as frame-index-driven (not wall-clock) so the whole sequence stays deterministic per seed, matching the existing event system."
+    - "OG images must be committed, not built on CF. CF runs `npm run build`; prebuild only invokes og-gen when PROCESS_OG=true, which is NOT set on CF. So system + note PNGs are force-added past the public/og/ gitignore (matching the ~120 already-tracked cards)."
+    - "OG motifs avoid font glyphs entirely (IBM Plex Mono lacks chess/card/symbol codepoints → empty boxes) and avoid clip-path (satori has none) — hexagons are drawn as hex-packed circles, which read as a hex grid better than rotated squares did."
+    - "Removed stale capitalized legacy OG cards (Chess/Bookshelf/Movieshelf.png) that collided case-insensitively on Windows with the new lowercase slugs — CF is case-sensitive and the worker requests lowercase."
+    - "Branch hygiene: shipped each concern as its own commit on short-lived branches, fast-forwarded into one linear master, then pruned. Deleted the fully-superseded fix/auth-redirect-and-chat-scroll branch (all 3 fixes already reimplemented on master — auth redirect in useAuth, password auto-open in WikiProfilePage, chat infinite-scroll extracted into useChatScroll) and the merged boot-feature worktree."
+  next: "Generative OG per coverless note (seed a motif by primary tag) — extends og-system. Other dream ideas floated- living visit-decay note visuals, constellation orrery/tour mode, a whois-style terminal command. ROADMAP reconciled- the cheat sheet (?), command palette (Ctrl/Cmd+P) and error boundaries it listed as open are already shipped."
