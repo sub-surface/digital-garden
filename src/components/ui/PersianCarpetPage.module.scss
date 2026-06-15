@@ -105,14 +105,16 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: 1.2rem;
-  border: 1px solid var(--color-border);
   border-radius: 8px;
   
-  // Highly transparent glassmorphism as requested ("more transparent frosting")
-  background: rgba(26, 26, 31, 0.35);
+  // Clean, transparent glassmorphism using the page's deep background color
+  background: color-mix(in srgb, var(--color-bg) 28%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  
+  // Sleek tinted border that subtly reflects the active accent color
+  border: 1px solid color-mix(in srgb, var(--color-accent-base) 18%, rgba(255, 255, 255, 0.05));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 
   &::-webkit-scrollbar { width: 4px; }
   &::-webkit-scrollbar-track { background: transparent; }
@@ -122,7 +124,7 @@
   @media (max-width: 920px) {
     width: 100%;
     max-height: none;
-    background: rgba(26, 26, 31, 0.5); // slightly darker on mobile flow for readability
+    background: color-mix(in srgb, var(--color-bg) 55%, transparent); // slightly darker on mobile flow for readability
   }
 
   @container panel (min-width: 0px) {
