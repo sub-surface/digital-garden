@@ -330,4 +330,9 @@ export const useStore = create<GardenStore>((set) => ({
 if (typeof window !== "undefined") {
   document.documentElement.setAttribute("data-theme", getInitialTheme())
   applyTriadicPalette(getInitialAccent())
+  // Dev-only: expose the store on window for the /__dev dashboard and
+  // headless verification scripts. Stripped from production builds.
+  if (import.meta.env.DEV) {
+    ;(window as unknown as { __store?: typeof useStore }).__store = useStore
+  }
 }

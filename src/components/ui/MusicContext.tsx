@@ -72,7 +72,11 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext
       const ctx = new AudioContextClass()
       const analyser = ctx.createAnalyser()
-      analyser.fftSize = 256
+      // 1024 → 512 bins: enough resolution for log-spaced bands to have real
+      // detail in the low octaves. smoothingTimeConstant adds a little inherent
+      // temporal smoothing on top of the visualiser's own peak-decay.
+      analyser.fftSize = 1024
+      analyser.smoothingTimeConstant = 0.8
       
       const source = ctx.createMediaElementSource(audioRef.current!)
       source.connect(analyser)

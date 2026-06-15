@@ -2,11 +2,11 @@
   position: fixed;
   top: 50px;
   right: 16px;
-  width: 240px; 
+  width: 240px;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.5rem;
+  gap: 0.85rem;
+  padding: 1.25rem;
   z-index: 1001;
   background: var(--glass-bg-heavy); 
   backdrop-filter: var(--glass-blur);
@@ -25,6 +25,23 @@
     right: 16px;
     width: auto;
   }
+
+  // When moved into the Document-PiP window, fill it instead of floating.
+  &.popped {
+    position: static;
+    top: auto;
+    right: auto;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    box-sizing: border-box;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--color-bg, #0a0a0a);
+    filter: none;
+    animation: none;
+  }
 }
 
 @keyframes fadeIn {
@@ -36,11 +53,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   margin-bottom: 0.5rem;
 }
 
 .trackMeta {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;   // allow the nowrap title to ellipsis instead of overflowing into the buttons
   overflow: hidden;
 
   .title {
@@ -68,10 +87,11 @@
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex: 0 0 auto;   // never shrink — the title yields first
 }
 
-.playlistToggle, .closeBtn {
+.iconAction, .closeBtn {
   background: none;
   border: none;
   color: var(--color-text-muted);
@@ -79,13 +99,15 @@
   padding: 0;
   line-height: 1;
   transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
 
   &:hover {
     color: var(--color-primary);
   }
 }
 
-.playlistToggle {
+.iconAction {
   &.active {
     color: var(--color-primary);
   }
@@ -98,32 +120,115 @@
 .mainContent {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.7rem;
 }
 
 .coverWrap {
+  position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 8px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0;
 }
 
-.cover {
+// Radial audio visualiser, drawn behind the record — bars bloom outward from
+// behind the disc edge while playing.
+.viz {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+// --- Vinyl record ---
+// The disc is a black record with concentric grooves; the cover art is the
+// centre label. It spins while playing and coasts to a stop when paused.
+.vinyl {
+  position: relative;
+  z-index: 1;
+  width: 82%;
+  aspect-ratio: 1 / 1;
+}
+
+.disc {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  // vinyl body + grooves: a near-black base with fine concentric rings
+  background:
+    repeating-radial-gradient(
+      circle at center,
+      rgba(255, 255, 255, 0.045) 0,
+      rgba(255, 255, 255, 0.045) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    radial-gradient(circle at center, #1c1c1f 0%, #0a0a0c 70%, #050506 100%);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    inset 0 0 1px rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  // subtle sheen sweeping across the surface
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: linear-gradient(
+      120deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.06) 48%,
+      transparent 60%
+    );
+    pointer-events: none;
+  }
+}
+
+.label {
+  width: 54%;
+  height: 54%;
+  border-radius: 50%;
   object-fit: cover;
   display: block;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 0 4px var(--color-bg, #0a0a0a),
+    0 0 0 5px rgba(255, 255, 255, 0.08);
 }
 
-.visualiserWrap {
-  height: 30px;
-  opacity: 0.3;
+.spindle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-bg, #0a0a0a);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  z-index: 2;
 }
 
-.canvas {
-  width: 100%;
-  height: 100%;
+.vinyl .disc {
+  animation: spin 4s linear infinite;
+  animation-play-state: paused;
+}
+
+.vinyl.spinning .disc {
+  animation-play-state: running;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vinyl .disc {
+    animation: none;
+  }
 }
 
 .progressArea {
@@ -134,17 +239,34 @@
 
 .progressBar {
   width: 100%;
-  height: 2px;
+  height: 3px;
   -webkit-appearance: none;
-  background: rgba(255, 255, 255, 0.05);
+  appearance: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
   outline: none;
   cursor: pointer;
+  padding: 7px 0;
+  background-clip: content-box;
 
   &::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 6px;
-    height: 6px;
+    appearance: none;
+    width: 10px;
+    height: 10px;
     background: var(--color-primary);
+    border: 2px solid var(--color-bg, #0a0a0a);
+    border-radius: 50%;
+    cursor: grab;
+    transition: transform 0.12s ease;
+  }
+  &::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.3); }
+
+  &::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    background: var(--color-primary);
+    border: 2px solid var(--color-bg, #0a0a0a);
     border-radius: 50%;
   }
 }
@@ -162,7 +284,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .controlBtn {
@@ -200,24 +322,51 @@
 .volumeArea {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
+  gap: 0.6rem;
+  margin-top: 0.15rem;
 }
 
 .volumeSlider {
   flex: 1;
-  height: 1px;
+  height: 4px;
   -webkit-appearance: none;
-  background: rgba(255, 255, 255, 0.1);
+  appearance: none;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
   outline: none;
   cursor: pointer;
+  // a generous transparent hit area so the thin track is easy to grab
+  padding: 8px 0;
+  background-clip: content-box;
+  transition: background-color 0.15s ease;
+
+  &:hover { background-color: rgba(255, 255, 255, 0.18); }
 
   &::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 4px;
-    height: 4px;
-    background: var(--color-text-muted);
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--color-primary);
+    border: 2px solid var(--color-bg, #0a0a0a);
     border-radius: 50%;
+    cursor: grab;
+    transition: transform 0.12s ease;
+  }
+  &::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.25); }
+
+  &::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: var(--color-primary);
+    border: 2px solid var(--color-bg, #0a0a0a);
+    border-radius: 50%;
+    cursor: grab;
+  }
+  &::-moz-range-track {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
   }
 }
 
