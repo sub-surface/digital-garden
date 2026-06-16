@@ -980,7 +980,9 @@ export function BootPage() {
       )}
 
       <header className={styles.tmuxBar} aria-label="Terminal session bar">
-        <span className={styles.sessionName}>[subsurface]</span>
+        <a href="https://subsurfaces.net" className={styles.sessionName} target="_blank" rel="noopener noreferrer">
+          [subsurface]
+        </a>
         <span className={`${styles.windowTab} ${styles.activeTab}`}>
           <b>0</b>:boot*
         </span>
