@@ -108,7 +108,7 @@ export function ArcadePage() {
           }
           return (
             <li key={g.name}>
-              <a href={`/${g.href}`} className={`internal-link ${cls}`}>
+              <a href={`/${g.href}`} className={`internal-link ${cls}`} data-no-preview>
                 {inner}
               </a>
             </li>

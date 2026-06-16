@@ -269,10 +269,18 @@ export function GraphView() {
         if (appRef.current) {
           try {
             appRef.current.ticker.stop()
-            // NOTE: texture:true triggers a race when the TextPool tries to
-            // return cached atlas textures to an already-disposed pool.
-            // Leave texture cleanup to Pixi's own GC to avoid the push-on-
-            // undefined crash in Hh.returnTexture.
+            // Free each node's own Graphics/Text GPU textures explicitly.
+            // app.destroy with texture:true triggers a race when the shared
+            // TextPool returns cached atlas textures to an already-disposed
+            // pool (push-on-undefined crash in Hh.returnTexture). Destroying
+            // each label/gfx with its own textureSource frees the per-node
+            // textures without touching that pool.
+            nodes.forEach(node => {
+              node.label?.destroy({ texture: true, textureSource: true })
+              node.gfx?.destroy()
+              node.label = undefined
+              node.gfx = undefined
+            })
             appRef.current.destroy(true, { children: true, texture: false })
           } catch (e) {
             console.warn("Pixi destruction failed:", e)

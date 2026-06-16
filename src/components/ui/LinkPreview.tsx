@@ -211,6 +211,10 @@ export function LinkPreview() {
       const anchor = target.closest("a") as HTMLAnchorElement | null
       if (!anchor) return
 
+      // Opt-out for links that aren't notes (e.g. arcade system-page entries),
+      // where a body fetch only 404s and the preview card would be empty.
+      if (anchor.hasAttribute("data-no-preview")) return
+
       const isInternal = anchor.classList.contains("internal-link")
       const isFootnote = anchor.hasAttribute("data-footnote-ref")
       const slug = isInternal ? extractSlug(anchor.href) : (isFootnote ? (anchor.getAttribute("href") ?? "").slice(1) : null)

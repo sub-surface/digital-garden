@@ -277,6 +277,18 @@ export function LocalGraph({ slug }: Props) {
         if (appRef.current) {
           try {
             appRef.current.ticker.stop()
+            // Free each node's own Graphics/Text GPU textures explicitly. We
+            // can't pass texture:true to app.destroy() — that returns the shared
+            // TextPool atlas to an already-disposed pool and crashes in
+            // Hh.returnTexture. Destroying each label/gfx with its own
+            // textureSource frees the per-node textures (the thing that
+            // accumulates on every slug navigation) without touching that pool.
+            localNodes.forEach(node => {
+              node.label?.destroy({ texture: true, textureSource: true })
+              node.gfx?.destroy()
+              node.label = undefined
+              node.gfx = undefined
+            })
             appRef.current.destroy(true, { children: true, texture: false })
           } catch (e) {
             console.warn("Pixi destruction failed:", e)
