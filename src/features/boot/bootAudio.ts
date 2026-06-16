@@ -120,6 +120,15 @@ export class AmbientEngine {
     this.onMessage?.("pad field receding", "normal")
   }
 
+  setLevel(targetLevel: number) {
+    this.level = Math.max(0.0001, Math.min(MAX_LEVEL, targetLevel))
+    if (!this.enabled || !this.ctx || !this.master) return
+    const now = this.ctx.currentTime
+    this.master.gain.cancelScheduledValues(now)
+    this.master.gain.setValueAtTime(Math.max(0.0001, this.master.gain.value), now)
+    this.master.gain.linearRampToValueAtTime(this.level, now + 0.5)
+  }
+
   destroy(): void {
     this.clearEvolution()
     this.enabled = false

@@ -4,9 +4,14 @@ import { mixSeed } from "./bootSeed"
 const SPARKS = " ⡀⡄⡆⡇⣇⣧⣷⣿"
 
 export let activeScopeMode: "auto" | 0 | 1 | 2 = "auto"
+export let activeNetMode: "auto" | "dense" | "sparse" | "rhizome" = "auto"
 
 export function setScopeMode(mode: "auto" | 0 | 1 | 2): void {
   activeScopeMode = mode
+}
+
+export function setNetMode(mode: "auto" | "dense" | "sparse" | "rhizome"): void {
+  activeNetMode = mode
 }
 
 export interface TelemetryProcess {
@@ -37,6 +42,7 @@ export interface BootTelemetrySnapshot {
   phaseCode: string
   /** Small ASCII node-link mesh for the net pane, animated by tick. */
   networkRows: readonly string[]
+  netMode: string
 }
 
 function sparkline(values: readonly number[]): string {
@@ -93,29 +99,70 @@ function drawScope(
         if (x % 8 === 0 && y % 8 === 0) grid[Math.floor(y / 4)][Math.floor(x / 2)] |= DOTS[y % 4][x % 2]
       }
     }
-    const t = tick * 0.15
-    let amplitudeScale = 0.8
-    if (typeof window !== "undefined" && (window.performance as any)?.memory) {
-      const mem = (window.performance as any).memory
-      amplitudeScale = Math.min(1, Math.max(0.2, mem.usedJSHeapSize / mem.jsHeapSizeLimit))
-    }
-    const ampX = (pxW / 2 - 2)
-    const ampY = (pxH / 2 - 2) * amplitudeScale
+    const analyser = (window as any).__musicAnalyser as AnalyserNode | undefined
+    const isPlaying = (window as any).__musicIsPlaying?.()
 
-    for (let i = 0; i < 120; i++) {
-      const pt = t + i * 0.05
-      const x = Math.floor((pxW / 2) + Math.sin(pt * 1.3) * ampX)
-      const y = Math.floor((pxH / 2) + Math.sin(pt * 2.1) * ampY)
-      if (x >= 0 && x < pxW && y >= 0 && y < pxH) {
-        grid[Math.floor(y / 4)][Math.floor(x / 2)] |= DOTS[y % 4][x % 2]
+    if (analyser && isPlaying) {
+      const data = new Uint8Array(analyser.frequencyBinCount)
+      analyser.getByteTimeDomainData(data)
+      const step = data.length / pxW
+      
+      let prevY = -1
+      for (let x = 0; x < pxW; x++) {
+        const val = (data[Math.floor(x * step)] / 128.0 - 1.0) * 1.5
+        const y = Math.floor((pxH / 2) + val * (pxH / 2 - 2))
+        if (y >= 0 && y < pxH) {
+          grid[Math.floor(y / 4)][Math.floor(x / 2)] |= DOTS[y % 4][x % 2]
+        }
+        if (prevY !== -1 && Math.abs(y - prevY) > 1) {
+           const minY = Math.min(y, prevY)
+           const maxY = Math.max(y, prevY)
+           for (let iy = minY + 1; iy < maxY; iy++) {
+              if (iy >= 0 && iy < pxH) grid[Math.floor(iy / 4)][Math.floor(x / 2)] |= DOTS[iy % 4][x % 2]
+           }
+        }
+        prevY = y
       }
-    }
-    for (let i = 0; i < 60; i++) {
-      const pt = t * 1.5 + i * 0.08
-      const x = Math.floor((pxW / 2) + Math.cos(pt * 3.7) * (ampX * 0.6))
-      const y = Math.floor((pxH / 2) + Math.sin(pt * 4.2) * (ampY * 0.6) + (rng.float()-0.5)*4)
-      if (x >= 0 && x < pxW && y >= 0 && y < pxH) {
-        grid[Math.floor(y / 4)][Math.floor(x / 2)] |= DOTS[y % 4][x % 2]
+      
+      analyser.getByteFrequencyData(data)
+      const bars = Math.min(pxW, 32)
+      const minIndex = 1
+      const maxIndex = data.length * 0.7
+      for (let i = 0; i < bars; i++) {
+         const t = i / Math.max(1, bars - 1)
+         const idx = Math.floor(minIndex * Math.pow(maxIndex / minIndex, t))
+         const val = data[idx] / 255.0
+         const h = Math.floor(val * (pxH / 3))
+         for (let y = pxH - 1; y > pxH - 1 - h; y--) {
+            const x = Math.floor(i * (pxW / bars))
+            grid[Math.floor(y / 4)][Math.floor(x / 2)] |= DOTS[y % 4][x % 2]
+         }
+      }
+    } else {
+      const t = tick * 0.1
+      const ampY = (pxH / 2 - 2)
+      
+      for (let x = 0; x < pxW; x++) {
+        const nx = x / pxW
+        
+        const y1 = Math.floor((pxH / 2) + Math.sin(nx * Math.PI * 4 + t) * ampY * 0.9)
+        
+        const saw = ((nx * 3 + t * 0.5) % 1.0) * 2 - 1
+        const y2 = Math.floor((pxH / 2) + saw * ampY * 0.6)
+        
+        const pulse = Math.sin(nx * Math.PI * 6 + t * 1.5) > 0 ? 1 : -1
+        const y3 = Math.floor((pxH / 2) + pulse * ampY * 0.4)
+        
+        const noiseIdx = Math.floor(nx * 30 - t * 4)
+        const noise = Math.sin(noiseIdx * 123.456)
+        const y4 = Math.floor((pxH / 2) + noise * ampY * 0.25)
+        
+        const points = [y1, y2, y3, y4]
+        points.forEach((y) => {
+          if (y >= 0 && y < pxH) {
+            grid[Math.floor(y / 4)][Math.floor(x / 2)] |= DOTS[y % 4][x % 2]
+          }
+        })
       }
     }
   } else if (mode === 1) {
@@ -217,47 +264,40 @@ function drawNetwork(
   const H = Math.max(5, height)
   const grid = Array.from({ length: H }, () => new Uint8Array(W))
 
-  const nodeCount = Math.min(7, Math.max(4, Math.floor(W / 6)))
+  let baseNodeCount = Math.floor(W / 6)
+  if (activeNetMode === "dense") baseNodeCount = Math.floor(W / 3)
+  else if (activeNetMode === "sparse") baseNodeCount = Math.floor(W / 12)
+  else if (activeNetMode === "rhizome") baseNodeCount = Math.floor(W / 2) // more nodes for rhizome
+  const nodeCount = Math.min(25, Math.max(3, baseNodeCount))
   const nodes: { x: number; y: number }[] = []
-  let guard = 0
-  while (nodes.length < nodeCount && guard++ < 200) {
-    const x = rng.int(1, W - 2)
-    const y = rng.int(0, H - 1)
-    // keep nodes from overlapping
-    if (nodes.some((n) => Math.abs(n.x - x) < 3 && Math.abs(n.y - y) < 2)) continue
-    nodes.push({ x, y })
-  }
-
-  // links: connect each node to its 1-2 nearest neighbours
   const links: { a: number; b: number; pts: { x: number; y: number }[] }[] = []
-  for (let i = 0; i < nodes.length; i++) {
-    const dists = nodes
-      .map((n, j) => ({ j, d: Math.hypot(n.x - nodes[i].x, n.y - nodes[i].y) }))
-      .filter((o) => o.j !== i)
-      .sort((p, q) => p.d - q.d)
-    const k = rng.chance(0.5) ? 2 : 1
-    for (const { j } of dists.slice(0, k)) {
-      if (!links.some((l) => (l.a === i && l.b === j) || (l.a === j && l.b === i))) {
-        // Orthogonal (Manhattan) pathfinding
-        const A = nodes[i], B = nodes[j]
-        const pts: { x: number; y: number }[] = []
-        let { x, y } = A
-        pts.push({ x, y })
-        const horizFirst = rng.chance(0.5)
-        if (horizFirst) {
-          const sx = A.x < B.x ? 1 : -1
-          while (x !== B.x) { x += sx; pts.push({ x, y }) }
-          const sy = A.y < B.y ? 1 : -1
-          while (y !== B.y) { y += sy; pts.push({ x, y }) }
-        } else {
-          const sy = A.y < B.y ? 1 : -1
-          while (y !== B.y) { y += sy; pts.push({ x, y }) }
-          const sx = A.x < B.x ? 1 : -1
-          while (x !== B.x) { x += sx; pts.push({ x, y }) }
-        }
+  let guard = 0
+
+  if (activeNetMode === "rhizome") {
+    // A growing tree/rhizome from the bottom
+    nodes.push({ x: Math.floor(W/2), y: H-1 }) // Root
+    let frontier = [0]
+    let remainingNodes = nodeCount - 1
+    while (remainingNodes > 0 && frontier.length > 0 && guard++ < 300) {
+      const fi = rng.int(0, frontier.length - 1)
+      const parentIdx = frontier[fi]
+      const parent = nodes[parentIdx]
+      
+      const childX = Math.max(1, Math.min(W-2, parent.x + rng.int(-6, 6)))
+      const childY = Math.max(0, parent.y - rng.int(1, 3))
+      
+      if (!nodes.some((n) => Math.abs(n.x - childX) < 2 && Math.abs(n.y - childY) < 1)) {
+        nodes.push({ x: childX, y: childY })
+        const childIdx = nodes.length - 1
         
-        // Burn path into bitmask grid
-        // 1=UP, 2=RIGHT, 4=DOWN, 8=LEFT
+        const pts: {x:number, y:number}[] = []
+        let {x, y} = parent
+        pts.push({x,y})
+        const sy = parent.y < childY ? 1 : -1
+        while (y !== childY) { y += sy; pts.push({x,y}) }
+        const sx = parent.x < childX ? 1 : -1
+        while (x !== childX) { x += sx; pts.push({x,y}) }
+        
         for (let p = 0; p < pts.length - 1; p++) {
           const curr = pts[p], next = pts[p+1]
           if (next.x > curr.x) { grid[curr.y][curr.x] |= 2; grid[next.y][next.x] |= 8 }
@@ -265,7 +305,56 @@ function drawNetwork(
           else if (next.y > curr.y) { grid[curr.y][curr.x] |= 4; grid[next.y][next.x] |= 1 }
           else if (next.y < curr.y) { grid[curr.y][curr.x] |= 1; grid[next.y][next.x] |= 4 }
         }
-        links.push({ a: i, b: j, pts })
+        links.push({ a: parentIdx, b: childIdx, pts })
+        frontier.push(childIdx)
+        remainingNodes--
+      } else {
+        if (rng.chance(0.2)) frontier.splice(fi, 1) // cull stuck branches
+      }
+    }
+  } else {
+    // Normal mesh
+    while (nodes.length < Math.min(15, Math.max(3, baseNodeCount)) && guard++ < 200) {
+      const x = rng.int(1, W - 2)
+      const y = rng.int(0, H - 1)
+      if (nodes.some((n) => Math.abs(n.x - x) < 3 && Math.abs(n.y - y) < 2)) continue
+      nodes.push({ x, y })
+    }
+
+    for (let i = 0; i < nodes.length; i++) {
+      const dists = nodes
+        .map((n, j) => ({ j, d: Math.hypot(n.x - nodes[i].x, n.y - nodes[i].y) }))
+        .filter((o) => o.j !== i)
+        .sort((p, q) => p.d - q.d)
+      const k = rng.chance(0.5) ? 2 : 1
+      for (const { j } of dists.slice(0, k)) {
+        if (!links.some((l) => (l.a === i && l.b === j) || (l.a === j && l.b === i))) {
+          const A = nodes[i], B = nodes[j]
+          const pts: { x: number; y: number }[] = []
+          let { x, y } = A
+          pts.push({ x, y })
+          const horizFirst = rng.chance(0.5)
+          if (horizFirst) {
+            const sx = A.x < B.x ? 1 : -1
+            while (x !== B.x) { x += sx; pts.push({ x, y }) }
+            const sy = A.y < B.y ? 1 : -1
+            while (y !== B.y) { y += sy; pts.push({ x, y }) }
+          } else {
+            const sy = A.y < B.y ? 1 : -1
+            while (y !== B.y) { y += sy; pts.push({ x, y }) }
+            const sx = A.x < B.x ? 1 : -1
+            while (x !== B.x) { x += sx; pts.push({ x, y }) }
+          }
+          
+          for (let p = 0; p < pts.length - 1; p++) {
+            const curr = pts[p], next = pts[p+1]
+            if (next.x > curr.x) { grid[curr.y][curr.x] |= 2; grid[next.y][next.x] |= 8 }
+            else if (next.x < curr.x) { grid[curr.y][curr.x] |= 8; grid[next.y][next.x] |= 2 }
+            else if (next.y > curr.y) { grid[curr.y][curr.x] |= 4; grid[next.y][next.x] |= 1 }
+            else if (next.y < curr.y) { grid[curr.y][curr.x] |= 1; grid[next.y][next.x] |= 4 }
+          }
+          links.push({ a: i, b: j, pts })
+        }
       }
     }
   }
@@ -315,6 +404,7 @@ export function buildBootTelemetry(
   tick: number,
   phaseLabel: string,
   narrow = false,
+  scopeTick = tick,
 ): BootTelemetrySnapshot {
   // `tick` advances at half the line rate (see caller) so telemetry repaints
   // every other line — cheaper, and visually indistinguishable.
@@ -333,8 +423,8 @@ export function buildBootTelemetry(
 
   const rx = makeSeries(rng.fork("rx"), seriesLength, 8, rxLimit)
   const tx = makeSeries(rng.fork("tx"), seriesLength, 4, txLimit)
-  const scopeRng = rng.fork("scope")
-  const scopeRows = drawScope(scopeRng, narrow ? 24 : 34, narrow ? 6 : 8, tick)
+  const scopeRng = new SeededRNG(mixSeed(seed, `scope:${epoch}:${scopeTick}`))
+  const scopeRows = drawScope(scopeRng, narrow ? 48 : 68, narrow ? 12 : 16, scopeTick)
   const networkRows = drawNetwork(rng.fork("netmap"), narrow ? 32 : 44, narrow ? 6 : 8, tick)
   const processNames = [
     "graph-weaver",
@@ -387,5 +477,6 @@ export function buildBootTelemetry(
     processes,
     phaseCode: compactPhase(phaseLabel),
     networkRows,
+    netMode: activeNetMode,
   }
 }

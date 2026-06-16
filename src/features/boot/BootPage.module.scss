@@ -439,12 +439,17 @@
 
 .kindPhase {
   margin-top: 0.32rem;
-  color: var(--tui-bg);
-  background: var(--tui-fg);
   font-weight: 700;
   letter-spacing: 0.045em;
   text-transform: uppercase;
+  padding: 0 0.25rem;
 }
+
+.kindPhase.toneNormal { background: var(--tui-fg); color: var(--tui-bg); }
+.kindPhase.toneMuted { background: var(--tui-dim); color: var(--tui-bg); }
+.kindPhase.toneAccent { background: var(--tui-accent); color: var(--tui-bg); }
+.kindPhase.toneWarning { background: var(--tui-warning, #f5a623); color: var(--tui-bg); }
+.kindPhase.toneError { background: var(--tui-error, #ff4444); color: var(--tui-bg); }
 
 .toneNormal {
   color: var(--tui-fg);
@@ -545,8 +550,8 @@
   color: var(--tui-accent);
   background: transparent;
   font: inherit;
-  font-size: clamp(0.58rem, 0.2vw + 0.54rem, 0.72rem);
-  line-height: 1.08;
+  font-size: clamp(0.40rem, 0.16vw + 0.38rem, 0.55rem);
+  line-height: 1.1;
   letter-spacing: 0;
   white-space: pre;
 }

@@ -39,6 +39,7 @@ export interface UseBootPlaybackResult {
   emittedCount: number
   error: string | null
   injectLine: (text: string, tone?: BootTone, kind?: BootEventKind) => void
+  replaceLastLines: (count: number, newLines: string[], tone?: BootTone, kind?: BootEventKind) => void
   clearLines: () => void
 }
 
@@ -238,6 +239,19 @@ export function useBootPlayback({
     setLines([])
   }, [])
 
+  const replaceLastLines = useCallback((count: number, newLines: string[], tone: BootTone = "normal", kind: BootEventKind = "frame") => {
+    setLines((previous) => {
+      const next = previous.slice(0, Math.max(0, previous.length - count))
+      const rendered = newLines.map((text, i) => ({
+        id: `replaced-${Date.now()}-${Math.random()}-${i}`,
+        text,
+        tone,
+        kind
+      }))
+      return [...next, ...rendered]
+    })
+  }, [])
+
   useEffect(() => {
     const controller = new AbortController()
     const { signal } = controller
@@ -394,6 +408,7 @@ export function useBootPlayback({
     emittedCount,
     error,
     injectLine,
+    replaceLastLines,
     clearLines,
   }
 }

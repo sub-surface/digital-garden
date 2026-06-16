@@ -19,6 +19,12 @@ interface MusicContextType {
   analyser: AnalyserNode | null
   /** Live <audio> element — for direct, render-lag-free scrubbing (scratch). */
   audioRef: React.RefObject<HTMLAudioElement | null>
+  repeatMode: "off" | "track" | "all"
+  setRepeatMode: (mode: "off" | "track" | "all") => void
+  playlist: number[]
+  setPlaylist: (list: number[]) => void
+  playlistIndex: number
+  setPlaylistIndex: (index: number) => void
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined)
@@ -35,10 +41,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [tracks, setTracks] = useState<Track[]>([])
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(0)
   const [isPlaying, setIsPlaying] = useState<boolean>(false)
-  const [volume, setVolumeState] = useState<number>(0.8)
+  const [volume, setVolumeState] = useState<number>(0.5)
   const [progress, setProgress] = useState<number>(0)
   const [currentTime, setCurrentTime] = useState<number>(0)
   const [duration, setDuration] = useState<number>(0)
+  
+  const [repeatMode, setRepeatMode] = useState<"off" | "track" | "all">("all")
+  const [playlist, setPlaylist] = useState<number[]>([])
+  const [playlistIndex, setPlaylistIndex] = useState<number>(-1)
   
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -161,13 +171,25 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const nextTrack = () => {
     ensureAudioContext()
-    setCurrentTrackIndex((prev) => (prev + 1) % tracks.length)
+    if (playlist.length > 0) {
+      const nextIdx = (playlistIndex + 1) % playlist.length
+      setPlaylistIndex(nextIdx)
+      setCurrentTrackIndex(playlist[nextIdx])
+    } else {
+      setCurrentTrackIndex((prev) => (prev + 1) % tracks.length)
+    }
     setIsPlaying(true)
   }
 
   const prevTrack = () => {
     ensureAudioContext()
-    setCurrentTrackIndex((prev) => (prev - 1 + tracks.length) % tracks.length)
+    if (playlist.length > 0) {
+      const prevIdx = (playlistIndex - 1 + playlist.length) % playlist.length
+      setPlaylistIndex(prevIdx)
+      setCurrentTrackIndex(playlist[prevIdx])
+    } else {
+      setCurrentTrackIndex((prev) => (prev - 1 + tracks.length) % tracks.length)
+    }
     setIsPlaying(true)
   }
 
@@ -195,7 +217,22 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }
 
   const handleEnded = () => {
-    nextTrack()
+    if (repeatMode === "track") {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0
+        audioRef.current.play()
+      }
+    } else if (repeatMode === "all") {
+      nextTrack()
+    } else {
+      if (playlist.length > 0 && playlistIndex === playlist.length - 1) {
+        setIsPlaying(false)
+      } else if (playlist.length === 0 && currentTrackIndex === tracks.length - 1) {
+        setIsPlaying(false)
+      } else {
+        nextTrack()
+      }
+    }
   }
 
   return (
@@ -217,6 +254,12 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         currentTrack,
         analyser: analyserRef.current,
         audioRef,
+        repeatMode,
+        setRepeatMode,
+        playlist,
+        setPlaylist,
+        playlistIndex,
+        setPlaylistIndex,
       }}
     >
       {children}

@@ -31,6 +31,7 @@ import styles from "./BootPage.module.scss"
 import { AmbientEngine } from "./bootAudio"
 import {
   runBootCommand,
+  clearActiveCommand,
   COMMAND_NAMES,
   HELP_COMMANDS,
   type BootCommandContext,
@@ -38,6 +39,7 @@ import {
   type ZoomPane,
 } from "./bootCommands"
 import { SYSTEM_PAGES } from "../../config/system-pages"
+import { useMusic } from "@/components/ui/MusicContext"
 import { WikiAuthModal } from "../../components/ui/WikiAuthModal"
 import { useAuth } from "../../hooks/useAuth"
 
@@ -228,7 +230,22 @@ const InstrumentRack = memo(function InstrumentRack({
             <code>{telemetry.txHistory}</code>
             <b>{telemetry.txRate}</b>
           </div>
-          <pre className={styles.networkMap}>{telemetry.networkRows.join("\n")}</pre>
+          <pre className={styles.networkMap}>
+            {telemetry.networkRows.map((row, i) => (
+              <div key={i}>
+                {row.split("").map((c, j) => {
+                  let color = "inherit"
+                  if (c === "◈") color = "var(--tui-accent)"
+                  else if (c === "·") color = "#42b464"
+                  else if (telemetry.netMode === "rhizome" && c !== " ") {
+                    const depth = (i + j) % 3
+                    color = depth === 0 ? "var(--tui-accent)" : depth === 1 ? "var(--tui-dim)" : "var(--tui-fg)"
+                  }
+                  return color !== "inherit" ? <span key={j} style={{color}}>{c}</span> : c
+                })}
+              </div>
+            ))}
+          </pre>
           <div className={styles.routeLine}>{telemetry.route}</div>
           <div className={styles.netStats}>
             <span>loss {telemetry.packetLoss}</span>
@@ -344,6 +361,7 @@ export function BootPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const detachedAtCountRef = useRef(0)
   const audioRef = useRef<AmbientEngine | null>(null)
+  const music = useMusic()
 
   const isNarrow = useMediaQuery("(max-width: 800px)")
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)")
@@ -421,6 +439,15 @@ export function BootPage() {
   }, [])
 
   useEffect(() => {
+    if (!audioRef.current) return
+    if (music.isPlaying) {
+      audioRef.current.setLevel(0)
+    } else {
+      audioRef.current.setLevel(music.volume * 0.22)
+    }
+  }, [music.isPlaying, music.volume])
+
+  useEffect(() => {
     const handlePopState = (): void => {
       const resolved = resolveSeed()
       detachedAtCountRef.current = 0
@@ -431,7 +458,10 @@ export function BootPage() {
     }
 
     window.addEventListener("popstate", handlePopState)
-    return () => window.removeEventListener("popstate", handlePopState)
+    return () => {
+       window.removeEventListener("popstate", handlePopState)
+       clearActiveCommand()
+    }
   }, [])
 
   const {
@@ -449,6 +479,7 @@ export function BootPage() {
     emittedCount,
     error,
     injectLine,
+    replaceLastLines,
     clearLines,
   } = useBootPlayback({
     seed: isBooted ? (resolvedSeed?.value ?? null) : null,
@@ -469,6 +500,8 @@ export function BootPage() {
   // not a game), so this ticks calmly at ~1.4fps: clearly alive, very cheap,
   // and not distracting. Gated off under reduced-motion and while hidden.
   const [idleTick, setIdleTick] = useState(0)
+  const [fastTick, setFastTick] = useState(0)
+
   useEffect(() => {
     if (reducedMotion) return
     let timer: ReturnType<typeof setInterval> | undefined
@@ -480,9 +513,16 @@ export function BootPage() {
     return () => { document.removeEventListener("visibilitychange", onVis); stop() }
   }, [reducedMotion])
 
+  useEffect(() => {
+    if (reducedMotion || !music.isPlaying) return
+    let timer = setInterval(() => setFastTick(f => f + 1), 50)
+    return () => clearInterval(timer)
+  }, [reducedMotion, music.isPlaying])
+
   // Combine the log-driven tick with the free-running one. Whichever is larger
   // drives the instruments, so live streaming and idle animation compose.
   const tick = Math.floor(emittedCount / 2) + idleTick
+  const scopeTick = tick + (music.isPlaying ? fastTick : 0)
   const telemetry = useMemo(
     () =>
       buildBootTelemetry(
@@ -491,8 +531,9 @@ export function BootPage() {
         tick,
         phaseLabel,
         isNarrow,
+        scopeTick,
       ),
-    [tick, epoch, isNarrow, phaseLabel, resolvedSeed?.value],
+    [resolvedSeed?.value, epoch, tick, phaseLabel, isNarrow, scopeTick],
   )
 
   const unseenCount = isFollowing
@@ -699,6 +740,7 @@ export function BootPage() {
 
   const commandContext = useMemo<BootCommandContext>(() => ({
     injectLine,
+    replaceLastLines,
     clearLines,
     setZoomedPane,
     toggleZoom,
@@ -721,6 +763,21 @@ export function BootPage() {
     triggerLogin: () => setShowAuthModal(true),
     navigate: (url: string) => { window.location.href = url },
     getUser: () => session ? { username, role, email: session.user.email ?? null } : null,
+    music: {
+      playTrack: music.playTrack,
+      togglePlay: music.togglePlay,
+      nextTrack: music.nextTrack,
+      prevTrack: music.prevTrack,
+      setVolume: music.setVolume,
+      isPlaying: music.isPlaying,
+      volume: music.volume,
+      tracks: music.tracks,
+      currentTrackIndex: music.currentTrackIndex,
+      playlist: music.playlist,
+      setPlaylist: music.setPlaylist,
+      repeatMode: music.repeatMode,
+      setRepeatMode: music.setRepeatMode,
+    }
   }), [
     session,
     username,
@@ -739,6 +796,12 @@ export function BootPage() {
     setPaused,
     toggleSound,
     toggleZoom,
+    music.isPlaying,
+    music.volume,
+    music.tracks,
+    music.currentTrackIndex,
+    music.playlist,
+    music.repeatMode,
   ])
 
   const runCommand = useCallback((raw: string) => {

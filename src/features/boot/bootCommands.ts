@@ -13,7 +13,7 @@
 import type { BootEventKind, BootTone } from "./bootTypes"
 import type { BootPalette } from "./bootSeed"
 import { parseMarkdownToBootLines } from "./bootMarkdown"
-import { setScopeMode } from "./bootTelemetry"
+import { setScopeMode, setNetMode } from "./bootTelemetry"
 
 /** Resolve a user-typed note query to a note (exact slug/title, then fuzzy). */
 function resolveNote(notes: readonly BootNote[], query: string): BootNote | undefined {
@@ -35,6 +35,7 @@ const ZOOM_PANES: readonly ZoomPane[] = ["log", "scope", "net", "proc"]
 /** Everything a command needs to act on the live boot session. */
 export interface BootCommandContext {
   injectLine: (text: string, tone?: BootTone, kind?: BootEventKind) => void
+  replaceLastLines: (count: number, newLines: string[], tone?: BootTone, kind?: BootEventKind) => void
   clearLines: () => void
   setZoomedPane: (pane: ZoomPane) => void
   /** Returns the pane after toggling `target` (or "none" if it was active). */
@@ -64,6 +65,21 @@ export interface BootCommandContext {
   navigate: (url: string) => void
   /** Get the current authenticated user profile */
   getUser: () => { username: string | null; role: string | null; email: string | null } | null
+  music: {
+    playTrack: (index: number | string) => void
+    togglePlay: () => void
+    nextTrack: () => void
+    prevTrack: () => void
+    setVolume: (vol: number) => void
+    isPlaying: boolean
+    volume: number
+    tracks: any[]
+    currentTrackIndex: number
+    playlist: number[]
+    setPlaylist: (list: number[]) => void
+    repeatMode: string
+    setRepeatMode: (mode: any) => void
+  }
 }
 
 /** A garden note as the boot terminal sees it. */
@@ -813,6 +829,222 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
     }
   },
   {
+    name: "net",
+    help: { usage: "net [auto|dense|sparse]", description: "Change the network panel visualization density" },
+    run: (ctx, args) => {
+      const mode = args[0]?.toLowerCase()
+      if (mode === "dense") {
+         setNetMode("dense")
+         ctx.injectLine("  NET OVERRIDE: Dense Mesh", "accent")
+      } else if (mode === "sparse") {
+         setNetMode("sparse")
+         ctx.injectLine("  NET OVERRIDE: Sparse Graph", "accent")
+      } else if (mode === "auto") {
+         setNetMode("auto")
+         ctx.injectLine("  NET OVERRIDE: Auto-scaling restored", "tender")
+      } else {
+         ctx.injectLine("  Usage: net [auto|dense|sparse]", "warning")
+      }
+    }
+  },
+  {
+    name: "calc",
+    help: { usage: "calc <expression>", description: "Evaluate a mathematical expression" },
+    run: (ctx, args) => {
+      const expr = args.join(" ")
+      if (!expr) return ctx.injectLine("  Usage: calc <expression>", "warning")
+      try {
+        const notes = ctx.getNotes()
+        const vars = {
+          nodes: notes.length,
+          articles: notes.filter(n => !n.slug.startsWith("users/")).length,
+          tags: new Set(notes.flatMap(n => n.tags)).size
+        }
+        const result = new Function(...Object.keys(vars), `return (${expr})`)(...Object.values(vars))
+        if (typeof result !== "number" || isNaN(result)) throw new Error("Invalid output")
+        ctx.injectLine(`  ${expr}`, "muted")
+        ctx.injectLine(`  = ${result}`, "accent", "heading")
+      } catch (err: any) {
+        ctx.injectLine(`  calc: ${err.message}`, "error")
+      }
+    }
+  },
+  {
+    name: "grow",
+    help: { usage: "grow", description: "Procedurally grow an ASCII bonsai tree" },
+    run: (ctx) => {
+      const W = 40, H = 20;
+      const grid = Array.from({length: H}, () => Array(W).fill(" "))
+      const branches: {x: number, y: number, length: number, angle: number}[] = [{x: W/2, y: H-1, length: 0, angle: -Math.PI/2}]
+      
+      ctx.injectLine("  PROCEDURAL BONSAI", "accent", "heading")
+      ctx.injectLine("  ┌" + "─".repeat(W) + "┐", "normal", "frame")
+      grid.forEach(row => ctx.injectLine("  │" + row.join("") + "│", "normal", "frame"))
+      ctx.injectLine("  └" + "─".repeat(W) + "┘", "normal", "frame")
+      ctx.chime("tender")
+
+      let step = 0
+      activeCommandInterval = setInterval(() => {
+        if (branches.length === 0 || step > 200) {
+          clearInterval(activeCommandInterval)
+          ctx.chime("tender")
+          return
+        }
+
+        let newBranches = []
+        for (let i = branches.length - 1; i >= 0; i--) {
+           const b = branches[i]
+           const nx = b.x + Math.cos(b.angle) * 0.8
+           const ny = b.y + Math.sin(b.angle) * 0.8
+           if (nx >= 0 && nx < W && ny >= 0 && ny < H) {
+              const ix = Math.floor(nx), iy = Math.floor(ny)
+              if (b.length > 5 && Math.random() < 0.15) {
+                 grid[iy][ix] = Math.random() > 0.5 ? "✿" : "❁"
+                 branches.splice(i, 1)
+                 continue
+              } else {
+                 grid[iy][ix] = b.length < 4 ? "█" : (b.length < 8 ? "▓" : "▒")
+              }
+              
+              if (Math.random() < 0.25) {
+                 newBranches.push({x: nx, y: ny, length: b.length + 1, angle: b.angle + (Math.random() * 0.8 + 0.1)})
+                 newBranches.push({x: nx, y: ny, length: b.length + 1, angle: b.angle - (Math.random() * 0.8 + 0.1)})
+                 branches.splice(i, 1)
+              } else {
+                 b.x = nx; b.y = ny; b.length++;
+                 b.angle += (Math.random() - 0.5) * 0.4
+              }
+           } else {
+              branches.splice(i, 1)
+           }
+        }
+        branches.push(...newBranches)
+        step++
+
+        const lines = [
+          "  ┌" + "─".repeat(W) + "┐",
+          ...grid.map(row => "  │" + row.join("") + "│"),
+          "  └" + "─".repeat(W) + "┘"
+        ]
+        ctx.replaceLastLines(H + 2, lines, "accent", "frame")
+      }, 50)
+    }
+  },
+  {
+    name: "life",
+    help: { usage: "life", description: "Conway's Game of Life simulation" },
+    run: (ctx) => {
+      const W = 40, H = 15;
+      let grid = Array.from({length: H}, () => Array.from({length: W}, () => Math.random() < 0.3 ? "█" : " "))
+      
+      ctx.injectLine("  GAME OF LIFE", "accent", "heading")
+      ctx.injectLine("  ┌" + "─".repeat(W) + "┐", "normal", "frame")
+      grid.forEach(row => ctx.injectLine("  │" + row.join("") + "│", "normal", "frame"))
+      ctx.injectLine("  └" + "─".repeat(W) + "┘", "normal", "frame")
+      ctx.chime("tender")
+
+      let step = 0
+      activeCommandInterval = setInterval(() => {
+        if (step > 150) {
+          clearInterval(activeCommandInterval)
+          ctx.chime("tender")
+          return
+        }
+
+        const next = Array.from({length: H}, () => Array(W).fill(" "))
+        let changes = 0
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            let n = 0
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue
+                const ny = y + dy, nx = x + dx
+                if (ny >= 0 && ny < H && nx >= 0 && nx < W && grid[ny][nx] !== " ") n++
+              }
+            }
+            if (grid[y][x] !== " ") {
+              if (n === 2 || n === 3) next[y][x] = "█"
+              else changes++
+            } else {
+              if (n === 3) { next[y][x] = "▓"; changes++ }
+            }
+          }
+        }
+        
+        if (changes === 0) {
+           clearInterval(activeCommandInterval)
+           ctx.chime("tender")
+           return
+        }
+
+        grid = next
+        const lines = [
+          "  ┌" + "─".repeat(W) + "┐",
+          ...grid.map(row => "  │" + row.join("") + "│"),
+          "  └" + "─".repeat(W) + "┘"
+        ]
+        ctx.replaceLastLines(H + 2, lines, "accent", "frame")
+        step++
+      }, 100)
+    }
+  },
+  {
+    name: "orbit",
+    help: { usage: "orbit", description: "ASCII planetary orbit simulation" },
+    run: (ctx) => {
+      const W = 60, H = 20;
+      ctx.injectLine("  CELESTIAL ORBIT", "accent", "heading")
+      ctx.injectLine("  ┌" + "─".repeat(W) + "┐", "normal", "frame")
+      for (let i=0; i<H; i++) ctx.injectLine("  │" + " ".repeat(W) + "│", "normal", "frame")
+      ctx.injectLine("  └" + "─".repeat(W) + "┘", "normal", "frame")
+      ctx.chime("tender")
+
+      const planets = [
+        { r: 4, speed: 0.15, char: "o", trail: [] as {x:number, y:number}[] },
+        { r: 8, speed: 0.08, char: "O", trail: [] as {x:number, y:number}[] },
+        { r: 14, speed: 0.04, char: "Ø", trail: [] as {x:number, y:number}[] },
+        { r: 22, speed: 0.02, char: "•", trail: [] as {x:number, y:number}[] },
+      ]
+
+      let t = 0
+      activeCommandInterval = setInterval(() => {
+        if (t > 400) {
+          clearInterval(activeCommandInterval)
+          ctx.chime("tender")
+          return
+        }
+
+        const grid = Array.from({length: H}, () => Array(W).fill(" "))
+        const cx = W/2, cy = H/2
+        grid[cy][cx] = "☼"
+
+        planets.forEach(p => {
+           const x = Math.floor(cx + Math.cos(t * p.speed) * p.r * 1.8)
+           const y = Math.floor(cy + Math.sin(t * p.speed) * p.r)
+           
+           p.trail.push({x, y})
+           if (p.trail.length > 8) p.trail.shift()
+           p.trail.forEach((tr, i) => {
+              if (tr.x >= 0 && tr.x < W && tr.y >= 0 && tr.y < H && grid[tr.y][tr.x] === " ") {
+                 grid[tr.y][tr.x] = "·"
+              }
+           })
+           
+           if (x >= 0 && x < W && y >= 0 && y < H) grid[y][x] = p.char
+        })
+
+        const lines = [
+          "  ┌" + "─".repeat(W) + "┐",
+          ...grid.map(row => "  │" + row.join("") + "│"),
+          "  └" + "─".repeat(W) + "┘"
+        ]
+        ctx.replaceLastLines(H + 2, lines, "accent", "frame")
+        t++
+      }, 50)
+    }
+  },
+  {
     name: "maze",
     help: { usage: "maze", description: "Generate a random terminal maze" },
     run: (ctx) => {
@@ -836,10 +1068,102 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
         }
         if (!carved) stack.pop()
       }
+      const getWall = (x: number, y: number) => {
+        const isW = (cx: number, cy: number) => cy >= 0 && cy < H && cx >= 0 && cx < W && maze[cy][cx] === "█"
+        const n = isW(x, y-1)
+        const s = isW(x, y+1)
+        const e = isW(x+1, y)
+        const w = isW(x-1, y)
+        if (n && s && e && w) return "┼"
+        if (n && s && e) return "├"
+        if (n && s && w) return "┤"
+        if (e && w && n) return "┴"
+        if (e && w && s) return "┬"
+        if (n && s) return "│"
+        if (e && w) return "─"
+        if (n && e) return "└"
+        if (n && w) return "┘"
+        if (s && e) return "┌"
+        if (s && w) return "┐"
+        if (n || s) return "│"
+        if (e || w) return "─"
+        return "·"
+      }
+      
+      const nextMaze = maze.map((row, y) => row.map((cell, x) => cell === "█" ? getWall(x, y) : cell))
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          maze[y][x] = nextMaze[y][x]
+        }
+      }
+
       maze[1][0] = "S"; maze[H-2][W-1] = "E";
       ctx.injectLine("  PROCEDURAL MAZE", "accent", "heading")
-      maze.forEach(row => ctx.injectLine("  " + row.join(""), "normal", "frame"))
+      ctx.injectLine("  ┌" + "─".repeat(W) + "┐", "normal", "frame")
+      maze.forEach(row => ctx.injectLine("  │" + row.join("") + "│", "normal", "frame"))
+      ctx.injectLine("  └" + "─".repeat(W) + "┘", "normal", "frame")
       ctx.chime("tender")
+
+      // Animated BFS solver
+      const startNode = {x: 0, y: 1}
+      const endNode = {x: W-1, y: H-2}
+      const queue: {x: number, y: number, path: {x: number, y: number}[]}[] = [{...startNode, path: []}]
+      const visited = new Set<string>()
+      visited.add(`0,1`)
+
+      activeCommandInterval = setInterval(() => {
+        if (queue.length === 0) {
+          clearInterval(activeCommandInterval)
+          return
+        }
+
+        const current = queue.shift()!
+        if (current.x === endNode.x && current.y === endNode.y) {
+          clearInterval(activeCommandInterval)
+          current.path.forEach(({x, y}) => {
+            if (maze[y][x] === "·" || maze[y][x] === " ") maze[y][x] = "•" // Highlight final path
+          })
+          const lines = [
+            "  ┌" + "─".repeat(W) + "┐",
+            ...maze.map(row => "  │" + row.join("") + "│"),
+            "  └" + "─".repeat(W) + "┘"
+          ]
+          ctx.replaceLastLines(H + 2, lines, "accent", "frame")
+          ctx.chime("tender")
+          return
+        }
+
+        const dirs = [{dx: 0, dy: -1}, {dx: 0, dy: 1}, {dx: -1, dy: 0}, {dx: 1, dy: 0}]
+        let foundNew = false
+
+        for (const {dx, dy} of dirs) {
+          const nx = current.x + dx
+          const ny = current.y + dy
+          if (nx >= 0 && nx < W && ny >= 0 && ny < H) {
+            if (maze[ny][nx] === " " || maze[ny][nx] === "E") {
+              const key = `${nx},${ny}`
+              if (!visited.has(key)) {
+                visited.add(key)
+                queue.push({x: nx, y: ny, path: [...current.path, {x: nx, y: ny}]})
+                if (maze[ny][nx] === " ") {
+                  maze[ny][nx] = "·" // Show search progress
+                }
+                foundNew = true
+              }
+            }
+          }
+        }
+
+        // Only draw if we expanded the search frontier, to save frames
+        if (foundNew) {
+          const lines = [
+            "  ┌" + "─".repeat(W) + "┐",
+            ...maze.map(row => "  │" + row.join("") + "│"),
+            "  └" + "─".repeat(W) + "┘"
+          ]
+          ctx.replaceLastLines(H + 2, lines, "normal", "frame")
+        }
+      }, 50)
     }
   },
   {
@@ -848,16 +1172,25 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
     help: { usage: "topology", description: "Visualise the garden's tags and connections" },
     run: (ctx) => {
       const notes = ctx.getNotes()
+      const articles = notes.filter(n => !n.slug.startsWith("users/"))
+      const longestNote = [...notes].sort((a,b) => (b.excerpt?.length || 0) - (a.excerpt?.length || 0))[0]
+      const sha = typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_GIT_SHA 
+                  ? (import.meta as any).env.VITE_GIT_SHA.substring(0, 7) 
+                  : "e4f8a9b"
+      
       const tagCounts = new Map<string, number>()
       notes.forEach(n => n.tags.forEach(t => tagCounts.set(t, (tagCounts.get(t) || 0) + 1)))
       
-      const sorted = [...tagCounts.entries()].sort((a,b) => b[1] - a[1]).slice(0, 10)
+      const sorted = [...tagCounts.entries()].sort((a,b) => b[1] - a[1]).slice(0, 8)
       const max = Math.max(...sorted.map(s => s[1]), 1)
       
       ctx.injectLine("  GARDEN TOPOLOGY", "accent", "heading")
-      ctx.injectLine(`  Total Nodes: ${notes.length}`, "normal")
-      ctx.injectLine("  Density by concept:", "muted")
+      ctx.injectLine(`  Scale:         ${notes.length} total nodes`, "normal")
+      ctx.injectLine(`  Articles:      ${articles.length} wiki articles`, "normal")
+      ctx.injectLine(`  Longest Note:  [${longestNote?.slug || "none"}]`, "normal")
+      ctx.injectLine(`  Git SHA:       ${sha}`, "normal")
       ctx.injectLine("", "normal")
+      ctx.injectLine("  Density by concept:", "muted")
       
       const BAR_CHARS = [" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"]
       
@@ -981,9 +1314,135 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
     requireRole: "admin",
     help: { usage: "admin", description: "Access elevated subroutines" },
     run: (ctx) => {
-      ctx.injectLine("  ELEVATED ACCESS GRANTED", "warning", "heading")
-      ctx.injectLine("  The admin module is currently undergoing structural maintenance.", "muted")
-      ctx.injectLine("  No anomalies detected.", "success")
+      ctx.injectLine("  admin module loaded.", "accent")
+      ctx.injectLine("  available elevated routines: [list users, system override, purge logs]", "muted")
+    }
+  },
+  {
+    name: "play",
+    help: { usage: "play [track]", description: "Play garden ambient music" },
+    run: (ctx, args) => {
+      if (args[0]) {
+        ctx.music.playTrack(args.join(" "))
+        ctx.injectLine(`  tuning to frequency: ${args.join(" ")}`, "accent")
+      } else {
+        ctx.music.togglePlay()
+        ctx.injectLine(ctx.music.isPlaying ? "  halting playback" : "  resuming playback", "accent")
+      }
+      runBootCommand("cat m0rvidd", ctx)
+    }
+  },
+  {
+    name: "track",
+    aliases: ["playing"],
+    help: { usage: "track", description: "Show current track details" },
+    run: (ctx) => {
+      const { tracks, currentTrackIndex, isPlaying } = ctx.music
+      if (tracks.length === 0) {
+        ctx.injectLine("  no tracks available.", "muted")
+        return
+      }
+      const t = tracks[currentTrackIndex]
+      ctx.injectLine(`  CURRENT TRACK [${isPlaying ? "PLAYING" : "PAUSED"}]`, "accent", "heading")
+      ctx.injectLine(`  Title:  ${t.title}`, "normal")
+      ctx.injectLine(`  Slug:   ${t.slug}`, "normal")
+      ctx.injectLine(`  Link:   https://soundcloud.com/m0rvidd/${t.slug.replace("music/", "")}`, "normal")
+    }
+  },
+  {
+    name: "tracks",
+    help: { usage: "tracks", description: "List available tracks" },
+    run: (ctx) => {
+      const { tracks } = ctx.music
+      ctx.injectLine("  AVAILABLE FREQUENCIES", "accent", "heading")
+      tracks.forEach((t, i) => {
+        ctx.injectLine(`  [${i.toString().padStart(2, "0")}] ${t.title} (${t.slug})`, "normal")
+      })
+    }
+  },
+  {
+    name: "playlist",
+    help: { usage: "playlist [add <slug>|clear]", description: "Construct a music playlist" },
+    run: (ctx, args) => {
+      if (args[0] === "add" && args[1]) {
+        const slug = args[1]
+        const idx = ctx.music.tracks.findIndex(t => t.slug === slug)
+        if (idx === -1) {
+          ctx.injectLine(`  track not found: ${slug}`, "error")
+        } else {
+          ctx.music.setPlaylist([...ctx.music.playlist, idx])
+          ctx.injectLine(`  added ${slug} to playlist`, "accent")
+        }
+      } else if (args[0] === "clear") {
+        ctx.music.setPlaylist([])
+        ctx.injectLine("  playlist cleared", "accent")
+      } else {
+        ctx.injectLine(`  PLAYLIST (${ctx.music.playlist.length} tracks)`, "accent", "heading")
+        if (ctx.music.playlist.length === 0) {
+          ctx.injectLine("  empty.", "muted")
+        } else {
+          ctx.music.playlist.forEach((idx, i) => {
+            const t = ctx.music.tracks[idx]
+            ctx.injectLine(`  ${i + 1}. ${t.title}`, "normal")
+          })
+        }
+      }
+    }
+  },
+  {
+    name: "repeat",
+    help: { usage: "repeat [off|track|all]", description: "Set music repeat mode" },
+    run: (ctx, args) => {
+      const mode = args[0]
+      if (mode === "off" || mode === "track" || mode === "all") {
+        ctx.music.setRepeatMode(mode)
+        ctx.injectLine(`  repeat mode set to ${mode}`, "accent")
+      } else {
+        ctx.injectLine(`  current repeat mode: ${ctx.music.repeatMode}`, "normal")
+        ctx.injectLine("  usage: repeat [off|track|all]", "warning")
+      }
+    }
+  },
+  {
+    name: "pause",
+    help: { usage: "pause", description: "Pause garden music" },
+    run: (ctx) => {
+      if (ctx.music.isPlaying) {
+        ctx.music.togglePlay()
+        ctx.injectLine("  music paused.", "muted")
+      } else {
+        ctx.injectLine("  no music playing.", "muted")
+      }
+    }
+  },
+  {
+    name: "next",
+    help: { usage: "next", description: "Next music track" },
+    run: (ctx) => {
+      ctx.music.nextTrack()
+      ctx.injectLine("  skipping track...", "accent")
+    }
+  },
+  {
+    name: "prev",
+    help: { usage: "prev", description: "Previous music track" },
+    run: (ctx) => {
+      ctx.music.prevTrack()
+      ctx.injectLine("  reversing track...", "accent")
+    }
+  },
+  {
+    name: "vol",
+    help: { usage: "vol <0-100>", description: "Set master system volume" },
+    run: (ctx, args) => {
+      const v = parseInt(args[0], 10)
+      if (isNaN(v) || v < 0 || v > 100) {
+        ctx.injectLine(`  current volume: ${Math.round(ctx.music.volume * 100)}%`, "normal")
+        ctx.injectLine("  usage: vol <0-100>", "warning")
+      } else {
+        ctx.music.setVolume(v / 100)
+        ctx.injectLine(`  volume set to ${v}%`, "accent")
+      }
     }
   },
   {
@@ -1040,7 +1499,18 @@ export const HELP_COMMANDS: readonly BootCommand[] = BOOT_COMMANDS.filter(
  * if the command was not recognised (the caller emits the "not found" line so
  * it can include the original token casing).
  */
+export let activeCommandInterval: any = null
+
+export function clearActiveCommand() {
+  if (activeCommandInterval) {
+    clearInterval(activeCommandInterval)
+    activeCommandInterval = null
+  }
+}
+
 export function runBootCommand(raw: string, ctx: BootCommandContext): boolean {
+  clearActiveCommand()
+
   const trimmed = raw.trim()
   if (!trimmed) return false
 
