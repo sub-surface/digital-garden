@@ -578,6 +578,20 @@
   overflow: hidden;
 }
 
+.networkMap {
+  margin: 0;
+  padding: 0.2rem 0.1rem;
+  overflow: hidden;
+  color: var(--tui-accent);
+  font: inherit;
+  font-size: clamp(0.54rem, 0.2vw + 0.5rem, 0.68rem);
+  line-height: 1.05;
+  letter-spacing: 0;
+  white-space: pre;
+  text-align: center;
+  opacity: 0.92;
+}
+
 .sparkRow {
   min-width: 0;
   display: grid;

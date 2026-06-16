@@ -34,11 +34,45 @@ import {
   COMMAND_NAMES,
   HELP_COMMANDS,
   type BootCommandContext,
+  type BootNote,
   type ZoomPane,
 } from "./bootCommands"
+import { SYSTEM_PAGES } from "../../config/system-pages"
 
 const FOLLOW_THRESHOLD_PX = 32
 const SPEED_STEPS = [0.5, 1, 2, 4] as const
+
+// Slugs that aren't readable prose (system pages, games, shelves) — excluded
+// from the boot terminal's `ls` / `cat`.
+const NON_NOTE_SLUGS = new Set([...Object.keys(SYSTEM_PAGES), "tags", "folder", "graph"])
+
+/**
+ * Readable garden notes for the boot terminal. The boot shell doesn't go
+ * through AppShell's content-index fetch, so load it here (once, cached) and
+ * fall back to the store if it's already populated.
+ */
+let bootNotesPromise: Promise<readonly BootNote[]> | null = null
+function loadBootNotes(): Promise<readonly BootNote[]> {
+  if (bootNotesPromise) return bootNotesPromise
+  const fromStore = useStore.getState().contentIndex
+  const toNotes = (idx: NonNullable<ReturnType<typeof useStore.getState>["contentIndex"]>): BootNote[] =>
+    Object.values(idx)
+      .filter((n) => n.contentPath && !n.private && !NON_NOTE_SLUGS.has(n.slug.toLowerCase()))
+      .map((n) => ({ slug: n.slug, title: String(n.title), tags: n.tags ?? [], contentPath: n.contentPath! }))
+  if (fromStore) {
+    bootNotesPromise = Promise.resolve(toNotes(fromStore))
+    return bootNotesPromise
+  }
+  bootNotesPromise = fetch("/content-index.json")
+    .then((r) => {
+      const ct = r.headers.get("content-type") ?? ""
+      if (!r.ok || !ct.includes("json")) throw new Error(`content-index ${r.status}`)
+      return r.json()
+    })
+    .then((idx) => toNotes(idx))
+    .catch(() => [])
+  return bootNotesPromise
+}
 
 const TONE_CLASS: Record<BootTone, string> = {
   normal: styles.toneNormal,
@@ -185,6 +219,7 @@ const InstrumentRack = memo(function InstrumentRack({
             <code>{telemetry.txHistory}</code>
             <b>{telemetry.txRate}</b>
           </div>
+          <pre className={styles.networkMap}>{telemetry.networkRows.join("\n")}</pre>
           <div className={styles.routeLine}>{telemetry.route}</div>
           <div className={styles.netStats}>
             <span>loss {telemetry.packetLoss}</span>
@@ -415,10 +450,27 @@ export function BootPage() {
     }, []),
   })
 
-  // Telemetry advances at half the line rate: memoising on `tick` (not raw
-  // `emittedCount`) halves how often the RNG + scope raster + process table
-  // rebuild, with no visible difference.
-  const tick = Math.floor(emittedCount / 2)
+  // Telemetry advances at half the line rate while the log streams. But once
+  // the log goes idle (paused, or the sequence has caught up) the instruments
+  // would freeze — so a slow free-running clock keeps the scope and net gently
+  // alive. They don't need per-frame motion (it's an ambient instrument rack,
+  // not a game), so this ticks calmly at ~1.4fps: clearly alive, very cheap,
+  // and not distracting. Gated off under reduced-motion and while hidden.
+  const [idleTick, setIdleTick] = useState(0)
+  useEffect(() => {
+    if (reducedMotion) return
+    let timer: ReturnType<typeof setInterval> | undefined
+    const start = () => { if (!timer) timer = setInterval(() => setIdleTick((t) => t + 1), 700) }
+    const stop = () => { if (timer) { clearInterval(timer); timer = undefined } }
+    const onVis = () => { if (document.hidden) stop(); else start() }
+    document.addEventListener("visibilitychange", onVis)
+    if (!document.hidden) start()
+    return () => { document.removeEventListener("visibilitychange", onVis); stop() }
+  }, [reducedMotion])
+
+  // Combine the log-driven tick with the free-running one. Whichever is larger
+  // drives the instruments, so live streaming and idle animation compose.
+  const tick = Math.floor(emittedCount / 2) + idleTick
   const telemetry = useMemo(
     () =>
       buildBootTelemetry(
@@ -614,6 +666,25 @@ export function BootPage() {
     setTimeout(() => document.body.classList.remove("glitchMode"), 600)
   }, [])
 
+  // Preload the readable-notes list so `ls` / `cat` resolve synchronously.
+  const bootNotesRef = useRef<readonly BootNote[]>([])
+  useEffect(() => {
+    let alive = true
+    loadBootNotes().then((notes) => { if (alive) bootNotesRef.current = notes })
+    return () => { alive = false }
+  }, [])
+
+  const getNotes = useCallback(() => bootNotesRef.current, [])
+  const fetchNote = useCallback(async (contentPath: string): Promise<string | null> => {
+    try {
+      const res = await fetch(`/content/${contentPath}`)
+      if (!res.ok || res.headers.get("content-type")?.includes("text/html")) return null
+      return await res.text()
+    } catch {
+      return null
+    }
+  }, [])
+
   const commandContext = useMemo<BootCommandContext>(() => ({
     injectLine,
     clearLines,
@@ -633,12 +704,16 @@ export function BootPage() {
     restart,
     setPaused,
     getHistory: () => commandHistoryRef.current,
+    getNotes,
+    fetchNote,
   }), [
     clearLines,
     createNewSeed,
     cyclePalette,
     exportLog,
+    fetchNote,
     flashGlitch,
+    getNotes,
     injectLine,
     palette.name,
     restart,

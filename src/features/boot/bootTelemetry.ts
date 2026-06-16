@@ -29,6 +29,8 @@ export interface BootTelemetrySnapshot {
   uptime: string
   processes: readonly TelemetryProcess[]
   phaseCode: string
+  /** Small ASCII node-link mesh for the net pane, animated by tick. */
+  networkRows: readonly string[]
 }
 
 function sparkline(values: readonly number[]): string {
@@ -89,6 +91,83 @@ function drawScope(
   return rows
 }
 
+/**
+ * A small node-link mesh rendered to ASCII. Node positions are seeded (stable
+ * for a given seed), links connect nearby nodes, and a pulse travels along the
+ * edges driven by `tick` so the mesh reads as a live network. O(nodes²) for
+ * link-finding + O(cells) raster on a ~tiny grid — cheap.
+ */
+function drawNetwork(
+  rng: SeededRNG,
+  width: number,
+  height: number,
+  tick: number,
+): string[] {
+  const W = Math.max(16, width)
+  const H = Math.max(5, height)
+  const grid: string[][] = Array.from({ length: H }, () => Array(W).fill(" "))
+
+  const nodeCount = Math.min(7, Math.max(4, Math.floor(W / 6)))
+  const nodes: { x: number; y: number }[] = []
+  let guard = 0
+  while (nodes.length < nodeCount && guard++ < 200) {
+    const x = rng.int(1, W - 2)
+    const y = rng.int(0, H - 1)
+    // keep nodes from overlapping
+    if (nodes.some((n) => Math.abs(n.x - x) < 3 && Math.abs(n.y - y) < 2)) continue
+    nodes.push({ x, y })
+  }
+
+  // links: connect each node to its 1-2 nearest neighbours (a connected-ish mesh)
+  const links: { a: number; b: number }[] = []
+  for (let i = 0; i < nodes.length; i++) {
+    const dists = nodes
+      .map((n, j) => ({ j, d: Math.hypot(n.x - nodes[i].x, n.y - nodes[i].y) }))
+      .filter((o) => o.j !== i)
+      .sort((p, q) => p.d - q.d)
+    const k = rng.chance(0.5) ? 2 : 1
+    for (const { j } of dists.slice(0, k)) {
+      if (!links.some((l) => (l.a === i && l.b === j) || (l.a === j && l.b === i))) {
+        links.push({ a: i, b: j })
+      }
+    }
+  }
+
+  // rasterise links with a Bresenham walk; mark a moving pulse cell per link
+  links.forEach((l, li) => {
+    const A = nodes[l.a], B = nodes[l.b]
+    const dx = Math.abs(B.x - A.x), dy = Math.abs(B.y - A.y)
+    const sx = A.x < B.x ? 1 : -1, sy = A.y < B.y ? 1 : -1
+    let err = dx - dy
+    let x = A.x, y = A.y
+    const pts: { x: number; y: number }[] = []
+    for (let n = 0; n < W + H; n++) {
+      pts.push({ x, y })
+      if (x === B.x && y === B.y) break
+      const e2 = 2 * err
+      if (e2 > -dy) { err -= dy; x += sx }
+      if (e2 < dx) { err += dx; y += sy }
+    }
+    const glyph = dx > dy ? "─" : dy > dx ? "│" : sx === sy ? "╲" : "╱"
+    const pulse = pts.length > 1 ? Math.floor((tick * 0.7 + li * 2)) % pts.length : 0
+    pts.forEach((p, idx) => {
+      if (p.x <= 0 || p.x >= W - 1 || p.y < 0 || p.y >= H) return
+      if (grid[p.y][p.x] === " " || grid[p.y][p.x] === "·") {
+        grid[p.y][p.x] = idx === pulse ? "•" : glyph
+      }
+    })
+  })
+
+  // nodes on top
+  nodes.forEach((n, i) => {
+    if (n.y >= 0 && n.y < H && n.x >= 0 && n.x < W) {
+      grid[n.y][n.x] = i === 0 ? "◉" : "◇"
+    }
+  })
+
+  return grid.map((row) => row.join(""))
+}
+
 function formatDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
@@ -122,6 +201,7 @@ export function buildBootTelemetry(
   const tx = makeSeries(rng.fork("tx"), seriesLength, 4, 72)
   const scopeRng = rng.fork("scope")
   const scopeRows = drawScope(scopeRng, narrow ? 24 : 34, narrow ? 6 : 8, tick)
+  const networkRows = drawNetwork(rng.fork("netmap"), narrow ? 22 : 30, narrow ? 4 : 5, tick)
   const processNames = [
     "graph-weaver",
     "mothkeeper",
@@ -172,5 +252,6 @@ export function buildBootTelemetry(
     uptime: formatDuration(uptimeSeconds),
     processes,
     phaseCode: compactPhase(phaseLabel),
+    networkRows,
   }
 }

@@ -12,6 +12,20 @@
 
 import type { BootEventKind, BootTone } from "./bootTypes"
 import type { BootPalette } from "./bootSeed"
+import { parseMarkdownToBootLines } from "./bootMarkdown"
+
+/** Resolve a user-typed note query to a note (exact slug/title, then fuzzy). */
+function resolveNote(notes: readonly BootNote[], query: string): BootNote | undefined {
+  const q = query.trim().toLowerCase()
+  if (!q) return undefined
+  const bySlug = notes.find((n) => n.slug.toLowerCase() === q)
+  if (bySlug) return bySlug
+  const byTitle = notes.find((n) => n.title.toLowerCase() === q)
+  if (byTitle) return byTitle
+  return notes.find(
+    (n) => n.slug.toLowerCase().includes(q) || n.title.toLowerCase().includes(q),
+  )
+}
 
 export type ZoomPane = "none" | "log" | "scope" | "net" | "proc"
 
@@ -39,6 +53,18 @@ export interface BootCommandContext {
   setPaused: (paused: boolean) => void
   /** Command history, oldest-first, for `history`. */
   getHistory: () => readonly string[]
+  /** Public garden notes available to read, for `ls` / `cat` / autocomplete. */
+  getNotes: () => readonly BootNote[]
+  /** Fetch a note's raw markdown by content path (returns null on failure). */
+  fetchNote: (contentPath: string) => Promise<string | null>
+}
+
+/** A garden note as the boot terminal sees it. */
+export interface BootNote {
+  slug: string
+  title: string
+  tags: readonly string[]
+  contentPath: string
 }
 
 interface HelpEntry {
@@ -107,12 +133,61 @@ const SCENES: readonly SceneLine[][] = [
     ["         ) )", "tender", "frame"],
     ["        (_(", "tender", "frame"],
   ],
+  [
+    ["  SCENE: deep-listening-station", "accent", "heading"],
+    ["        .  *      .        ·         *", "tender", "frame"],
+    ["     ((( ((( ((●))) ))) )))", "tender", "frame"],
+    ["          \\   |   /", "tender", "frame"],
+    ["           \\  |  /", "tender", "frame"],
+    ["      ______\\_|_/______", "tender", "frame"],
+    ["     /   the long ear   \\", "tender", "frame"],
+    ["    /  listening outward  \\", "tender", "frame"],
+    ["   '-----------------------'", "tender", "frame"],
+    ["      ~ ~ ~ signal ~ ~ ~", "muted", "frame"],
+  ],
+  [
+    ["  SCENE: tidal-archive", "accent", "heading"],
+    ["   ___________________________", "tender", "frame"],
+    ["  |  ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ |", "tender", "frame"],
+    ["  |  the stacks go under at   |", "tender", "frame"],
+    ["  |  high tide; the salt      |", "tender", "frame"],
+    ["  |  edits what it touches    |", "tender", "frame"],
+    ["  |___________________________|", "tender", "frame"],
+    ["  ≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈", "muted", "frame"],
+    ["    ≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈", "muted", "frame"],
+  ],
+  [
+    ["  SCENE: orchard-of-forks", "accent", "heading"],
+    ["              ◆", "accent", "frame"],
+    ["             ╱ ╲", "tender", "frame"],
+    ["            ◇   ◇", "tender", "frame"],
+    ["           ╱   ╱ ╲", "tender", "frame"],
+    ["          ◇   ◇   ◇", "tender", "frame"],
+    ["         every choice you", "muted", "frame"],
+    ["         did not take is", "muted", "frame"],
+    ["         still bearing fruit", "muted", "frame"],
+    ["       ════════╤════════", "tender", "frame"],
+    ["               │", "tender", "frame"],
+  ],
+  [
+    ["  SCENE: lantern-procession", "accent", "heading"],
+    ["    ·  ✦      ·       ✦    ·", "tender", "frame"],
+    ["      .oOo.   .oOo.   .oOo.", "accent", "frame"],
+    ["      |   |   |   |   |   |", "tender", "frame"],
+    ["     _|   |___|   |___|   |_", "tender", "frame"],
+    ["    they carry small lights", "muted", "frame"],
+    ["    down a corridor that has", "muted", "frame"],
+    ["    no recorded end", "muted", "frame"],
+  ],
 ]
 
 /** Deterministic-enough index without leaning on Math.random in module scope. */
 function pickIndex(length: number): number {
   return Math.floor(Math.random() * length)
 }
+
+/** Last scene shown, so `scene` doesn't repeat itself back-to-back. */
+let lastSceneIndex = -1
 
 function pick<T>(items: readonly T[]): T {
   return items[pickIndex(items.length)]
@@ -275,8 +350,11 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
     help: { usage: "scene", description: "Render a randomised ASCII scene" },
     run: (ctx) => {
       ctx.setZoomedPane("none")
-      const choice = SCENES[pickIndex(SCENES.length)]
-      choice.forEach(([text, tone, kind]) => ctx.injectLine(text, tone, kind))
+      // Avoid replaying the same scene twice in a row.
+      let idx = pickIndex(SCENES.length)
+      if (SCENES.length > 1 && idx === lastSceneIndex) idx = (idx + 1) % SCENES.length
+      lastSceneIndex = idx
+      SCENES[idx].forEach(([text, tone, kind]) => ctx.injectLine(text, tone, kind))
     },
   },
   {
@@ -300,14 +378,145 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
   },
   {
     name: "ls",
-    aliases: ["dir"],
-    help: { usage: "ls", description: "List root archives" },
+    aliases: ["dir", "notes"],
+    help: { usage: "ls [filter]", description: "List garden notes (optionally filtered)" },
+    run: (ctx, args) => {
+      const filter = args.join(" ").trim().toLowerCase()
+      let notes = ctx.getNotes()
+      if (filter) {
+        notes = notes.filter(
+          (n) => n.slug.toLowerCase().includes(filter) || n.title.toLowerCase().includes(filter),
+        )
+      }
+      if (notes.length === 0) {
+        ctx.injectLine(filter ? `  no notes match "${filter}"` : "  archive empty", "muted")
+        return
+      }
+      ctx.injectLine(`  ${notes.length} note${notes.length === 1 ? "" : "s"} // cat <name> to read`, "muted")
+      // Sort by slug for a stable listing; cap so the feed isn't flooded.
+      const sorted = [...notes].sort((a, b) => a.slug.localeCompare(b.slug))
+      for (const n of sorted.slice(0, 40)) {
+        ctx.injectLine(`  ${n.slug.padEnd(28).slice(0, 28)} ${n.title}`, "normal")
+      }
+      if (sorted.length > 40) ctx.injectLine(`  … ${sorted.length - 40} more (filter with: ls <text>)`, "muted")
+    },
+  },
+  {
+    name: "cat",
+    aliases: ["read", "open"],
+    help: { usage: "cat <name>", description: "Read a garden note into the feed" },
+    run: (ctx, args) => {
+      const query = args.join(" ").trim()
+      if (!query) {
+        ctx.injectLine("  usage: cat <name>  (try `ls` first)", "warning")
+        return
+      }
+      const note = resolveNote(ctx.getNotes(), query)
+      if (!note) {
+        ctx.injectLine(`  not found: ${query}`, "warning")
+        ctx.injectLine("  (try `ls` to list readable notes)", "muted")
+        return
+      }
+      ctx.setZoomedPane("none")
+      ctx.injectLine(`  ── ${note.title} ──`, "accent", "heading")
+      if (note.tags.length) ctx.injectLine(`  #${note.tags.join("  #")}`, "muted")
+      ctx.injectLine("", "normal")
+      // Async fetch + parse; inject when it lands. injectLine is a stable
+      // callback, so resolving after the command returns is fine.
+      ctx.fetchNote(note.contentPath).then((raw) => {
+        if (raw == null) {
+          ctx.injectLine(`  read error: ${note.slug}`, "error")
+          return
+        }
+        const { lines, truncated } = parseMarkdownToBootLines(raw)
+        for (const l of lines) ctx.injectLine(l.text, l.tone)
+        if (truncated) {
+          ctx.injectLine("", "normal")
+          ctx.injectLine(`  … note truncated. full text: subsurfaces.net/${note.slug}`, "muted")
+        }
+        ctx.chime("tender")
+      })
+    },
+  },
+  {
+    name: "tags",
+    help: { usage: "tags", description: "List tags across the garden" },
     run: (ctx) => {
-      ctx.injectLine("  total 42", "muted")
-      ctx.injectLine("  drwxr-xr-x   2 system system  4096 Jun 16 02:00 archives", "normal")
-      ctx.injectLine("  drwxr-xr-x  14 system system  4096 Jun 16 02:05 garden", "accent")
-      ctx.injectLine("  -r--------   1 root   root    1024 Jun 16 01:00 moon_cache.dat", "muted")
-      ctx.injectLine("  drwxrwxr-x   3 guest  guest   4096 Jun 16 02:30 operator", "normal")
+      const counts = new Map<string, number>()
+      for (const n of ctx.getNotes()) {
+        for (const t of n.tags) counts.set(t, (counts.get(t) ?? 0) + 1)
+      }
+      if (counts.size === 0) {
+        ctx.injectLine("  no tags indexed", "muted")
+        return
+      }
+      ctx.injectLine(`  ${counts.size} tags // ls <tag> to filter`, "muted")
+      const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      for (const [tag, n] of sorted.slice(0, 30)) {
+        ctx.injectLine(`  #${tag.padEnd(22).slice(0, 22)} ${n}`, "normal")
+      }
+    },
+  },
+  {
+    name: "random",
+    aliases: ["dice", "lucky"],
+    help: { usage: "random", description: "Read a random note into the feed" },
+    run: (ctx) => {
+      const notes = ctx.getNotes()
+      if (notes.length === 0) {
+        ctx.injectLine("  archive empty (notes still loading?)", "muted")
+        return
+      }
+      const note = notes[pickIndex(notes.length)]
+      ctx.setZoomedPane("none")
+      ctx.injectLine(`  rolling… → ${note.slug}`, "muted")
+      ctx.injectLine(`  ── ${note.title} ──`, "accent", "heading")
+      if (note.tags.length) ctx.injectLine(`  #${note.tags.join("  #")}`, "muted")
+      ctx.injectLine("", "normal")
+      ctx.fetchNote(note.contentPath).then((raw) => {
+        if (raw == null) { ctx.injectLine(`  read error: ${note.slug}`, "error"); return }
+        const { lines, truncated } = parseMarkdownToBootLines(raw)
+        for (const l of lines) ctx.injectLine(l.text, l.tone)
+        if (truncated) {
+          ctx.injectLine("", "normal")
+          ctx.injectLine(`  … truncated. full text: subsurfaces.net/${note.slug}`, "muted")
+        }
+        ctx.chime("tender")
+      })
+    },
+  },
+  {
+    name: "find",
+    aliases: ["grep", "search"],
+    help: { usage: "find <text>", description: "Search note titles and tags" },
+    run: (ctx, args) => {
+      const q = args.join(" ").trim().toLowerCase()
+      if (!q) { ctx.injectLine("  usage: find <text>", "warning"); return }
+      const hits = ctx.getNotes().filter(
+        (n) =>
+          n.title.toLowerCase().includes(q) ||
+          n.slug.toLowerCase().includes(q) ||
+          n.tags.some((t) => t.toLowerCase().includes(q)),
+      )
+      if (hits.length === 0) { ctx.injectLine(`  no matches for "${q}"`, "muted"); return }
+      ctx.injectLine(`  ${hits.length} match${hits.length === 1 ? "" : "es"} for "${q}"`, "accent")
+      for (const n of hits.slice(0, 20)) {
+        ctx.injectLine(`  ${n.slug.padEnd(28).slice(0, 28)} ${n.title}`, "normal")
+      }
+      if (hits.length > 20) ctx.injectLine(`  … ${hits.length - 20} more`, "muted")
+    },
+  },
+  {
+    name: "open-site",
+    aliases: ["visit", "goto"],
+    help: { usage: "goto <name>", description: "Open a note on the live site in a new tab" },
+    run: (ctx, args) => {
+      const query = args.join(" ").trim()
+      const note = resolveNote(ctx.getNotes(), query)
+      if (!note) { ctx.injectLine(`  not found: ${query || "(nothing)"}`, "warning"); return }
+      const url = `https://subsurfaces.net/${note.slug}`
+      ctx.injectLine(`  opening ${url}`, "muted")
+      if (typeof window !== "undefined") window.open(url, "_blank", "noopener")
     },
   },
   {

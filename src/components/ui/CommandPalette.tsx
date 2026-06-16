@@ -35,7 +35,7 @@ export function CommandPalette() {
   const navigate = useNavigate()
   const shell = useShell()
   const goRandom = useRandomNote()
-  const { togglePlay } = useMusic()
+  const { togglePlay, nextTrack, prevTrack } = useMusic()
 
   const contentIndex = useStore((s) => s.contentIndex)
   const pushCard = useStore((s) => s.pushCard)
@@ -46,6 +46,9 @@ export function CommandPalette() {
   const toggleThemePanel = useStore((s) => s.toggleThemePanel)
   const toggleCheatSheet = useStore((s) => s.toggleCheatSheet)
   const toggleReaderMode = useStore((s) => s.toggleReaderMode)
+  const toggleGraph = useStore((s) => s.toggleGraph)
+  const toggleMusic = useStore((s) => s.toggleMusic)
+  const setBgMode = useStore((s) => s.setBgMode)
 
   const openNote = (slug: string, title: string) => {
     if (shell === "wiki") {
@@ -69,8 +72,17 @@ export function CommandPalette() {
     if (shell === "main") {
       base.push(
         { id: "bg", label: "Cycle background", hint: "B", keywords: "background bg canvas murmuration graph vectors", run: cycleBgMode },
+        { id: "bg-murmuration", label: "Background: Murmuration", keywords: "background murmuration boids flock birds", run: () => setBgMode("murmuration") },
+        { id: "bg-vectors", label: "Background: Vector field", keywords: "background vectors field flow noise", run: () => setBgMode("vectors") },
+        { id: "bg-dots", label: "Background: Constellation dots", keywords: "background dots constellation lattice", run: () => setBgMode("dots") },
+        { id: "bg-terminal", label: "Background: Terminal rain", keywords: "background terminal matrix rain glyphs", run: () => setBgMode("terminal") },
         { id: "music", label: "Play / pause music", hint: "M", keywords: "music play pause audio track", run: togglePlay },
+        { id: "music-next", label: "Next track", keywords: "music next skip forward track", run: nextTrack },
+        { id: "music-prev", label: "Previous track", keywords: "music previous back track", run: prevTrack },
+        { id: "music-open", label: "Open music player", keywords: "music player turntable vinyl open panel", run: () => toggleMusic() },
+        { id: "graph-overlay", label: "Open graph overlay", keywords: "graph overlay constellation network map", run: () => toggleGraph() },
         { id: "reader", label: "Toggle reader mode", keywords: "reader focus distraction mode", run: toggleReaderMode },
+        { id: "share", label: "Copy link to this page", keywords: "share copy link url clipboard permalink", run: () => { void navigator.clipboard?.writeText(window.location.href) } },
         { id: "nav-boot", label: "Enter boot sequence", hint: "/boot", keywords: "boot terminal tui console firmware startup go navigate", run: () => navigate({ to: "/boot" }) },
         { id: "nav-graph", label: "Go to Graph", keywords: "graph constellation network map go navigate", run: () => navigate({ to: "/$", params: { _splat: "graph" } as any }) },
         { id: "nav-arcade", label: "Go to Arcade", keywords: "arcade games go navigate play", run: () => openNote("Arcade", "Arcade") },
@@ -78,6 +90,7 @@ export function CommandPalette() {
         { id: "nav-hexo", label: "Go to heXO", keywords: "hexo hex game go navigate", run: () => openNote("heXO", "heXO") },
         { id: "nav-bookshelf", label: "Go to Bookshelf", keywords: "books bookshelf reading go navigate", run: () => openNote("Bookshelf", "Bookshelf") },
         { id: "nav-movieshelf", label: "Go to Movieshelf", keywords: "movies film movieshelf go navigate", run: () => openNote("Movieshelf", "Movieshelf") },
+        { id: "nav-music-library", label: "Go to Music Library", keywords: "music library tracks songs go navigate", run: () => openNote("music-library", "Music Library") },
       )
     }
     return base
