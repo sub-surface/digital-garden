@@ -1803,6 +1803,14 @@ function addSecurityHeaders(headers: Headers) {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
+    const isOmega = url.hostname === "omega.subsurfaces.net"
+
+    if (isOmega) {
+      const targetPath = url.pathname === "/" || url.pathname === "" ? "/omega/index.html" : `/omega${url.pathname}`
+      const targetUrl = new URL(targetPath, request.url)
+      request = new Request(targetUrl.toString(), request)
+      url.pathname = targetPath
+    }
 
     // Domain routing — one Worker, three surfaces:
     // garden:  subsurfaces.net        → static assets + OG meta injection
@@ -1902,7 +1910,7 @@ export default {
 
     // Only rewrite HTML responses for GET requests (page navigations)
     const contentType = response.headers.get("content-type") ?? ""
-    if (request.method !== "GET" || !contentType.includes("text/html")) {
+    if (request.method !== "GET" || !contentType.includes("text/html") || isOmega) {
       return response
     }
 

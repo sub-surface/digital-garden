@@ -28,3 +28,7 @@ custom_domain = true
 [[routes]]
 pattern = "chat.subsurfaces.net"
 custom_domain = true
+
+[[routes]]
+pattern = "omega.subsurfaces.net"
+custom_domain = true
