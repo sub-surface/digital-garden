@@ -920,6 +920,47 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
     }
   },
   {
+    name: "whois",
+    help: { usage: "whois <username>", description: "Query operator profile details" },
+    run: (ctx, args) => {
+      const target = args[0]?.toLowerCase()
+      if (!target) {
+         ctx.injectLine("  usage: whois <username>", "warning")
+         return
+      }
+      const notes = ctx.getNotes()
+      // find profile note
+      const profileNote = notes.find(n => n.username?.toLowerCase() === target)
+      
+      ctx.injectLine(`  TARGET PROFILE: @${target}`, "accent", "heading")
+      
+      if (profileNote && profileNote.excerpt) {
+         ctx.injectLine(`  bio: ${profileNote.excerpt}`, "tender")
+      } else {
+         ctx.injectLine(`  no profile biography found.`, "muted")
+      }
+
+      const mentions = notes.filter(n =>
+         (n.username?.toLowerCase() === target && n !== profileNote) ||
+         n.slug.toLowerCase().includes(target) ||
+         n.title.toLowerCase().includes(target) ||
+         n.excerpt?.toLowerCase().includes(target) ||
+         n.tags.some(t => t.toLowerCase().includes(target))
+      )
+
+      if (mentions.length > 0) {
+        ctx.injectLine("", "normal")
+        ctx.injectLine(`  pages referencing '@${target}':`, "muted")
+        mentions.forEach(m => {
+          ctx.injectLine(`  ${m.slug.padEnd(28).slice(0, 28)} ${m.title}`, "normal")
+        })
+      } else {
+        ctx.injectLine("", "normal")
+        ctx.injectLine(`  no additional references found in garden.`, "muted")
+      }
+    }
+  },
+  {
     name: "admin",
     requireRole: "admin",
     help: { usage: "admin", description: "Access elevated subroutines" },
