@@ -39,6 +39,7 @@ import {
 } from "./bootCommands"
 import { SYSTEM_PAGES } from "../../config/system-pages"
 import { WikiAuthModal } from "../../components/ui/WikiAuthModal"
+import { useAuth } from "../../hooks/useAuth"
 
 const FOLLOW_THRESHOLD_PX = 32
 const SPEED_STEPS = [0.5, 1, 2, 4] as const
@@ -326,6 +327,8 @@ export function BootPage() {
   const [zoomedPane, setZoomedPane] = useState<ZoomPane>("none")
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
+
+  const { session, username, role } = useAuth()
   
   const commandInputRef = useRef<HTMLInputElement>(null)
 
@@ -710,7 +713,11 @@ export function BootPage() {
     fetchNote,
     triggerLogin: () => setShowAuthModal(true),
     navigate: (url: string) => { window.location.href = url },
+    getUser: () => session ? { username, role, email: session.user.email ?? null } : null,
   }), [
+    session,
+    username,
+    role,
     clearLines,
     createNewSeed,
     cyclePalette,

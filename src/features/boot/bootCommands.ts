@@ -62,6 +62,8 @@ export interface BootCommandContext {
   triggerLogin: () => void
   /** Navigate to a different shell/url */
   navigate: (url: string) => void
+  /** Get the current authenticated user profile */
+  getUser: () => { username: string | null; role: string | null; email: string | null } | null
 }
 
 /** A garden note as the boot terminal sees it. */
@@ -549,8 +551,16 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
     name: "whoami",
     help: { usage: "whoami", description: "Query operator identity" },
     run: (ctx) => {
-      ctx.injectLine("  you are the operator.", "tender")
-      ctx.injectLine("  or at least, you are holding the keys.", "muted")
+      const user = ctx.getUser()
+      if (user) {
+        ctx.injectLine(`  authenticated as: ${user.username || user.email || "unknown"}`, "accent")
+        ctx.injectLine(`  role: ${user.role || "pending"}`, "normal")
+        ctx.injectLine("  you have full access to the mainframe.", "tender")
+      } else {
+        ctx.injectLine("  you are the operator.", "tender")
+        ctx.injectLine("  or at least, you are holding the keys.", "muted")
+        ctx.injectLine("  (type 'login' to authenticate)", "warning")
+      }
     },
   },
   {
@@ -838,6 +848,28 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
       ctx.injectLine("  }", "accent")
       ctx.chime("tender")
     },
+  },
+  {
+    name: "calc",
+    aliases: ["math"],
+    help: { usage: "calc <expr>", description: "Evaluate a mathematical expression" },
+    run: (ctx, args) => {
+      const expr = args.join(" ")
+      if (!expr) {
+        ctx.injectLine("  usage: calc <expr>", "warning")
+        return
+      }
+      try {
+        if (/[^0-9\+\-\*\/\(\)\.\s\%\|\&\^\~\<\>]/g.test(expr)) {
+           ctx.injectLine("  calc: invalid characters in expression", "error")
+           return
+        }
+        const result = new Function(`return (${expr})`)()
+        ctx.injectLine(`  ${expr} = ${result}`, "accent")
+      } catch (err) {
+        ctx.injectLine(`  calc: error evaluating expression`, "error")
+      }
+    }
   },
   {
     name: "boot",
