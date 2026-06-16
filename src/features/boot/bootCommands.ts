@@ -1612,11 +1612,11 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
   },
   {
     name: "talk",
-    help: { usage: "talk <persona> <message>", description: "Talk to Willow, Deleuze, Spinoza, or Trump" },
+    help: { usage: "talk <persona> <message>", description: "Talk to Willow, Deleuze, Spinoza, Trump, Jeh, or Hpcr" },
     run: (ctx, args) => {
       const personaName = args[0]?.toLowerCase()
       if (!personaName || !PERSONAS[personaName as PersonaId]) {
-         ctx.injectLine("  Usage: talk [willow|deleuze|spinoza|trump] <message>", "warning")
+         ctx.injectLine("  Usage: talk [willow|deleuze|spinoza|trump|jeh|hpcr] <message>", "warning")
          return
       }
       
