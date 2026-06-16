@@ -961,6 +961,22 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
     }
   },
   {
+    name: "edit",
+    requireRole: "editor",
+    help: { usage: "edit <slug>", description: "Launch the external Wiki editor" },
+    run: (ctx, args) => {
+       const slug = args[0]
+       if (!slug) {
+         ctx.injectLine("  usage: edit <slug>", "warning")
+         return
+       }
+       ctx.injectLine(`  launching editor interface for [${slug}]...`, "accent")
+       if (typeof window !== "undefined") {
+         window.open(`https://wiki.subsurfaces.net/edit/${encodeURIComponent(slug)}`, "_blank")
+       }
+    }
+  },
+  {
     name: "admin",
     requireRole: "admin",
     help: { usage: "admin", description: "Access elevated subroutines" },

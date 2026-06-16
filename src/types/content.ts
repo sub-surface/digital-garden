@@ -20,6 +20,7 @@ export interface NoteMetadata {
   year?: number
   rating?: number
   status?: string
+  username?: string
   links: string[]       // slugs this note links to
   backlinks: string[]   // slugs that link to this note
   folder?: string       // parent folder path

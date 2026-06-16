@@ -7,7 +7,7 @@
  * `keys` is the display form (what the cheat sheet shows). `shell` narrows a
  * binding to specific shells; omit for "all shells".
  */
-export type Shell = "main" | "wiki" | "chat"
+export type Shell = "main" | "wiki" | "chat" | "os"
 
 export interface Hotkey {
   /** Lowercased KeyboardEvent.key this binding matches (handler-side). */
