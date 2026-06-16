@@ -317,6 +317,7 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
       ctx.injectLine("  click any pane header to zoom it", "tender")
     },
   },
+
   {
     name: "clear",
     aliases: ["cls"],
@@ -1607,6 +1608,75 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
         const host = isLocal ? window.location.host : "chat.subsurfaces.net"
         ctx.navigate(`${window.location.protocol}//${host}/?terminal=1`)
       }, 1000)
+    }
+  },
+  {
+    name: "talk",
+    help: { usage: "talk <persona> <message>", description: "Talk to Willow, Deleuze, Spinoza, or Trump" },
+    run: (ctx, args) => {
+      const personaName = args[0]?.toLowerCase()
+      if (!personaName || !PERSONAS[personaName as PersonaId]) {
+         ctx.injectLine("  Usage: talk [willow|deleuze|spinoza|trump] <message>", "warning")
+         return
+      }
+      
+      const pId = personaName as PersonaId
+      const p = PERSONAS[pId]
+      const msg = args.slice(1).join(" ")
+      
+      if (!msg) {
+         ctx.injectLine(`  [${p.name}] ${p.generics[0]}`, p.color)
+         ctx.chime("tender")
+         return
+      }
+
+      ctx.injectLine(`  > ${msg}`, "muted")
+      setTimeout(() => {
+        const reply = generateReply(pId, msg)
+        ctx.injectLine(`  [${p.name}] ${reply}`, p.color)
+        ctx.chime("tender")
+      }, 600)
+    }
+  },
+  {
+    name: "debate",
+    help: { usage: "debate <persona1> <persona2> [topic]", description: "Watch two personas debate a topic" },
+    run: (ctx, args) => {
+      const p1Name = args[0]?.toLowerCase()
+      const p2Name = args[1]?.toLowerCase()
+      
+      if (!p1Name || !PERSONAS[p1Name as PersonaId] || !p2Name || !PERSONAS[p2Name as PersonaId]) {
+         ctx.injectLine("  Usage: debate <persona1> <persona2> [topic]", "warning")
+         return
+      }
+      
+      const p1 = PERSONAS[p1Name as PersonaId]
+      const p2 = PERSONAS[p2Name as PersonaId]
+      const initialTopic = args.slice(2).join(" ") || "the nature of reality"
+      
+      ctx.injectLine(`  INITIATING DEBATE: ${p1.name} vs ${p2.name}`, "accent", "heading")
+      ctx.injectLine(`  Topic: ${initialTopic}`, "normal")
+      ctx.chime("tender")
+      
+      let turn = 0
+      let lastMsg = initialTopic
+
+      activeCommandInterval = setInterval(() => {
+        if (turn > 6) {
+           clearInterval(activeCommandInterval)
+           ctx.injectLine(`  DEBATE CONCLUDED.`, "muted")
+           return
+        }
+        
+        const speaker = turn % 2 === 0 ? p1 : p2
+        const reply = generateReply(speaker.id, lastMsg)
+        
+        ctx.injectLine(`  [${speaker.name}] ${reply}`, speaker.color)
+        ctx.chime("tender")
+        
+        lastMsg = reply
+        turn++
+      }, 2500)
     }
   },
 ]
