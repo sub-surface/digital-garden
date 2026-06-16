@@ -127,26 +127,40 @@ export function useDynamicFavicon() {
       return
     }
 
-    let raf = 0
-    let start = performance.now()
-    // Throttle to ~8fps — a favicon needs no more, and it keeps the data-URL
-    // churn (and tab repaints) cheap.
-    const FRAME_MS = 125
-    let lastDraw = -Infinity
+    // Drive the icon from a plain interval, NOT requestAnimationFrame. A favicon
+    // needs ~8fps, and an rAF loop would wake ~60–200×/s just to no-op against a
+    // throttle — pure overhead. The real cost per draw is the synchronous
+    // `toDataURL` PNG encode + tab repaint, so we also pause entirely while the
+    // tab is hidden (no point encoding a favicon nobody can see).
+    const FRAME_MS = 125 // ~8fps
+    const start = performance.now()
+    let timer: ReturnType<typeof setInterval> | undefined
 
-    const tick = (t: number): void => {
-      if (t - lastDraw >= FRAME_MS) {
-        lastDraw = t
-        const phase = ((t - start) % LOOP_MS) / LOOP_MS
-        paintFrame(ctx, colors, phase)
-        iconLink.href = cv.toDataURL("image/png")
-      }
-      raf = window.requestAnimationFrame(tick)
+    const draw = (): void => {
+      const phase = ((performance.now() - start) % LOOP_MS) / LOOP_MS
+      paintFrame(ctx, colors, phase)
+      iconLink.href = cv.toDataURL("image/png")
     }
-    raf = window.requestAnimationFrame(tick)
+
+    const startLoop = (): void => {
+      if (timer) return
+      draw()
+      timer = setInterval(draw, FRAME_MS)
+    }
+    const stopLoop = (): void => {
+      if (timer) { clearInterval(timer); timer = undefined }
+    }
+    const onVisibility = (): void => {
+      if (document.hidden) stopLoop()
+      else startLoop()
+    }
+
+    document.addEventListener("visibilitychange", onVisibility)
+    if (!document.hidden) startLoop()
 
     return () => {
-      window.cancelAnimationFrame(raf)
+      document.removeEventListener("visibilitychange", onVisibility)
+      stopLoop()
     }
   }, [theme, accentBase])
 }

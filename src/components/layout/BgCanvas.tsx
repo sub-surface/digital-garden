@@ -177,22 +177,8 @@ function BgCanvasInner() {
       stateRef.current.my = e.clientY
     }
 
-    // Skip the per-frame redraw while the user is actively scrolling. The bg is
-    // a full-viewport fixed canvas; repainting it on the main thread during a
-    // scroll competes with the compositor and causes a brief hitch. We hold the
-    // last frame for the duration of the scroll and resume shortly after it
-    // settles — visually imperceptible, removes the stall.
-    let scrolling = false
-    let scrollIdle: ReturnType<typeof setTimeout> | undefined
-    const onScroll = () => {
-      scrolling = true
-      clearTimeout(scrollIdle)
-      scrollIdle = setTimeout(() => { scrolling = false }, 120)
-    }
-
     window.addEventListener("resize", resize)
     window.addEventListener("mousemove", mouseMove)
-    window.addEventListener("scroll", onScroll, { passive: true })
     resize()
 
     // Fetch graph nodes only when graph background mode is active
@@ -247,8 +233,6 @@ function BgCanvasInner() {
       return () => {
         window.removeEventListener("resize", resize)
         window.removeEventListener("mousemove", mouseMove)
-        window.removeEventListener("scroll", onScroll)
-        clearTimeout(scrollIdle)
       }
     }
 
@@ -256,8 +240,7 @@ function BgCanvasInner() {
     const frame = () => {
       const state = stateRef.current
       state.readerAlpha += (state.readerTarget - state.readerAlpha) * 0.08
-      // Hold the last frame while actively scrolling (see onScroll above).
-      if (!scrolling) draw()
+      draw()
       animationId = requestAnimationFrame(frame)
     }
 
@@ -273,9 +256,7 @@ function BgCanvasInner() {
     return () => {
       window.removeEventListener("resize", resize)
       window.removeEventListener("mousemove", mouseMove)
-      window.removeEventListener("scroll", onScroll)
       document.removeEventListener("visibilitychange", onVisibility)
-      clearTimeout(scrollIdle)
       stop()
     }
   }, [bgMode, bgStyle, theme, accentBase, config])
@@ -675,17 +656,21 @@ function drawMurmuration(ctx: CanvasRenderingContext2D, state: any) {
 
     // faster birds read a touch brighter — subtle life
     ctx.globalAlpha = alpha * (0.7 + 0.3 * (sp / MURM.maxSpeed))
-    const a = Math.atan2(b.vy, b.vx)
-    ctx.save()
-    ctx.translate(b.x, b.y)
-    ctx.rotate(a)
+    // Rotate+translate the 3 triangle vertices by hand instead of
+    // save/translate/rotate/restore. Per-boid ctx.save/restore snapshots the
+    // entire canvas state — at 460 boids/frame that dominated the bg cost
+    // (the save/rotate/translate/restore hotspots in the profile). Manual math
+    // on three points is a fraction of that and draws the identical shape.
+    const cos = b.vx, sin = b.vy
+    const inv = 1 / (sp || 1)       // unit heading (sp is the clamped speed)
+    const c = cos * inv, s = sin * inv
+    // local verts: (4.5,0) nose, (-2.6,2.1) and (-2.6,-2.1) tail corners
     ctx.beginPath()
-    ctx.moveTo(4.5, 0)
-    ctx.lineTo(-2.6, 2.1)
-    ctx.lineTo(-2.6, -2.1)
+    ctx.moveTo(b.x + 4.5 * c,          b.y + 4.5 * s)
+    ctx.lineTo(b.x - 2.6 * c - 2.1 * s, b.y - 2.6 * s + 2.1 * c)
+    ctx.lineTo(b.x - 2.6 * c + 2.1 * s, b.y - 2.6 * s - 2.1 * c)
     ctx.closePath()
     ctx.fill()
-    ctx.restore()
   }
   ctx.globalAlpha = 1
 }
