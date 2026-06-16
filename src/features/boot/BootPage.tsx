@@ -38,6 +38,7 @@ import {
   type ZoomPane,
 } from "./bootCommands"
 import { SYSTEM_PAGES } from "../../config/system-pages"
+import { WikiAuthModal } from "../../components/ui/WikiAuthModal"
 
 const FOLLOW_THRESHOLD_PX = 32
 const SPEED_STEPS = [0.5, 1, 2, 4] as const
@@ -324,6 +325,7 @@ export function BootPage() {
   const [themeOverride, setThemeOverride] = useState<string | null>(null)
   const [zoomedPane, setZoomedPane] = useState<ZoomPane>("none")
   const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
   
   const commandInputRef = useRef<HTMLInputElement>(null)
 
@@ -706,6 +708,8 @@ export function BootPage() {
     getHistory: () => commandHistoryRef.current,
     getNotes,
     fetchNote,
+    triggerLogin: () => setShowAuthModal(true),
+    navigate: (url: string) => { window.location.href = url },
   }), [
     clearLines,
     createNewSeed,
@@ -958,6 +962,10 @@ export function BootPage() {
           <span style={{ cursor: "pointer", opacity: 0.7 }} onClick={() => setIsHelpOpen(true)}>[?]</span>
         </div>
       </footer>
+
+      {showAuthModal && (
+        <WikiAuthModal onClose={() => setShowAuthModal(false)} defaultTab="login" />
+      )}
 
       {isHelpOpen && (
         <div className={styles.helpModal} onClick={() => setIsHelpOpen(false)}>

@@ -330,9 +330,8 @@ export const useStore = create<GardenStore>((set) => ({
     ? Number(localStorage.getItem("chatFontScale") || "1")
     : 1),
   setChatFontScale: (s) => { localStorage.setItem("chatFontScale", String(s)); set({ chatFontScale: s }) },
-  chatTerminal: (typeof localStorage !== "undefined"
-    ? localStorage.getItem("chatTerminal") === "1"
-    : false),
+  chatTerminal: (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("terminal") === "1") ||
+    (typeof localStorage !== "undefined" ? localStorage.getItem("chatTerminal") === "1" : false),
   setChatTerminal: (v) => {
     localStorage.setItem("chatTerminal", v ? "1" : "0")
     set({ chatTerminal: v })

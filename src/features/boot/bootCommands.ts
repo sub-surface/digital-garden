@@ -58,6 +58,10 @@ export interface BootCommandContext {
   getNotes: () => readonly BootNote[]
   /** Fetch a note's raw markdown by content path (returns null on failure). */
   fetchNote: (contentPath: string) => Promise<string | null>
+  /** Trigger the auth modal */
+  triggerLogin: () => void
+  /** Navigate to a different shell/url */
+  navigate: (url: string) => void
 }
 
 /** A garden note as the boot terminal sees it. */
@@ -838,6 +842,31 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
   {
     name: "boot",
     run: (ctx) => ctx.injectLine("  system is already running", "muted"),
+  },
+  {
+    name: "login",
+    aliases: ["auth"],
+    help: { usage: "login", description: "Authenticate to the psychograph mainframe" },
+    run: (ctx) => {
+      ctx.injectLine("  Initiating auth handshake...", "accent")
+      setTimeout(() => {
+        ctx.triggerLogin()
+      }, 500)
+    }
+  },
+  {
+    name: "chat",
+    aliases: ["philchat"],
+    help: { usage: "chat", description: "Connect to the subsurfaces terminal chat" },
+    run: (ctx) => {
+      ctx.injectLine("  Establishing secure connection to chat.subsurfaces.net...", "accent")
+      ctx.chime("success")
+      setTimeout(() => {
+        const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        const host = isLocal ? window.location.host : "chat.subsurfaces.net"
+        ctx.navigate(`${window.location.protocol}//${host}/?terminal=1`)
+      }, 1000)
+    }
   },
 ]
 

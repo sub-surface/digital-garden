@@ -33,4 +33,8 @@ custom_domain = true
 pattern = "chat.subsurfaces.net"
 custom_domain = true
 
+[[routes]]
+pattern = "os.subsurfaces.net"
+custom_domain = true
+
 
