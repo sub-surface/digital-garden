@@ -857,10 +857,10 @@ export function BootPage() {
         if (parts.length <= 1) {
           matches = COMMAND_NAMES.filter(c => c.startsWith(val))
         } else if (cmd === "talk") {
-          const personas = ["willow", "deleuze", "spinoza", "trump", "jeh", "hpcr"]
+          const personas = ["willow", "deleuze", "spinoza", "trump", "jeh", "hpcr", "terry", "nick", "mark", "zizek", "diogenes", "bostrom"]
           matches = personas.filter(p => p.startsWith(arg)).map(p => `talk ${p}`)
         } else if (cmd === "debate") {
-          const personas = ["willow", "deleuze", "spinoza", "trump", "jeh", "hpcr"]
+          const personas = ["willow", "deleuze", "spinoza", "trump", "jeh", "hpcr", "terry", "nick", "mark", "zizek", "diogenes", "bostrom"]
           if (parts.length === 2) {
              matches = personas.filter(p => p.startsWith(parts[1])).map(p => `debate ${p}`)
           } else if (parts.length === 3) {

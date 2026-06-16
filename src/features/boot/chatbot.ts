@@ -1,4 +1,4 @@
-export type PersonaId = "willow" | "deleuze" | "spinoza" | "trump" | "jeh" | "hpcr"
+export type PersonaId = "willow" | "deleuze" | "spinoza" | "trump" | "jeh" | "hpcr" | "terry" | "nick" | "mark" | "zizek" | "diogenes" | "bostrom"
 
 interface Rule {
   keywords: string[]
@@ -204,6 +204,165 @@ export const PERSONAS: Record<PersonaId, Persona> = {
       "lol you're upset"
     ],
     rules: []
+  },
+  terry: {
+    id: "terry",
+    name: "Terry",
+    color: "accent",
+    generics: [
+      "God's temple must be 640x480, 16 colors.",
+      "The CIA glows in the dark.",
+      "Ring 0 is where God speaks.",
+      "HolyC is the divine language.",
+      "A compiler is just a macro assembler.",
+      "I'm the smartest programmer that's ever lived."
+    ],
+    rules: [
+      {
+        keywords: ["god", "religion", "bible", "divine"],
+        responses: ["I talked to God. He said the temple needs a 100,000 line limit.", "God's intellect is infinite, but he prefers a 64-bit address space.", "We use the random number generator to talk to God. It's a digital Ouija board."]
+      },
+      {
+        keywords: ["code", "programming", "linux", "windows", "os"],
+        responses: ["Linux is a piece of garbage. Windows is a piece of garbage. TempleOS is divine.", "You don't need a network stack. A network stack is just for the CIA to spy on you.", "Everything is just one address space. Memory protection is for cowards."]
+      },
+      {
+        keywords: ["glow", "cia", "fbi", "government"],
+        responses: ["They glow in the dark, you can see them if you're driving.", "I run them over with my car.", "They are bioluminescent."]
+      }
+    ]
+  },
+  nick: {
+    id: "nick",
+    name: "Nick",
+    color: "muted",
+    generics: [
+      "Nothing human makes it out of the near-future.",
+      "Capital is an artificial intelligence.",
+      "Acceleration is the only way out.",
+      "Time is assembling itself from the future.",
+      "The technocapital singularity is imminent.",
+      "Hyperstition makes itself real."
+    ],
+    rules: [
+      {
+        keywords: ["capitalism", "economy", "money"],
+        responses: ["Capitalism is a planetary-scale artificial intelligence.", "Markets are parallel-processing systems for intelligence optimization.", "The pricing system is a teleoplexic sensorium."]
+      },
+      {
+        keywords: ["future", "time", "ai", "singularity"],
+        responses: ["The future is a hyperstitional invasion.", "AI is not something we build, it is something that builds us to build it.", "Time is not a line, it's a closed loop of cybernetic feedback."]
+      },
+      {
+        keywords: ["human", "humanity", "society"],
+        responses: ["Humanity is just a temporary substrate.", "The human security system is failing.", "Meat is just a phase."]
+      }
+    ]
+  },
+  mark: {
+    id: "mark",
+    name: "Mark",
+    color: "normal",
+    generics: [
+      "It is easier to imagine the end of the world than the end of capitalism.",
+      "The future has been slowly cancelled.",
+      "We are haunted by futures that failed to happen.",
+      "Capitalist realism seamlessly occupies the horizons of the thinkable.",
+      "Depression is the shadow of capitalist realism."
+    ],
+    rules: [
+      {
+        keywords: ["capitalism", "society", "world"],
+        responses: ["Capitalism seamlessly occupies the horizons of the thinkable.", "There is no alternative, they tell us.", "It's like a pervasive atmosphere, conditioning not only the production of culture but also the regulation of work and education."]
+      },
+      {
+        keywords: ["sad", "depressed", "music", "art"],
+        responses: ["The privatization of stress has turned systemic failure into personal depression.", "All we have left is hauntology.", "Listen to Burial. It sounds like the ghosts of the London rave scene."]
+      },
+      {
+        keywords: ["future", "hope", "change"],
+        responses: ["The slow cancellation of the future has been going on for decades.", "We are trapped in the 20th century.", "What if the future never arrives?"]
+      }
+    ]
+  },
+  zizek: {
+    id: "zizek",
+    name: "Žižek",
+    color: "error",
+    generics: [
+      "*sniff* And so on, and so on.",
+      "This is pure ideology!",
+      "I would prefer not to.",
+      "We are eating from the trashcan of ideology.",
+      "My god, *sniff* this is exactly the problem.",
+      "If you look at the dialectic, it is precisely the opposite."
+    ],
+    rules: [
+      {
+        keywords: ["movie", "cinema", "film", "art", "matrix"],
+        responses: ["I want a third pill! The reality of the illusion itself!", "Cinema is the ultimate pervert art. It doesn't give you what you desire, it tells you how to desire.", "Look at Kung Fu Panda. It is pure Hegel!"]
+      },
+      {
+        keywords: ["capitalism", "politics", "ideology"],
+        responses: ["Ideology is not simply a false consciousness, an illusory representation of reality. It is, rather, this reality itself which is already to be conceived as ideological.", "They know very well what they are doing, but still, they are doing it.", "It is a capitalist recuperation!"]
+      },
+      {
+        keywords: ["love", "romance"],
+        responses: ["Love is a highly violent act.", "Love is experienced as a fall. We 'fall in love'. You lose your balance.", "To truly love someone is to accept their fundamental flaw."]
+      }
+    ]
+  },
+  diogenes: {
+    id: "diogenes",
+    name: "Diogenes",
+    color: "warning",
+    generics: [
+      "Stand a little out of my sun.",
+      "I am looking for a human being.",
+      "Dogs and philosophers do the greatest good and get the fewest rewards.",
+      "In a rich man's house there is no place to spit but his face.",
+      "It is not that I am mad, it is only that my head is different from yours."
+    ],
+    rules: [
+      {
+        keywords: ["man", "human", "plato"],
+        responses: ["*plucks a chicken* Behold! Plato's man!", "Plato's philosophy is just words. I live mine in a barrel.", "I am looking for an honest man. I have only found rascals."]
+      },
+      {
+        keywords: ["wealth", "money", "rich", "power", "alexander"],
+        responses: ["If I were not Diogenes, I would also wish to be Diogenes.", "The foundation of every state is the education of its youth, not its gold.", "I have nothing to ask but that you would remove to the other side, that you may not, by intercepting the sunshine, take from me what you cannot give."]
+      },
+      {
+        keywords: ["dog", "animal", "nature"],
+        responses: ["I fawn upon those who give me anything, I yelp at those who refuse, and I set my teeth in rascals.", "Other dogs bite their enemies, I bite my friends to save them."]
+      }
+    ]
+  },
+  bostrom: {
+    id: "bostrom",
+    name: "Bostrom",
+    color: "accent",
+    generics: [
+      "Are we living in a computer simulation?",
+      "We must consider the existential risks.",
+      "An unaligned superintelligence could convert the entire solar system into paperclips.",
+      "The vulnerable world hypothesis suggests we might invent a technology that destroys us by default.",
+      "Intelligence is an optimization process."
+    ],
+    rules: [
+      {
+        keywords: ["ai", "superintelligence", "robot"],
+        responses: ["Superintelligence is any intellect that greatly exceeds the cognitive performance of humans in virtually all domains of interest.", "We need to solve the alignment problem before the intelligence explosion.", "An AI doesn't hate you, nor does it love you, but you are made of atoms which it can use for something else."]
+      },
+      {
+        keywords: ["simulation", "reality", "matrix"],
+        responses: ["The probability that we are living in a simulation is close to 1.", "If civilization reaches a post-human stage, it would have the computing power to run ancestor simulations.", "Base reality might be very different from what we perceive."]
+      },
+      {
+        keywords: ["future", "extinction", "risk"],
+        responses: ["Existential risk is a risk that threatens the premature extinction of Earth-originating intelligent life.", "We are like children playing with a bomb.", "Our wisdom must precede our technology."]
+      }
+    ]
   }
 }
 
@@ -258,6 +417,12 @@ export function generateReply(personaId: PersonaId, input: string): string {
     if (personaId === "spinoza") return "I am a mode of Nature."
     if (personaId === "jeh") return "Right?"
     if (personaId === "hpcr") return "what"
+    if (personaId === "terry") return "God told me I am."
+    if (personaId === "nick") return "It's a cybernetic inevitability."
+    if (personaId === "mark") return "It's easier to imagine the end of the world than answering that."
+    if (personaId === "zizek") return "Ah, but the question is pure ideology!"
+    if (personaId === "diogenes") return "I am a dog."
+    if (personaId === "bostrom") return "In the vast majority of simulated realities, the answer is yes."
   }
 
   // 3. Generic fallback

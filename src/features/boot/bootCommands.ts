@@ -1612,11 +1612,11 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
   },
   {
     name: "talk",
-    help: { usage: "talk <persona> <message>", description: "Talk to Willow, Deleuze, Spinoza, Trump, Jeh, or Hpcr" },
+    help: { usage: "talk <persona> <message>", description: "Talk to Willow, Deleuze, Spinoza, Trump, Jeh, Hpcr, Terry, Nick, Mark, Zizek, Diogenes, or Bostrom" },
     run: (ctx, args) => {
       const personaName = args[0]?.toLowerCase()
       if (!personaName || !PERSONAS[personaName as PersonaId]) {
-         ctx.injectLine("  Usage: talk [willow|deleuze|spinoza|trump|jeh|hpcr] <message>", "warning")
+         ctx.injectLine("  Usage: talk [willow|deleuze|spinoza|trump|jeh|hpcr|terry|nick|mark|zizek|diogenes|bostrom] <message>", "warning")
          return
       }
       
@@ -1640,21 +1640,29 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
   },
   {
     name: "debate",
-    help: { usage: "debate <persona1> <persona2> [topic]", description: "Watch two personas debate a topic" },
+    help: { usage: "debate <persona1> <persona2> [turns] [topic]", description: "Watch two personas debate a topic" },
     run: (ctx, args) => {
       const p1Name = args[0]?.toLowerCase()
       const p2Name = args[1]?.toLowerCase()
       
       if (!p1Name || !PERSONAS[p1Name as PersonaId] || !p2Name || !PERSONAS[p2Name as PersonaId]) {
-         ctx.injectLine("  Usage: debate <persona1> <persona2> [topic]", "warning")
+         ctx.injectLine("  Usage: debate <persona1> <persona2> [turns] [topic]", "warning")
          return
       }
       
       const p1 = PERSONAS[p1Name as PersonaId]
       const p2 = PERSONAS[p2Name as PersonaId]
-      const initialTopic = args.slice(2).join(" ") || "the nature of reality"
       
-      ctx.injectLine(`  INITIATING DEBATE: ${p1.name} vs ${p2.name}`, "accent", "heading")
+      let maxTurns = 6
+      let topicStartIdx = 2
+      if (args[2] && !isNaN(Number(args[2]))) {
+        maxTurns = Number(args[2])
+        topicStartIdx = 3
+      }
+      
+      const initialTopic = args.slice(topicStartIdx).join(" ") || "the nature of reality"
+      
+      ctx.injectLine(`  INITIATING DEBATE: ${p1.name} vs ${p2.name} for ${maxTurns} turns`, "accent", "heading")
       ctx.injectLine(`  Topic: ${initialTopic}`, "normal")
       ctx.chime("tender")
       
@@ -1662,7 +1670,7 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
       let lastMsg = initialTopic
 
       activeCommandInterval = setInterval(() => {
-        if (turn > 6) {
+        if (turn >= maxTurns) {
            clearInterval(activeCommandInterval)
            ctx.injectLine(`  DEBATE CONCLUDED.`, "muted")
            return
