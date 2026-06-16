@@ -5,6 +5,7 @@ interface Env {
   SUPABASE_URL: string
   SUPABASE_SERVICE_KEY: string
   KLIPY_API_KEY?: string
+  EMAIL?: { send: (msg: any) => Promise<any> }
 }
 
 interface NoteMeta {
@@ -236,6 +237,16 @@ async function handleSubmit(request: Request, env: Env): Promise<Response> {
     })
     if (!prRes.ok) throw new Error(`create PR: ${prRes.status}`)
     const { html_url } = await prRes.json<{ html_url: string }>()
+
+    if (env.EMAIL) {
+      env.EMAIL.send({
+        from: { email: "system@subsurfaces.net", name: "Subsurface Wiki" },
+        to: "admin@subsurfaces.net",
+        subject: `New Profile Submission: ${body.username}`,
+        text: `A new profile has been submitted by ${body.name} (${body.username}).\n\nReview it here: ${html_url}`,
+        html: `<p>A new profile has been submitted by <strong>${body.name}</strong> (@${body.username}).</p><p><a href="${html_url}">Review Pull Request</a></p>`
+      }).catch(err => console.error("Email send error:", err))
+    }
 
     return Response.json({ prUrl: html_url }, { status: 200 })
   } catch (err) {
@@ -715,6 +726,16 @@ async function createEditPR(
     slug, user_id: auth.id, pr_url: html_url, edit_summary: editSummary || null,
   })
 
+  if (env.EMAIL) {
+    env.EMAIL.send({
+      from: { email: "system@subsurfaces.net", name: "Subsurface Wiki" },
+      to: "admin@subsurfaces.net",
+      subject: `New Wiki Edit: ${slug}`,
+      text: `An edit to ${slug} was submitted by ${auth.email}.\n\nReview it here: ${html_url}`,
+      html: `<p>An edit to <strong>${slug}</strong> was submitted by ${auth.email}.</p><p><a href="${html_url}">Review Pull Request</a></p>`
+    }).catch(err => console.error("Email send error:", err))
+  }
+
   return jsonResponse({ prUrl: html_url })
 }
 
@@ -790,6 +811,16 @@ async function handleNew(request: Request, env: Env): Promise<Response> {
     await supabaseRest(env, "edit_log", "POST", {
       slug, user_id: auth.id, pr_url: html_url, edit_summary: body.editSummary || null,
     })
+
+    if (env.EMAIL) {
+      env.EMAIL.send({
+        from: { email: "system@subsurfaces.net", name: "Subsurface Wiki" },
+        to: "admin@subsurfaces.net",
+        subject: `New Article: ${body.title}`,
+        text: `A new article "${body.title}" was submitted by ${auth.email}.\n\nReview it here: ${html_url}`,
+        html: `<p>A new article <strong>${body.title}</strong> was submitted by ${auth.email}.</p><p><a href="${html_url}">Review Pull Request</a></p>`
+      }).catch(err => console.error("Email send error:", err))
+    }
 
     return jsonResponse({ prUrl: html_url })
   } catch (err) {

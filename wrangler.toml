@@ -37,4 +37,5 @@ custom_domain = true
 pattern = "os.subsurfaces.net"
 custom_domain = true
 
-
+[[send_email]]
+name = "EMAIL"
