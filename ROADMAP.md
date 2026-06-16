@@ -103,10 +103,14 @@ Thin and undiscoverable.
 - [ ] **`?` opens a keyboard-shortcut cheat sheet** overlay — single source of truth for bindings.
 - [ ] **Audit focus management** on every overlay (Search, ThemePanel, WikiAuthModal, zen mode,
   GifPicker, EmotePicker): focus trap while open, `Esc` to close, focus restored to trigger on close.
-- [ ] **`aria-label`s on icon-only buttons** — heXO `✕`/`⤢ Zen`, profile SVG, zoom buttons, chat
-  controls. Many have `title=` (tooltip) but not `aria-label` (screen reader).
-- [ ] **`prefers-reduced-motion`** — BgCanvas (incl. murmuration loop), emote glow, telescopic
-  transitions, terminal boot. One `@media` block in `base.scss` + a JS check to skip the bg loop.
+- [~] **`aria-label`s on icon-only buttons** — done for the truly icon-only set (MusicBar
+  prev/play/next/expand SVGs, SearchButton, RandomNote/Bookmark SVGs marked `aria-hidden`).
+  QuickControls/CornerMenu/heXO close already had them. Remaining: profile SVG, chat controls,
+  any per-game zoom buttons not yet audited. (2026-06-16)
+- [~] **`prefers-reduced-motion`** — BgCanvas now paints one static frame and runs no loop under
+  reduced-motion (JS `matchMedia` check). Also added: pause on hidden tab, and skip redraw during
+  active scroll (fixes a scroll hitch from the full-viewport fixed canvas). Remaining: emote glow,
+  telescopic transitions, terminal boot. (2026-06-16)
 - [ ] **Skip-to-content link** (first focusable, visually hidden until focused).
 - [ ] **Visible accent-aware focus rings** — verify nothing `outline: none`'s them away.
 
@@ -168,9 +172,9 @@ Hex Life, Progressions, The Knotted Field (Persian carpet loom — 2026-06-15). 
 
 ## 7. Wiki & content polish
 
-- [ ] **★ 35 broken wikilinks** (cluster breakdown in `docs/garden.md`). Finish the cluster;
-  consider making prebuild emit a machine-readable broken-link report (or fail above a threshold)
-  so the count can only go down.
+- [~] **Broken wikilinks** — down to **4** (was 35; content cleanup happened). prebuild now emits
+  `public/broken-links.json` (`{total, bySlug}`) so the count is trackable and CI could fail above a
+  threshold. The remaining 4 point at notes that don't exist yet (Leon's content call). (2026-06-16)
 - [ ] Page metadata editing (description, tags) from the wiki editor UI.
 - [ ] Watchlist — notify on bookmarked-page edits. Needs a `watchlist` table; pairs with existing
   bookmarks + `edit_log`.

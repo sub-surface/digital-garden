@@ -271,18 +271,34 @@ function main() {
 
   // Broken link detection (skip media files — they aren't in the slug-map by design)
   const MEDIA_EXT = /\.(png|jpe?g|gif|webp|svg|mp3|mp4|wav|pdf|gif)$/i
+  const brokenBySlug: Record<string, string[]> = {}
   let brokenCount = 0
   for (const [slug, rawLinks] of linkMap) {
     for (const raw of rawLinks) {
       if (MEDIA_EXT.test(raw)) continue
       if (!resolveLink(raw)) {
         console.warn(`  [broken link] ${slug} → [[${raw}]]`)
+        ;(brokenBySlug[slug] ??= []).push(raw)
         brokenCount++
       }
     }
   }
+  // Emit a machine-readable report so the count is trackable (and CI can fail
+  // above a threshold). Sorted by source slug for stable diffs.
+  const brokenReport = {
+    total: brokenCount,
+    bySlug: Object.fromEntries(
+      Object.entries(brokenBySlug).sort(([a], [b]) => a.localeCompare(b)),
+    ),
+  }
+  fs.writeFileSync(
+    path.join(PUBLIC_DIR, "broken-links.json"),
+    JSON.stringify(brokenReport, null, 2),
+  )
   if (brokenCount > 0) {
-    console.warn(`  ${brokenCount} broken wikilink(s) found`)
+    console.warn(`  ${brokenCount} broken wikilink(s) found — see public/broken-links.json`)
+  } else {
+    console.log(`  broken-links.json generated (0 broken)`)
   }
 
   // Write graph data

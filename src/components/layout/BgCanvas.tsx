@@ -177,8 +177,22 @@ function BgCanvasInner() {
       stateRef.current.my = e.clientY
     }
 
+    // Skip the per-frame redraw while the user is actively scrolling. The bg is
+    // a full-viewport fixed canvas; repainting it on the main thread during a
+    // scroll competes with the compositor and causes a brief hitch. We hold the
+    // last frame for the duration of the scroll and resume shortly after it
+    // settles — visually imperceptible, removes the stall.
+    let scrolling = false
+    let scrollIdle: ReturnType<typeof setTimeout> | undefined
+    const onScroll = () => {
+      scrolling = true
+      clearTimeout(scrollIdle)
+      scrollIdle = setTimeout(() => { scrolling = false }, 120)
+    }
+
     window.addEventListener("resize", resize)
     window.addEventListener("mousemove", mouseMove)
+    window.addEventListener("scroll", onScroll, { passive: true })
     resize()
 
     // Fetch graph nodes only when graph background mode is active
@@ -203,42 +217,66 @@ function BgCanvasInner() {
         .catch((e) => console.warn("BgCanvas: graph data prefetch failed:", e))
     }
 
-    let animationId: number
+    // Draw a single frame of whatever the current mode is. Shared by the
+    // animation loop and the static (reduced-motion) one-shot paint.
+    const draw = () => {
+      const state = stateRef.current
+      if (bgStyle === "off") { ctx.clearRect(0, 0, state.w, state.h); return }
+      if (!state.colorValid) refreshColors()
+      ctx.clearRect(0, 0, state.w, state.h)
+      if (bgMode === "vectors" || bgMode === "dots") {
+        drawField(ctx, state, bgMode, bgStyle, config)
+      } else if (bgMode === "terminal") {
+        drawTerminalPops(ctx, state, config)
+      } else if (bgMode === "chess") {
+        drawChess(ctx, state)
+      } else if (bgMode === "hexo") {
+        drawHexo(ctx, state)
+      } else if (bgMode === "graph") {
+        drawGraph(ctx, state, config)
+      } else if (bgMode === "murmuration") {
+        drawMurmuration(ctx, state)
+      }
+    }
+
+    // Honour prefers-reduced-motion: paint one static frame, run no loop.
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    if (reduceMotion) {
+      stateRef.current.readerAlpha = stateRef.current.readerTarget
+      draw()
+      return () => {
+        window.removeEventListener("resize", resize)
+        window.removeEventListener("mousemove", mouseMove)
+        window.removeEventListener("scroll", onScroll)
+        clearTimeout(scrollIdle)
+      }
+    }
+
+    let animationId = 0
     const frame = () => {
       const state = stateRef.current
       state.readerAlpha += (state.readerTarget - state.readerAlpha) * 0.08
-      
-      if (bgStyle !== "off") {
-        if (!state.colorValid) refreshColors()
-        ctx.clearRect(0, 0, state.w, state.h)
-
-        if (bgMode === "vectors" || bgMode === "dots") {
-          drawField(ctx, state, bgMode, bgStyle, config)
-        } else if (bgMode === "terminal") {
-          drawTerminalPops(ctx, state, config)
-        } else if (bgMode === "chess") {
-
-          drawChess(ctx, state)
-        } else if (bgMode === "hexo") {
-          drawHexo(ctx, state)
-        } else if (bgMode === "graph") {
-          drawGraph(ctx, state, config)
-        } else if (bgMode === "murmuration") {
-          drawMurmuration(ctx, state)
-        }
-      } else {
-        ctx.clearRect(0, 0, state.w, state.h)
-      }
-
+      // Hold the last frame while actively scrolling (see onScroll above).
+      if (!scrolling) draw()
       animationId = requestAnimationFrame(frame)
     }
 
-    animationId = requestAnimationFrame(frame)
+    // Pause the loop entirely when the tab is hidden — no point burning frames
+    // in a backgrounded tab. Resume on return.
+    const start = () => { if (!animationId) animationId = requestAnimationFrame(frame) }
+    const stop = () => { if (animationId) { cancelAnimationFrame(animationId); animationId = 0 } }
+    const onVisibility = () => { if (document.hidden) stop(); else start() }
+    document.addEventListener("visibilitychange", onVisibility)
+
+    if (!document.hidden) start()
 
     return () => {
       window.removeEventListener("resize", resize)
       window.removeEventListener("mousemove", mouseMove)
-      cancelAnimationFrame(animationId)
+      window.removeEventListener("scroll", onScroll)
+      document.removeEventListener("visibilitychange", onVisibility)
+      clearTimeout(scrollIdle)
+      stop()
     }
   }, [bgMode, bgStyle, theme, accentBase, config])
 

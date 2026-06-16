@@ -13,12 +13,12 @@ export function MusicBar() {
     <div className={styles.musicBar} data-panel-ignore>
       {/* 1. Playback Buttons (Now on the Left) */}
       <div className={styles.controls}>
-        <button className={styles.iconBtn} onClick={prevTrack} title="Previous">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+        <button className={styles.iconBtn} onClick={prevTrack} title="Previous" aria-label="Previous track">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M19 20L9 12L19 4V20ZM5 19V5H7V19H5Z" />
           </svg>
         </button>
-        <button className={styles.iconBtn} onClick={togglePlay} title={isPlaying ? "Pause" : "Play"}>
+        <button className={styles.iconBtn} onClick={togglePlay} title={isPlaying ? "Pause" : "Play"} aria-label={isPlaying ? "Pause" : "Play"}>
           {isPlaying ? (
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
               <path d="M6 19H10V5H6V19ZM14 5V19H18V5H14Z" />
@@ -29,8 +29,8 @@ export function MusicBar() {
             </svg>
           )}
         </button>
-        <button className={styles.iconBtn} onClick={nextTrack} title="Next">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+        <button className={styles.iconBtn} onClick={nextTrack} title="Next" aria-label="Next track">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M5 4L15 12L5 20V4ZM19 5V19H17V5H19Z" />
           </svg>
         </button>
@@ -45,12 +45,14 @@ export function MusicBar() {
       </div>
 
       {/* 3. Expand Button (Now on the Right) */}
-      <button 
-        className={styles.expandBtn} 
+      <button
+        className={styles.expandBtn}
         onClick={() => setIsExpanded(!isExpanded)}
         title="Show details"
+        aria-label={isExpanded ? "Hide player details" : "Show player details"}
+        aria-expanded={isExpanded}
       >
-        <span className={`${styles.plus} ${isExpanded ? styles.active : ""}`}>+</span>
+        <span className={`${styles.plus} ${isExpanded ? styles.active : ""}`} aria-hidden="true">+</span>
       </button>
     </div>
   )
