@@ -11,6 +11,7 @@
  */
 
 import type { BootEventKind, BootTone } from "./bootTypes"
+import { generateReply, PERSONAS, PersonaId } from "./chatbot"
 import type { BootPalette } from "./bootSeed"
 import { parseMarkdownToBootLines } from "./bootMarkdown"
 import { setScopeMode, setNetMode } from "./bootTelemetry"
@@ -1041,6 +1042,140 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
         ]
         ctx.replaceLastLines(H + 2, lines, "accent", "frame")
         t++
+      }, 50)
+    }
+  },
+  {
+    name: "boids",
+    help: { usage: "boids", description: "ASCII flocking simulation" },
+    run: (ctx) => {
+      const W = 60, H = 20;
+      ctx.injectLine("  AERIAL MURMURATION", "accent", "heading")
+      ctx.injectLine("  ┌" + "─".repeat(W) + "┐", "normal", "frame")
+      for (let i=0; i<H; i++) ctx.injectLine("  │" + " ".repeat(W) + "│", "normal", "frame")
+      ctx.injectLine("  └" + "─".repeat(W) + "┘", "normal", "frame")
+      ctx.chime("tender")
+
+      const boids = Array.from({length: 25}, () => ({
+         x: Math.random() * W, y: Math.random() * H,
+         vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2
+      }))
+
+      let step = 0
+      activeCommandInterval = setInterval(() => {
+         if (step > 300) {
+            clearInterval(activeCommandInterval)
+            ctx.chime("tender")
+            return
+         }
+
+         const grid = Array.from({length: H}, () => Array(W).fill(" "))
+         boids.forEach(b => {
+            let cx = 0, cy = 0, vx = 0, vy = 0, sx = 0, sy = 0, n = 0
+            boids.forEach(other => {
+               if (b === other) return
+               const dx = other.x - b.x, dy = other.y - b.y
+               const dist = Math.sqrt(dx*dx + dy*dy)
+               if (dist < 6) {
+                  cx += other.x; cy += other.y;
+                  vx += other.vx; vy += other.vy;
+                  n++;
+               }
+               if (dist < 2.5) {
+                  sx -= dx; sy -= dy;
+               }
+            })
+            if (n > 0) {
+               cx /= n; cy /= n; vx /= n; vy /= n;
+               b.vx += (cx - b.x) * 0.015 + (vx - b.vx) * 0.05
+               b.vy += (cy - b.y) * 0.015 + (vy - b.vy) * 0.05
+            }
+            b.vx += sx * 0.1
+            b.vy += sy * 0.1
+
+            const speed = Math.sqrt(b.vx*b.vx + b.vy*b.vy)
+            if (speed > 1.2) {
+               b.vx = (b.vx / speed) * 1.2
+               b.vy = (b.vy / speed) * 1.2
+            }
+            b.x += b.vx; b.y += b.vy;
+            if (b.x < 0) b.x += W; if (b.x >= W) b.x -= W;
+            if (b.y < 0) b.y += H; if (b.y >= H) b.y -= H;
+
+            const ix = Math.floor(b.x), iy = Math.floor(b.y)
+            if (ix >= 0 && ix < W && iy >= 0 && iy < H) {
+               grid[iy][ix] = Math.abs(b.vx) > Math.abs(b.vy) ? (b.vx > 0 ? "»" : "«") : (b.vy > 0 ? "v" : "^")
+            }
+         })
+
+         const lines = [
+          "  ┌" + "─".repeat(W) + "┐",
+          ...grid.map(row => "  │" + row.join("") + "│"),
+          "  └" + "─".repeat(W) + "┘"
+         ]
+         ctx.replaceLastLines(H + 2, lines, "accent", "frame")
+         step++
+      }, 50)
+    }
+  },
+  {
+    name: "matrix",
+    help: { usage: "matrix", description: "Terminal digital rain" },
+    run: (ctx) => {
+      const W = 60, H = 20;
+      ctx.injectLine("  DIGITAL RAIN", "accent", "heading")
+      ctx.injectLine("  ┌" + "─".repeat(W) + "┐", "normal", "frame")
+      for (let i=0; i<H; i++) ctx.injectLine("  │" + " ".repeat(W) + "│", "normal", "frame")
+      ctx.injectLine("  └" + "─".repeat(W) + "┘", "normal", "frame")
+      ctx.chime("tender")
+
+      const drops: {x: number, y: number, length: number, speed: number, chars: string[]}[] = []
+      const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*!"
+
+      let step = 0
+      activeCommandInterval = setInterval(() => {
+         if (step > 250) {
+            clearInterval(activeCommandInterval)
+            ctx.chime("tender")
+            return
+         }
+
+         if (Math.random() < 0.6) {
+            drops.push({
+               x: Math.floor(Math.random() * W),
+               y: -Math.floor(Math.random() * 5),
+               length: 5 + Math.floor(Math.random() * 12),
+               speed: 0.5 + Math.random() * 1.0,
+               chars: Array.from({length: 20}, () => CHARS[Math.floor(Math.random() * CHARS.length)])
+            })
+         }
+
+         const grid = Array.from({length: H}, () => Array(W).fill(" "))
+
+         for (let i = drops.length - 1; i >= 0; i--) {
+            const d = drops[i]
+            d.y += d.speed
+            if (d.y - d.length > H) {
+               drops.splice(i, 1)
+               continue
+            }
+            for (let j = 0; j < d.length; j++) {
+               const cy = Math.floor(d.y - j)
+               if (cy >= 0 && cy < H && d.x >= 0 && d.x < W) {
+                  // randomly mutate characters
+                  if (Math.random() < 0.05) d.chars[j] = CHARS[Math.floor(Math.random() * CHARS.length)]
+                  grid[cy][d.x] = d.chars[j] || "X"
+               }
+            }
+         }
+
+         const lines = [
+          "  ┌" + "─".repeat(W) + "┐",
+          ...grid.map(row => "  │" + row.join("") + "│"),
+          "  └" + "─".repeat(W) + "┘"
+         ]
+         ctx.replaceLastLines(H + 2, lines, "accent", "frame")
+         step++
       }, 50)
     }
   },

@@ -341,12 +341,14 @@ export function BootPage() {
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null)
 
   const [audioEnabled, setAudioEnabled] = useState(false)
-
   const [isBooted, setIsBooted] = useState(false)
+
+  const commandInputRef = useRef<HTMLInputElement>(null)
   const [commandInput, setCommandInput] = useState("")
   const [commandHistory, setCommandHistory] = useState<string[]>([])
-  const commandHistoryRef = useRef<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(0)
+  const commandHistoryRef = useRef<string[]>([])
+  const [tabState, setTabState] = useState<{ matches: string[], index: number } | null>(null)
   const [themeOverride, setThemeOverride] = useState<string | null>(null)
   const [zoomedPane, setZoomedPane] = useState<ZoomPane>("none")
   const [isHelpOpen, setIsHelpOpen] = useState(false)
@@ -354,8 +356,6 @@ export function BootPage() {
 
   const { session, username, role } = useAuth()
   
-  const commandInputRef = useRef<HTMLInputElement>(null)
-
   const pageRef = useRef<HTMLElement>(null)
   const logRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -835,18 +835,55 @@ export function BootPage() {
       const nextIndex = Math.max(0, historyIndex - 1)
       setHistoryIndex(nextIndex)
       setCommandInput(commandHistory[nextIndex] || "")
+      setTabState(null)
     } else if (e.key === "ArrowDown") {
       e.preventDefault()
       const nextIndex = Math.min(commandHistory.length, historyIndex + 1)
       setHistoryIndex(nextIndex)
       setCommandInput(commandHistory[nextIndex] || "")
+      setTabState(null)
     } else if (e.key === "Tab") {
       e.preventDefault()
-      // simple autocomplete over the registry's names + aliases
-      const val = commandInput.trim().toLowerCase()
-      if (!val) return
-      const match = COMMAND_NAMES.find((c) => c.startsWith(val))
-      if (match) setCommandInput(match + " ")
+      
+      let matches = tabState?.matches || []
+      let nextIndex = tabState ? (tabState.index + 1) % matches.length : 0
+
+      if (!tabState) {
+        const val = commandInput.trimStart().toLowerCase()
+        const parts = val.split(/\s+/)
+        const cmd = parts[0]
+        const arg = parts.slice(1).join(" ")
+
+        if (parts.length <= 1) {
+          matches = COMMAND_NAMES.filter(c => c.startsWith(val))
+        } else if (cmd === "chat") {
+          const personas = ["willow", "deleuze", "spinoza", "trump"]
+          matches = personas.filter(p => p.startsWith(arg)).map(p => `chat ${p}`)
+        } else if (cmd === "debate") {
+          const personas = ["willow", "deleuze", "spinoza", "trump"]
+          if (parts.length === 2) {
+             matches = personas.filter(p => p.startsWith(parts[1])).map(p => `debate ${p}`)
+          } else if (parts.length === 3) {
+             matches = personas.filter(p => p.startsWith(parts[2])).map(p => `debate ${parts[1]} ${p}`)
+          }
+        } else if (cmd === "read" || cmd === "edit") {
+          const notes = getNotes()
+          matches = notes.map(n => n.slug).filter(s => s.startsWith(arg)).map(s => `${cmd} ${s}`)
+        } else if (cmd === "theme" || cmd === "mode") {
+          const themes = ["dark", "light", "oled", "classic"]
+          matches = themes.filter(t => t.startsWith(arg)).map(t => `${cmd} ${t}`)
+        } else if (cmd === "net") {
+          matches = ["auto", "dense", "sparse"].filter(n => n.startsWith(arg)).map(n => `net ${n}`)
+        }
+
+        if (matches.length === 0) return
+        nextIndex = 0
+      }
+      
+      setTabState({ matches, index: nextIndex })
+      setCommandInput(matches[nextIndex] + " ")
+    } else if (e.key !== "Shift" && e.key !== "Control" && e.key !== "Meta" && e.key !== "Alt") {
+      if (tabState) setTabState(null)
     }
   }
 
@@ -1018,7 +1055,10 @@ export function BootPage() {
           <input
             ref={commandInputRef}
             value={commandInput}
-            onChange={(e) => setCommandInput(e.target.value)}
+            onChange={(e) => {
+              setCommandInput(e.target.value)
+              setTabState(null)
+            }}
             onKeyDown={handleCommandKeyDown}
             placeholder="type 'help' or press [ : ]"
             autoComplete="off"
