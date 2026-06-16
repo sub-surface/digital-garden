@@ -543,10 +543,7 @@
   place-content: center;
   overflow: hidden;
   color: var(--tui-accent);
-  background-image:
-    linear-gradient(rgb(224 224 224 / 5%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(224 224 224 / 5%) 1px, transparent 1px);
-  background-size: 1.25rem 1.25rem;
+  background: transparent;
   font: inherit;
   font-size: clamp(0.58rem, 0.2vw + 0.54rem, 0.72rem);
   line-height: 1.08;
@@ -564,7 +561,7 @@
   overflow: hidden;
   border-top: 1px solid var(--tui-border);
   color: var(--tui-dim);
-  background: rgb(255 255 255 / 2%);
+  background: transparent;
   font-size: 0.6rem;
   white-space: nowrap;
 }
@@ -583,6 +580,7 @@
   padding: 0.2rem 0.1rem;
   overflow: hidden;
   color: var(--tui-accent);
+  background: transparent !important;
   font: inherit;
   font-size: clamp(0.54rem, 0.2vw + 0.5rem, 0.68rem);
   line-height: 1.05;

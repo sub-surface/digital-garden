@@ -160,6 +160,7 @@ export const BOOT_PALETTES: readonly BootPalette[] = [
   { name: "amber", accent: "#ffc66d" },
   { name: "ice", accent: "#8ed7e8" },
   { name: "violet", accent: "#d2a3e8" },
+  { name: "temple", accent: "#55ffff" },
 ]
 
 export function paletteForSeed(seed: number): BootPalette {

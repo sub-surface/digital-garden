@@ -1,6 +1,0 @@
-.DS_Store
-Thumbs.db
-*.log
-.server-*
-.browser-profile-*
-node_modules/

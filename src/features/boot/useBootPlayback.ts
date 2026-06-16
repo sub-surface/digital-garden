@@ -321,24 +321,22 @@ export function useBootPlayback({
           showActive(event, graphemes.slice(0, clampedEnd).join(""))
 
           if (clampedEnd < graphemes.length) {
-            await waitForActiveTime(
-              event.charDelayMs,
-              signal,
-              pausedRef,
-              speedRef,
-            )
+            let charDelay = event.charDelayMs
+            if (event.tone === "accent" || event.kind === "heading") { charDelay *= 1.5 + Math.random() * 0.5 }
+            else if (event.tone === "muted" || event.kind === "frame") { charDelay *= 0.6 }
+            
+            await waitForActiveTime(charDelay, signal, pausedRef, speedRef)
           }
         }
 
         commit(event)
       }
 
-      await waitForActiveTime(
-        event.holdAfterMs,
-        signal,
-        pausedRef,
-        speedRef,
-      )
+      let holdMs = event.holdAfterMs
+      if (event.tone === "accent" || event.kind === "heading" || event.tone === "warning") { holdMs *= 1.5 + Math.random() }
+      else if (event.tone === "muted" || event.kind === "frame") { holdMs *= 0.6 }
+
+      await waitForActiveTime(holdMs, signal, pausedRef, speedRef)
     }
 
     const run = async (): Promise<void> => {

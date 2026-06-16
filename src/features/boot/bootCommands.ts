@@ -13,6 +13,7 @@
 import type { BootEventKind, BootTone } from "./bootTypes"
 import type { BootPalette } from "./bootSeed"
 import { parseMarkdownToBootLines } from "./bootMarkdown"
+import { setScopeMode } from "./bootTelemetry"
 
 /** Resolve a user-typed note query to a note (exact slug/title, then fuzzy). */
 function resolveNote(notes: readonly BootNote[], query: string): BootNote | undefined {
@@ -202,6 +203,8 @@ const FORTUNES: readonly string[] = [
   "a draft you abandoned has quietly improved on its own",
   "the moon cache remembers the thing you meant to say",
   "you are allowed to leave the sentence unfinished",
+  "the architect left a temple in the palette",
+  "an operating system is a temple, if you listen closely",
 ]
 
 const ORACLE_ANSWERS: readonly string[] = [
@@ -213,6 +216,15 @@ const ORACLE_ANSWERS: readonly string[] = [
   "it is already true; you simply haven't reread it",
   "wait for the tide table to disagree, then decide",
   "certainly, in the way that rain is certain",
+  "the oracle says to consult the divine intellect",
+  "the system speaks holyc in the dark",
+]
+
+const DIVINE_WORDS: readonly string[] = [
+  "covenant", "temple", "algorithm", "recursive", "tide", "moth",
+  "intellect", "vessel", "horizon", "crystal", "fabric", "firmament",
+  "compile", "syntax", "hallowed", "subsurface", "salt", "echo",
+  "tabernacle", "void", "chariot", "iteration", "fractal", "mercy"
 ]
 
 // Small ASCII familiars for `moth` / `cat`-style flourishes.
@@ -705,6 +717,122 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
         "  memory   enough, kept warm",
       ]
       rows.forEach((r, i) => ctx.injectLine(r, i === 0 ? "accent" : i === 1 ? "muted" : "normal", i === 0 ? "heading" : "line"))
+    },
+  },
+  {
+    name: "god",
+    aliases: ["divine", "intellect"],
+    help: { usage: "god", description: "Consult the divine intellect (procedural word generator)" },
+    run: (ctx) => {
+      const count = Math.floor(Math.random() * 4) + 3
+      const words = Array.from({ length: count }, () => pick(DIVINE_WORDS))
+      ctx.injectLine(`  ◈ divine intellect says: '${words.join(" ")}'`, "tender")
+      ctx.chime("tender")
+    },
+  },
+  {
+    name: "vannak",
+    help: { usage: "vannak", description: "Spin up a highly hypothetical subagent" },
+    run: (ctx) => {
+      ctx.injectLine("  [!] vannak-agent initialized", "warning")
+      ctx.injectLine("  vannak-agent: informing adjacent agents they are stuck in a hypothetical...", "tender")
+      ctx.injectLine("  vannak-agent: locating unallocated physical space...", "muted")
+      ctx.injectLine("  vannak-agent: downloading RAM (32GB DDR6) via HTTP...", "accent")
+      ctx.injectLine("  [█████░░░░░░░░░░░░░░░] 24% (1.4GB/s)", "normal")
+      ctx.injectLine("  [█████████████░░░░░░░] 68% (1.8GB/s)", "normal")
+      ctx.injectLine("  [████████████████████] 100% DONE", "success")
+      ctx.injectLine("  vannak-agent: physical memory installed. please do not perceive the hypothetical.", "muted")
+      ctx.chime("success")
+    },
+  },
+  {
+    name: "scope",
+    help: { usage: "scope [auto|osc|globe|radar]", description: "Change the scope panel visualization mode" },
+    run: (ctx, args) => {
+      const modeArg = args[0]?.toLowerCase()
+      if (modeArg === "osc" || modeArg === "0") {
+         setScopeMode(0)
+         ctx.injectLine("  SCOPE OVERRIDE: Oscilloscope", "accent")
+      } else if (modeArg === "globe" || modeArg === "1") {
+         setScopeMode(1)
+         ctx.injectLine("  SCOPE OVERRIDE: Orbital Globe", "accent")
+      } else if (modeArg === "radar" || modeArg === "2") {
+         setScopeMode(2)
+         ctx.injectLine("  SCOPE OVERRIDE: Phased Array Radar", "accent")
+      } else if (modeArg === "auto") {
+         setScopeMode("auto")
+         ctx.injectLine("  SCOPE OVERRIDE: Auto-cycling restored", "tender")
+      } else {
+         ctx.injectLine("  Usage: scope [auto|osc|globe|radar]", "warning")
+      }
+    }
+  },
+  {
+    name: "maze",
+    help: { usage: "maze", description: "Generate a random terminal maze" },
+    run: (ctx) => {
+      const W = 31, H = 15;
+      const maze = Array.from({length: H}, () => Array(W).fill("█"))
+      const stack = [{x: 1, y: 1}]
+      maze[1][1] = " "
+      while (stack.length > 0) {
+        const {x, y} = stack[stack.length - 1]
+        const dirs = [{dx:0, dy:-2}, {dx:0, dy:2}, {dx:-2, dy:0}, {dx:2, dy:0}].sort(() => Math.random() - 0.5)
+        let carved = false
+        for (const {dx, dy} of dirs) {
+          const nx = x + dx, ny = y + dy
+          if (nx > 0 && nx < W-1 && ny > 0 && ny < H-1 && maze[ny][nx] === "█") {
+            maze[y+dy/2][x+dx/2] = " "
+            maze[ny][nx] = " "
+            stack.push({x: nx, y: ny})
+            carved = true
+            break
+          }
+        }
+        if (!carved) stack.pop()
+      }
+      maze[1][0] = "S"; maze[H-2][W-1] = "E";
+      ctx.injectLine("  PROCEDURAL MAZE", "accent", "heading")
+      maze.forEach(row => ctx.injectLine("  " + row.join(""), "normal", "frame"))
+      ctx.chime("tender")
+    }
+  },
+  {
+    name: "topology",
+    aliases: ["stats", "graph"],
+    help: { usage: "topology", description: "Visualise the garden's tags and connections" },
+    run: (ctx) => {
+      const notes = ctx.getNotes()
+      const tagCounts = new Map<string, number>()
+      notes.forEach(n => n.tags.forEach(t => tagCounts.set(t, (tagCounts.get(t) || 0) + 1)))
+      
+      const sorted = [...tagCounts.entries()].sort((a,b) => b[1] - a[1]).slice(0, 10)
+      const max = Math.max(...sorted.map(s => s[1]), 1)
+      
+      ctx.injectLine("  GARDEN TOPOLOGY", "accent", "heading")
+      ctx.injectLine(`  Total Nodes: ${notes.length}`, "normal")
+      ctx.injectLine("  Density by concept:", "muted")
+      ctx.injectLine("", "normal")
+      
+      const BAR_CHARS = [" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"]
+      
+      sorted.forEach(([tag, count]) => {
+         const width = (count / max) * 20
+         const fullBlocks = Math.floor(width)
+         const remainder = Math.floor((width - fullBlocks) * 8)
+         const bar = "█".repeat(fullBlocks) + (remainder > 0 ? BAR_CHARS[remainder] : "")
+         ctx.injectLine(`  ${tag.padEnd(16)} │ ${bar} ${count}`, "normal")
+      })
+      ctx.chime("tender")
+    }
+  },
+  {
+    name: "holyc",
+    run: (ctx) => {
+      ctx.injectLine("  U0 Main() {", "accent")
+      ctx.injectLine('    Print("The garden is a temple.\\n");', "normal")
+      ctx.injectLine("  }", "accent")
+      ctx.chime("tender")
     },
   },
   {
