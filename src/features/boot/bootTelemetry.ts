@@ -66,37 +66,27 @@ function drawScope(
 ): string[] {
   const safeWidth = Math.max(12, width)
   const safeHeight = Math.max(5, height)
-  const rows = Array.from({ length: safeHeight }, () =>
-    Array.from({ length: safeWidth }, () => " "),
-  )
-  const centre = Math.floor(safeHeight / 2)
-  const amplitude = Math.max(1, Math.floor((safeHeight - 2) / 2))
-  const frequency = rng.int(2, 5)
-  const phase = (tick % safeWidth) / safeWidth * Math.PI * 2
-  let previousY = centre
-
-  for (let x = 0; x < safeWidth; x += 1) {
-    if (rows[centre][x] === " ") rows[centre][x] = x % 2 === 0 ? "·" : " "
-
-    const fundamental = Math.sin((x / safeWidth) * Math.PI * 2 * frequency + phase)
-    const harmonic = Math.sin((x / safeWidth) * Math.PI * 2 * (frequency + 1) - phase * 0.35) * 0.22
-    const noise = (rng.float() - 0.5) * 0.18
-    const sample = Math.max(-1, Math.min(1, fundamental * 0.78 + harmonic + noise))
-    const y = Math.max(0, Math.min(safeHeight - 1, centre - Math.round(sample * amplitude)))
-
-    if (x > 0 && Math.abs(y - previousY) > 1) {
-      const from = Math.min(y, previousY) + 1
-      const to = Math.max(y, previousY)
-      for (let bridge = from; bridge < to; bridge += 1) {
-        rows[bridge][x] = "│"
-      }
+  const rows: string[] = Array(safeHeight).fill("")
+  const buffer = Array(safeHeight).fill(0).map(() => Array(safeWidth).fill(" "))
+  const t = tick * 0.15
+  
+  for (let i = 0; i < 48; i++) {
+    const pt = t + i * 0.08
+    const x = Math.floor((safeWidth / 2) + Math.sin(pt * 1.3) * (safeWidth / 2 - 2))
+    const y = Math.floor((safeHeight / 2) + Math.sin(pt * 2.1) * (safeHeight / 2 - 1))
+    if (x >= 0 && x < safeWidth && y >= 0 && y < safeHeight) {
+      buffer[y][x] = rng.pick(["●", "○", "x", "+", "·"])
     }
-
-    rows[y][x] = y === previousY ? "─" : y < previousY ? "╭" : "╰"
-    previousY = y
   }
 
-  return rows.map((row) => row.join(""))
+  for (let y = 0; y < safeHeight; y++) {
+    for (let x = 0; x < safeWidth; x++) {
+      if (buffer[y][x] === " " && rng.chance(0.015)) buffer[y][x] = "."
+      rows[y] += buffer[y][x]
+    }
+  }
+
+  return rows
 }
 
 function formatDuration(totalSeconds: number): string {
@@ -119,11 +109,13 @@ function compactPhase(value: string): string {
 export function buildBootTelemetry(
   seed: number,
   epoch: number,
-  emittedCount: number,
+  tick: number,
   phaseLabel: string,
   narrow = false,
 ): BootTelemetrySnapshot {
-  const tick = Math.floor(emittedCount / 2)
+  // `tick` advances at half the line rate (see caller) so telemetry repaints
+  // every other line — cheaper, and visually indistinguishable.
+  const emittedCount = tick * 2
   const rng = new SeededRNG(mixSeed(seed, `telemetry:${epoch}:${tick}`))
   const seriesLength = narrow ? 18 : 28
   const rx = makeSeries(rng.fork("rx"), seriesLength, 8, 98)
@@ -137,11 +129,19 @@ export function buildBootTelemetry(
     "note-indexer",
     "cursor-herd",
     "dream-sweeper",
+    "light-parser",
+    "void-mapper",
+    "dust-collector",
+    "echo-chamber",
+    "timer-drift",
+    "signal-tap",
+    "logic-gate",
+    "shadow-proc"
   ] as const
 
   const processes = rng
     .shuffle(processNames)
-    .slice(0, narrow ? 3 : 5)
+    .slice(0, 14)
     .map((name, index): TelemetryProcess => ({
       pid: rng.int(12, 640),
       name,

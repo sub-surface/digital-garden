@@ -71,6 +71,7 @@ export function CommandPalette() {
         { id: "bg", label: "Cycle background", hint: "B", keywords: "background bg canvas murmuration graph vectors", run: cycleBgMode },
         { id: "music", label: "Play / pause music", hint: "M", keywords: "music play pause audio track", run: togglePlay },
         { id: "reader", label: "Toggle reader mode", keywords: "reader focus distraction mode", run: toggleReaderMode },
+        { id: "nav-boot", label: "Enter boot sequence", hint: "/boot", keywords: "boot terminal tui console firmware startup go navigate", run: () => navigate({ to: "/boot" }) },
         { id: "nav-graph", label: "Go to Graph", keywords: "graph constellation network map go navigate", run: () => navigate({ to: "/$", params: { _splat: "graph" } as any }) },
         { id: "nav-arcade", label: "Go to Arcade", keywords: "arcade games go navigate play", run: () => openNote("Arcade", "Arcade") },
         { id: "nav-chess", label: "Go to Chess", keywords: "chess game board go navigate", run: () => openNote("Chess", "Chess") },

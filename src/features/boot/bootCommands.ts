@@ -1,0 +1,555 @@
+/**
+ * Command registry for the /boot in-page command line.
+ *
+ * Each command is a single declarative entry: name, aliases, a one-line help
+ * string and a `run(ctx, args)` handler. The help modal and Tab-autocomplete
+ * derive their lists from this registry, so there is exactly one source of
+ * truth — add a command here and it shows up everywhere automatically.
+ *
+ * Handlers receive a `BootCommandContext` of callbacks supplied by BootPage;
+ * the registry itself holds no React state and is trivially unit-testable.
+ */
+
+import type { BootEventKind, BootTone } from "./bootTypes"
+import type { BootPalette } from "./bootSeed"
+
+export type ZoomPane = "none" | "log" | "scope" | "net" | "proc"
+
+const ZOOM_PANES: readonly ZoomPane[] = ["log", "scope", "net", "proc"]
+
+/** Everything a command needs to act on the live boot session. */
+export interface BootCommandContext {
+  injectLine: (text: string, tone?: BootTone, kind?: BootEventKind) => void
+  clearLines: () => void
+  setZoomedPane: (pane: ZoomPane) => void
+  /** Returns the pane after toggling `target` (or "none" if it was active). */
+  toggleZoom: (target: ZoomPane) => void
+  toggleSound: () => void
+  chime: (tone: BootTone) => void
+  setSpeed: (speed: number) => void
+  cyclePalette: () => string
+  setPalette: (name: string) => boolean
+  setGlobalTheme: (theme: "light" | "dark") => void
+  setFollowing: (follow: boolean) => void
+  createNewSeed: () => void
+  exportLog: () => void
+  flashGlitch: () => void
+  openHelp: () => void
+  restart: () => void
+  setPaused: (paused: boolean) => void
+  /** Command history, oldest-first, for `history`. */
+  getHistory: () => readonly string[]
+}
+
+interface HelpEntry {
+  /** Display name shown in the manual. */
+  usage: string
+  description: string
+}
+
+export interface BootCommand {
+  name: string
+  aliases?: string[]
+  help?: HelpEntry
+  run: (ctx: BootCommandContext, args: string[]) => void
+}
+
+type SceneLine = [text: string, tone: BootTone, kind: BootEventKind]
+
+const SCENES: readonly SceneLine[][] = [
+  [
+    ["  SCENE: ice-cathedral", "accent", "heading"],
+    ["                  ╱╲", "tender", "frame"],
+    ["             ╱╲  ╱  ╲  ╱╲", "tender", "frame"],
+    ["        ╱╲  ╱  ╲╱ ▓▓ ╲╱  ╲  ╱╲", "tender", "frame"],
+    ["       ╱  ╲╱      ◇      ╲╱  ╲", "tender", "frame"],
+    ["      ║      ┌────┼────┐      ║", "tender", "frame"],
+    ["      ║      │  dm11   │      ║", "tender", "frame"],
+    ["      ║      └────┼────┘      ║", "tender", "frame"],
+    ["  ════╩═══════════╧═══════════╩════", "tender", "frame"],
+  ],
+  [
+    ["  SCENE: blue-marble", "accent", "heading"],
+    ["       ☆                     ✦               ·", "tender", "frame"],
+    ["                    .-~~~~~~~~-.", "tender", "frame"],
+    ["        ·        .~      _      ~.       *", "tender", "frame"],
+    ["                /   _.-'   '-._   \\", "tender", "frame"],
+    ["    ✦          |  .'  EURASIA  '.  |", "tender", "frame"],
+    ["               | /  .-~~~~~~-.  \\ |        ☆", "tender", "frame"],
+    ["        ·      | |  (  ocean  )  | |", "tender", "frame"],
+    ["               | \\  '-.__.-'  / |", "tender", "frame"],
+    ["           ·    \\  '._     _.'  /     ✦", "tender", "frame"],
+    ["                 '~.  '---'  .~'", "tender", "frame"],
+    ["                    '-.____.-'", "tender", "frame"],
+  ],
+  [
+    ["  SCENE: void-moth", "accent", "heading"],
+    ["            ·             ◇", "tender", "frame"],
+    ["                  ·       ◇", "tender", "frame"],
+    ["                        ◇ ·", "tender", "frame"],
+    ["            ·             ◇", "tender", "frame"],
+  ],
+  [
+    ["  SCENE: terminal-ecology", "accent", "heading"],
+    ["   .       .         .", "tender", "frame"],
+    ["       .        .       .", "tender", "frame"],
+    ["   .       .         .", "tender", "frame"],
+    ["      |\\___/|", "tender", "frame"],
+    ["      )     (    .  ", "tender", "frame"],
+    ["     =\\     /=", "tender", "frame"],
+    ["       )===(       .", "tender", "frame"],
+    ["      /     \\", "tender", "frame"],
+    ["      |     |", "tender", "frame"],
+    ["     /       \\", "tender", "frame"],
+    ["     \\       /", "tender", "frame"],
+    ["      \\__  _/", "tender", "frame"],
+    ["        ( (", "tender", "frame"],
+    ["         ) )", "tender", "frame"],
+    ["        (_(", "tender", "frame"],
+  ],
+]
+
+/** Deterministic-enough index without leaning on Math.random in module scope. */
+function pickIndex(length: number): number {
+  return Math.floor(Math.random() * length)
+}
+
+function pick<T>(items: readonly T[]): T {
+  return items[pickIndex(items.length)]
+}
+
+const FORTUNES: readonly string[] = [
+  "a link you forgot about still points somewhere kind",
+  "the orphan note will find its garden by morning",
+  "today's drift is well within affectionate tolerance",
+  "someone will reread an old page and feel understood",
+  "the cursor blinks for you, and only you, right now",
+  "a draft you abandoned has quietly improved on its own",
+  "the moon cache remembers the thing you meant to say",
+  "you are allowed to leave the sentence unfinished",
+]
+
+const ORACLE_ANSWERS: readonly string[] = [
+  "the answer is yes, but slowly",
+  "ask again once the kettle has boiled",
+  "signs point to a long, well-lit hallway",
+  "no — and that is a kindness",
+  "the moth says maybe; the moth says most things",
+  "it is already true; you simply haven't reread it",
+  "wait for the tide table to disagree, then decide",
+  "certainly, in the way that rain is certain",
+]
+
+// Small ASCII familiars for `moth` / `cat`-style flourishes.
+const MOTH_ART: readonly string[] = [
+  "      ┊  ╲ ╱  ┊",
+  "    ╲   ▟█▙   ╱",
+  "  ╲   ▟█████▙   ╱",
+  "      ▜█████▛",
+  "        ▜█▛   ·",
+]
+
+/** One-screen man pages, keyed by command name. */
+const MANPAGES: Record<string, readonly string[]> = {
+  seed: [
+    "SEED(1)                 subsurface manual",
+    "NAME    seed — install a fresh random world seed",
+    "DESC    Every seed is a deterministic universe. The",
+    "        same seed always boots the same garden. Share",
+    "        the URL to share the exact machine you saw.",
+  ],
+  audio: [
+    "AUDIO(1)                subsurface manual",
+    "NAME    audio — raise or lower the pad field",
+    "DESC    A small, filtered atmospheric synth. Frequencies",
+    "        and volume are clamped to safe, musical ranges.",
+    "        Chords breathe through a slow progression.",
+  ],
+  oracle: [
+    "ORACLE(1)               subsurface manual",
+    "NAME    oracle — consult the resident uncertainty",
+    "DESC    Answers questions you would rather not decide",
+    "        alone. Non-binding. Occasionally a moth.",
+  ],
+}
+
+export const BOOT_COMMANDS: readonly BootCommand[] = [
+  {
+    name: "help",
+    aliases: ["?", "commands"],
+    help: { usage: "help", description: "List commands in the feed" },
+    run: (ctx, args) => {
+      // `help <cmd>` shows that command's man page if one exists.
+      const topic = args[0]?.toLowerCase()
+      if (topic && MANPAGES[topic]) {
+        MANPAGES[topic].forEach((line, i) =>
+          ctx.injectLine(`  ${line}`, i === 0 ? "accent" : "muted", i === 0 ? "heading" : "line"),
+        )
+        return
+      }
+      ctx.injectLine("  SUB/SURFACE FIELD MANUAL", "accent", "heading")
+      ctx.injectLine("  type a command, or [?] for the keyboard map", "muted")
+      for (const command of HELP_COMMANDS) {
+        const usage = (command.help?.usage ?? command.name).padEnd(16, " ")
+        ctx.injectLine(`  ${usage}${command.help?.description ?? ""}`, "normal")
+      }
+      ctx.injectLine("  click any pane header to zoom it", "tender")
+    },
+  },
+  {
+    name: "clear",
+    aliases: ["cls"],
+    help: { usage: "clear", description: "Clear the local scrollback buffer" },
+    run: (ctx) => {
+      ctx.clearLines()
+      ctx.setZoomedPane("none")
+      ctx.injectLine("  scrollback cleared", "muted")
+    },
+  },
+  {
+    name: "sound",
+    aliases: ["audio"],
+    help: { usage: "audio", description: "Start / stop the AmbientEngine" },
+    run: (ctx) => ctx.toggleSound(),
+  },
+  {
+    name: "speed",
+    help: { usage: "speed <n>", description: "Set playback speed (0.25–4×)" },
+    run: (ctx, args) => {
+      const s = Number(args[0])
+      if (s && s >= 0.25 && s <= 4) {
+        ctx.setSpeed(s)
+        ctx.injectLine(`  speed ${s}x`, "muted")
+      } else {
+        ctx.injectLine("  speed range is 0.25–4", "warning")
+      }
+    },
+  },
+  {
+    name: "theme",
+    aliases: ["palette"],
+    help: { usage: "theme [name|next]", description: "Cycle or set the terminal palette" },
+    run: (ctx, args) => {
+      const target = args[0]
+      if (!target || target === "next") {
+        const next = ctx.cyclePalette()
+        ctx.injectLine(`  palette: ${next}`, "muted")
+      } else if (ctx.setPalette(target)) {
+        ctx.injectLine(`  palette: ${target}`, "muted")
+      } else {
+        ctx.injectLine("  unknown theme", "warning")
+      }
+    },
+  },
+  {
+    name: "mode",
+    aliases: ["light", "lightmode", "dark", "darkmode"],
+    help: { usage: "light | dark", description: "Toggle the global site theme" },
+    run: (ctx, args) => {
+      // Allow both `mode light` and the bare `light` / `dark` aliases.
+      const verb = (args[0] ?? "").toLowerCase()
+      if (verb === "light" || verb === "dark") {
+        ctx.setGlobalTheme(verb)
+        ctx.injectLine(`  ${verb} mode enabled`, "muted")
+      } else {
+        ctx.injectLine("  usage: mode light | mode dark", "warning")
+      }
+    },
+  },
+  {
+    name: "zoom",
+    aliases: ["focus"],
+    help: { usage: "zoom <pane>", description: "Focus a pane (log, scope, net, proc)" },
+    run: (ctx, args) => {
+      const target = (args[0] || "log") as ZoomPane
+      if (ZOOM_PANES.includes(target)) {
+        ctx.toggleZoom(target)
+        ctx.injectLine(`  zoom: ${target}`, "muted")
+      } else {
+        ctx.injectLine(`  unknown pane: ${target}`, "warning")
+      }
+    },
+  },
+  {
+    name: "scene",
+    help: { usage: "scene", description: "Render a randomised ASCII scene" },
+    run: (ctx) => {
+      ctx.setZoomedPane("none")
+      const choice = SCENES[pickIndex(SCENES.length)]
+      choice.forEach(([text, tone, kind]) => ctx.injectLine(text, tone, kind))
+    },
+  },
+  {
+    name: "weather",
+    help: { usage: "weather", description: "Fetch a core meteorology report" },
+    run: (ctx) => {
+      ctx.injectLine("  METEOROLOGY REPORT", "accent", "heading")
+      ctx.injectLine(`  atmosphere: ${Math.random() > 0.5 ? "mildly glitchy" : "clear and stable"}`, "normal")
+      ctx.injectLine(`  temperature: ${Math.floor(Math.random() * 40 + 20)}°C in the core`, "normal")
+      ctx.injectLine(`  wind: solar winds at ${Math.floor(Math.random() * 800)} km/s`, "muted")
+    },
+  },
+  {
+    name: "ping",
+    help: { usage: "ping [host]", description: "Ping a local cache target" },
+    run: (ctx, args) => {
+      const host = args[0] || "moon-cache.local"
+      ctx.injectLine(`  PING ${host} (192.168.1.${Math.floor(Math.random() * 200 + 50)}) 56(84) bytes of data.`, "normal")
+      ctx.injectLine(`  64 bytes from ${host}: icmp_seq=1 ttl=64 time=${(Math.random() * 120).toFixed(1)} ms`, "success")
+    },
+  },
+  {
+    name: "ls",
+    aliases: ["dir"],
+    help: { usage: "ls", description: "List root archives" },
+    run: (ctx) => {
+      ctx.injectLine("  total 42", "muted")
+      ctx.injectLine("  drwxr-xr-x   2 system system  4096 Jun 16 02:00 archives", "normal")
+      ctx.injectLine("  drwxr-xr-x  14 system system  4096 Jun 16 02:05 garden", "accent")
+      ctx.injectLine("  -r--------   1 root   root    1024 Jun 16 01:00 moon_cache.dat", "muted")
+      ctx.injectLine("  drwxrwxr-x   3 guest  guest   4096 Jun 16 02:30 operator", "normal")
+    },
+  },
+  {
+    name: "whoami",
+    help: { usage: "whoami", description: "Query operator identity" },
+    run: (ctx) => {
+      ctx.injectLine("  you are the operator.", "tender")
+      ctx.injectLine("  or at least, you are holding the keys.", "muted")
+    },
+  },
+  {
+    name: "status",
+    help: { usage: "status", description: "Query system vitals" },
+    run: (ctx) => {
+      ctx.injectLine("  SYSTEM VITALS", "accent", "heading")
+      ctx.injectLine("  [ OK ] All processes responding", "success")
+      ctx.injectLine("  [ OK ] Mycelial network integrated", "success")
+      ctx.injectLine("  [WARN] Temporal drift detected (0.4ms)", "warning")
+    },
+  },
+  {
+    name: "inject",
+    aliases: ["echo"],
+    help: { usage: "inject <msg>", description: "Inject an OPERATOR note into the log" },
+    run: (ctx, args) => {
+      ctx.setZoomedPane("none")
+      ctx.injectLine(`  OPERATOR // ${args.join(" ") || "the operator left no message"}`, "tender")
+      ctx.chime("tender")
+    },
+  },
+  {
+    name: "export",
+    help: { usage: "export", description: "Download the current log as text" },
+    run: (ctx) => ctx.exportLog(),
+  },
+  {
+    name: "seed",
+    help: { usage: "seed", description: "Install a fresh random seed" },
+    run: (ctx) => ctx.createNewSeed(),
+  },
+  {
+    name: "glitch",
+    help: { usage: "glitch", description: "Reseat the display bus (visual flourish)" },
+    run: (ctx) => {
+      ctx.flashGlitch()
+      ctx.injectLine("  DISPLAY BUS RESEATED // no data harmed", "tender")
+      ctx.chime("warning")
+    },
+  },
+  {
+    name: "tail",
+    help: { usage: "tail [off]", description: "Attach / detach live follow" },
+    run: (ctx, args) => {
+      const attach = args[0] !== "off"
+      ctx.setFollowing(attach)
+      ctx.injectLine(`  tail ${attach ? "attached" : "detached"}`, "muted")
+    },
+  },
+  {
+    name: "pause",
+    aliases: ["hold", "stop"],
+    help: { usage: "pause", description: "Hold the boot stream" },
+    run: (ctx) => {
+      ctx.setPaused(true)
+      ctx.injectLine("  playback held — type 'resume' or press SPC", "muted")
+    },
+  },
+  {
+    name: "resume",
+    aliases: ["play", "go"],
+    help: { usage: "resume", description: "Resume the boot stream" },
+    run: (ctx) => {
+      ctx.setPaused(false)
+      ctx.injectLine("  playback resumed", "muted")
+    },
+  },
+  {
+    name: "restart",
+    aliases: ["reboot"],
+    help: { usage: "restart", description: "Reboot the current seed from firmware" },
+    run: (ctx) => {
+      ctx.injectLine("  reseating firmware; the garden will be right back", "warning")
+      ctx.restart()
+    },
+  },
+  {
+    name: "fortune",
+    help: { usage: "fortune", description: "Draw a small omen" },
+    run: (ctx) => {
+      ctx.injectLine("  ✦ " + pick(FORTUNES), "tender")
+    },
+  },
+  {
+    name: "oracle",
+    aliases: ["ask", "8ball"],
+    help: { usage: "ask <question>", description: "Consult the resident uncertainty" },
+    run: (ctx, args) => {
+      const question = args.join(" ").trim()
+      if (question) ctx.injectLine(`  ? ${question}`, "muted")
+      ctx.injectLine("  ◈ " + pick(ORACLE_ANSWERS), "tender")
+      ctx.chime("tender")
+    },
+  },
+  {
+    name: "moth",
+    aliases: ["mothkeeper"],
+    help: { usage: "moth", description: "Summon the lamp moth" },
+    run: (ctx) => {
+      ctx.injectLine("  the moth arrives, drawn to the cursor", "muted")
+      MOTH_ART.forEach((line) => ctx.injectLine(line, "tender", "frame"))
+      ctx.chime("tender")
+    },
+  },
+  {
+    name: "uptime",
+    help: { usage: "uptime", description: "How long the field has been awake" },
+    run: (ctx) => {
+      const mins = Math.floor(Math.random() * 480 + 12)
+      const load = [0, 0, 0].map(() => (Math.random() * 0.6).toFixed(2)).join(" ")
+      ctx.injectLine(`  up ${Math.floor(mins / 60)}h ${mins % 60}m,  1 operator,  load average: ${load}`, "normal")
+    },
+  },
+  {
+    name: "date",
+    aliases: ["time", "now"],
+    help: { usage: "date", description: "Read the local soft clock" },
+    run: (ctx) => {
+      const now = new Date()
+      const hh = now.getHours().toString().padStart(2, "0")
+      const mm = now.getMinutes().toString().padStart(2, "0")
+      const phase = pick(["under a waning moon", "at a considerate hour", "between two tides", "in the blue part of the evening"])
+      ctx.injectLine(`  ${hh}:${mm} local · ${phase}`, "normal")
+    },
+  },
+  {
+    name: "cat",
+    aliases: ["less", "read"],
+    help: { usage: "cat <file>", description: "Read a root archive" },
+    run: (ctx, args) => {
+      const file = (args[0] || "").toLowerCase()
+      if (file === "moon_cache.dat") {
+        ctx.injectLine("  cat: moon_cache.dat: permission denied (read-only moon)", "warning")
+      } else if (file.includes("operator")) {
+        ctx.injectLine("  you are the operator. there is nothing here you don't already hold.", "tender")
+      } else if (file) {
+        ctx.injectLine(`  ${file}: a quiet file. mostly whitespace and intention.`, "muted")
+      } else {
+        ctx.injectLine("  usage: cat <file>  (try 'ls' first)", "warning")
+      }
+    },
+  },
+  {
+    name: "roll",
+    aliases: ["dice"],
+    help: { usage: "roll [NdM]", description: "Roll dice (default 1d20)" },
+    run: (ctx, args) => {
+      const m = (args[0] || "1d20").match(/^(\d{0,2})d(\d{1,3})$/i)
+      const count = Math.min(8, Math.max(1, Number(m?.[1]) || 1))
+      const sides = Math.min(100, Math.max(2, Number(m?.[2]) || 20))
+      const rolls = Array.from({ length: count }, () => Math.floor(Math.random() * sides) + 1)
+      const total = rolls.reduce((a, b) => a + b, 0)
+      ctx.injectLine(`  🎲 ${count}d${sides} → [${rolls.join(", ")}] = ${total}`, "normal")
+    },
+  },
+  {
+    name: "history",
+    aliases: ["hist"],
+    help: { usage: "history", description: "Show recent commands" },
+    run: (ctx) => {
+      const entries = ctx.getHistory().slice(-12)
+      if (!entries.length) {
+        ctx.injectLine("  no history yet", "muted")
+        return
+      }
+      entries.forEach((cmd, i) =>
+        ctx.injectLine(`  ${(i + 1).toString().padStart(3, " ")}  ${cmd}`, "muted"),
+      )
+    },
+  },
+  {
+    name: "neofetch",
+    aliases: ["sysinfo", "about"],
+    help: { usage: "neofetch", description: "System portrait" },
+    run: (ctx) => {
+      const rows = [
+        "  operator@subsurface",
+        "  ─────────────────────",
+        "  OS       SUB/SURFACE (procedural)",
+        "  kernel   garden 2.6.0-tender",
+        "  shell    bootsh",
+        "  uptime   a while; time is soft here",
+        "  packages 14 small daemons",
+        "  memory   enough, kept warm",
+      ]
+      rows.forEach((r, i) => ctx.injectLine(r, i === 0 ? "accent" : i === 1 ? "muted" : "normal", i === 0 ? "heading" : "line"))
+    },
+  },
+  {
+    name: "boot",
+    run: (ctx) => ctx.injectLine("  system is already running", "muted"),
+  },
+]
+
+/** Lookup table from every name + alias to its command. */
+const COMMAND_INDEX: ReadonlyMap<string, BootCommand> = (() => {
+  const map = new Map<string, BootCommand>()
+  for (const command of BOOT_COMMANDS) {
+    map.set(command.name, command)
+    for (const alias of command.aliases ?? []) map.set(alias, command)
+  }
+  return map
+})()
+
+/** All command names + aliases, for Tab-autocomplete. */
+export const COMMAND_NAMES: readonly string[] = Array.from(COMMAND_INDEX.keys())
+
+/** Commands that expose a help entry, in registry order. */
+export const HELP_COMMANDS: readonly BootCommand[] = BOOT_COMMANDS.filter(
+  (command) => command.help,
+)
+
+/**
+ * Parse and dispatch a raw command line. Returns true if a command ran, false
+ * if the command was not recognised (the caller emits the "not found" line so
+ * it can include the original token casing).
+ */
+export function runBootCommand(raw: string, ctx: BootCommandContext): boolean {
+  const trimmed = raw.trim()
+  if (!trimmed) return false
+
+  const tokens = trimmed.split(/\s+/)
+  const name = tokens[0].toLowerCase()
+  const command = COMMAND_INDEX.get(name)
+  if (!command) return false
+
+  // For the bare `light` / `dark` aliases, fold the verb back into args so the
+  // `mode` handler sees it uniformly.
+  const args =
+    command.name === "mode" && name !== "mode"
+      ? [name, ...tokens.slice(1)]
+      : tokens.slice(1)
+
+  command.run(ctx, args)
+  return true
+}

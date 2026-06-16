@@ -45,6 +45,12 @@ const MEMORY_PHRASES = [
   "NOTHING LOST, ONLY REINDEXED",
   "THE MOON CACHE IS READ ONLY",
   "LEAVE A PORCH LIGHT FOR ORPHANS",
+  "THE LAST READER WAS KIND",
+  "WE KEPT THE WINDOW OPEN FOR YOU",
+  "SLOT 12 IS DREAMING; STEP SOFTLY",
+  "EVERY LINK STILL POINTS SOMEWHERE",
+  "THE INDEX FORGIVES TYPOS",
+  "A WARM CHAIR REMAINS RESERVED",
 ] as const
 
 const GRAPH_PAIRS = [
@@ -54,6 +60,10 @@ const GRAPH_PAIRS = [
   ["garden", "machine"],
   ["camera", "ghost"],
   ["orbit", "home"],
+  ["letter", "harbour"],
+  ["dust", "lantern"],
+  ["fever", "almanac"],
+  ["mirror", "doorway"],
 ] as const
 
 const ANOMALIES = [
@@ -77,6 +87,26 @@ const ANOMALIES = [
     "[ INFO ] star reports that it is nearby",
     "[  OK  ] claim filed under affectionate uncertainty",
   ],
+  [
+    "[ WARN ] a rumour reached the cache before the fact",
+    "[ INFO ] fact arrived shortly after, slightly out of breath",
+    "[  OK  ] both versions reconciled over a long pause",
+  ],
+  [
+    "[ WARN ] the cursor blinked out of sequence once",
+    "[ INFO ] suspected a thought; none was scheduled",
+    "[  OK  ] resuming, no thought harmed",
+  ],
+  [
+    "[ WARN ] gravity in /var felt 0.3% more sentimental",
+    "[ INFO ] re-weighed against the standard kilogram of longing",
+    "[  OK  ] within tolerance; the archive may keep its mood",
+  ],
+  [
+    "[ WARN ] a closed tab is still warm to the touch",
+    "[ INFO ] heat traced to an unfinished sentence",
+    "[  OK  ] sentence left open, as the author intended",
+  ],
 ] as const
 
 const SERVICE_GROUPS = [
@@ -85,6 +115,10 @@ const SERVICE_GROUPS = [
   ["cursor-shepherd.service", "all cursors accounted for"],
   ["dream-sweeper.service", "night cache folded and aired"],
   ["crumb-indexer.service", "trail remains navigable"],
+  ["tide-clock.service", "phase locked to a distant moon"],
+  ["margin-keeper.service", "whitespace defended on all sides"],
+  ["echo-librarian.service", "every quote returned to its shelf"],
+  ["porch-lamp.service", "one bulb left burning, on purpose"],
 ] as const
 
 const GARDEN_OBSERVATIONS = [
@@ -93,6 +127,11 @@ const GARDEN_OBSERVATIONS = [
   "three seeds negotiating shared sunlight",
   "a fern process waiting politely on stdin",
   "compost rotation complete; no complaints logged",
+  "a snail has been promoted to load balancer",
+  "the trellis reports structurally sound longing",
+  "dew budget balanced to the nearest droplet",
+  "one bee logged in, browsed, and logged out happy",
+  "the oldest oak is still backwards-compatible",
 ] as const
 
 const RULE_WIDE = "─".repeat(64)
@@ -723,6 +762,106 @@ export class BootGenerator {
     ]
   }
 
+  private dreamDefrag(context: SnippetContext): BootEvent[] {
+    const width = context.viewport === "narrow" ? 18 : 30
+    const fragments = context.rng.shuffle([
+      "a hallway that kept apologising",
+      "the smell of a library after rain",
+      "an exam in a subject made of weather",
+      "a friend's voice, slightly out of sync",
+      "a staircase that resolved into a chord",
+      "a city you have never visited missing you",
+      "a cat explaining the tax code, convincingly",
+    ] as const).slice(0, context.viewport === "narrow" ? 2 : 3)
+
+    const steps = context.viewport === "narrow" ? 4 : 6
+    const bars: BootEvent[] = []
+    for (let step = 1; step <= steps; step += 1) {
+      const filled = Math.round((step / steps) * width)
+      const pct = Math.round((step / steps) * 100)
+      bars.push(
+        this.event(
+          context,
+          `defrag [${"█".repeat(filled)}${"░".repeat(width - filled)}] ${pct
+            .toString()
+            .padStart(3, " ")}%`,
+          {
+            kind: "frame",
+            reveal: "overwrite",
+            tone: "accent",
+            holdAfterMs: 120,
+            ariaLabel: `Dream cache defragmentation ${pct} percent`,
+            ephemeral: step < steps,
+          },
+        ),
+      )
+    }
+
+    return [
+      this.phase(context, "dream cache defrag"),
+      this.event(context, "compacting last night's loose imagery", {
+        reveal: "type",
+        tone: "muted",
+        charDelayMs: 16,
+      }),
+      ...bars,
+      this.event(context, "recovered, intact:", {
+        kind: "heading",
+        reveal: "instant",
+        tone: "muted",
+      }),
+      ...fragments.map((fragment) =>
+        this.event(context, `  · ${fragment}`, {
+          reveal: "burst",
+          tone: "tender",
+          holdAfterMs: 110,
+        }),
+      ),
+      this.event(context, "filed under things to remember if asked nicely", {
+        reveal: "type",
+        tone: "tender",
+        charDelayMs: 17,
+        holdAfterMs: 230,
+      }),
+      this.blank(context),
+    ]
+  }
+
+  private correspondenceQueue(context: SnippetContext): BootEvent[] {
+    const width = context.viewport === "narrow" ? 42 : 64
+    const letters = context.rng.shuffle([
+      ["to: a future reader", "held, undelivered, hopeful"],
+      ["to: the orphan notes", "porch light enclosed"],
+      ["to: yesterday", "returned to sender, fondly"],
+      ["to: whoever closed the tab", "no reply expected"],
+      ["to: the unfinished essay", "we are still listening"],
+      ["to: the moon cache", "read receipt declined, politely"],
+      ["to: the first visitor", "the kettle is always on"],
+    ] as const).slice(0, context.viewport === "narrow" ? 3 : 4)
+
+    return [
+      this.phase(context, "correspondence spool"),
+      this.event(context, statusLine("outbound queue", `${letters.length} held`, width), {
+        reveal: "burst",
+        tone: "normal",
+      }),
+      ...letters.map(([to, note]) =>
+        this.event(context, statusLine(`  ${to}`, note, width), {
+          reveal: "burst",
+          tone: "muted",
+          holdAfterMs: 95,
+        }),
+      ),
+      this.event(context, "nothing is overdue here; the post arrives when it is ready", {
+        reveal: "type",
+        tone: "tender",
+        charDelayMs: 18,
+        holdAfterMs: 230,
+      }),
+      this.blank(context),
+    ]
+  }
+
   private networkMonitor(context: SnippetContext): BootEvent[] {
     const frames: BootEvent[] = []
     const width = context.viewport === "narrow" ? 22 : 44
@@ -750,7 +889,7 @@ export class BootGenerator {
           tone: "accent",
           holdAfterMs: 170,
           ariaLabel: `Live network monitor frame ${frame + 1}`,
-          ephemeral: true,
+          ephemeral: frame < 5,
         }),
       )
     }
@@ -788,7 +927,7 @@ export class BootGenerator {
           tone: frame < 3 ? "normal" : "accent",
           holdAfterMs: 145,
           ariaLabel: `Oscilloscope trace frame ${frame + 1}`,
-          ephemeral: true,
+          ephemeral: frame < 6,
         }),
       )
     }
@@ -851,6 +990,66 @@ export class BootGenerator {
           holdAfterMs: 250,
         },
       ),
+      this.blank(context),
+    ]
+  }
+
+  private starChart(context: SnippetContext): BootEvent[] {
+    const width = context.viewport === "narrow" ? 26 : 46
+    const height = context.viewport === "narrow" ? 5 : 7
+    const body = context.rng.pick([
+      "the patient comet",
+      "a low amber planet",
+      "the orphan star",
+      "the moon cache itself",
+    ] as const)
+    // Deterministic fixed background of faint stars for this seed.
+    const bgRng = context.rng.fork("starfield")
+    const field: string[][] = Array.from({ length: height }, () =>
+      Array.from({ length: width }, () => (bgRng.chance(0.05) ? "·" : " ")),
+    )
+
+    const frames: BootEvent[] = []
+    const steps = 6
+    for (let frame = 0; frame < steps; frame += 1) {
+      const t = frame / (steps - 1)
+      const x = Math.round(t * (width - 1))
+      // Rise then settle — an arc that culminates mid-sky.
+      const y = Math.round((height - 1) * (1 - Math.sin(t * Math.PI) * 0.85))
+      const sky = field.map((row) => row.slice())
+      if (sky[y]) sky[y][x] = frame === steps - 1 ? "◉" : "✦"
+      const panel = [
+        `sky  alt ${(Math.sin(t * Math.PI) * 90).toFixed(0).padStart(2, " ")}°  az ${(t * 180).toFixed(0).padStart(3, " ")}°`,
+        ...sky.map((row) => row.join("")),
+        "─".repeat(width),
+      ].join("\n")
+
+      frames.push(
+        this.event(context, panel, {
+          kind: "frame",
+          reveal: "overwrite",
+          tone: frame === steps - 1 ? "accent" : "normal",
+          holdAfterMs: 165,
+          ariaLabel: `Star chart frame ${frame + 1}, tracking ${body}`,
+          ephemeral: frame < steps - 1,
+        }),
+      )
+    }
+
+    return [
+      this.phase(context, "ephemeris"),
+      this.event(context, `tracking ${body} across the local sky`, {
+        reveal: "type",
+        tone: "muted",
+        charDelayMs: 16,
+      }),
+      ...frames,
+      this.event(context, `${body} reached culmination and was, briefly, the brightest thing here`, {
+        reveal: "type",
+        tone: "tender",
+        charDelayMs: 18,
+        holdAfterMs: 250,
+      }),
       this.blank(context),
     ]
   }
@@ -1035,14 +1234,14 @@ export class BootGenerator {
 
     return [
       this.phase(context, chosen.phase),
-      ...chosen.frames.map((frame) =>
+      ...chosen.frames.map((frame, index) =>
         this.event(context, frame, {
           kind: "frame",
           reveal: "overwrite",
           tone: "accent",
           holdAfterMs: context.rng.int(120, 180),
           ariaLabel: chosen.ariaLabel,
-          ephemeral: true,
+          ephemeral: index < chosen.frames.length - 1,
         }),
       ),
       this.event(context, chosen.final, {
@@ -1142,7 +1341,7 @@ export class BootGenerator {
           tone: scene.tone,
           holdAfterMs: context.rng.int(70, 110),
           ariaLabel: scene.ariaLabel,
-          ephemeral: true,
+          ephemeral: frame < frameCount,
         }),
       )
     }
@@ -1238,6 +1437,8 @@ export class BootGenerator {
       () => this.packetCapture(this.context(epoch, "packets", viewport, sequence), facts),
       () => this.gardenMaintenance(this.context(epoch, "garden", viewport, sequence), facts),
       () => this.latencySurvey(this.context(epoch, "latency", viewport, sequence)),
+      () => this.dreamDefrag(this.context(epoch, "dreams", viewport, sequence)),
+      () => this.correspondenceQueue(this.context(epoch, "post", viewport, sequence)),
     ]).slice(0, 3)
     const instrumentPool = [
       () => this.networkMonitor(this.context(epoch, "netwatch", viewport, sequence)),
@@ -1246,6 +1447,7 @@ export class BootGenerator {
       () => this.storageMap(this.context(epoch, "storage-map", viewport, sequence)),
       () => this.spectrumAnalyzer(this.context(epoch, "spectrum", viewport, sequence)),
       () => this.cosmicScene(this.context(epoch, "scene", viewport, sequence)),
+      () => this.starChart(this.context(epoch, "ephemeris", viewport, sequence)),
     ]
     const instrumentPhases = epoch === 0
       ? instrumentPool.slice(0, 2)

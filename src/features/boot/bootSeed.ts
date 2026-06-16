@@ -155,7 +155,7 @@ export interface BootPalette {
  * the terminal accent is recoloured; the OLED-dark base stays constant so the
  * page never clashes with the rest of the site.
  */
-const BOOT_PALETTES: readonly BootPalette[] = [
+export const BOOT_PALETTES: readonly BootPalette[] = [
   { name: "phosphor", accent: "#8ef0a7" },
   { name: "amber", accent: "#ffc66d" },
   { name: "ice", accent: "#8ed7e8" },

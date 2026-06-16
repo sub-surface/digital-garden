@@ -7,6 +7,24 @@
   --tui-dim: rgb(224 224 224 / 58%);
   --tui-row: 1.5rem;
 
+  // ANSI 16-colour palette (dark background). Tuned to read like a real
+  // terminal scheme — desaturated enough to sit on OLED black without buzzing,
+  // bright variants reserved for emphasis. `--tui-warn` / `--tui-line-strong`
+  // alias older names referenced elsewhere in this file.
+  --ansi-red: #e06c75;
+  --ansi-green: #98c379;
+  --ansi-yellow: #e5c07b;
+  --ansi-blue: #61afef;
+  --ansi-magenta: #c678dd;
+  --ansi-cyan: #56b6c2;
+  --ansi-red-bright: #ff7b86;
+  --ansi-green-bright: #b5e890;
+  --ansi-yellow-bright: #ffd98a;
+  --ansi-blue-bright: #8cc8ff;
+  --ansi-cyan-bright: #7fdce6;
+  --tui-warn: var(--ansi-yellow);
+  --tui-line-strong: var(--tui-border-strong);
+
   position: fixed;
   inset: 0;
   z-index: 2147483647;
@@ -30,6 +48,26 @@
   text-rendering: optimizeSpeed;
   color-scheme: dark;
   outline: none;
+}
+
+:global([data-theme="light"]) .page {
+  --tui-border: rgb(0 0 0 / 16%);
+  --tui-border-strong: rgb(0 0 0 / 32%);
+  --tui-dim: rgb(0 0 0 / 64%);
+  color-scheme: light;
+
+  // Darker ANSI set so the colours hold contrast on a paper background.
+  --ansi-red: #c0392b;
+  --ansi-green: #4f8a2f;
+  --ansi-yellow: #a8761a;
+  --ansi-blue: #1f6fc0;
+  --ansi-magenta: #9b4bb5;
+  --ansi-cyan: #2b8a96;
+  --ansi-red-bright: #d4453a;
+  --ansi-green-bright: #5fa337;
+  --ansi-yellow-bright: #c08a1f;
+  --ansi-blue-bright: #2a7fd0;
+  --ansi-cyan-bright: #2f9aa8;
 }
 
 .page *,
@@ -111,6 +149,152 @@
   grid-template-columns: minmax(0, 1fr) minmax(21rem, 30vw);
   overflow: hidden;
   background: var(--tui-bg);
+  transition: grid-template-columns 0.3s ease;
+}
+
+.workspace.zoom-log { grid-template-columns: minmax(0, 1fr) 0; }
+.workspace.zoom-scope, .workspace.zoom-net, .workspace.zoom-proc { grid-template-columns: 0 minmax(0, 1fr); }
+
+.zoom-scope .instrumentRack { grid-template-rows: 1fr 0 0; }
+.zoom-net .instrumentRack { grid-template-rows: 0 1fr 0; }
+.zoom-proc .instrumentRack { grid-template-rows: 0 0 1fr; }
+
+.cover {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: var(--tui-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tui-fg);
+}
+
+.coverInner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  font-size: 1rem;
+
+  h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--tui-accent);
+  }
+
+  form {
+    display: flex;
+    gap: 0.8rem;
+    color: var(--tui-dim);
+
+    input {
+      background: transparent;
+      border: none;
+      color: var(--tui-fg);
+      font: inherit;
+      outline: none;
+      flex: 1;
+    }
+  }
+}
+
+:global(body.glitchMode) {
+  filter: hue-rotate(90deg) invert(10%);
+  transform: translate(2px, -2px);
+}
+
+.helpModal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.helpContent {
+  width: min(760px, calc(100vw - 20px));
+  max-height: calc(100vh - 20px);
+  overflow: auto;
+  border: 1px solid var(--tui-line-strong);
+  background: var(--tui-bg);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+}
+
+.helpHeader {
+  padding: 8px 12px;
+  color: var(--tui-bg);
+  background: var(--tui-accent);
+  font-weight: 800;
+  text-transform: uppercase;
+  display: flex;
+  justify-content: space-between;
+}
+
+.helpBody {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  color: var(--tui-fg);
+
+  h3 {
+    color: var(--tui-accent);
+    font-size: 0.9rem;
+    margin: 0 0 12px;
+    text-transform: uppercase;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  td {
+    padding: 4px 0;
+    vertical-align: top;
+  }
+
+  td:first-child {
+    width: 100px;
+    color: var(--tui-warn);
+  }
+
+  p {
+    color: var(--tui-dim);
+    line-height: 1.5;
+    margin-top: 0;
+  }
+}
+
+.commandForm {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  padding: 0 0.52rem;
+  background: var(--tui-bg);
+  color: var(--tui-fg);
+  border-right: 1px solid rgb(0 0 0 / 26%);
+
+  span {
+    color: var(--tui-accent);
+    font-weight: 800;
+    margin-right: 0.5rem;
+  }
+
+  input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--tui-fg);
+    font: inherit;
+    outline: none;
+  }
 }
 
 .pane {
@@ -142,11 +326,19 @@
   line-height: 1;
   letter-spacing: 0.025em;
   white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease, background 0.15s ease;
 
   > span:first-child {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  &:hover {
+    color: var(--tui-fg);
+    background: var(--tui-border-strong);
   }
 }
 
@@ -267,26 +459,33 @@
 }
 
 .toneSuccess {
-  color: var(--tui-fg);
+  color: var(--ansi-green);
 }
 
 .toneWarning {
-  color: var(--tui-accent);
-  text-decoration: underline;
-  text-decoration-style: dotted;
-  text-underline-offset: 0.16em;
+  color: var(--ansi-yellow);
 }
 
 .toneError {
-  color: var(--tui-bg);
-  background: var(--tui-accent);
-  font-weight: 800;
+  color: var(--ansi-red-bright);
+  font-weight: 700;
 }
 
 .toneTender {
-  color: var(--tui-fg);
-  opacity: 0.82;
+  color: var(--ansi-cyan);
 }
+
+// Inline syntax tokens — coloured independently of the line tone so the stream
+// reads like parsed terminal output. Tokenised once per line (see BootLine).
+.tokNumber { color: var(--ansi-magenta); }
+.tokPath { color: var(--ansi-blue); }
+.tokHex { color: var(--ansi-cyan); }
+.tokOk { color: var(--ansi-green-bright); font-weight: 700; }
+.tokWarn { color: var(--ansi-yellow-bright); font-weight: 700; }
+.tokErr { color: var(--ansi-red-bright); font-weight: 700; }
+.tokInfo { color: var(--ansi-blue-bright); font-weight: 700; }
+.tokPrompt { color: var(--ansi-green); font-weight: 700; }
+.tokString { color: var(--ansi-yellow); }
 
 .cursor {
   margin-left: 0.08ch;
@@ -446,7 +645,11 @@
 .processList {
   min-height: 0;
   padding: 0.26rem 0.48rem;
-  overflow: hidden;
+  overflow: auto;
+  scrollbar-width: none; /* Hide scrollbar for a cleaner look */
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .processRow {

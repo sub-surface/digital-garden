@@ -4,25 +4,38 @@ import {
   useMemo,
   useRef,
   useState,
+  memo,
 } from "react"
 import type { FocusEvent } from "react"
 import { createPortal } from "react-dom"
 import type { CSSProperties } from "react"
+import { useStore } from "../../store"
 import {
   canonicalSeedUrl,
   paletteForSeed,
   persistResolvedSeed,
   randomSeed,
   resolveSeed,
+  BOOT_PALETTES,
 } from "./bootSeed"
 import { buildBootTelemetry } from "./bootTelemetry"
+import type { BootTelemetrySnapshot } from "./bootTelemetry"
 import type {
   BootEventKind,
   BootTone,
   ResolvedSeed,
+  BootRenderedLine,
 } from "./bootTypes"
 import { useBootPlayback } from "./useBootPlayback"
 import styles from "./BootPage.module.scss"
+import { AmbientEngine } from "./bootAudio"
+import {
+  runBootCommand,
+  COMMAND_NAMES,
+  HELP_COMMANDS,
+  type BootCommandContext,
+  type ZoomPane,
+} from "./bootCommands"
 
 const FOLLOW_THRESHOLD_PX = 32
 const SPEED_STEPS = [0.5, 1, 2, 4] as const
@@ -45,6 +58,169 @@ const KIND_CLASS: Record<BootEventKind, string> = {
   frame: styles.kindFrame,
   phase: styles.kindPhase,
 }
+
+/**
+ * Token classes for inline terminal-style syntax highlighting. Matched in
+ * priority order; the first regex to hit at a position wins. Kept deliberately
+ * small — this runs once per committed line (BootLine is memoised on its
+ * immutable `line` prop), so there is no per-frame cost.
+ */
+const TOKEN_RULES: ReadonlyArray<{ re: RegExp; cls: string }> = [
+  { re: /\[\s*(?:OK|DONE|PASS|UP|LIVE)\s*\]/y, cls: styles.tokOk },
+  { re: /\[\s*(?:WARN|HOLD|SKIP)\s*\]/y, cls: styles.tokWarn },
+  { re: /\[\s*(?:ERR(?:OR)?|FAIL|DEAD|LOST)\s*\]/y, cls: styles.tokErr },
+  { re: /\[\s*(?:INFO|NOTE|\.\.\.)\s*\]/y, cls: styles.tokInfo },
+  { re: /(?:^|(?<=\s))\$(?=\s)/y, cls: styles.tokPrompt },
+  { re: /0x[0-9a-fA-F]+/y, cls: styles.tokHex },
+  { re: /(?:\/[\w.-]+)+\/?|[\w-]+\.(?:dat|json|md|log|sock|tmp|cfg)/y, cls: styles.tokPath },
+  { re: /"[^"]*"|'[^']*'/y, cls: styles.tokString },
+  { re: /\d+(?:\.\d+)?(?:%|ms|s|Hz|kB\/s|MiB|M|°C|km\/s|×)?/y, cls: styles.tokNumber },
+]
+
+/** Split text into plain + classed token spans. Allocation-light, no backtrack. */
+function tokenize(text: string): Array<{ text: string; cls?: string }> {
+  const out: Array<{ text: string; cls?: string }> = []
+  let plainStart = 0
+  let i = 0
+
+  const flushPlain = (end: number): void => {
+    if (end > plainStart) out.push({ text: text.slice(plainStart, end) })
+  }
+
+  while (i < text.length) {
+    let matched = false
+    for (const { re, cls } of TOKEN_RULES) {
+      re.lastIndex = i
+      const m = re.exec(text)
+      if (m && m.index === i && m[0].length > 0) {
+        flushPlain(i)
+        out.push({ text: m[0], cls })
+        i += m[0].length
+        plainStart = i
+        matched = true
+        break
+      }
+    }
+    if (!matched) i += 1
+  }
+  flushPlain(text.length)
+  return out
+}
+
+/** Kinds that get inline tokenising. ASCII art / frames stay verbatim. */
+const TOKENISED_KINDS = new Set<BootEventKind>(["line", "heading"])
+
+const BootLine = memo(({ line }: { line: BootRenderedLine }) => {
+  const content =
+    TOKENISED_KINDS.has(line.kind) && line.text.length <= 200
+      ? tokenize(line.text).map((seg, idx) =>
+          seg.cls ? (
+            <span key={idx} className={seg.cls}>
+              {seg.text}
+            </span>
+          ) : (
+            seg.text
+          ),
+        )
+      : line.text
+
+  return (
+    <div
+      className={`${styles.line} ${TONE_CLASS[line.tone]} ${KIND_CLASS[line.kind]}`}
+      data-kind={line.kind}
+      aria-label={line.ariaLabel}
+      aria-hidden={line.kind === "blank" || undefined}
+    >
+      {content}
+    </div>
+  )
+})
+
+/**
+ * The right-hand instrument rack (scope + net + proc). Memoised on its
+ * telemetry snapshot so log updates don't reconcile it, and telemetry updates
+ * don't reconcile the (much larger) log list. `onZoom` is stable from the
+ * parent's `setZoomedPane` setter.
+ */
+const InstrumentRack = memo(function InstrumentRack({
+  telemetry,
+  onZoom,
+}: {
+  telemetry: BootTelemetrySnapshot
+  onZoom: (updater: (prev: ZoomPane) => ZoomPane) => void
+}) {
+  const toggle = (pane: ZoomPane) => () =>
+    onZoom((prev) => (prev === pane ? "none" : pane))
+
+  return (
+    <aside className={styles.instrumentRack} aria-label="Live terminal instruments">
+      <section className={`${styles.pane} ${styles.scopePane}`}>
+        <div className={styles.paneTitle} onClick={toggle("scope")}>
+          <span>1:scope — CH A</span>
+          <span>{telemetry.scopeTrigger}</span>
+        </div>
+        <pre className={styles.scopeDisplay} aria-hidden="true">
+          {telemetry.scopeRows.join("\n")}
+        </pre>
+        <div className={styles.instrumentFooter}>
+          <span>F {telemetry.scopeFrequency}</span>
+          <span>Vpp {telemetry.scopeVoltage}</span>
+          <span>tick {telemetry.tick.toString().padStart(5, "0")}</span>
+        </div>
+      </section>
+
+      <section className={`${styles.pane} ${styles.networkPane}`}>
+        <div className={styles.paneTitle} onClick={toggle("net")}>
+          <span>2:net — eth0</span>
+          <span>{telemetry.peerCount} peers</span>
+        </div>
+        <div className={styles.networkBody} aria-hidden="true">
+          <div className={styles.sparkRow}>
+            <span>RX</span>
+            <code>{telemetry.rxHistory}</code>
+            <b>{telemetry.rxRate}</b>
+          </div>
+          <div className={styles.sparkRow}>
+            <span>TX</span>
+            <code>{telemetry.txHistory}</code>
+            <b>{telemetry.txRate}</b>
+          </div>
+          <div className={styles.routeLine}>{telemetry.route}</div>
+          <div className={styles.netStats}>
+            <span>loss {telemetry.packetLoss}</span>
+            <span>state ESTABLISHED</span>
+          </div>
+        </div>
+      </section>
+
+      <section className={`${styles.pane} ${styles.processPane}`}>
+        <div className={styles.paneTitle} onClick={toggle("proc")}>
+          <span>3:proc — garden.top</span>
+          <span>{telemetry.phaseCode}</span>
+        </div>
+        <div className={styles.processHead} aria-hidden="true">
+          <span>PID</span><span>S</span><span>CPU</span><span>MEM</span><span>COMMAND</span>
+        </div>
+        <div className={styles.processList} aria-hidden="true">
+          {telemetry.processes.map((process) => (
+            <div className={styles.processRow} key={`${process.pid}-${process.name}`}>
+              <span>{process.pid.toString().padStart(3, "0")}</span>
+              <span>{stateGlyph(process.state)}</span>
+              <span>{process.cpu}</span>
+              <span>{process.memory}</span>
+              <span>{process.name}</span>
+            </div>
+          ))}
+        </div>
+        <div className={styles.instrumentFooter}>
+          <span>load {telemetry.loadAverage}</span>
+          <span>{telemetry.temperature}</span>
+          <span>up {telemetry.uptime}</span>
+        </div>
+      </section>
+    </aside>
+  )
+})
 
 function useMediaQuery(query: string, fallback = false): boolean {
   const [matches, setMatches] = useState(() => {
@@ -103,10 +279,24 @@ export function BootPage() {
   const [copySucceeded, setCopySucceeded] = useState(false)
   const [fallbackUrl, setFallbackUrl] = useState<string | null>(null)
 
+  const [audioEnabled, setAudioEnabled] = useState(false)
+
+  const [isBooted, setIsBooted] = useState(false)
+  const [commandInput, setCommandInput] = useState("")
+  const [commandHistory, setCommandHistory] = useState<string[]>([])
+  const commandHistoryRef = useRef<string[]>([])
+  const [historyIndex, setHistoryIndex] = useState(0)
+  const [themeOverride, setThemeOverride] = useState<string | null>(null)
+  const [zoomedPane, setZoomedPane] = useState<ZoomPane>("none")
+  const [isHelpOpen, setIsHelpOpen] = useState(false)
+  
+  const commandInputRef = useRef<HTMLInputElement>(null)
+
   const pageRef = useRef<HTMLElement>(null)
   const logRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const detachedAtCountRef = useRef(0)
+  const audioRef = useRef<AmbientEngine | null>(null)
 
   const isNarrow = useMediaQuery("(max-width: 800px)")
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)")
@@ -165,6 +355,25 @@ export function BootPage() {
   }, [])
 
   useEffect(() => {
+    const engine = new AmbientEngine()
+    engine.onStateChange = (state, error) => {
+      if (error && state !== "running") {
+        setStatusMessage(`Audio fault: ${error}`)
+        setAudioEnabled(false)
+      }
+    }
+    engine.onMessage = (msg) => {
+      setStatusMessage(msg)
+    }
+    audioRef.current = engine
+
+    return () => {
+      engine.destroy()
+      audioRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
     const handlePopState = (): void => {
       const resolved = resolveSeed()
       detachedAtCountRef.current = 0
@@ -192,25 +401,34 @@ export function BootPage() {
     epoch,
     emittedCount,
     error,
+    injectLine,
+    clearLines,
   } = useBootPlayback({
-    seed: resolvedSeed?.value ?? null,
+    seed: isBooted ? (resolvedSeed?.value ?? null) : null,
     runId,
     viewport: isNarrow ? "narrow" : "wide",
     reducedMotion,
     speed,
     maxLines: isNarrow ? 120 : 220,
+    onTone: useCallback((tone: BootTone) => {
+      audioRef.current?.chime(tone)
+    }, []),
   })
 
+  // Telemetry advances at half the line rate: memoising on `tick` (not raw
+  // `emittedCount`) halves how often the RNG + scope raster + process table
+  // rebuild, with no visible difference.
+  const tick = Math.floor(emittedCount / 2)
   const telemetry = useMemo(
     () =>
       buildBootTelemetry(
         resolvedSeed?.value ?? 1,
         epoch,
-        emittedCount,
+        tick,
         phaseLabel,
         isNarrow,
       ),
-    [emittedCount, epoch, isNarrow, phaseLabel, resolvedSeed?.value],
+    [tick, epoch, isNarrow, phaseLabel, resolvedSeed?.value],
   )
 
   const unseenCount = isFollowing
@@ -225,10 +443,13 @@ export function BootPage() {
     [resolvedSeed],
   )
 
-  const palette = useMemo(
-    () => paletteForSeed(resolvedSeed?.value ?? 1),
-    [resolvedSeed?.value],
-  )
+  const palette = useMemo(() => {
+    if (themeOverride) {
+      const found = BOOT_PALETTES.find(p => p.name === themeOverride)
+      if (found) return found
+    }
+    return paletteForSeed(resolvedSeed?.value ?? 1)
+  }, [resolvedSeed?.value, themeOverride])
 
   const pageStyle = useMemo<CSSProperties>(
     () => ({ ["--tui-accent" as string]: palette.accent }),
@@ -245,10 +466,13 @@ export function BootPage() {
     }
   }, [resolvedSeed])
 
+  // Follow on committed lines + phase changes only — not per-grapheme of the
+  // active line (that thrashed layout on every keystroke). The active line is
+  // short and the log's bottom padding keeps it in view as it types.
   useEffect(() => {
     if (!isFollowing) return
     bottomRef.current?.scrollIntoView({ block: "end", behavior: "auto" })
-  }, [activeText, emittedCount, isFollowing])
+  }, [emittedCount, phaseLabel, isFollowing])
 
   useEffect(() => {
     if (!copySucceeded) return undefined
@@ -339,6 +563,137 @@ export function BootPage() {
     setStatusMessage(nextPaused ? "Playback paused" : "Playback resumed")
   }, [isPaused, setPaused])
 
+  const toggleSound = useCallback(async () => {
+    if (!audioRef.current) return
+    const engine = audioRef.current
+    if (audioEnabled) {
+      await engine.stop()
+      setAudioEnabled(false)
+      setStatusMessage("Audio disabled")
+    } else {
+      const success = await engine.start()
+      if (success) {
+        setAudioEnabled(true)
+        setStatusMessage(`Audio running (${engine.chordName})`)
+      }
+    }
+  }, [audioEnabled])
+
+  const cyclePalette = useCallback((): string => {
+    const currentName = themeOverride || palette.name
+    const idx = BOOT_PALETTES.findIndex((p) => p.name === currentName)
+    const nextName = BOOT_PALETTES[(idx + 1) % BOOT_PALETTES.length].name
+    setThemeOverride(nextName)
+    return nextName
+  }, [palette.name, themeOverride])
+
+  const setPalette = useCallback((name: string): boolean => {
+    if (!BOOT_PALETTES.some((p) => p.name === name)) return false
+    setThemeOverride(name)
+    return true
+  }, [])
+
+  const toggleZoom = useCallback((target: ZoomPane) => {
+    setZoomedPane((prev) => (prev === target ? "none" : target))
+  }, [])
+
+  const exportLog = useCallback(() => {
+    const textToExport = lines.map((l) => l.text).join("\n")
+    const blob = new Blob([textToExport], { type: "text/plain" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `subsurface_log_${resolvedSeed?.display ?? "export"}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+    injectLine("  log exported", "muted")
+  }, [injectLine, lines, resolvedSeed?.display])
+
+  const flashGlitch = useCallback(() => {
+    document.body.classList.add("glitchMode")
+    setTimeout(() => document.body.classList.remove("glitchMode"), 600)
+  }, [])
+
+  const commandContext = useMemo<BootCommandContext>(() => ({
+    injectLine,
+    clearLines,
+    setZoomedPane,
+    toggleZoom,
+    toggleSound: () => void toggleSound(),
+    chime: (tone) => audioRef.current?.chime(tone),
+    setSpeed: (value) => setSpeed(value),
+    cyclePalette,
+    setPalette,
+    setGlobalTheme: (mode) => useStore.getState().setTheme(mode),
+    setFollowing,
+    createNewSeed,
+    exportLog,
+    flashGlitch,
+    openHelp: () => setIsHelpOpen(true),
+    restart,
+    setPaused,
+    getHistory: () => commandHistoryRef.current,
+  }), [
+    clearLines,
+    createNewSeed,
+    cyclePalette,
+    exportLog,
+    flashGlitch,
+    injectLine,
+    palette.name,
+    restart,
+    setPalette,
+    setPaused,
+    toggleSound,
+    toggleZoom,
+  ])
+
+  const runCommand = useCallback((raw: string) => {
+    const trimmed = raw.trim()
+    if (!trimmed) return
+
+    setCommandHistory((prev) => {
+      const next = [...prev, trimmed]
+      commandHistoryRef.current = next
+      setHistoryIndex(next.length)
+      return next
+    })
+
+    injectLine(`  $ ${trimmed}`, "accent")
+
+    if (!runBootCommand(trimmed, commandContext)) {
+      const name = trimmed.split(/\s+/)[0].toLowerCase()
+      injectLine(`  command not found: ${name}`, "warning")
+    }
+  }, [commandContext, injectLine])
+
+  const handleCommandSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    runCommand(commandInput)
+    setCommandInput("")
+  }
+
+  const handleCommandKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowUp") {
+      e.preventDefault()
+      const nextIndex = Math.max(0, historyIndex - 1)
+      setHistoryIndex(nextIndex)
+      setCommandInput(commandHistory[nextIndex] || "")
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault()
+      const nextIndex = Math.min(commandHistory.length, historyIndex + 1)
+      setHistoryIndex(nextIndex)
+      setCommandInput(commandHistory[nextIndex] || "")
+    } else if (e.key === "Tab") {
+      e.preventDefault()
+      // simple autocomplete over the registry's names + aliases
+      const val = commandInput.trim().toLowerCase()
+      if (!val) return
+      const match = COMMAND_NAMES.find((c) => c.startsWith(val))
+      if (match) setCommandInput(match + " ")
+    }
+  }
+
   const exitBoot = useCallback(() => {
     window.location.assign("/")
   }, [])
@@ -362,15 +717,38 @@ export function BootPage() {
       } else if (event.key.toLowerCase() === "g") {
         event.preventDefault()
         returnToLive()
+      } else if (event.key.toLowerCase() === "s") {
+        event.preventDefault()
+        void toggleSound()
+      } else if (event.key === ":") {
+        event.preventDefault()
+        commandInputRef.current?.focus()
+      } else if (event.key === "]") {
+        event.preventDefault()
+        const panes = ["none", "log", "scope", "net", "proc"] as const
+        setZoomedPane(prev => panes[(panes.indexOf(prev) + 1) % panes.length])
+      } else if (event.key === "[") {
+        event.preventDefault()
+        const panes = ["none", "log", "scope", "net", "proc"] as const
+        setZoomedPane(prev => panes[(panes.indexOf(prev) - 1 + panes.length) % panes.length])
+      } else if (event.key === "?") {
+        event.preventDefault()
+        setIsHelpOpen(prev => !prev)
       } else if (event.key === "Escape") {
         event.preventDefault()
-        exitBoot()
+        if (isHelpOpen) {
+          setIsHelpOpen(false)
+        } else if (document.activeElement === commandInputRef.current) {
+          commandInputRef.current?.blur()
+        } else {
+          exitBoot()
+        }
       }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [changeSpeed, error, exitBoot, isPaused, isRunning, returnToLive, togglePaused])
+  }, [changeSpeed, error, exitBoot, isPaused, isRunning, returnToLive, togglePaused, toggleSound, isHelpOpen])
 
   if (portalTarget === null) return null
 
@@ -385,6 +763,23 @@ export function BootPage() {
     >
       <h1 className={styles.srOnly}>SUB/SURFACE procedural boot console</h1>
 
+      {!isBooted && (
+        <div className={styles.cover}>
+          <div className={styles.coverInner}>
+            <h2>PROBING THE SMALL MACHINES...</h2>
+            <form onSubmit={(e) => {
+              e.preventDefault()
+              const val = (new FormData(e.currentTarget).get("bootCmd") as string).toLowerCase()
+              if (val.includes("audio") || val.includes("sound")) void toggleSound()
+              setIsBooted(true)
+            }}>
+              <span>bootloader&gt;</span>
+              <input name="bootCmd" autoFocus autoComplete="off" spellCheck="false" defaultValue="boot --audio" />
+            </form>
+          </div>
+        </div>
+      )}
+
       <header className={styles.tmuxBar} aria-label="Terminal session bar">
         <span className={styles.sessionName}>[subsurface]</span>
         <span className={`${styles.windowTab} ${styles.activeTab}`}>
@@ -397,9 +792,9 @@ export function BootPage() {
         <span className={styles.hostLabel}>subsurface.local</span>
       </header>
 
-      <div className={styles.workspace}>
+      <div className={`${styles.workspace} ${zoomedPane !== "none" ? styles[`zoom-${zoomedPane}`] : ""}`}>
         <section className={`${styles.pane} ${styles.bootPane}`} aria-label="Boot log pane">
-          <div className={styles.paneTitle}>
+          <div className={styles.paneTitle} onClick={() => setZoomedPane(prev => prev === "log" ? "none" : "log")}>
             <span>0:boot — {phaseLabel}</span>
             {!isFollowing ? (
               <button type="button" className={styles.paneAction} onClick={returnToLive}>
@@ -420,15 +815,7 @@ export function BootPage() {
             onScroll={handleScroll}
           >
             {lines.map((line) => (
-              <div
-                key={line.id}
-                className={`${styles.line} ${TONE_CLASS[line.tone]} ${KIND_CLASS[line.kind]}`}
-                data-kind={line.kind}
-                aria-label={line.ariaLabel}
-                aria-hidden={line.kind === "blank" || undefined}
-              >
-                {line.text}
-              </div>
+              <BootLine key={line.id} line={line} />
             ))}
 
             {error && (
@@ -454,72 +841,7 @@ export function BootPage() {
           </div>
         </section>
 
-        <aside className={styles.instrumentRack} aria-label="Live terminal instruments">
-          <section className={`${styles.pane} ${styles.scopePane}`}>
-            <div className={styles.paneTitle}>
-              <span>1:scope — CH A</span>
-              <span>{telemetry.scopeTrigger}</span>
-            </div>
-            <pre className={styles.scopeDisplay} aria-hidden="true">
-              {telemetry.scopeRows.join("\n")}
-            </pre>
-            <div className={styles.instrumentFooter}>
-              <span>F {telemetry.scopeFrequency}</span>
-              <span>Vpp {telemetry.scopeVoltage}</span>
-              <span>tick {telemetry.tick.toString().padStart(5, "0")}</span>
-            </div>
-          </section>
-
-          <section className={`${styles.pane} ${styles.networkPane}`}>
-            <div className={styles.paneTitle}>
-              <span>2:net — eth0</span>
-              <span>{telemetry.peerCount} peers</span>
-            </div>
-            <div className={styles.networkBody} aria-hidden="true">
-              <div className={styles.sparkRow}>
-                <span>RX</span>
-                <code>{telemetry.rxHistory}</code>
-                <b>{telemetry.rxRate}</b>
-              </div>
-              <div className={styles.sparkRow}>
-                <span>TX</span>
-                <code>{telemetry.txHistory}</code>
-                <b>{telemetry.txRate}</b>
-              </div>
-              <div className={styles.routeLine}>{telemetry.route}</div>
-              <div className={styles.netStats}>
-                <span>loss {telemetry.packetLoss}</span>
-                <span>state ESTABLISHED</span>
-              </div>
-            </div>
-          </section>
-
-          <section className={`${styles.pane} ${styles.processPane}`}>
-            <div className={styles.paneTitle}>
-              <span>3:proc — garden.top</span>
-              <span>{telemetry.phaseCode}</span>
-            </div>
-            <div className={styles.processHead} aria-hidden="true">
-              <span>PID</span><span>S</span><span>CPU</span><span>MEM</span><span>COMMAND</span>
-            </div>
-            <div className={styles.processList} aria-hidden="true">
-              {telemetry.processes.map((process) => (
-                <div className={styles.processRow} key={`${process.pid}-${process.name}`}>
-                  <span>{process.pid.toString().padStart(3, "0")}</span>
-                  <span>{stateGlyph(process.state)}</span>
-                  <span>{process.cpu}</span>
-                  <span>{process.memory}</span>
-                  <span>{process.name}</span>
-                </div>
-              ))}
-            </div>
-            <div className={styles.instrumentFooter}>
-              <span>load {telemetry.loadAverage}</span>
-              <span>{telemetry.temperature}</span>
-              <span>up {telemetry.uptime}</span>
-            </div>
-          </section>
-        </aside>
+        <InstrumentRack telemetry={telemetry} onZoom={setZoomedPane} />
       </div>
 
       {fallbackUrl && (
@@ -535,29 +857,18 @@ export function BootPage() {
       )}
 
       <footer className={styles.commandBar} aria-label="Boot controls and status">
-        <div className={styles.commandGroup}>
-          <button type="button" onClick={handlePause} disabled={!isRunning || Boolean(error)}>
-            <kbd>SPC</kbd>{isPaused ? "resume" : "pause"}
-          </button>
-          <button type="button" onClick={() => changeSpeed(-1)} disabled={speed <= SPEED_STEPS[0]}>
-            <kbd>−</kbd>slow
-          </button>
-          <button type="button" onClick={() => changeSpeed(1)} disabled={speed >= SPEED_STEPS[SPEED_STEPS.length - 1]}>
-            <kbd>+</kbd>fast
-          </button>
-          <button type="button" onClick={restart} disabled={resolvedSeed === null}>
-            <kbd>r</kbd>restart
-          </button>
-          <button type="button" onClick={createNewSeed}>
-            <kbd>n</kbd>reseed
-          </button>
-          <button type="button" onClick={() => void copySeedLink()} disabled={!seedUrl}>
-            <kbd>y</kbd>{copySucceeded ? "copied" : "yank"}
-          </button>
-          <button type="button" onClick={exitBoot}>
-            <kbd>ESC</kbd>exit
-          </button>
-        </div>
+        <form className={styles.commandForm} onSubmit={handleCommandSubmit}>
+          <span>$</span>
+          <input
+            ref={commandInputRef}
+            value={commandInput}
+            onChange={(e) => setCommandInput(e.target.value)}
+            onKeyDown={handleCommandKeyDown}
+            placeholder="type 'help' or press [ : ]"
+            autoComplete="off"
+            spellCheck="false"
+          />
+        </form>
 
         <div className={styles.statusGroup}>
           <span className={isPaused ? styles.modeHeld : styles.modeLive}>
@@ -569,8 +880,50 @@ export function BootPage() {
           <span>{speed}×</span>
           <span>{emittedCount}L</span>
           {reducedMotion && <span>RM</span>}
+          <span style={{ cursor: "pointer", opacity: 0.7 }} onClick={() => setIsHelpOpen(true)}>[?]</span>
         </div>
       </footer>
+
+      {isHelpOpen && (
+        <div className={styles.helpModal} onClick={() => setIsHelpOpen(false)}>
+          <div className={styles.helpContent} onClick={e => e.stopPropagation()}>
+            <div className={styles.helpHeader}>
+              <span>SUB/SURFACE FIELD MANUAL</span>
+              <button type="button" onClick={() => setIsHelpOpen(false)} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontWeight: "bold" }}>X</button>
+            </div>
+            <div className={styles.helpBody}>
+              <div>
+                <h3>Keyboard</h3>
+                <table>
+                  <tbody>
+                    <tr><td>SPC</td><td>Pause / resume playback</td></tr>
+                    <tr><td>[ / ]</td><td>Cycle zoomed pane</td></tr>
+                    <tr><td>:</td><td>Focus command line</td></tr>
+                    <tr><td>+, -</td><td>Adjust playback speed</td></tr>
+                    <tr><td>g, End</td><td>Return to live output</td></tr>
+                    <tr><td>s</td><td>Toggle audio engine</td></tr>
+                    <tr><td>Esc</td><td>Exit boot</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <h3>Commands</h3>
+                <table>
+                  <tbody>
+                    {HELP_COMMANDS.map((command) => (
+                      <tr key={command.name}>
+                        <td>{command.help?.usage}</td>
+                        <td>{command.help?.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p style={{ marginTop: "16px" }}>You can also click on any pane's header to quickly zoom into it.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className={styles.srOnly} role="status" aria-live="polite" aria-atomic="true">
         {statusMessage}

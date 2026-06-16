@@ -21,6 +21,7 @@ export interface UseBootPlaybackOptions {
   reducedMotion?: boolean
   speed?: number
   maxLines?: number
+  onTone?: (tone: BootTone) => void
 }
 
 export interface UseBootPlaybackResult {
@@ -37,6 +38,8 @@ export interface UseBootPlaybackResult {
   epoch: number
   emittedCount: number
   error: string | null
+  injectLine: (text: string, tone?: BootTone, kind?: BootEventKind) => void
+  clearLines: () => void
 }
 
 interface ActiveLine {
@@ -172,6 +175,7 @@ export function useBootPlayback({
   reducedMotion = false,
   speed = 1,
   maxLines = DEFAULT_MAX_LINES,
+  onTone,
 }: UseBootPlaybackOptions): UseBootPlaybackResult {
   const [lines, setLines] = useState<readonly BootRenderedLine[]>([])
   const [active, setActive] = useState<ActiveLine>(EMPTY_ACTIVE)
@@ -215,6 +219,25 @@ export function useBootPlayback({
     setPausedState(next)
   }, [])
 
+  const injectLine = useCallback((text: string, tone: BootTone = "normal", kind: BootEventKind = "line") => {
+    const rendered: BootRenderedLine = {
+      id: `injected-${Date.now()}-${Math.random()}`,
+      text,
+      tone,
+      kind
+    }
+    setLines((previous) => {
+      const next = [...previous, rendered]
+      const limit = maxLinesRef.current
+      return next.length > limit ? next.slice(-limit) : next
+    })
+    setEmittedCount((count) => count + 1)
+  }, [])
+
+  const clearLines = useCallback(() => {
+    setLines([])
+  }, [])
+
   useEffect(() => {
     const controller = new AbortController()
     const { signal } = controller
@@ -250,6 +273,10 @@ export function useBootPlayback({
       })
       setEmittedCount((count) => count + 1)
       setActive(EMPTY_ACTIVE)
+      
+      if (!event.ephemeral && (event.tone === "tender" || event.tone === "warning")) {
+        onTone?.(event.tone)
+      }
     }
 
     const showActive = (event: BootEvent, text: string): void => {
@@ -368,5 +395,7 @@ export function useBootPlayback({
     epoch,
     emittedCount,
     error,
+    injectLine,
+    clearLines,
   }
 }
