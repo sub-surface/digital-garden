@@ -72,6 +72,8 @@ export interface BootNote {
   title: string
   tags: readonly string[]
   contentPath: string
+  username?: string
+  excerpt?: string
 }
 
 interface HelpEntry {
@@ -553,9 +555,29 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
     run: (ctx) => {
       const user = ctx.getUser()
       if (user) {
-        ctx.injectLine(`  authenticated as: ${user.username || user.email || "unknown"}`, "accent")
+        const handle = user.username || "unknown"
+        ctx.injectLine(`  authenticated as: ${handle}`, "accent")
         ctx.injectLine(`  role: ${user.role || "pending"}`, "normal")
         ctx.injectLine("  you have full access to the mainframe.", "tender")
+        
+        if (handle !== "unknown") {
+          const notes = ctx.getNotes()
+          const mentions = notes.filter(n =>
+            n.username?.toLowerCase() === handle.toLowerCase() ||
+            n.slug.toLowerCase().includes(handle.toLowerCase()) ||
+            n.title.toLowerCase().includes(handle.toLowerCase()) ||
+            n.excerpt?.toLowerCase().includes(handle.toLowerCase()) ||
+            n.tags.some(t => t.toLowerCase().includes(handle.toLowerCase()))
+          )
+
+          if (mentions.length > 0) {
+            ctx.injectLine("", "normal")
+            ctx.injectLine(`  pages referencing '${handle}':`, "muted")
+            mentions.forEach(m => {
+              ctx.injectLine(`  ${m.slug.padEnd(28).slice(0, 28)} ${m.title}`, "normal")
+            })
+          }
+        }
       } else {
         ctx.injectLine("  you are the operator.", "tender")
         ctx.injectLine("  or at least, you are holding the keys.", "muted")

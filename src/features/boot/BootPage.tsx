@@ -60,7 +60,14 @@ function loadBootNotes(): Promise<readonly BootNote[]> {
   const toNotes = (idx: NonNullable<ReturnType<typeof useStore.getState>["contentIndex"]>): BootNote[] =>
     Object.values(idx)
       .filter((n) => n.contentPath && !n.private && !NON_NOTE_SLUGS.has(n.slug.toLowerCase()))
-      .map((n) => ({ slug: n.slug, title: String(n.title), tags: n.tags ?? [], contentPath: n.contentPath! }))
+      .map((n) => ({
+        slug: n.slug,
+        title: String(n.title),
+        tags: n.tags ?? [],
+        contentPath: n.contentPath!,
+        username: n.username,
+        excerpt: n.excerpt,
+      }))
   if (fromStore) {
     bootNotesPromise = Promise.resolve(toNotes(fromStore))
     return bootNotesPromise
