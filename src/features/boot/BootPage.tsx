@@ -869,9 +869,15 @@ export function BootPage() {
         } else if (cmd === "read" || cmd === "edit") {
           const notes = getNotes()
           matches = notes.map(n => n.slug).filter(s => s.startsWith(arg)).map(s => `${cmd} ${s}`)
-        } else if (cmd === "theme" || cmd === "mode") {
-          const themes = ["dark", "light", "oled", "classic"]
+        } else if (cmd === "theme" || cmd === "palette") {
+          const themes = ["phosphor", "amber", "ice", "violet", "temple", "next"]
           matches = themes.filter(t => t.startsWith(arg)).map(t => `${cmd} ${t}`)
+        } else if (cmd === "mode") {
+          const modes = ["light", "dark"]
+          matches = modes.filter(m => m.startsWith(arg)).map(m => `${cmd} ${m}`)
+        } else if (cmd === "scope") {
+          const scopes = ["auto", "osc", "globe", "radar"]
+          matches = scopes.filter(s => s.startsWith(arg)).map(s => `${cmd} ${s}`)
         } else if (cmd === "net") {
           matches = ["auto", "dense", "sparse"].filter(n => n.startsWith(arg)).map(n => `net ${n}`)
         }
