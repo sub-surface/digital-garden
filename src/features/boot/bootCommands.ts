@@ -403,12 +403,22 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
   },
   {
     name: "cat",
-    aliases: ["read", "open"],
+    aliases: ["read", "open", "less"],
     help: { usage: "cat <name>", description: "Read a garden note into the feed" },
     run: (ctx, args) => {
       const query = args.join(" ").trim()
       if (!query) {
         ctx.injectLine("  usage: cat <name>  (try `ls` first)", "warning")
+        return
+      }
+      // Easter-egg pseudo-files from the fictional root archive.
+      const lower = query.toLowerCase()
+      if (lower === "moon_cache.dat") {
+        ctx.injectLine("  cat: moon_cache.dat: permission denied (read-only moon)", "warning")
+        return
+      }
+      if (lower.includes("operator")) {
+        ctx.injectLine("  you are the operator. there is nothing here you don't already hold.", "tender")
         return
       }
       const note = resolveNote(ctx.getNotes(), query)
@@ -459,7 +469,7 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
   },
   {
     name: "random",
-    aliases: ["dice", "lucky"],
+    aliases: ["lucky"],
     help: { usage: "random", description: "Read a random note into the feed" },
     run: (ctx) => {
       const notes = ctx.getNotes()
@@ -649,23 +659,6 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
       const mm = now.getMinutes().toString().padStart(2, "0")
       const phase = pick(["under a waning moon", "at a considerate hour", "between two tides", "in the blue part of the evening"])
       ctx.injectLine(`  ${hh}:${mm} local · ${phase}`, "normal")
-    },
-  },
-  {
-    name: "cat",
-    aliases: ["less", "read"],
-    help: { usage: "cat <file>", description: "Read a root archive" },
-    run: (ctx, args) => {
-      const file = (args[0] || "").toLowerCase()
-      if (file === "moon_cache.dat") {
-        ctx.injectLine("  cat: moon_cache.dat: permission denied (read-only moon)", "warning")
-      } else if (file.includes("operator")) {
-        ctx.injectLine("  you are the operator. there is nothing here you don't already hold.", "tender")
-      } else if (file) {
-        ctx.injectLine(`  ${file}: a quiet file. mostly whitespace and intention.`, "muted")
-      } else {
-        ctx.injectLine("  usage: cat <file>  (try 'ls' first)", "warning")
-      }
     },
   },
   {

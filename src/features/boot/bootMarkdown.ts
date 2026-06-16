@@ -85,6 +85,12 @@ export function parseMarkdownToBootLines(
       continue
     }
 
+    // standalone MDX/JSX component tag (e.g. <Query ... />, <Gallery>) — these
+    // are React components in the garden, meaningless as terminal text. Skip.
+    if (/^<\/?[A-Z][\w]*(\s[^>]*)?\/?>$/.test(trimmed)) {
+      continue
+    }
+
     // horizontal rule
     if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
       push(`${INDENT}${"·".repeat(24)}`, "muted")
