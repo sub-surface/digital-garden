@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react"
 import styles from "./ArcadePage.module.scss"
 
 interface GameCard {
@@ -45,54 +46,76 @@ const GAMES: GameCard[] = [
 ]
 
 export function ArcadePage() {
+  const [query, setQuery] = useState("")
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return GAMES
+    return GAMES.filter(
+      (g) => g.name.toLowerCase().includes(q) || g.blurb.toLowerCase().includes(q),
+    )
+  }, [query])
+
   return (
     <div className={styles.arcadeContainer}>
       <header className={styles.header}>
         <h1>Arcade</h1>
         <p>A cabinet of handmade games, toys, and small worlds.</p>
       </header>
-      <div className={styles.grid}>
-        {GAMES.map((g) => {
-          const cls = [
-            styles.card,
-            g.featured ? styles.cardFeatured : "",
-            !g.live ? styles.cardDisabled : "",
-          ].filter(Boolean).join(" ")
 
+      <input
+        type="search"
+        className={styles.search}
+        placeholder="Filter…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        autoComplete="off"
+        spellCheck={false}
+        aria-label="Filter games"
+      />
+
+      <ul className={styles.list}>
+        {filtered.map((g) => {
           const inner = (
             <>
-              <span className={styles.cardName}>
+              <span className={styles.rowName}>
                 {g.name}
                 {g.external && g.live && <span className={styles.ext}> ↗</span>}
               </span>
-              <span className={styles.cardBlurb}>{g.blurb}</span>
+              <span className={styles.rowBlurb}>{g.blurb}</span>
             </>
           )
 
+          const cls = [styles.row, g.featured ? styles.rowFeatured : "", !g.live ? styles.rowDisabled : ""]
+            .filter(Boolean)
+            .join(" ")
+
           if (!g.live || !g.href) {
-            return <div key={g.name} className={cls}>{inner}</div>
+            return (
+              <li key={g.name} className={cls}>
+                {inner}
+              </li>
+            )
           }
           if (g.external) {
             return (
-              <a
-                key={g.name}
-                href={g.href}
-                className={cls}
-                target="_blank"
-                rel="noreferrer"
-                data-panel-ignore
-              >
-                {inner}
-              </a>
+              <li key={g.name}>
+                <a href={g.href} className={cls} target="_blank" rel="noreferrer" data-panel-ignore>
+                  {inner}
+                </a>
+              </li>
             )
           }
           return (
-            <a key={g.name} href={`/${g.href}`} className={`internal-link ${cls}`}>
-              {inner}
-            </a>
+            <li key={g.name}>
+              <a href={`/${g.href}`} className={`internal-link ${cls}`}>
+                {inner}
+              </a>
+            </li>
           )
         })}
-      </div>
+        {filtered.length === 0 && <li className={styles.empty}>Nothing matches “{query}”.</li>}
+      </ul>
     </div>
   )
 }

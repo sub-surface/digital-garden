@@ -1,6 +1,6 @@
 .arcadeContainer {
   width: 100%;
-  max-width: 760px;
+  max-width: 680px;
   margin: 0 auto;
   padding: var(--space-8) 0;
   font-family: var(--font-code);
@@ -8,7 +8,7 @@
 
 .header {
   text-align: center;
-  margin-bottom: var(--space-12);
+  margin-bottom: var(--space-8);
 
   h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
   p { opacity: 0.5; font-size: 0.9rem; letter-spacing: 1px; }
@@ -20,48 +20,58 @@
   }
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-
-  @media (max-width: 600px) { grid-template-columns: 1fr; }
-  // Collapse to one column inside a narrow panel regardless of viewport
-  @container panel (max-width: 560px) { grid-template-columns: 1fr; }
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding: 1.25rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
-  text-decoration: none;
+.search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: var(--space-6);
+  padding: 0.6rem 0.9rem;
+  font-family: var(--font-code);
+  font-size: 0.85rem;
   color: var(--color-text);
-  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  transition: border-color 0.2s;
 
-  &:hover {
+  &::placeholder { opacity: 0.4; }
+  &:focus {
+    outline: none;
     border-color: var(--color-accent-base);
-    background: color-mix(in srgb, var(--color-accent-base) 8%, transparent);
   }
 }
 
-.cardFeatured {
-  grid-column: 1 / -1;
-  padding: 1.75rem;
-  background: color-mix(in srgb, var(--color-accent-base) 5%, transparent);
-  border-color: color-mix(in srgb, var(--color-accent-base) 25%, var(--color-border));
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 
-  .cardName { font-size: 1.35rem; }
-  .cardBlurb { font-size: 0.85rem; line-height: 1.5; }
+  li { margin: 0; }
 }
 
-.cardDisabled {
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--color-border);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: background 0.15s, padding-left 0.15s;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-accent-base) 8%, transparent);
+    padding-left: 1.2rem;
+  }
+}
+
+.rowFeatured {
+  .rowName { color: var(--color-accent-base); }
+}
+
+.rowDisabled {
   opacity: 0.4;
   pointer-events: none;
-  &:hover { border-color: var(--color-border); background: rgba(255, 255, 255, 0.02); }
+  &:hover { background: transparent; padding-left: 0.9rem; }
 }
 
 .ext {
@@ -69,12 +79,20 @@
   font-size: 0.8em;
 }
 
-.cardName {
-  font-size: 1.1rem;
+.rowName {
+  font-size: 1rem;
   color: var(--color-primary);
 }
 
-.cardBlurb {
-  font-size: 0.75rem;
-  opacity: 0.6;
+.rowBlurb {
+  font-size: 0.72rem;
+  opacity: 0.55;
+  line-height: 1.4;
+}
+
+.empty {
+  padding: 1.5rem 0.9rem;
+  text-align: center;
+  font-size: 0.8rem;
+  opacity: 0.45;
 }
