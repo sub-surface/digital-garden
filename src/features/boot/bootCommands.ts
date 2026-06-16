@@ -86,6 +86,7 @@ export interface BootCommand {
   name: string
   aliases?: string[]
   help?: HelpEntry
+  requireRole?: "admin" | "editor"
   run: (ctx: BootCommandContext, args: string[]) => void
 }
 
@@ -284,7 +285,15 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
       }
       ctx.injectLine("  SUB/SURFACE FIELD MANUAL", "accent", "heading")
       ctx.injectLine("  type a command, or [?] for the keyboard map", "muted")
+      
+      const user = ctx.getUser()
+      const role = user?.role || "pending"
+      const isAdmin = role === "admin"
+      const isEditor = role === "editor" || isAdmin
+
       for (const command of HELP_COMMANDS) {
+        if (command.requireRole === "admin" && !isAdmin) continue
+        if (command.requireRole === "editor" && !isEditor) continue
         const usage = (command.help?.usage ?? command.name).padEnd(16, " ")
         ctx.injectLine(`  ${usage}${command.help?.description ?? ""}`, "normal")
       }
@@ -894,6 +903,33 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
     }
   },
   {
+    name: "users",
+    help: { usage: "users", description: "List known operator handles" },
+    run: (ctx) => {
+      const notes = ctx.getNotes()
+      const users = new Set<string>()
+      notes.forEach(n => {
+         if (n.username) users.add(n.username.toLowerCase())
+      })
+      ctx.injectLine("  KNOWN OPERATORS", "accent", "heading")
+      if (users.size === 0) {
+        ctx.injectLine("  no known operators found.", "muted")
+        return
+      }
+      Array.from(users).sort().forEach(u => ctx.injectLine(`  @${u}`, "normal"))
+    }
+  },
+  {
+    name: "admin",
+    requireRole: "admin",
+    help: { usage: "admin", description: "Access elevated subroutines" },
+    run: (ctx) => {
+      ctx.injectLine("  ELEVATED ACCESS GRANTED", "warning", "heading")
+      ctx.injectLine("  The admin module is currently undergoing structural maintenance.", "muted")
+      ctx.injectLine("  No anomalies detected.", "success")
+    }
+  },
+  {
     name: "boot",
     run: (ctx) => ctx.injectLine("  system is already running", "muted"),
   },
@@ -955,6 +991,19 @@ export function runBootCommand(raw: string, ctx: BootCommandContext): boolean {
   const name = tokens[0].toLowerCase()
   const command = COMMAND_INDEX.get(name)
   if (!command) return false
+
+  const role = ctx.getUser()?.role || "pending"
+  const isAdmin = role === "admin"
+  const isEditor = role === "editor" || isAdmin
+
+  if (command.requireRole === "admin" && !isAdmin) {
+    ctx.injectLine("  permission denied: requires elevated access", "error")
+    return true
+  }
+  if (command.requireRole === "editor" && !isEditor) {
+    ctx.injectLine("  permission denied: requires editor access", "error")
+    return true
+  }
 
   // For the bare `light` / `dark` aliases, fold the verb back into args so the
   // `mode` handler sees it uniformly.
