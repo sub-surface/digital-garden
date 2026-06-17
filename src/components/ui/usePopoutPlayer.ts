@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useStore } from "@/store"
 
 /**
@@ -71,34 +71,20 @@ export function usePopoutPlayer() {
   const [pipWindow, setPipWindow] = useState<Window | null>(null)
   const pipSupported = typeof window !== "undefined" && !!getPiP()
 
-  // Distinguish a window opened automatically (tab hidden) from one the user
-  // popped out by hand — only auto-opened ones auto-close on return.
-  const autoPoppedRef = useRef(false)
-
   const accentBase = useStore((s) => s.accentBase)
   const theme = useStore((s) => s.theme)
 
-  const open = useCallback(async () => {
-    const pip = getPiP()
-    if (!pip || pip.window) return null   // unsupported or already open
-    const win = await pip.requestWindow({ width: 300, height: 480 })
-    copyStyles(win)
-    win.addEventListener(
-      "pagehide",
-      () => { autoPoppedRef.current = false; setPipWindow(null) },
-      { once: true },
-    )
-    setPipWindow(win)
-    return win
-  }, [])
-
+  // Must be called synchronously within a user gesture — requestWindow()
+  // requires transient activation, so this only ever runs from a click.
   const popOut = useCallback(async () => {
     const pip = getPiP()
     if (!pip) return
     if (pip.window) { pip.window.close(); return }   // toggle off if already open
-    autoPoppedRef.current = false
-    await open()
-  }, [open])
+    const win = await pip.requestWindow({ width: 300, height: 480 })
+    copyStyles(win)
+    win.addEventListener("pagehide", () => setPipWindow(null), { once: true })
+    setPipWindow(win)
+  }, [])
 
   // Live-sync the palette into the PiP window whenever the user changes accent
   // or theme while popped (styles were only a snapshot at open time).
@@ -111,5 +97,5 @@ export function usePopoutPlayer() {
     return () => { getPiP()?.window?.close() }
   }, [])
 
-  return { popOut, open, pipWindow, isPopped: !!pipWindow, pipSupported, autoPoppedRef }
+  return { popOut, pipWindow, isPopped: !!pipWindow, pipSupported }
 }
