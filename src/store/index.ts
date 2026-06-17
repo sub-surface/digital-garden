@@ -144,6 +144,10 @@ interface GardenStore {
   contentIndexError: boolean
   setContentIndexError: (failed: boolean) => void
 
+  // Image dimensions map (loaded at startup)
+  imageDimensions: Record<string, { width: number; height: number }> | null
+  setImageDimensions: (dimensions: Record<string, { width: number; height: number }>) => void
+
   // Chat display
   chatDensity: "compact" | "comfortable" | "spacious"
   setChatDensity: (d: GardenStore["chatDensity"]) => void
@@ -320,6 +324,10 @@ export const useStore = create<GardenStore>((set) => ({
   setContentIndex: (contentIndex) => set({ contentIndex }),
   contentIndexError: false,
   setContentIndexError: (contentIndexError) => set({ contentIndexError }),
+
+  // Image dimensions
+  imageDimensions: null,
+  setImageDimensions: (imageDimensions) => set({ imageDimensions }),
 
   // Chat display
   chatDensity: (typeof localStorage !== "undefined"

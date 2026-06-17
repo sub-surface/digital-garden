@@ -5,7 +5,7 @@ import { lazy, Suspense, useState, useEffect } from "react"
 import { useIsWiki } from "@/hooks/useIsWiki"
 
 // Lazy load the local graph
-const LocalGraph = lazy(() => import("./LocalGraph").then(m => ({ default: m.LocalGraph })))
+const LocalGraph = lazy(() => import("../graph/LocalGraph").then(m => ({ default: m.LocalGraph })))
 
 interface Props {
   slug: string

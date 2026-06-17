@@ -1,4 +1,4 @@
-export type PersonaId = "willow" | "deleuze" | "spinoza" | "trump" | "jeh" | "hpcr" | "terry" | "nick" | "mark" | "zizek" | "diogenes" | "bostrom"
+export type PersonaId = "willow" | "deleuze" | "spinoza" | "trump" | "jeh" | "hpcr" | "terry" | "nick" | "mark" | "zizek" | "diogenes" | "bostrom" | "ape"
 
 interface Rule {
   keywords: string[]
@@ -580,6 +580,67 @@ export const PERSONAS: Record<PersonaId, Persona> = {
         ]
       }
     ]
+  },
+  ape: {
+    id: "ape",
+    name: "Ape",
+    color: "muted",
+    generics: [
+      "millenials are retarded",
+      "What can I tell you man my sperm are that dumb",
+      "I cannot present a counter-argument, as you have not presented an argument",
+      "yknow im happy that willow's found somebody with an equal capacity to just assert their metaphysics as though it were a substantive response",
+      "lmao",
+      "truuuuuu",
+      "so i assume you are using a bot",
+      "also idk if you are a bot yourself, but your messages are very botty, and you seem to be copy pasting them into chat",
+      "so generally i find circularity very pestering",
+      "arguments but then the paraphraser just turns it into assertionslop",
+      "Easier said than done for some of us",
+      "(Y'know how hard it is to find someone as retarded as I am?)"
+    ],
+    rules: [
+      {
+        keywords: ["smart", "intelligence", "dumb", "stupid", "retard"],
+        responses: [
+          "millenials are retarded",
+          "What can I tell you man my sperm are that dumb",
+          "(Y'know how hard it is to find someone as retarded as I am?)",
+          "Low intelligence people are prone to having money issue, planning issue, etc., which will be a bothersome in the long run."
+        ]
+      },
+      {
+        keywords: ["argument", "debate", "logic", "metaphysics", "circular", "assert"],
+        responses: [
+          "I cannot present a counter-argument, as you have not presented an argument",
+          "yknow im happy that willow's found somebody with an equal capacity to just assert their metaphysics as though it were a substantive response",
+          "arguments but then the paraphraser just turns it into assertionslop",
+          "so generally i find circularity very pestering"
+        ]
+      },
+      {
+        keywords: ["bot", "ai", "chatgpt", "gpt"],
+        responses: [
+          "so i assume you are using a bot",
+          "also idk if you are a bot yourself, but your messages are very botty, and you seem to be copy pasting them into chat",
+          "Ofc alex is just using chat gpt which makes it wayyyyy more pathetic"
+        ]
+      },
+      {
+        keywords: ["sperm", "testicles", "children", "baby", "seed"],
+        responses: [
+          "An estimated ~5% of global semen supply is directly attributable to my testicles",
+          "I fudged some paperwork and donated my baby batter to sperm banks all around the world"
+        ]
+      },
+      {
+        keywords: ["math", "calculus", "jacobian", "polar", "integral"],
+        responses: [
+          "Well it's annoying to compute the jacobians i need to convert to polar coordinates when evaluating a surface integral",
+          "though hed probably say something like \"Do you mean sphereical coordinates?\""
+        ]
+      }
+    ]
   }
 }
 
@@ -640,6 +701,7 @@ export function generateReply(personaId: PersonaId, input: string): string {
     if (personaId === "zizek") return "Ah, but the question is pure ideology! *sniff*"
     if (personaId === "diogenes") return "I am a dog."
     if (personaId === "bostrom") return "In the vast majority of simulated realities, the answer is yes."
+    if (personaId === "ape") return "also idk if you are a bot yourself, but your messages are very botty"
   }
 
   // 3. Generic fallback

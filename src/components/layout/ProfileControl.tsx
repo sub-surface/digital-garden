@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useAuth } from "@/hooks/useAuth"
 import { useShell } from "@/hooks/useShell"
-import { WikiAuthModal } from "@/components/ui/WikiAuthModal"
+import { WikiAuthModal } from "@/components/ui/wiki/WikiAuthModal"
 import styles from "./QuickControls.module.scss"
 
 export function ProfileControl() {

@@ -75,11 +75,18 @@ Dev dashboard: `/__dev` (dev mode only).
 | Route | Component | Notes |
 |---|---|---|
 | `/__dev` | DevDashboard | Dev mode only |
-| `/graph` | GraphView (lazy) | |
-| `/tags` / `/tags/:tag` | TagPage | |
-| `/folder` / `/folder/*` | FolderPage | |
-| `/wiki/submit` | WikiSubmitPage | Must be before catch-all |
-| `$` (catch-all) | NoteRenderer | Handles everything else |
+| `/graph` | ConstellationPage (lazy) | Full screen graph view |
+| `/tags` / `/tags/$tag` | TagPage | |
+| `/folder` / `/folder/$` | FolderPage | |
+| `/recent` | RecentPage | |
+| `/submit` | WikiSubmitPage (lazy) | Wiki submission form |
+| `/new` | WikiNewPage (lazy) | Create new wiki article |
+| `/admin` | WikiAdminPage (lazy) | Admin dashboard |
+| `/profile` / `/user/$` | WikiProfilePage (lazy) | User profiles |
+| `/privacy` | PrivacyPage (lazy) | Privacy policy |
+| `/edit/$` | WikiEditPage (lazy) | Edit wiki article |
+| `/boot` | BootPage (lazy) | Endless procedural TUI boot sequence |
+| `$` (catch-all) | NoteRenderer / ChatPage | Renders note content or ChatPage if in ChatShell |
 
 **System page slugs** live in `src/config/system-pages.ts`: `graph`, `chess`, `hexo`, `bookshelf`, `movieshelf`, `music-library`, `arcade`.
 

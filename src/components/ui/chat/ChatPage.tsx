@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/useAuth"
-import { WikiAuthModal } from "./WikiAuthModal"
+import { WikiAuthModal } from "../wiki/WikiAuthModal"
 import { ChatRoom } from "./ChatRoom"
 import type { ChatRoom as ChatRoomType } from "@/types/chat"
 import styles from "./Chat.module.scss"

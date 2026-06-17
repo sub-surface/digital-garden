@@ -10,11 +10,11 @@ A digital garden and wiki — notes, essays, philosophy, music, photography, and
 
 A non-linear, explorable knowledge base with 120+ interconnected notes. Two reading modes: article (long-form with margin sidenotes) and note (panel stacking for exploration). Animated backgrounds, a music player, an interactive knowledge graph, and a built-in chess board.
 
-The wiki at `wiki.subsurfaces.net` is a community space for the philchat Discord — profiles, philosophical positions, and collaborative articles. Anyone can submit a profile via the form at `/wiki/submit`.
+The wiki at `wiki.subsurfaces.net` is a community space for the philchat Discord — profiles, philosophical positions, and collaborative articles. Anyone can submit a profile via the form at `/submit`.
 
 ## Contributing to the wiki
 
-1. Visit [wiki.subsurfaces.net/wiki/submit](https://wiki.subsurfaces.net/wiki/submit)
+1. Visit [wiki.subsurfaces.net/submit](https://wiki.subsurfaces.net/submit)
 2. Fill in your profile and answer as many (or few) survey questions as you like
 3. Complete the captcha and submit — a pull request is opened automatically
 4. Your profile goes live after review

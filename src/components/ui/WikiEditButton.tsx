@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/useAuth"
-import { WikiAuthModal } from "./WikiAuthModal"
+import { WikiAuthModal } from "./wiki/WikiAuthModal"
 import { useNavigate } from "@tanstack/react-router"
 
 interface Props {

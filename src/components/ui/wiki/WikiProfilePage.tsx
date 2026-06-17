@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useBookmarks } from "@/hooks/useBookmarks"
 import { useStonkHistory } from "@/hooks/useStonkHistory"
 import { useStore } from "@/store"
-import { StonkSparkline } from "./StonkSparkline"
+import { StonkSparkline } from "../StonkSparkline"
 
 interface ProfileData {
   username: string

@@ -111,7 +111,7 @@ Thin and undiscoverable.
   reduced-motion (JS `matchMedia` check). Also added: pause on hidden tab, and skip redraw during
   active scroll (fixes a scroll hitch from the full-viewport fixed canvas). Remaining: emote glow,
   telescopic transitions, terminal boot. (2026-06-16)
-- [ ] **Skip-to-content link** (first focusable, visually hidden until focused).
+- [x] **Skip-to-content link** (first focusable, visually hidden until focused). (2026-06-16)
 - [ ] **Visible accent-aware focus rings** — verify nothing `outline: none`'s them away.
 
 ---

@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react"
 import { useTelescopicHandlers } from "@/components/ui/TelescopicHandler"
-import { NoteBody } from "@/components/ui/NoteBody"
+import { NoteBody } from "@/components/ui/reader/NoteBody"
 import styles from "./Panel.module.scss"
 
 interface Props {
