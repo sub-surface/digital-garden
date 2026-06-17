@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/useAuth"
-import { WikiMarkdownEditor } from "./WikiMarkdownEditor"
+import { WikiMarkdownEditor } from "../WikiMarkdownEditor"
 import { WikiAuthModal } from "./WikiAuthModal"
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"

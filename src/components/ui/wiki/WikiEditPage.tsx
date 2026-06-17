@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/useAuth"
-import { WikiMarkdownEditor } from "./WikiMarkdownEditor"
+import { WikiMarkdownEditor } from "../WikiMarkdownEditor"
 import { WikiAuthModal } from "./WikiAuthModal"
 import { useStore } from "@/store"
 import { resolveSlug } from "@/lib/content-loader"

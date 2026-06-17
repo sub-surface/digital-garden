@@ -4,7 +4,7 @@ import { createPortal } from "react-dom"
 import type { ChatMessage, ChatReaction } from "@/types/chat"
 import { parseMessageBody, parseMessageBodyWithFootnotes } from "@/lib/parseMessageBody"
 import { type EmoteEntry, fetchEmoteIndex, getEmoteCache, emoteSrc } from "@/lib/emoteIndex"
-import { ImageLightbox } from "./ImageLightbox"
+import { ImageLightbox } from "../reader/ImageLightbox"
 import { EmotePopup } from "./EmotePopup"
 import styles from "./Chat.module.scss"
 

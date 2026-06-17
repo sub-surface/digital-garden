@@ -284,6 +284,8 @@ function PreviewCard({ state, onOpen, onEnter }: {
   onOpen: () => void
   onEnter: () => void
 }) {
+  const dims = useStore((s) => state.image ? s.imageDimensions?.[state.image] : undefined)
+
   return (
     <div
       className="link-preview"
@@ -307,7 +309,7 @@ function PreviewCard({ state, onOpen, onEnter }: {
         <>
           {state.image && (
             <div className="link-preview__image">
-              <img src={state.image} alt="" onError={(e) => { (e.currentTarget.parentElement!).style.display = "none" }} />
+              <img src={state.image} alt="" width={dims?.width} height={dims?.height} onError={(e) => { (e.currentTarget.parentElement!).style.display = "none" }} />
             </div>
           )}
           <div className="link-preview__body">

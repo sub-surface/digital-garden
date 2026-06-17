@@ -4,25 +4,25 @@ import {
   createRootRoute,
 } from "@tanstack/react-router"
 import { AppShell } from "@/components/layout/AppShell"
-import { NoteRenderer } from "@/components/ui/NoteRenderer"
+import { NoteRenderer } from "@/components/ui/reader/NoteRenderer"
 import { DevDashboard } from "@/components/dev/DevDashboard"
 import { NotFound } from "@/components/ui/NotFound"
 import { useEffect, lazy, Suspense } from "react"
 import { useStore } from "@/store"
 import { useShell } from "@/hooks/useShell"
-import { TagPage } from "@/components/ui/TagPage"
-import { FolderPage } from "@/components/ui/FolderPage"
-import { RecentPage } from "@/components/ui/RecentPage"
-const WikiSubmitPage = lazy(() => import("@/components/ui/WikiSubmitPage").then(m => ({ default: m.WikiSubmitPage })))
-const WikiEditPage = lazy(() => import("@/components/ui/WikiEditPage").then(m => ({ default: m.WikiEditPage })))
-const WikiNewPage = lazy(() => import("@/components/ui/WikiNewPage").then(m => ({ default: m.WikiNewPage })))
-const WikiAdminPage = lazy(() => import("@/components/ui/WikiAdminPage").then(m => ({ default: m.WikiAdminPage })))
-const PrivacyPage = lazy(() => import("@/components/ui/PrivacyPage").then(m => ({ default: m.PrivacyPage })))
-const WikiProfilePage = lazy(() => import("@/components/ui/WikiProfilePage").then(m => ({ default: m.WikiProfilePage })))
-const ChatPage = lazy(() => import("@/components/ui/ChatPage").then(m => ({ default: m.ChatPage })))
+import { TagPage } from "@/components/ui/reader/TagPage"
+import { FolderPage } from "@/components/ui/reader/FolderPage"
+import { RecentPage } from "@/components/ui/reader/RecentPage"
+const WikiSubmitPage = lazy(() => import("@/components/ui/wiki/WikiSubmitPage").then(m => ({ default: m.WikiSubmitPage })))
+const WikiEditPage = lazy(() => import("@/components/ui/wiki/WikiEditPage").then(m => ({ default: m.WikiEditPage })))
+const WikiNewPage = lazy(() => import("@/components/ui/wiki/WikiNewPage").then(m => ({ default: m.WikiNewPage })))
+const WikiAdminPage = lazy(() => import("@/components/ui/wiki/WikiAdminPage").then(m => ({ default: m.WikiAdminPage })))
+const PrivacyPage = lazy(() => import("@/components/ui/reader/PrivacyPage").then(m => ({ default: m.PrivacyPage })))
+const WikiProfilePage = lazy(() => import("@/components/ui/wiki/WikiProfilePage").then(m => ({ default: m.WikiProfilePage })))
+const ChatPage = lazy(() => import("@/components/ui/chat/ChatPage").then(m => ({ default: m.ChatPage })))
 
 // Lazy load heavy components
-const ConstellationPage = lazy(() => import("@/components/ui/ConstellationPage").then(m => ({ default: m.ConstellationPage })))
+const ConstellationPage = lazy(() => import("@/components/ui/graph/ConstellationPage").then(m => ({ default: m.ConstellationPage })))
 const BootPage = lazy(() => import("@/features/boot/BootPage").then(m => ({ default: m.BootPage })))
 
 // Root layout

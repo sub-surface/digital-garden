@@ -17,17 +17,17 @@ import { QuickControls } from "./QuickControls"
 import { GlobalOverlays } from "./GlobalOverlays"
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
 import { SkipToContent } from "@/components/ui/SkipToContent"
-import { LinkPreview } from "@/components/ui/LinkPreview"
+import { LinkPreview } from "@/components/ui/reader/LinkPreview"
 import { MusicPlayer } from "@/components/ui/MusicPlayer"
 import { MobileMusicBar } from "@/components/ui/MobileMusicBar"
 import { SearchOverlay } from "@/components/ui/SearchOverlay"
-import { GraphOverlay } from "@/components/ui/GraphOverlay"
+import { GraphOverlay } from "@/components/ui/graph/GraphOverlay"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
 import { CookieConsent } from "./CookieConsent"
 import styles from "./AppShell.module.scss"
 
 // Lazy-load LocalGraph — pulls in D3 + PixiJS (~570KB), only needed on desktop
-const LocalGraph = lazy(() => import("@/components/ui/LocalGraph").then(m => ({ default: m.LocalGraph })))
+const LocalGraph = lazy(() => import("@/components/ui/graph/LocalGraph").then(m => ({ default: m.LocalGraph })))
 
 export function AppShell() {
   const shell = useShell()
@@ -37,32 +37,48 @@ export function AppShell() {
   const location = useLocation()
   const setContentIndex = useStore((s) => s.setContentIndex)
   const setContentIndexError = useStore((s) => s.setContentIndexError)
+  const setImageDimensions = useStore((s) => s.setImageDimensions)
 
   // Defer content-index fetch — needed by Query components on all shells.
   // A 404 (stale deploy) returns the SPA HTML fallback with a 200-but-not-JSON
   // body, so check both res.ok and content-type before trusting it.
   useEffect(() => {
     let cancelled = false
-    fetch("/content-index.json")
-      .then((r) => {
+    
+    Promise.all([
+      fetch("/content-index.json").then((r) => {
         const ct = r.headers.get("content-type") ?? ""
         if (!r.ok || !ct.includes("json")) {
           throw new Error(`content-index ${r.status} (${ct || "no content-type"})`)
         }
         return r.json()
+      }),
+      fetch("/image-dimensions.json").then((r) => {
+        const ct = r.headers.get("content-type") ?? ""
+        if (!r.ok || !ct.includes("json")) {
+          console.warn(`image-dimensions ${r.status} (${ct || "no content-type"})`)
+          return null // don't throw, just return null so it doesn't break content-index
+        }
+        return r.json()
+      }).catch(err => {
+        console.warn("Failed to fetch image dimensions:", err)
+        return null
       })
-      .then((idx) => {
+    ])
+      .then(([idx, dimensions]) => {
         if (cancelled) return
         setContentIndex(idx)
         setContentIndexError(false)
+        if (dimensions) setImageDimensions(dimensions)
       })
       .catch((err) => {
         if (cancelled) return
         console.warn("Content index failed to load:", err)
         setContentIndexError(true)
       })
+      
     return () => { cancelled = true }
-  }, [setContentIndex, setContentIndexError])
+  }, [setContentIndex, setContentIndexError, setImageDimensions])
 
   usePanelClick()
   useHotkeys()

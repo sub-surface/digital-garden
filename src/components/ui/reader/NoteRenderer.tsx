@@ -4,7 +4,7 @@ import { ArticleLayout } from "./ArticleLayout"
 import { NoteLayout } from "./NoteLayout"
 import { NoteFooter } from "./NoteFooter"
 import { NoteBody } from "./NoteBody"
-import { WikiInfobox } from "./WikiInfobox"
+import { WikiInfobox } from "../wiki/WikiInfobox"
 import { resolveSlug } from "@/lib/content-loader"
 import { useIsWiki } from "@/hooks/useIsWiki"
 import { SYSTEM_PAGES } from "@/config/system-pages"
@@ -14,8 +14,8 @@ interface Props {
   slug: string
 }
 
-const WikiEditButton = lazy(() => import("./WikiEditButton").then((m) => ({ default: m.WikiEditButton })))
-const BookmarkButton = lazy(() => import("./BookmarkButton").then((m) => ({ default: m.BookmarkButton })))
+const WikiEditButton = lazy(() => import("../WikiEditButton").then((m) => ({ default: m.WikiEditButton })))
+const BookmarkButton = lazy(() => import("../BookmarkButton").then((m) => ({ default: m.BookmarkButton })))
 
 function resolveLayout(
   frontmatter: Record<string, any>,

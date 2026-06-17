@@ -43,12 +43,22 @@ Here are a few ideas to consider:
   ```
 - **Vibe check**: Fun for developers who peek at the source code or guess the command.
 
-## 4. "Jiffies" in Uptime
-**Concept**: TempleOS often referenced time in "jiffies" (a standard computing term, but very present in HolyC).
-**Implementation**: 
-- Modify the existing `uptime` command in `bootCommands.ts` to include the jiffies count.
-- Example output: `  up 2h 14m,  1 operator,  4824000 jiffies since boot`
-- **Vibe check**: A subtle, non-intrusive nod.
+## 4. ASCII Temple Scene (`temple` command)
+**Concept**: A simple ASCII art scene of a temple, reminiscent of TempleOS's religious themes.
+**Implementation**:
+- Add a new command `temple` to `bootCommands.ts`.
+- When run, it prints a small ASCII temple with a mystical vibe.
+- Example (be more ambitious with the design if you want):
+  ```
+  SCENE: temple
+       /\
+      /  \
+     /____\
+    |      |
+    |  []  |
+    |______|
+  ```
+- **Vibe check**: Fits the mystical and procedural aesthetic, and can be a fun nod to TempleOS's religious themes without being too heavy-handed.
 
 ## 5. 16-Color "Divine Palette"
 **Concept**: TempleOS strictly used a 16-color VGA palette.

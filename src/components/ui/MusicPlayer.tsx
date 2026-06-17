@@ -32,7 +32,46 @@ export function MusicPlayer() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const vinylRef = useRef<HTMLDivElement>(null)
   const [scratching, setScratching] = useState(false)
-  const { popOut, pipWindow, isPopped, pipSupported } = usePopoutPlayer()
+  const { popOut, open, pipWindow, isPopped, pipSupported, autoPoppedRef } = usePopoutPlayer()
+
+  // Opt-in: when the tab is hidden while music plays, pop the player out into a
+  // floating window so the user keeps their controls; pop it back in on return.
+  // Off by default, persisted. Browsers may block a gesture-less open — we just
+  // let it fail (music keeps playing in-tab) and note it in dev.
+  const [autoPopout, setAutoPopout] = useState(
+    () => typeof localStorage !== "undefined" && localStorage.getItem("music-autopopout") === "1",
+  )
+  const toggleAutoPopout = useCallback(() => {
+    setAutoPopout((prev) => {
+      const next = !prev
+      try { localStorage.setItem("music-autopopout", next ? "1" : "0") } catch { /* non-fatal */ }
+      return next
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!autoPopout || !pipSupported) return
+    const pipApi = () =>
+      (window as unknown as { documentPictureInPicture?: { window: Window | null } })
+        .documentPictureInPicture ?? null
+    const onVisibility = async () => {
+      if (document.hidden) {
+        if (isPlaying && !pipApi()?.window) {
+          try {
+            autoPoppedRef.current = true
+            await open()
+          } catch (err) {
+            autoPoppedRef.current = false
+            if (import.meta.env.DEV) console.debug("Auto-popout blocked:", err)
+          }
+        }
+      } else if (autoPoppedRef.current) {
+        pipApi()?.window?.close()
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => document.removeEventListener("visibilitychange", onVisibility)
+  }, [autoPopout, pipSupported, isPlaying, open, autoPoppedRef])
 
   // Radial visualiser drawn BEHIND the record. Bars bloom outward from behind
   // the disc edge while playing. Two scale choices that make it musical without
@@ -260,6 +299,22 @@ export function MusicPlayer() {
           <div className={styles.artist}>{currentTrack?.artist}</div>
         </div>
         <div className={styles.headerActions}>
+          {pipSupported && (
+            <button
+              className={`${styles.iconAction} ${autoPopout ? styles.active : ""}`}
+              onClick={toggleAutoPopout}
+              title={autoPopout
+                ? "Auto pop-out on tab switch: on"
+                : "Auto pop-out on tab switch: off"}
+              aria-label="Toggle auto pop-out when switching tabs"
+              aria-pressed={autoPopout}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="14" rx="2" />
+                <path d="M7 21h10M9 9l3 3 3-3" />
+              </svg>
+            </button>
+          )}
           {pipSupported && (
             <button
               className={`${styles.iconAction} ${isPopped ? styles.active : ""}`}

@@ -40,7 +40,7 @@ import {
 } from "./bootCommands"
 import { SYSTEM_PAGES } from "../../config/system-pages"
 import { useMusic } from "@/components/ui/MusicContext"
-import { WikiAuthModal } from "../../components/ui/WikiAuthModal"
+import { WikiAuthModal } from "../../components/ui/wiki/WikiAuthModal"
 import { useAuth } from "../../hooks/useAuth"
 
 const FOLLOW_THRESHOLD_PX = 32

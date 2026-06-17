@@ -1,4 +1,4 @@
-import { useMusic } from "./MusicContext"
+import { useMusic } from "../MusicContext"
 import { useStore } from "@/store"
 import styles from "./Collections.module.scss"
 
@@ -22,7 +22,7 @@ export function MusicPage() {
         {tracks.length === 0 ? (
           <p>No tracks found.</p>
         ) : (
-          tracks.map((track, index) => (
+          tracks.map((track: any, index: any) => (
             <div
               key={track.slug}
               className={`${styles.musicItem} ${index === currentTrackIndex ? styles.active : ""}`}
