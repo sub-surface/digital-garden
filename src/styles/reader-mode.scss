@@ -1,0 +1,41 @@
+// ── Reader mode ──
+// Distraction-free reading. Toggled from the command palette (store
+// `isReaderMode` → `data-reader="true"` on the AppShell wrapper). Strips
+// ambient chrome and link ornament so only the prose remains. The state +
+// toggle already existed; this stylesheet is what makes it visible.
+//
+// Chrome is hidden via `data-panel-ignore` — the existing convention that
+// already marks ambient UI (CornerMenu, QuickControls, music bars, title) —
+// rather than fragile CSS-module class names.
+
+[data-reader="true"] {
+  // Quiet the animated background.
+  canvas {
+    opacity: 0.12 !important;
+    transition: opacity var(--duration-slow) var(--ease-default);
+  }
+
+  // Hide ambient chrome + the article's navigational side column.
+  [data-panel-ignore],
+  .article-toc,
+  .body-side-group {
+    display: none !important;
+  }
+
+  // Centre the measure and relax it a hair for focused reading.
+  .article-body {
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+
+  // Strip link ornament — colour-only, no underlines or external arrows.
+  .note-content {
+    a {
+      text-decoration: none !important;
+    }
+    a[href^="http"]::after {
+      content: none !important;
+    }
+  }
+}

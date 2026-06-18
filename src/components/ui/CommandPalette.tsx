@@ -68,6 +68,7 @@ export function CommandPalette() {
       { id: "theme", label: theme === "dark" ? "Switch to light mode" : "Switch to dark mode", keywords: "theme dark light mode toggle appearance", run: () => setTheme(theme === "dark" ? "light" : "dark") },
       { id: "accent", label: "Cycle accent colour", keywords: "accent colour color palette roygbiv", run: cycleAccent },
       { id: "themepanel", label: "Open theme panel", hint: "\\", keywords: "theme panel settings appearance customise", run: toggleThemePanel },
+      { id: "reader", label: "Toggle reader mode", keywords: "reader focus distraction mode clean prose", run: toggleReaderMode },
     ]
     if (shell === "main") {
       base.push(
@@ -81,7 +82,6 @@ export function CommandPalette() {
         { id: "music-prev", label: "Previous track", keywords: "music previous back track", run: prevTrack },
         { id: "music-open", label: "Open music player", keywords: "music player turntable vinyl open panel", run: () => toggleMusic() },
         { id: "graph-overlay", label: "Open graph overlay", keywords: "graph overlay constellation network map", run: () => toggleGraph() },
-        { id: "reader", label: "Toggle reader mode", keywords: "reader focus distraction mode", run: toggleReaderMode },
         { id: "share", label: "Copy link to this page", keywords: "share copy link url clipboard permalink", run: () => { void navigator.clipboard?.writeText(window.location.href) } },
         { id: "nav-boot", label: "Enter boot sequence", hint: "/boot", keywords: "boot terminal tui console firmware startup go navigate", run: () => navigate({ to: "/boot" }) },
         { id: "nav-graph", label: "Go to Graph", keywords: "graph constellation network map go navigate", run: () => navigate({ to: "/$", params: { _splat: "graph" } as any }) },

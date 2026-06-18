@@ -16,6 +16,7 @@ import styles from "./WikiShell.module.scss"
 
 export function WikiShell() {
   const activeLayout = useStore((s) => s.activeLayout)
+  const isReaderMode = useStore((s) => s.isReaderMode)
   const isSideChatOpen = useStore((s) => s.isSideChatOpen)
   const sideChatWidth = useStore((s) => s.sideChatWidth)
   const location = useLocation()
@@ -29,6 +30,7 @@ export function WikiShell() {
         className={styles.shell}
         data-wiki
         data-layout={activeLayout}
+        data-reader={isReaderMode ? "true" : undefined}
         data-testid="wiki-shell"
       >
         <SkipToContent />

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react"
+import React, { Suspense, lazy, useState } from "react"
 import { MDXProvider as BaseMDXProvider } from "@mdx-js/react"
 import { useStore } from "@/store"
 import { BookCard } from "./BookCard"
@@ -6,6 +6,8 @@ import { MovieCard } from "./MovieCard"
 import { Gallery } from "./Gallery"
 import { Query } from "./Query"
 import { AsciiAvatar } from "./AsciiAvatar"
+import { Epigraph } from "./Epigraph"
+import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
 
 const LazyWikiSubmitForm = lazy(() => import("@/components/ui/wiki/WikiSubmitPage").then((m) => ({ default: m.WikiSubmitForm })))
 const LazyPhotoAlbums = lazy(() => import("@/components/ui/shelves/PhotographyPage").then((m) => ({ default: m.PhotoAlbums })))
@@ -37,7 +39,21 @@ function MachineGod() {
 
 function MDXImage(props: any) {
   const dims = useStore(s => s.imageDimensions?.[props.src])
-  return <img {...props} width={dims?.width || props.width} height={dims?.height || props.height} />
+  const [zoomed, setZoomed] = useState(false)
+  return (
+    <>
+      <img
+        {...props}
+        width={dims?.width || props.width}
+        height={dims?.height || props.height}
+        onClick={() => setZoomed(true)}
+        style={{ cursor: "zoom-in", ...(props.style || {}) }}
+      />
+      {zoomed && (
+        <ImageLightbox src={props.src} alt={props.alt} onClose={() => setZoomed(false)} />
+      )}
+    </>
+  )
 }
 
 export const mdxComponents = {
@@ -49,6 +65,7 @@ export const mdxComponents = {
   AsciiAvatar,
   PhotoAlbums,
   MachineGod,
+  Epigraph,
   // Add more custom components here
   img: MDXImage,
   a: (props: any) => {

@@ -1,0 +1,151 @@
+// ── Article apparatus: figures, tables, small-caps, collapsible sections ──
+// Tier 3 additions. Scoped to article prose where it matters.
+
+// ── Figures ──
+// Centered image with a muted caption. `data-fullwidth` breaks out wider than
+// the ~72ch measure for diagrams/large graphics.
+figure {
+  margin: var(--space-8) auto;
+  text-align: center;
+
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    cursor: zoom-in;
+  }
+
+  &[data-fullwidth] {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+figcaption {
+  margin-top: var(--space-2);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  text-align: center;
+
+  // A leading figure number / source can be marked up in code font
+  .fig-label {
+    font-family: var(--font-code);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
+    margin-right: 0.4em;
+  }
+}
+
+// ── Epigraph ──
+// Opening quotation before the prose. Indented from the right, italic, with a
+// right-aligned attribution. Essays only (opt-in via <Epigraph>).
+.epigraph {
+  margin: 0 0 var(--space-12) auto;
+  width: min(80%, 32rem);
+  font-style: italic;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+
+  &__quote p:last-child {
+    margin-bottom: var(--space-2);
+  }
+
+  &__cite {
+    font-style: normal;
+    text-align: right;
+    font-size: 0.85rem;
+    font-family: var(--font-code);
+    opacity: 0.7;
+  }
+}
+
+// ── Tables ──
+// Wikipedia-flavoured: header band, zebra rows, quiet caption. Wiki articles
+// get the denser/striped treatment; essays keep it lighter (just the header
+// band + bottom rules already in base.scss).
+.note-content table {
+  caption {
+    caption-side: bottom;
+    margin-top: var(--space-2);
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    text-align: left;
+  }
+
+  th {
+    background: var(--color-highlight);
+    border-bottom: 2px solid var(--color-border);
+  }
+}
+
+[data-article-kind="wiki"] .note-content table {
+  font-size: 0.9em;
+
+  tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--color-text) 3%, transparent);
+  }
+
+  td, th {
+    border: 1px solid var(--color-border);
+  }
+}
+
+// ── Small-caps acronyms ──
+// <abbr> and an explicit .smallcaps helper. all-small-caps keeps lowercase
+// letters as small caps too; tiny tracking improves the texture.
+abbr,
+.smallcaps {
+  font-variant: all-small-caps;
+  letter-spacing: 0.03em;
+}
+
+abbr[title] {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-decoration-color: color-mix(in srgb, currentColor 30%, transparent);
+  text-underline-offset: 2px;
+}
+
+// ── Collapsible sections ──
+// <details>/<summary> as a quiet disclosure for digressions (Gwern's prose
+// code-folding). Works without JS; the triangle is the native marker restyled.
+.note-content details {
+  margin: var(--space-6) 0;
+  border-left: 2px solid var(--color-border);
+  padding-left: var(--space-4);
+
+  > summary {
+    cursor: pointer;
+    color: var(--color-text-muted);
+    font-family: var(--font-code);
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    list-style: none;        // hide default marker, use our own
+    transition: color var(--duration-fast) var(--ease-default);
+
+    &::-webkit-details-marker { display: none; }
+
+    &::before {
+      content: "\25B8";       // ▸ right-pointing triangle
+      display: inline-block;
+      margin-right: 0.5em;
+      transition: transform var(--duration-fast) var(--ease-default);
+      opacity: 0.6;
+    }
+
+    &:hover { color: var(--color-primary); }
+  }
+
+  &[open] > summary::before {
+    transform: rotate(90deg);
+  }
+
+  // Give the revealed body a little breathing room from the summary
+  > summary + * {
+    margin-top: var(--space-3);
+  }
+}
