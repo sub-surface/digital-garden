@@ -165,8 +165,19 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
     )
   }
 
+  // Essays read literary; wiki articles read reference. Style divergence keys
+  // off this so the two kinds can differ (links, tables, epigraph, dropcap)
+  // without duplicating layout. Wiki = wiki/ slugs or person infoboxes.
+  const articleKind =
+    slug.toLowerCase().startsWith("wiki/") || type === "chatter" || type === "philosopher"
+      ? "wiki"
+      : "essay"
+
   return (
-    <article className={`${layout}-layout`}>
+    <article
+      className={`${layout}-layout`}
+      data-article-kind={layout === "article" ? articleKind : undefined}
+    >
       {/* Layout-wrapped content (Header is passed inside to align with grid column 2) */}
       {layout === "article" ? (
         <ArticleLayout headings={data.headings} infobox={infobox} header={header}>

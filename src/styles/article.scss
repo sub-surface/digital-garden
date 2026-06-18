@@ -11,9 +11,26 @@
 
 .article-body {
   grid-column: 2;
-  max-width: 900px;
+  // Cap the prose measure to a comfortable ~72ch (~700px at our body size) even
+  // though the grid column is 900px — sidenotes/TOC keep their own columns, so
+  // narrowing the text block just stops lines sprawling past readable length.
+  max-width: min(72ch, 100%);
   min-width: 0;
+  // Justified with automatic hyphenation (lang="en" is set on <html>) so the
+  // even right edge doesn't open rivers of space. Applies to essays and wiki.
   text-align: justify;
+  hyphens: auto;
+  // Tighter than the global 1.55 for long-form reading rhythm.
+  line-height: 1.5;
+
+  // Fewer orphans / better rag without manual line breaks (modern, progressive).
+  p, li {
+    text-wrap: pretty;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
 }
 
 .article-toc {
