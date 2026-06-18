@@ -31,6 +31,37 @@
   h1, h2, h3 {
     text-wrap: balance;
   }
+
+  // Hairline under section headings so structure reads at a glance (Gwern/Wiki
+  // section breaks) without shouting.
+  h2 {
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-border-light);
+  }
+}
+
+// ── Link styling diverges by article kind ──
+// Wiki articles read as reference: prose links carry a persistent, subtle
+// underline so they're scannable in dense text. Essays keep the minimal
+// accent-only look (underline on hover only, handled in base.scss).
+// `.note-content` wraps just the MDX prose, so TOC/header/sidenote links
+// (siblings, not descendants) are untouched.
+[data-article-kind="wiki"] .note-content {
+  a:not(.tag-pill) {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+    text-underline-offset: 2px;
+
+    &:hover {
+      text-decoration-color: currentColor;
+    }
+  }
+
+  // Footnote markers stay clean superscripts, not underlined.
+  .footnote-marker a {
+    text-decoration: none;
+  }
 }
 
 .article-toc {
