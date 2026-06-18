@@ -164,12 +164,17 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
   }
 
   // Essays read literary; wiki articles read reference. Style divergence keys
-  // off this so the two kinds can differ (links, tables, epigraph, dropcap)
-  // without duplicating layout. Wiki = wiki/ slugs or person infoboxes.
+  // off this so the two kinds can differ (links, tables, epigraph) without
+  // duplicating layout. Frontmatter-first (mirrors resolveLayout): an explicit
+  // `kind: essay|wiki` wins; otherwise default from slug/type (wiki/ slugs and
+  // person infoboxes read as reference, everything else as essay).
+  const fmKind = ((fm as Record<string, any>).kind as string | undefined)?.toLowerCase()
   const articleKind =
-    slug.toLowerCase().startsWith("wiki/") || type === "chatter" || type === "philosopher"
-      ? "wiki"
-      : "essay"
+    fmKind === "essay" || fmKind === "wiki"
+      ? fmKind
+      : slug.toLowerCase().startsWith("wiki/") || type === "chatter" || type === "philosopher"
+        ? "wiki"
+        : "essay"
 
   return (
     <article
