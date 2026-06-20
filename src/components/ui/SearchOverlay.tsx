@@ -33,29 +33,42 @@ export function SearchOverlay() {
 
     let cancelled = false
     async function buildIndex() {
-      const { Document } = await import("flexsearch")
-      if (cancelled || !contentIndex) return
+      try {
+        // FlexSearch 0.8 changed its module shape: depending on the bundler,
+        // `Document` may sit on the namespace, on `.default`, or BE `.default`.
+        // Resolve all three so the index never silently fails to build.
+        const mod = (await import("flexsearch")) as unknown as {
+          Document?: typeof Document
+          default?: { Document?: typeof Document } & typeof Document
+        }
+        const DocumentCtor = mod.Document ?? mod.default?.Document ?? mod.default
+        if (!DocumentCtor) throw new Error("flexsearch: Document constructor not found")
 
-      const index = new Document<SearchResult>({
-        document: {
-          id: "id",
-          index: ["title", "excerpt"],
-          store: ["title", "excerpt"],
-        },
-        tokenize: "forward",
-      })
+        if (cancelled || !contentIndex) return
 
-      Object.entries(contentIndex).forEach(([slug, meta]) => {
-        index.add({
-          id: slug,
-          title: meta.title,
-          excerpt: meta.excerpt || "",
+        const index = new DocumentCtor<SearchResult>({
+          document: {
+            id: "id",
+            index: ["title", "excerpt"],
+            store: ["title", "excerpt"],
+          },
+          tokenize: "forward",
         })
-      })
 
-      if (!cancelled) {
-        searchIndexRef.current = index
-        setIndexVersion((v) => v + 1)
+        Object.entries(contentIndex).forEach(([slug, meta]) => {
+          index.add({
+            id: slug,
+            title: meta.title,
+            excerpt: meta.excerpt || "",
+          })
+        })
+
+        if (!cancelled) {
+          searchIndexRef.current = index
+          setIndexVersion((v) => v + 1)
+        }
+      } catch (error) {
+        console.error("SearchOverlay: Failed to build search index:", error)
       }
     }
 

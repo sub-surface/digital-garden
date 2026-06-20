@@ -24,3 +24,7 @@ public/og/
 # Automation / agent tooling output (not source)
 daily-report.md
 .codex/
+
+# Local scratch / one-off debug scripts (not source)
+scratch/
+test-flexsearch.mjs

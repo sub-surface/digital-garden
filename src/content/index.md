@@ -51,7 +51,7 @@ Welcome to a node in the subsurface network.
 	- a growing collection of 
 		- [[tags\thoughts|thoughts]], [[tags\games|games]], [tools](https://avatar.subsurfaces.net),
 		- and 
-			- [[Vector Playground|experiments]], [meditations](https://lines.subsurfaces.net) & [[the machine-god in the future|strange artifacts]]
+			- [[Vector Playground|experiments]], [meditations](https://lines.subsurfaces.net), [landscapes](https://anabasis.subsurfaces.net) & [[the machine-god in the future|strange artifacts]]
 ```
 
 ```telescopic

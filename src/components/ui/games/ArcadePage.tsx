@@ -30,6 +30,14 @@ const GAMES: GameCard[] = [
     featured: true,
     external: true,
   },
+  {
+    href: "https://anabasis.subsurfaces.net",
+    name: "Anabasis",
+    blurb: "Feed it an image; the machine forgets the image and hallucinates a world. A PS1-era topographic apparatus, after Fontcuberta. A toy you wander.",
+    live: true,
+    featured: true,
+    external: true,
+  },
   { href: "hexo", name: "HeXO", blurb: "Connect six on an endless hex field, against a handmade opponent.", live: true, featured: true },
   {
     href: "https://omega.subsurfaces.net",
