@@ -41,7 +41,11 @@
     background: var(--color-bg, #0a0a0a);
     filter: none;
     animation: none;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    // Reserve the scrollbar's width so its appear/disappear can't feed back into
+    // the cover's width → aspect-ratio height → scrollbar loop (the oscillation).
+    scrollbar-gutter: stable;
   }
 }
 
@@ -277,6 +281,11 @@ $thumb: 8px;
 .progressBar {
   width: 100%;
   height: $bar-h;
+  // Vertical padding makes the CONTENT box exactly $track-h tall; the gradient
+  // is then clipped to content-box, so the visible line is $track-h regardless
+  // of any UA default that might leak into the popped-out (PiP) document. The
+  // remaining height stays a transparent, taller hit area.
+  padding: calc((#{$bar-h} - #{$track-h}) / 2) 0;
   -webkit-appearance: none;
   appearance: none;
   background:

@@ -1,0 +1,88 @@
+// ── Article / note frontispiece ──
+// The header block above the body: tools row (bookmark/edit + breadcrumb),
+// growth badge, title, metadata (date · reading time), tags. Right-aligned to
+// sit as a quiet masthead before the prose. Styles were previously a wall of
+// inline style={{}} in NoteRenderer — lifted here, behaviour preserved.
+
+.note-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  margin-bottom: var(--space-12);
+}
+
+// Tools + breadcrumb row (article layout only)
+.note-header__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4em;
+  width: 100%;
+  margin-bottom: var(--space-2);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  opacity: 0.45;
+}
+
+.note-header__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.note-header__crumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+  }
+
+  .sep {
+    opacity: 0.5;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.note-header__title {
+  margin: var(--space-2) 0;
+}
+
+.note-header__meta {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.note-header__tags {
+  margin-top: var(--space-4);
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+
+  .tag-pill {
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+    opacity: 0.8;
+  }
+}
+
+// Essays read more literary: give the title a touch more presence than the
+// reference-flavoured wiki articles.
+[data-article-kind="essay"] .note-header__title {
+  font-size: 2.4rem;
+  letter-spacing: -0.6px;
+}

@@ -46,7 +46,7 @@ export function ReadingProgress() {
   }, [])
 
   return (
-    <div className={styles.track} aria-hidden="true">
+    <div className={styles.track} aria-hidden="true" data-panel-ignore>
       <div className={styles.bar} style={{ transform: `scaleX(${progress})` }} />
     </div>
   )

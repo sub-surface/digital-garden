@@ -111,24 +111,22 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
     : []
 
   const header = (
-    <div className="note-header" style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginBottom: 'var(--space-12)' }}>
+    <div className="note-header">
       {layout === "article" && (
-        <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.45, marginBottom: 'var(--space-2)', display: 'flex', gap: '0.4em', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: '0.4em', alignItems: 'center' }}>
+        <div className="note-header__bar">
+          <div className="note-header__tools">
             <Suspense fallback={null}>
               {editableWikiSlugs && <WikiEditButton slug={slug} />}
               <BookmarkButton slug={slug} title={title} />
             </Suspense>
           </div>
-          <div style={{ display: 'flex', gap: '0.4em', alignItems: 'center' }}>
+          <div className="note-header__crumbs">
             {breadcrumbParts.map((part, i) => {
               const href = "/" + breadcrumbParts.slice(0, i + 1).join("/")
               return (
-                <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.4em' }}>
-                  {i > 0 && <span style={{ opacity: 0.5 }}>/</span>}
-                  <a href={href} style={{ color: 'inherit', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {part.replace(/-/g, " ")}
-                  </a>
+                <span key={i}>
+                  {i > 0 && <span className="sep">/</span>}
+                  <a href={href}>{part.replace(/-/g, " ")}</a>
                 </span>
               )
             })}
@@ -138,17 +136,17 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
       {growth && (
         <span className={`growth-badge growth-${growth}`}>{growth}</span>
       )}
-      <h1 style={{ margin: 'var(--space-2) 0' }}>{title}</h1>
+      <h1 className="note-header__title">{title}</h1>
       {(date || readingTime) && (
-        <div className="note-date" style={{ fontFamily: 'var(--font-code)', fontSize: '0.8rem', opacity: 0.6, display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
+        <div className="note-date note-header__meta">
           {date && <span>{new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>}
           {readingTime && <span>{readingTime} min read</span>}
         </div>
       )}
       {tags.length > 0 && (
-        <div className="tag-list" style={{ marginTop: 'var(--space-4)', display: 'flex', gap: 'var(--space-2)', justifyContent: 'flex-end' }}>
+        <div className="tag-list note-header__tags">
           {tags.map((tag) => (
-            <a key={tag} href={`/tags/${tag}`} className="tag-pill" style={{ fontFamily: 'var(--font-code)', fontSize: '0.7rem', opacity: 0.8 }}>#{tag}</a>
+            <a key={tag} href={`/tags/${tag}`} className="tag-pill">#{tag}</a>
           ))}
         </div>
       )}
@@ -165,8 +163,24 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
     )
   }
 
+  // Essays read literary; wiki articles read reference. Style divergence keys
+  // off this so the two kinds can differ (links, tables, epigraph) without
+  // duplicating layout. Frontmatter-first (mirrors resolveLayout): an explicit
+  // `kind: essay|wiki` wins; otherwise default from slug/type (wiki/ slugs and
+  // person infoboxes read as reference, everything else as essay).
+  const fmKind = ((fm as Record<string, any>).kind as string | undefined)?.toLowerCase()
+  const articleKind =
+    fmKind === "essay" || fmKind === "wiki"
+      ? fmKind
+      : slug.toLowerCase().startsWith("wiki/") || type === "chatter" || type === "philosopher"
+        ? "wiki"
+        : "essay"
+
   return (
-    <article className={`${layout}-layout`}>
+    <article
+      className={`${layout}-layout`}
+      data-article-kind={layout === "article" ? articleKind : undefined}
+    >
       {/* Layout-wrapped content (Header is passed inside to align with grid column 2) */}
       {layout === "article" ? (
         <ArticleLayout headings={data.headings} infobox={infobox} header={header}>

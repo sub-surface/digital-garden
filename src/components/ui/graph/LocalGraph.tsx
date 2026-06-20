@@ -66,12 +66,22 @@ export function LocalGraph({ slug }: Props) {
         .map(l => ({ ...l }))
 
       if (!currentContainer) return
-      const width = currentContainer.clientWidth
-      const height = currentContainer.clientHeight
+      // The wrapper animates open (0.3s width/height transition from the 120×36
+      // minimised box). Measuring synchronously here can catch it mid-transition
+      // — or at 0×0 before layout — which pins PIXI to a tiny size and bunches
+      // every node into the top-left. Wait two frames so layout settles, and
+      // fall back to the CSS box (280×280, or 100%-width × 300 on mobile) if the
+      // measured size is still degenerate.
+      await new Promise<void>((r) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => r())),
+      )
+      if (!mounted || !currentContainer) return
+      const width = currentContainer.clientWidth || (isMobile ? currentContainer.parentElement?.clientWidth || 300 : 280)
+      const height = currentContainer.clientHeight || (isMobile ? 240 : 280)
 
       const app = new PIXI.Application()
       appRef.current = app
-      
+
       await app.init({
         width,
         height,
@@ -118,6 +128,20 @@ export function LocalGraph({ slug }: Props) {
       let targetScale = 1
       let targetX = stage.x
       let targetY = stage.y
+
+      // Keep the renderer matched to the container as the open transition lands
+      // (or on window resize). Recenter the stage and re-warm the simulation so
+      // nodes settle into the new box instead of staying bunched in a corner.
+      const resizeObserver = new ResizeObserver((entries) => {
+        if (!mounted || !appRef.current) return
+        const { width: w, height: h } = entries[0].contentRect
+        if (w < 2 || h < 2) return
+        appRef.current.renderer.resize(w, h)
+        stage.x = targetX = w / 2
+        stage.y = targetY = h / 2
+        simulation?.alpha(0.3).restart()
+      })
+      resizeObserver.observe(currentContainer)
 
       localNodes.forEach(node => {
         const gfx = new PIXI.Graphics()
@@ -271,6 +295,7 @@ export function LocalGraph({ slug }: Props) {
       return () => {
         mounted = false
         simulation?.stop()
+        resizeObserver.disconnect()
         if (currentContainer) {
           currentContainer.removeEventListener("wheel", handleWheel)
         }

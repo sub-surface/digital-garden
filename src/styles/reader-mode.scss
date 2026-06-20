@@ -1,0 +1,46 @@
+// ── Reader mode ──
+// Distraction-free reading. Toggled from the command palette (store
+// `isReaderMode` → `data-reader="true"` on the AppShell wrapper). Strips
+// ambient chrome and link ornament so only the prose remains. The state +
+// toggle already existed; this stylesheet is what makes it visible.
+//
+// Chrome is hidden via `data-panel-ignore`, but ONLY where that marker sits on
+// a DIRECT child of the shell — the ambient UI (BgCanvas, CornerMenu,
+// QuickControls, TerminalTitle, music bars) all render at the shell level,
+// while page content (Arcade / Music links, etc.) also carries the marker but
+// lives deep inside `.workspace > main`. The `> ` combinator keeps us from
+// hiding that real content. (CSS-module class names are hashed, so the marker
+// is still the most robust hook for the chrome itself.)
+
+[data-reader="true"] {
+  // Quiet ONLY the ambient background canvas — not game / graph / art canvases,
+  // which are interactive content and must stay fully visible.
+  > [data-testid="bg-canvas"] {
+    opacity: 0.12 !important;
+    transition: opacity var(--duration-slow) var(--ease-default);
+  }
+
+  // Hide ambient chrome (direct children only) + the article's nav side column.
+  > [data-panel-ignore],
+  .article-toc,
+  .body-side-group {
+    display: none !important;
+  }
+
+  // Centre the measure and relax it a hair for focused reading.
+  .article-body {
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+
+  // Strip link ornament — colour-only, no underlines or external arrows.
+  .note-content {
+    a {
+      text-decoration: none !important;
+    }
+    a[href^="http"]::after {
+      content: none !important;
+    }
+  }
+}

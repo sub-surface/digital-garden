@@ -155,8 +155,9 @@ blockquote {
   margin: var(--space-4) 0;
   padding-left: var(--space-6);
   border-left: 3px solid var(--color-secondary);
-  font-style: italic;
-  opacity: 0.9;
+  // Upright, not italic: long multi-line quotes are harder to read set in
+  // italic (it's for emphasis/short spans). Distinguish by the rule + colour.
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
