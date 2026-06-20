@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { GameCabinet } from "./GameCabinet"
 import { sfx } from "@/lib/sfx"
 import styles from "./HexMinesPage.module.scss"
 
@@ -168,20 +169,20 @@ export function HexMinesPage() {
   }
 
   return (
-    <div className={styles.minesContainer}>
-      <header className={styles.header}>
-        <h1>Hex Mines</h1>
-        <p>Minesweeper on hexes — six neighbours each. Click to reveal, right-click to flag.</p>
-      </header>
-
-      <div className={styles.bar}>
-        <span>mines <strong>{mineCount}</strong></span>
-        <span className={styles.state} data-state={status}>
-          {status === "won" ? "swept" : status === "lost" ? "boom" : "·"}
-        </span>
-        <button className={styles.newBtn} onClick={reset}>New</button>
-      </div>
-
+    <GameCabinet
+      title="Hex Mines"
+      blurb="Minesweeper on hexes — six neighbours each. Click to reveal, right-click to flag."
+      status={status}
+      onStart={reset}
+      endMessage={status === "won" ? "swept" : status === "lost" ? "boom" : undefined}
+      hint="click reveal · right-click flag"
+      controls={
+        <>
+          <span className={styles.mineCount}>mines <strong>{mineCount}</strong></span>
+          <button className={styles.newBtn} onClick={reset}>New</button>
+        </>
+      }
+    >
       <svg
         className={styles.board}
         viewBox={`${minX} ${minY} ${vbW} ${vbH}`}
@@ -214,6 +215,6 @@ export function HexMinesPage() {
           )
         })}
       </svg>
-    </div>
+    </GameCabinet>
   )
 }

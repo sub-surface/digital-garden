@@ -40,6 +40,23 @@ figcaption {
   }
 }
 
+// ── Poster / cover (movie & book notes) ──
+// Auto-rendered above the body for note pages that carry a poster in
+// frontmatter but little body text. Kept modest so it frames rather than shouts.
+.note-poster {
+  margin: 0 0 var(--space-8);
+  text-align: center;
+
+  img {
+    max-height: 60vh;
+    max-width: min(320px, 100%);
+    width: auto;
+    height: auto;
+    border-radius: 6px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  }
+}
+
 // ── Epigraph ──
 // Opening quotation before the prose. Indented from the right, italic, with a
 // right-aligned attribution. Essays only (opt-in via <Epigraph>).

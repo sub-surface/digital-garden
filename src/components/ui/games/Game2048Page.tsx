@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { sfx } from "@/lib/sfx"
+import { GameCabinet, type CabinetStatus } from "./GameCabinet"
 import styles from "./Game2048Page.module.scss"
 
 /**
@@ -97,10 +98,7 @@ export function Game2048Page() {
     const b = empty(); spawn(b); spawn(b); return b
   })
   const [score, setScore] = useState(0)
-  const [best, setBest] = useState(() => {
-    const v = typeof localStorage !== "undefined" ? localStorage.getItem("g2048-best") : null
-    return v ? parseInt(v, 10) : 0
-  })
+  // Best is tracked + persisted by GameCabinet via the `g2048-best` key.
   const [over, setOver] = useState(false)
   const [won, setWon] = useState(false)
   const boardRef = useRef(board)
@@ -119,15 +117,7 @@ export function Game2048Page() {
     setBoard(moved)
     if (gained > 0) {
       sfx.play("merge")
-      setScore((s) => {
-        const ns = s + gained
-        setBest((b) => {
-          const nb = Math.max(b, ns)
-          localStorage.setItem("g2048-best", String(nb))
-          return nb
-        })
-        return ns
-      })
+      setScore((s) => s + gained)
     } else {
       sfx.play("move")
     }
@@ -165,20 +155,25 @@ export function Game2048Page() {
     touch.current = null
   }
 
+  // `won` lets play continue, so it isn't a stop state — only `over` ends the
+  // game (and the win flourish fires once via the `won` flag on the board).
+  const status: CabinetStatus = over ? "lost" : won ? "won" : "playing"
   return (
-    <div className={styles.g2048Container}>
-      <header className={styles.header}>
-        <h1>2048</h1>
-        <p>Merge tiles up the spectrum. Arrows, WASD, or swipe.</p>
-      </header>
-
-      <div className={styles.scoreBar}>
-        <span>score <strong>{score}</strong></span>
-        <span>best <strong>{best}</strong></span>
-        <button className={styles.newBtn} onClick={reset}>New</button>
-      </div>
-
-      <div className={styles.boardWrap} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <GameCabinet
+      title="2048"
+      blurb="Merge tiles up the spectrum. Arrows, WASD, or swipe."
+      status={over ? "lost" : "playing"}
+      onStart={reset}
+      score={{ value: score, bestKey: "g2048-best" }}
+      endMessage={over ? "no moves left" : undefined}
+      controls={<button className={styles.newBtn} onClick={reset}>New</button>}
+    >
+      <div
+        className={styles.boardWrap}
+        data-win={status === "won" || undefined}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         <div className={styles.grid}>
           {board.flat().map((v, i) => (
             <div
@@ -190,13 +185,8 @@ export function Game2048Page() {
             </div>
           ))}
         </div>
-        {(over || won) && (
-          <div className={styles.overlay}>
-            <div className={styles.endMsg}>{won && !over ? "2048! keep going?" : "no moves left"}</div>
-            <button className={styles.startBtn} onClick={reset}>{over ? "Again" : "New game"}</button>
-          </div>
-        )}
+        {won && !over && <div className={styles.wonFlag}>2048! keep going</div>}
       </div>
-    </div>
+    </GameCabinet>
   )
 }

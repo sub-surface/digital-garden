@@ -17,6 +17,14 @@ interface Props {
 const WikiEditButton = lazy(() => import("../WikiEditButton").then((m) => ({ default: m.WikiEditButton })))
 const BookmarkButton = lazy(() => import("../BookmarkButton").then((m) => ({ default: m.BookmarkButton })))
 
+/** Top-level collection folders whose breadcrumb crumb routes to a shelf page
+ * instead of a (non-existent) /Folder page. Keyed lowercase. */
+const CRUMB_ALIASES: Record<string, string> = {
+  movies: "/movieshelf",
+  books: "/bookshelf",
+  music: "/music-library",
+}
+
 function resolveLayout(
   frontmatter: Record<string, any>,
   meta: NoteMetadata | undefined,
@@ -88,6 +96,16 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
     setActiveLayout(layout)
   }, [layout, setActiveLayout])
 
+  // Movie/book notes carry their poster/cover in frontmatter but have little or
+  // no body — render the artwork by default so the page isn't bare. Resolve
+  // bare filenames against /content/Media (mirrors the shelf pages).
+  const posterSrc = (() => {
+    if (type !== "movie" && type !== "book") return undefined
+    const raw = (fm.poster || fm.cover || fm.image) as string | undefined
+    if (!raw) return undefined
+    return raw.startsWith("http") ? raw : `/content/Media/${raw}`
+  })()
+
   // System Page Fallback Logic
   const renderContent = () => {
     const s = slug.toLowerCase()
@@ -98,7 +116,16 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
       return <Suspense fallback={<div>{sysPage.loading}</div>}><SysComponent /></Suspense>
     }
 
-    return <NoteBody slug={slug} onLoad={handleLoad} />
+    return (
+      <>
+        {posterSrc && (
+          <figure className="note-poster">
+            <img src={posterSrc} alt={title} loading="lazy" />
+          </figure>
+        )}
+        <NoteBody slug={slug} onLoad={handleLoad} />
+      </>
+    )
   }
 
   const infobox = (type === "chatter" || type === "philosopher") ? (
@@ -122,7 +149,12 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
           </div>
           <div className="note-header__crumbs">
             {breadcrumbParts.map((part, i) => {
-              const href = "/" + breadcrumbParts.slice(0, i + 1).join("/")
+              // Top-level collection folders have dedicated shelf pages; route
+              // their crumb there instead of /Movies (which has no page).
+              const href =
+                i === 0 && CRUMB_ALIASES[part.toLowerCase()]
+                  ? CRUMB_ALIASES[part.toLowerCase()]
+                  : "/" + breadcrumbParts.slice(0, i + 1).join("/")
               return (
                 <span key={i}>
                   {i > 0 && <span className="sep">/</span>}

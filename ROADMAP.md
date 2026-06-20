@@ -163,11 +163,13 @@ of `var(--color-bg*)`. Audit pass:
 Lots of bespoke per-game code (heXO zen/pan/zoom/annotations; each toy reinvents the frame).
 Extract the cabinet *before* building the next game.
 
-- [~] **`<GameCabinet>` wrapper** — SHIPPED (`src/components/ui/games/GameCabinet.tsx`): title +
+- [x] **`<GameCabinet>` wrapper** — SHIPPED (`src/components/ui/games/GameCabinet.tsx`): title +
   blurb header, start/again overlay, score+best bar (localStorage via `bestKey`), zen/fullscreen
-  (Esc to exit), accent-aware win flourish (`data-win`), optional `controls` slot. Snake migrated
-  as the reference. **Remaining: migrate Tetris, 2048, Blackjack, HexMines** (mechanical — swap
-  their header/overlay/scorebar for the cabinet, drop duplicated best-tracking). (2026-06-20)
+  (Esc to exit), accent-aware win flourish (`data-win`), optional `controls` slot. Migrated:
+  **Snake, 2048, Hex Mines** (the clean start→play→win/lose games) + the new **Life** page.
+  *Intentional exceptions:* **Tetris** (pause state + side score/lines panel + touch D-pad) and
+  **Blackjack** (multi-phase betting state machine with a persistent bankroll) keep bespoke frames
+  — folding them in would make the cabinet a leaky abstraction. (2026-06-20)
 - [ ] **Generalise heXO zen mode** into the cabinet — Esc-to-exit handler, overlay, bottom bar,
   wide viewBox are all reusable. Currently live in `HexoPage`.
 - [ ] heXO polish threads from the code review:

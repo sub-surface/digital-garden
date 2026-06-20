@@ -39,7 +39,7 @@ Welcome to a node in the subsurface network.
 		  - my own music too: [Hello!](music:hello)
 ```
 
-You can use `?` to see a list of keyboard shortcuts, `Ctrl+P` for the command palette, and `Ctrl+K` to search for notes.  
+You can use `?` to see a list of keyboard shortcuts, `Ctrl+P` for the command palette, and `Ctrl+K` to search for notes.  Press `r` to open a random note. Press `M` to play/pause music.
 
 ---
 
@@ -100,7 +100,7 @@ A few notes at random — refresh for more.
 
 <Query sort="random" limit="6" display="list" />
 
-# The machine's subconscious
+# A Game of Life
 
 <GameOfLife caption="Conway's Game of Life. Click cells to intervene." />
 
