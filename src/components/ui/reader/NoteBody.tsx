@@ -25,6 +25,7 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
   )
   const [loading, setLoading] = useState(true)
   const [MDXComponent, setMDXComponent] = useState<React.ComponentType<any> | null>(null)
+  const [frontmatter, setFrontmatter] = useState<Record<string, any>>({})
   const [notFound, setNotFound] = useState(false)
   
   const contentRef = useRef<HTMLDivElement>(null)
@@ -117,6 +118,7 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
           const mod = (await notes[match]()) as any
           if (!cancelled) {
             setMDXComponent(() => mod.default)
+            setFrontmatter(mod.frontmatter || {})
             if (onLoad) {
               onLoad({ frontmatter: mod.frontmatter || {} })
             }
@@ -174,8 +176,24 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
     )
   }
 
+  // Movie/book notes carry their poster in frontmatter but have little body —
+  // render the artwork by default. Lives here (not just NoteRenderer) so panel
+  // cards / note-mode views get it too. Bare filenames resolve to /content/Media.
+  const posterSrc = (() => {
+    const ftype = frontmatter.type as string | undefined
+    if (ftype !== "movie" && ftype !== "book") return undefined
+    const raw = (frontmatter.poster || frontmatter.cover || frontmatter.image) as string | undefined
+    if (!raw) return undefined
+    return raw.startsWith("http") ? raw : `/content/Media/${raw}`
+  })()
+
   return (
     <div ref={contentRef} className="note-content">
+      {posterSrc && (
+        <figure className="note-poster">
+          <img src={posterSrc} alt={(frontmatter.title as string) || ""} loading="lazy" />
+        </figure>
+      )}
       {MDXComponent && (
         <Suspense fallback={<div>Loading component...</div>}>
           <MDXComponent components={mdxComponents as any} />

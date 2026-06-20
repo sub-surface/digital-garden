@@ -96,16 +96,6 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
     setActiveLayout(layout)
   }, [layout, setActiveLayout])
 
-  // Movie/book notes carry their poster/cover in frontmatter but have little or
-  // no body — render the artwork by default so the page isn't bare. Resolve
-  // bare filenames against /content/Media (mirrors the shelf pages).
-  const posterSrc = (() => {
-    if (type !== "movie" && type !== "book") return undefined
-    const raw = (fm.poster || fm.cover || fm.image) as string | undefined
-    if (!raw) return undefined
-    return raw.startsWith("http") ? raw : `/content/Media/${raw}`
-  })()
-
   // System Page Fallback Logic
   const renderContent = () => {
     const s = slug.toLowerCase()
@@ -116,16 +106,9 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
       return <Suspense fallback={<div>{sysPage.loading}</div>}><SysComponent /></Suspense>
     }
 
-    return (
-      <>
-        {posterSrc && (
-          <figure className="note-poster">
-            <img src={posterSrc} alt={title} loading="lazy" />
-          </figure>
-        )}
-        <NoteBody slug={slug} onLoad={handleLoad} />
-      </>
-    )
+    // The poster for movie/book notes is rendered inside NoteBody (so panel
+    // cards / note-mode views get it too).
+    return <NoteBody slug={slug} onLoad={handleLoad} />
   }
 
   const infobox = (type === "chatter" || type === "philosopher") ? (

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react"
+import { useNavigate } from "@tanstack/react-router"
+import { useStore } from "@/store"
 import styles from "./HexLifePage.module.scss"
 
 /**
@@ -50,6 +52,23 @@ const COLOR_MODES: { id: ColorMode; name: string }[] = [
 
 export function HexLifePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const navigate = useNavigate()
+  const popCard = useStore((s) => s.popCard)
+
+  // Close the fullscreen toy: pop the panel card it opened in, or (on the
+  // dedicated /hex-life route, where there's no card) go back to the arcade.
+  const close = useCallback(() => {
+    const stack = useStore.getState().panelStack
+    if (stack.length > 0) popCard()
+    else navigate({ to: "/$", params: { _splat: "arcade" } as any })
+  }, [popCard, navigate])
+
+  // Esc closes too.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close() }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [close])
 
   // grid dimensions scale with cell size; stored in refs so the sim loop reads live values
   const colsRef = useRef(0)
@@ -303,6 +322,27 @@ export function HexLifePage() {
     }
     const up = () => { mode = "none" }
     const ctxMenu = (e: Event) => e.preventDefault()
+
+    // Scroll to zoom — adjust the hex size, keeping the point under the cursor
+    // roughly stationary by compensating the pan. Replaces the cell-size slider.
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const r = canvas.getBoundingClientRect()
+      const cx = e.clientX - r.left
+      const cy = e.clientY - r.top
+      const old = hexSizeRef.current
+      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1
+      const next = Math.max(4, Math.min(28, old * factor))
+      if (next === old) return
+      // Keep the world point under the cursor fixed: scale the pan about it.
+      const pan = panRef.current
+      const ratio = next / old
+      panRef.current = {
+        x: cx - (cx - pan.x) * ratio,
+        y: cy - (cy - pan.y) * ratio,
+      }
+      setHexSize(Math.round(next))
+    }
     const tStart = (e: TouchEvent) => {
       if (e.touches[0]) { mode = "paint"; const c = cellAt(e.touches[0].clientX, e.touches[0].clientY); if (c >= 0) gridRef.current[c] = 1 }
     }
@@ -314,6 +354,7 @@ export function HexLifePage() {
     window.addEventListener("mousemove", move)
     window.addEventListener("mouseup", up)
     canvas.addEventListener("contextmenu", ctxMenu)
+    canvas.addEventListener("wheel", wheel, { passive: false })
     canvas.addEventListener("touchstart", tStart, { passive: true })
     canvas.addEventListener("touchmove", tMove, { passive: false })
     canvas.addEventListener("touchend", up)
@@ -325,6 +366,7 @@ export function HexLifePage() {
       window.removeEventListener("mousemove", move)
       window.removeEventListener("mouseup", up)
       canvas.removeEventListener("contextmenu", ctxMenu)
+      canvas.removeEventListener("wheel", wheel)
       canvas.removeEventListener("touchstart", tStart)
       canvas.removeEventListener("touchmove", tMove)
       canvas.removeEventListener("touchend", up)
@@ -342,6 +384,15 @@ export function HexLifePage() {
         title={menuOpen ? "Hide controls" : "Show controls"}
       >
         {menuOpen ? "‹ hide" : "☰ controls"}
+      </button>
+
+      <button
+        className={styles.closeBtn}
+        onClick={close}
+        title="Close (Esc)"
+        aria-label="Close Hex Life"
+      >
+        ✕
       </button>
 
       {menuOpen && (
@@ -396,10 +447,6 @@ export function HexLifePage() {
             <input type="range" min={1} max={60} value={speed} onChange={(e) => setSpeed(+e.target.value)} />
           </div>
           <div className={styles.group}>
-            <label className={styles.label}>Cell size — {hexSize}px</label>
-            <input type="range" min={4} max={28} value={hexSize} onChange={(e) => setHexSize(+e.target.value)} />
-          </div>
-          <div className={styles.group}>
             <label className={styles.label}>Seed density — {Math.round(density * 100)}%</label>
             <input type="range" min={2} max={80} value={Math.round(density * 100)} onChange={(e) => setDensity(+e.target.value / 100)} />
           </div>
@@ -420,7 +467,7 @@ export function HexLifePage() {
 
           <p className={styles.meta}>
             B{birth.join("")}/S{survive.join("")} · gen {gen} · pop {pop}<br />
-            paint to draw · shift/right-click erase · alt-drag to pan
+            paint to draw · shift/right-click erase · alt-drag to pan · scroll to zoom
           </p>
         </div>
       )}
