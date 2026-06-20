@@ -163,9 +163,11 @@ of `var(--color-bg*)`. Audit pass:
 Lots of bespoke per-game code (heXO zen/pan/zoom/annotations; each toy reinvents the frame).
 Extract the cabinet *before* building the next game.
 
-- [ ] **`<GameCabinet>` wrapper** — status line, New Game / reset, local-best (localStorage),
-  keyboard+touch hint footer, optional zen/fullscreen overlay (generalise heXO's), accent-aware
-  win flourish (`data-win`). Game logic stays pure in `src/lib/{game}.ts`.
+- [~] **`<GameCabinet>` wrapper** — SHIPPED (`src/components/ui/games/GameCabinet.tsx`): title +
+  blurb header, start/again overlay, score+best bar (localStorage via `bestKey`), zen/fullscreen
+  (Esc to exit), accent-aware win flourish (`data-win`), optional `controls` slot. Snake migrated
+  as the reference. **Remaining: migrate Tetris, 2048, Blackjack, HexMines** (mechanical — swap
+  their header/overlay/scorebar for the cabinet, drop duplicated best-tracking). (2026-06-20)
 - [ ] **Generalise heXO zen mode** into the cabinet — Esc-to-exit handler, overlay, bottom bar,
   wide viewBox are all reusable. Currently live in `HexoPage`.
 - [ ] heXO polish threads from the code review:
@@ -339,6 +341,12 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
 - **Constellation "guided tour" mode** — devlog `next:`.
 - **"What changed" timeline** — devlog `next:`. The new `<Query sort="-date">` on `index.md`
   is the seed; promote it to a full dated changelog stream (group by day, show growth badges).
+- [x] **Embeddable discovery queries** — `Query` now supports `sort="random"` (render-stable
+  seed, `notesOnly` filter) and a new `<OnThisDay />` MDX component (note dated to today's
+  calendar day in a past year, random fallback). Both live at the bottom of `index.md`. (2026-06-20)
+- [x] **Game of Life consolidated** — extracted the square Conway engine from `MachineGod.tsx`
+  into one reusable `<GameOfLife>` (MDX-registered); the machine-god article, `index.md`, and a
+  new arcade **Life** page (`/life`) all share it. Hex Life stays a distinct hex automaton. (2026-06-20)
 - **Garden seasons / time-of-day ambient theming** — shift the default bg palette + accent
   warmth by local clock (dawn/day/dusk/night) and optionally month. The triadic palette math +
   `bgMode` cycle already exist; this is a thin scheduler over them, respecting any explicit

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { sfx } from "@/lib/sfx"
+import { GameCabinet, type CabinetStatus } from "./GameCabinet"
 import styles from "./SnakePage.module.scss"
 
 /**
@@ -45,10 +46,7 @@ export function SnakePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [status, setStatus] = useState<Status>("ready")
   const [score, setScore] = useState(0)
-  const [best, setBest] = useState(() => {
-    const v = typeof localStorage !== "undefined" ? localStorage.getItem("snake-best") : null
-    return v ? parseInt(v, 10) : 0
-  })
+  // Best score is tracked + persisted by GameCabinet via the `snake-best` key.
 
   // mutable game state kept in refs so the loop doesn't churn React state
   const snake = useRef<Cell[]>([])
@@ -156,11 +154,6 @@ export function SnakePage() {
       if (body.some((c) => eq(c, next))) {
         sfx.play("death")
         setStatus("dead")
-        setBest((b) => {
-          const nb = Math.max(b, score)
-          localStorage.setItem("snake-best", String(nb))
-          return nb
-        })
         return
       }
 
@@ -246,38 +239,32 @@ export function SnakePage() {
     }
     raf = requestAnimationFrame(frame)
     return () => cancelAnimationFrame(raf)
-  }, [status, score])
+    // Loop reads game state via refs + setScore (functional); only `status`
+    // gates start/stop. (Was also keyed on `score` for best-tracking, now in
+    // the cabinet — dropping it stops the loop restarting on every point.)
+  }, [status])
 
+  const cabinetStatus: CabinetStatus = status === "dead" ? "lost" : status
   return (
-    <div className={styles.snakeContainer}>
-      <header className={styles.header}>
-        <h1>Snake</h1>
-        <p>Walls wrap. Seeds grow you; the rare bloom is worth five and bends time.</p>
-      </header>
-
+    <GameCabinet
+      title="Snake"
+      blurb="Walls wrap. Seeds grow you; the rare bloom is worth five and bends time."
+      status={cabinetStatus}
+      onStart={start}
+      score={{ value: score, bestKey: "snake-best" }}
+      endMessage={status === "dead" ? "caught your own tail" : undefined}
+      hint="arrow keys or WASD"
+      zen
+    >
       <div
-        className={styles.board}
+        className={styles.grid}
         data-status={status}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         style={{ touchAction: "none" }}
       >
         <canvas ref={canvasRef} width={480} height={480} className={styles.canvas} />
-        {status !== "playing" && (
-          <div className={styles.overlay}>
-            {status === "dead" && <div className={styles.gameOver}>caught your own tail</div>}
-            <button className={styles.startBtn} onClick={start}>
-              {status === "ready" ? "Start" : "Again"}
-            </button>
-            <div className={styles.hint}>arrow keys or WASD</div>
-          </div>
-        )}
       </div>
-
-      <div className={styles.scoreBar}>
-        <span>score <strong>{score}</strong></span>
-        <span>best <strong>{best}</strong></span>
-      </div>
-    </div>
+    </GameCabinet>
   )
 }

@@ -23,6 +23,7 @@ export const SYSTEM_PAGES: Record<string, SystemPage> = {
   "hex-mines":     { component: lazy(() => import("@/components/ui/games/HexMinesPage").then(m => ({ default: m.HexMinesPage }))),   layout: "game",    loading: "Loading minefield..." },
   "ant-farm":      { component: lazy(() => import("@/components/ui/games/AntFarmPage").then(m => ({ default: m.AntFarmPage }))),     layout: "game",    loading: "Loading colony..." },
   "hex-life":      { component: lazy(() => import("@/components/ui/games/HexLifePage").then(m => ({ default: m.HexLifePage }))),   layout: "game",    loading: "Seeding the grid..." },
+  life:            { component: lazy(() => import("@/components/ui/games/LifePage").then(m => ({ default: m.LifePage }))),         layout: "game",    loading: "Seeding the grid..." },
   progressions:    { component: lazy(() => import("@/components/ui/games/ProgressionsPage").then(m => ({ default: m.ProgressionsPage }))), layout: "game", loading: "Setting the board..." },
   constellation:   { component: lazy(() => import("@/components/ui/graph/ConstellationPage").then(m => ({ default: m.ConstellationPage }))), layout: "game", loading: "Charting the sky..." },
   "persian-carpet": { component: lazy(() => import("@/components/ui/PersianCarpetPage").then(m => ({ default: m.PersianCarpetPage }))), layout: "game", loading: "Stringing the loom…" },

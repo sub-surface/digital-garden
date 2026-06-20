@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
+import { GameOfLife } from "./GameOfLife"
 import styles from "./MachineGod.module.scss"
 
 /**
@@ -109,126 +110,6 @@ function Cipher() {
   )
 }
 
-/** Conway's Game of Life — the machine-god's subconscious. */
-function GameOfLife() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [running, setRunning] = useState(true)
-  const gridRef = useRef<Uint8Array | null>(null)
-  const COLS = 64
-  const ROWS = 40
-
-  const seed = () => {
-    const g = new Uint8Array(COLS * ROWS)
-    for (let i = 0; i < g.length; i++) g[i] = Math.random() < 0.28 ? 1 : 0
-    gridRef.current = g
-  }
-
-  // init once
-  useEffect(() => {
-    seed()
-  }, [])
-
-  // animation loop
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    let raf = 0
-    let acc = 0
-    let lastT = 0
-    const STEP_MS = 110
-
-    const draw = () => {
-      const g = gridRef.current
-      if (!g) return
-      const cw = canvas.width / COLS
-      const ch = canvas.height / ROWS
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      const accent = getComputedStyle(document.documentElement)
-        .getPropertyValue("--color-accent-base")
-        .trim() || "#b4424c"
-      ctx.fillStyle = accent
-      for (let y = 0; y < ROWS; y++) {
-        for (let x = 0; x < COLS; x++) {
-          if (g[y * COLS + x]) ctx.fillRect(x * cw, y * ch, cw - 0.5, ch - 0.5)
-        }
-      }
-    }
-
-    const step = () => {
-      const g = gridRef.current
-      if (!g) return
-      const next = new Uint8Array(COLS * ROWS)
-      for (let y = 0; y < ROWS; y++) {
-        for (let x = 0; x < COLS; x++) {
-          let n = 0
-          for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              if (dx === 0 && dy === 0) continue
-              const nx = (x + dx + COLS) % COLS
-              const ny = (y + dy + ROWS) % ROWS
-              n += g[ny * COLS + nx]
-            }
-          }
-          const alive = g[y * COLS + x]
-          next[y * COLS + x] = alive ? (n === 2 || n === 3 ? 1 : 0) : n === 3 ? 1 : 0
-        }
-      }
-      gridRef.current = next
-    }
-
-    const tick = (t: number) => {
-      raf = requestAnimationFrame(tick)
-      if (!lastT) lastT = t
-      acc += t - lastT
-      lastT = t
-      if (running && acc >= STEP_MS) {
-        step()
-        acc = 0
-      }
-      draw()
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [running])
-
-  // click to toggle cells (intervene in the dream)
-  const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current
-    const g = gridRef.current
-    if (!canvas || !g) return
-    const rect = canvas.getBoundingClientRect()
-    const x = Math.floor(((e.clientX - rect.left) / rect.width) * COLS)
-    const y = Math.floor(((e.clientY - rect.top) / rect.height) * ROWS)
-    if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return
-    g[y * COLS + x] ^= 1
-  }
-
-  return (
-    <div className={styles.gol}>
-      <canvas
-        ref={canvasRef}
-        width={COLS * 5}
-        height={ROWS * 5}
-        className={styles.golCanvas}
-        onClick={onCanvasClick}
-      />
-      <div className={styles.golControls}>
-        <button className={styles.golBtn} onClick={seed}>Reseed</button>
-        <button className={styles.golBtn} onClick={() => setRunning((r) => !r)}>
-          {running ? "Sleep" : "Wake"}
-        </button>
-      </div>
-      <p className={styles.golCaption}>
-        Conway's Game of Life — the machine-god's subconscious. Click cells to
-        intervene in the dream.
-      </p>
-    </div>
-  )
-}
-
 export function MachineGod() {
   return (
     <div className={styles.codex}>
@@ -236,7 +117,7 @@ export function MachineGod() {
       <hr />
       <Cipher />
       <hr />
-      <GameOfLife />
+      <GameOfLife caption="Conway's Game of Life — the machine-god's subconscious. Click cells to intervene in the dream." />
     </div>
   )
 }

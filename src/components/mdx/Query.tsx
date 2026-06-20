@@ -1,12 +1,34 @@
 import { useStore } from "@/store"
-import { useMemo } from "react"
+import { useMemo, useRef } from "react"
 import type { NoteMetadata } from "@/types/content"
+import { isLandableNote } from "@/hooks/useRandomNote"
 
 interface QueryProps {
   filter?: string   // e.g. "type=book" or "tag=philosophy" or "folder=Wiki"
-  sort?: string     // "date" | "title" | "-date" | "-title"
+  sort?: string     // "date" | "title" | "-date" | "-title" | "random"
   limit?: number
   display?: "list" | "grid" | "table"
+  /**
+   * Restrict to "landable" notes (exclude system/shelf/landing pages and private
+   * notes). Defaults on for random sort (where stubs are noise), off otherwise.
+   */
+  notesOnly?: boolean
+}
+
+/** Fisher–Yates with a deterministic, render-stable order via a fixed seed. */
+function shuffle<T>(arr: T[], seed: number): T[] {
+  const out = [...arr]
+  let s = seed || 1
+  const rand = () => {
+    // xorshift32 — cheap, deterministic, no Math.random (stable across renders).
+    s ^= s << 13; s ^= s >>> 17; s ^= s << 5
+    return ((s >>> 0) % 100000) / 100000
+  }
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1))
+    ;[out[i], out[j]] = [out[j], out[i]]
+  }
+  return out
 }
 
 function applyFilter(notes: NoteMetadata[], filter: string): NoteMetadata[] {
@@ -61,16 +83,23 @@ function formatDate(raw: string): string {
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })
 }
 
-export function Query({ filter, sort = "-date", limit = 10, display = "list" }: QueryProps) {
+export function Query({ filter, sort = "-date", limit = 10, display = "list", notesOnly }: QueryProps) {
   const contentIndex = useStore(s => s.contentIndex)
+  // One stable seed per mount, so random sort doesn't reshuffle on every render.
+  const seedRef = useRef(((Date.now() & 0xffff) ^ 0x9e37) | 1)
+
+  const isRandom = sort === "random"
+  const landable = notesOnly ?? isRandom
 
   const results = useMemo(() => {
     if (!contentIndex) return []
-    let notes = Object.values(contentIndex)
+    let notes = Object.entries(contentIndex)
+      .filter(([slug, meta]) => !landable || isLandableNote(slug, meta))
+      .map(([, meta]) => meta)
     if (filter) notes = applyFilter(notes, filter)
-    notes = applySort(notes, sort)
+    notes = isRandom ? shuffle(notes, seedRef.current) : applySort(notes, sort)
     return notes.slice(0, limit)
-  }, [contentIndex, filter, sort, limit])
+  }, [contentIndex, filter, sort, limit, landable, isRandom])
 
   if (!contentIndex) return <div className="note-loading">Loading...</div>
   if (results.length === 0) return <p style={{ opacity: 0.5, fontFamily: 'var(--font-code)', fontSize: '0.85rem' }}>No results.</p>

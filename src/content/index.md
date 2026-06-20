@@ -90,6 +90,20 @@ A virtual space for [[thinking in public]],
 
 <Query sort="-date" limit="10" display="list" />
 
+# On this day
+
+<OnThisDay />
+
+# Wander
+
+A few notes at random — refresh for more.
+
+<Query sort="random" limit="6" display="list" />
+
+# The machine's subconscious
+
+<GameOfLife caption="Conway's Game of Life. Click cells to intervene." />
+
 ---
 
 [^1]: **This site is a work in progress.**

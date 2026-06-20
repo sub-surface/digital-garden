@@ -1,0 +1,53 @@
+// Shared square Conway's Life. Lifted from MachineGod's inline GoL so the
+// article, index, and arcade Life page all share one engine + look.
+
+.gol {
+  text-align: center;
+}
+
+.canvas {
+  display: block;
+  margin: 0 auto 1em;
+  border: 1px solid currentColor;
+  opacity: 0.75;
+  cursor: crosshair;
+  image-rendering: pixelated;
+  width: 100%;
+  max-width: 480px;
+  background: transparent;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.6em;
+}
+
+.btn {
+  font-family: var(--font-code, "IBM Plex Mono", monospace);
+  font-size: 0.7em;
+  padding: 0.4em 1.5em;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  transition: opacity 0.2s, color 0.2s, border-color 0.2s;
+
+  &:hover {
+    opacity: 1;
+    color: var(--color-accent-base);
+    border-color: var(--color-accent-base);
+  }
+}
+
+.caption {
+  text-align: center;
+  font-family: var(--font-header, "Playfair Display", Georgia, serif);
+  font-style: italic;
+  opacity: 0.6;
+  font-size: 0.8em;
+  margin-top: 0.75em;
+}

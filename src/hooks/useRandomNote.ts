@@ -10,11 +10,21 @@ import { SYSTEM_PAGES } from "@/config/system-pages"
  * Compared case-insensitively because content-index keys preserve casing
  * (`heXO`, `Arcade`) while SYSTEM_PAGES keys are lowercase route slugs.
  */
-const EXCLUDED_SLUGS = new Set(
+export const EXCLUDED_SLUGS = new Set(
   [...Object.keys(SYSTEM_PAGES), "index", "recent", "tags", "folder"].map((s) =>
     s.toLowerCase()
   )
 )
+
+/**
+ * Whether a content-index entry is a "landable" note — i.e. a real note you'd
+ * want to surface in a random pick / "on this day", not a system/shelf/landing
+ * page or a private note. Shared by `useRandomNote` and the MDX query components.
+ */
+export function isLandableNote(slug: string, meta: { private?: boolean }): boolean {
+  if (EXCLUDED_SLUGS.has(slug.toLowerCase())) return false
+  return !meta.private
+}
 
 /**
  * Returns a callback that jumps to a random note. On the main shell it opens the
@@ -31,11 +41,9 @@ export function useRandomNote() {
     // Chat shell has no notes to land on; the dice is a garden/wiki affordance.
     if (!contentIndex || shell === "chat") return
 
-    const slugs = Object.keys(contentIndex).filter((slug) => {
-      if (EXCLUDED_SLUGS.has(slug.toLowerCase())) return false
-      const meta = contentIndex[slug]
-      return !meta.private
-    })
+    const slugs = Object.keys(contentIndex).filter((slug) =>
+      isLandableNote(slug, contentIndex[slug])
+    )
     if (slugs.length === 0) return
 
     const slug = slugs[Math.floor(Math.random() * slugs.length)]

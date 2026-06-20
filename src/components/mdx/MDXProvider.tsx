@@ -5,6 +5,8 @@ import { BookCard } from "./BookCard"
 import { MovieCard } from "./MovieCard"
 import { Gallery } from "./Gallery"
 import { Query } from "./Query"
+import { OnThisDay } from "./OnThisDay"
+import { GameOfLife } from "./GameOfLife"
 import { AsciiAvatar } from "./AsciiAvatar"
 import { Epigraph } from "./Epigraph"
 import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
@@ -61,6 +63,8 @@ export const mdxComponents = {
   MovieCard,
   Gallery,
   Query,
+  OnThisDay,
+  GameOfLife,
   WikiSubmitForm,
   AsciiAvatar,
   PhotoAlbums,
