@@ -6,6 +6,7 @@ import { MusicBar } from "@/components/ui/MusicBar"
 import { SearchButton } from "@/components/ui/SearchButton"
 import { RandomNoteButton } from "@/components/ui/RandomNoteButton"
 import { BgModeToggle } from "@/components/ui/BgModeToggle"
+import { ReaderToggle } from "@/components/ui/ReaderToggle"
 import styles from "./QuickControls.module.scss"
 
 const NON_ARCADE_SLUGS = new Set(["graph", "constellation"])
@@ -143,6 +144,7 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
   return (
     <div
       className={styles.quickControls}
+      data-variant={variant}
       data-panel-ignore
       style={rightOffset ? { right: `${rightOffset}px` } : undefined}
     >
@@ -174,6 +176,9 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
       />
 
       <BgModeToggle />
+
+      {/* Reader Mode Toggle */}
+      {variant === "full" && <ReaderToggle />}
 
       {/* Side Chat Toggle (wiki only) */}
       <SideChatToggle />

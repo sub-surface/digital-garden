@@ -33,6 +33,11 @@
       opacity: 1;
       color: var(--color-accent-base);
     }
+
+    &[data-active] {
+      opacity: 1;
+      color: var(--color-accent-base);
+    }
   }
 }
 
@@ -196,6 +201,13 @@
     top: 0.75rem;
     right: 0.75rem;
     gap: var(--space-2);
+  }
+
+  // The full-variant bar (garden/wiki) is replaced by the bottom-right
+  // CornerMenu on mobile, which mirrors these actions. The chat variant has no
+  // CornerMenu, so it must stay visible.
+  .quickControls[data-variant="full"] {
+    display: none;
   }
 
   .clockGroup {

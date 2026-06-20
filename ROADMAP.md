@@ -13,21 +13,25 @@ the sequenced/opinionated cut (`docs/iteration-spec.md`), the HeXO research pipe
 - Detail backers: `docs/future.md` (full backlog by domain), `docs/iteration-spec.md` (rationale
   + proposed shapes), `../hexgo-theory/{DIRECTION,SPEC}.md` (the theory).
 
-Last reconciled against the working tree: 2026-06-15.
+Last reconciled against the working tree: 2026-06-20.
 
 ---
 
 ## 0. Now — sequenced top picks
 
-The iteration-spec's recommended order, pruned to what's actually still open:
+Big structural items from the original cut have since shipped (verified 2026-06-20):
+**Worker split** (§2 — `src/worker/*` modules), **`ui/` grouping** (§3 — chat/wiki/games/
+shelves/reader/graph subdirs), **CLS image dimensions** (§5 — `rehype-image-paths` stamps
+intrinsic w/h from `public/image-dimensions.json`), the **command palette + `?` cheat sheet**
+(§4/§15 — `CommandPalette` + `KeyboardCheatSheet`), and **reading-progress bar** (§15 —
+`ReadingProgress` in `ArticleLayout`). Remaining recommended order:
 
-1. **Hygiene** (§1) — `AGENTS.md`/`CLAUDE.md` drift is the only one left. Minutes.
-2. **Lighthouse CI** (§5) — scoreboard *before* perf work.
-3. **Worker split** (§2) then **`ui/` grouping** (§3) — structural; do while fresh.
-4. **CLS image dimensions** (§5) + **broken wikilinks** (§7) — highest felt-quality wins.
-5. **a11y / keyboard pass** (§4) — the craft layer.
-6. **Arcade cabinet shell** (§6) — before any new game.
-7. Everything else opportunistically.
+1. **Lighthouse CI** (§5) — scoreboard *before* perf work. No `.github/workflows` for it yet.
+2. **Error boundaries around lazy routes** (§9) — router has none; a failed `lazy()` chunk
+   white-screens. Highest resilience win.
+3. **a11y / keyboard pass** (§4) — finish the focus-trap + reduced-motion tails.
+4. **Arcade cabinet shell** (§6) — before any new game.
+5. Everything else opportunistically.
 
 ---
 
@@ -310,4 +314,15 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
   setting accent + bg-style + density together. Triadic palette math already in the store.
 - **Music-reactive generative art** — FFT analyser already wired (devlog 2026-06-14 `next:`).
 - **Constellation "guided tour" mode** — devlog `next:`.
-- **"What changed" timeline** — devlog `next:`.
+- **"What changed" timeline** — devlog `next:`. The new `<Query sort="-date">` on `index.md`
+  is the seed; promote it to a full dated changelog stream (group by day, show growth badges).
+- **Garden seasons / time-of-day ambient theming** — shift the default bg palette + accent
+  warmth by local clock (dawn/day/dusk/night) and optionally month. The triadic palette math +
+  `bgMode` cycle already exist; this is a thin scheduler over them, respecting any explicit
+  user override in localStorage. Quiet, atmospheric, zero new deps.
+- **"On this day" resurfacer** — a small index-page module that surfaces a note created/edited
+  on this calendar day in a past year (or a random seedling if none). Pairs with the content
+  index's `date`; nudges old notes back into view. No backend.
+- **Adjustable measure / type-scale control** in reader mode — a couple of `±` steps on body
+  width (e.g. 70/80/90ch) and font size, persisted to localStorage. Cheap, and directly serves
+  the long-form reading focus the article layout is built around.

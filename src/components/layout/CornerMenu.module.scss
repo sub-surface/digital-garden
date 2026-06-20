@@ -25,52 +25,62 @@
   justify-content: center;
 }
 
-.arc {
+// Vertical menu — anchored to the toggle, opens upward (bottom-right corner).
+.menu {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  pointer-events: none;
-  width: 0;
-  height: 0;
-}
-
-.arcItem {
-  position: absolute;
-  top: -24px;
-  left: -24px;
+  bottom: calc(100% + var(--space-2));
+  right: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  font-family: var(--font-code);
-  font-size: 0.75rem;
-  text-decoration: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 9rem;
+  padding: var(--space-2);
+  background: var(--glass-bg-heavy);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  // Hidden state: collapsed + non-interactive. data-open reveals it.
   opacity: 0;
-  transform: translate(0, 0) scale(0.5);
-  transition: 
-    transform 0.4s var(--ease-spring),
-    opacity 0.3s ease,
-    color 0.2s ease;
-  transition-delay: var(--arc-delay);
+  transform: translateY(8px) scale(0.96);
+  transform-origin: bottom right;
   pointer-events: none;
-  cursor: pointer;
-  padding: 0;
+  transition:
+    opacity 0.18s ease,
+    transform 0.22s var(--ease-spring);
 
-  &:hover {
-    color: var(--color-primary);
-    transform: translate(var(--arc-x), var(--arc-y)) scale(1.1) !important;
+  &[data-open] {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
   }
 }
 
-.arc[data-open] {
-  .arcItem {
-    opacity: 1;
-    transform: translate(var(--arc-x), var(--arc-y)) scale(1);
-    pointer-events: auto;
+.menuItem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  }
+
+  &[data-active] {
+    color: var(--color-accent-base);
   }
 }
 

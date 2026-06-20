@@ -27,6 +27,16 @@
     display: none !important;
   }
 
+  // …but keep the mobile CornerMenu reachable: on mobile it's the *only* control
+  // surface (the QuickControls bar is hidden ≤800px and there's no command
+  // palette), so hiding it would trap the user in reader mode with no toggle to
+  // leave. It already only renders ≤800px, so this just un-hides it there.
+  @media (max-width: 800px) {
+    > [data-corner-menu] {
+      display: flex !important;
+    }
+  }
+
   // Centre the measure and relax it a hair for focused reading.
   .article-body {
     margin-left: auto;

@@ -110,11 +110,13 @@
   pointer-events: none;
 }
 
-// ── Mobile: keep the title from running under the top-right controls ──
+// ── Mobile ──
 @media (max-width: 800px) {
   .container {
-    // leave room for QuickControls' icons on the right
-    max-width: calc(100vw - 110px);
+    // The full QuickControls bar is hidden on mobile (its actions move to the
+    // bottom-right CornerMenu), so the title can use nearly the full width —
+    // just a small inset so it doesn't kiss the screen edge.
+    max-width: calc(100vw - 2rem);
   }
 
   .title {

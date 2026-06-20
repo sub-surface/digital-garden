@@ -2,19 +2,22 @@
 
 .article-layout {
   display: grid;
-  // Center 900px content, with a 250px margin column to the right
-  grid-template-columns: minmax(2rem, 1fr) 900px 250px minmax(2rem, 1fr);
-  gap: 0 4rem;
+  // The prose column (col 2) is sized to the measure and the page is balanced
+  // so it sits OPTICALLY CENTRED: the left spacer matches the right spacer +
+  // gap + margin column, so the text block is centred in the viewport while the
+  // sidenote/TOC margin still hangs off to the right. Below the TOC breakpoint
+  // the margin column collapses (see media queries) and the body just centres.
+  grid-template-columns:
+    minmax(2rem, 1fr)            // left spacer (balances the right margin)
+    minmax(0, 80ch)              // prose measure
+    calc(4rem + 250px)           // gap + right margin column (TOC / sidenotes)
+    minmax(2rem, 1fr);           // right spacer
   width: 100%;
   padding: 4rem 0;
 }
 
 .article-body {
   grid-column: 2;
-  // Cap the prose measure to a comfortable ~72ch (~700px at our body size) even
-  // though the grid column is 900px — sidenotes/TOC keep their own columns, so
-  // narrowing the text block just stops lines sprawling past readable length.
-  max-width: min(72ch, 100%);
   min-width: 0;
   // Justified with automatic hyphenation (lang="en" is set on <html>) so the
   // even right edge doesn't open rivers of space. Applies to essays and wiki.
@@ -28,7 +31,10 @@
     text-wrap: pretty;
   }
 
-  h1, h2, h3 {
+  // Headings read left-aligned (not justified) — justified headings open ugly
+  // word gaps on short lines and fight the centred body's symmetry.
+  h1, h2, h3, h4, h5, h6 {
+    text-align: left;
     text-wrap: balance;
   }
 
@@ -37,6 +43,11 @@
   h2 {
     padding-bottom: var(--space-2);
     border-bottom: 1px solid var(--color-border-light);
+    // Establish a block formatting context so the underline rule shrinks to sit
+    // *beside* a floated sidenote/pullquote rather than running under it (the
+    // border-box no longer flows beneath the float). `---`/<hr> dodge this by
+    // being 60%-wide & centered; headings span the measure, so they need the BFC.
+    overflow: hidden;
   }
 }
 
@@ -66,6 +77,9 @@
 
 .article-toc {
   grid-column: 3;
+  // The 4rem gap is now folded into column 3's width, so pad it back as the
+  // gutter between the prose and the TOC.
+  padding-left: 4rem;
   position: sticky;
   top: 4rem;
   align-self: start;
@@ -221,12 +235,12 @@
   }
 }
 
-// Collapse to single column below 1300px
+// Below the TOC breakpoint the margin column drops away and the prose centres
+// on its own (sidenotes go inline — see sidenotes.scss @min-width 1101px).
 @media (max-width: 1300px) {
   .article-layout {
-    grid-template-columns: 1fr minmax(0, 900px) 1fr;
+    grid-template-columns: 1fr minmax(0, 80ch) 1fr;
     padding: 2rem 1.5rem;
-    gap: 0;
   }
 
   .article-body {

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { useStore } from "@/store"
+import { useRandomNote } from "@/hooks/useRandomNote"
 import styles from "./CornerMenu.module.scss"
 
 interface ArcItem {
@@ -8,6 +9,7 @@ interface ArcItem {
   href?: string
   onClick?: () => void
   devOnly?: boolean
+  active?: boolean
 }
 
 interface CornerMenuProps {
@@ -20,24 +22,35 @@ export function CornerMenu({ variant = "default" }: CornerMenuProps = {}) {
   const toggleThemePanel = useStore((s) => s.toggleThemePanel)
   const toggleMusic = useStore((s) => s.toggleMusic)
   const toggleSearch = useStore((s) => s.toggleSearch)
+  const cycleBgMode = useStore((s) => s.cycleBgMode)
+  const toggleReaderMode = useStore((s) => s.toggleReaderMode)
+  const isReaderMode = useStore((s) => s.isReaderMode)
   const theme = useStore((s) => s.theme)
   const cycleAccent = useStore((s) => s.cycleAccent)
   const setTheme = (t: "light" | "dark") => useStore.getState().setTheme(t)
+  const goRandom = useRandomNote()
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // The mobile arc is the only set of quick controls on small screens (the
+  // top QuickControls bar is hidden ≤800px), so it mirrors that bar's actions.
   const ARC_ITEMS: ArcItem[] = variant === "wiki"
     ? [
         { label: "Search", onClick: () => { toggleSearch(); setOpen(false); } },
         { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },
         { label: "Palette", onClick: () => { cycleAccent(); setOpen(false); } },
+        { label: "Bg", onClick: () => { cycleBgMode(); setOpen(false); } },
+        { label: "Reader", active: isReaderMode, onClick: () => { toggleReaderMode(); setOpen(false); } },
         { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
         { label: "⬡ Garden", href: "https://subsurfaces.net" },
       ]
     : [
         { label: "Search", onClick: () => { toggleSearch(); setOpen(false); } },
+        { label: "Random", onClick: () => { goRandom(); setOpen(false); } },
         { label: "Music", onClick: () => { toggleMusic(); setOpen(false); } },
         { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },
         { label: "Palette", onClick: () => { cycleAccent(); setOpen(false); } },
+        { label: "Bg", onClick: () => { cycleBgMode(); setOpen(false); } },
+        { label: "Reader", active: isReaderMode, onClick: () => { toggleReaderMode(); setOpen(false); } },
         { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
         ...(import.meta.env.DEV ? [{ label: "Dev", to: "/__dev", devOnly: true }] : []),
       ]
@@ -78,32 +91,21 @@ export function CornerMenu({ variant = "default" }: CornerMenuProps = {}) {
     setOpen(false)
   }
 
-  // Spaced out arc positions
-  const arcRadius = 110
-  const startAngle = -90 // Straight up
-  const sweepAngle = 140 // Spread more for more items
-  const step = ARC_ITEMS.length > 1 ? sweepAngle / (ARC_ITEMS.length - 1) : 0
-
   return (
-    <div className={styles.container} ref={containerRef} data-panel-ignore>
+    <div className={styles.container} ref={containerRef} data-panel-ignore data-corner-menu>
       {/* Origin-centered menu wrapper */}
       <div className={styles.menuWrapper}>
-        <div className={styles.arc} data-open={open || undefined}>
-          {ARC_ITEMS.map((item, i) => {
-            const angle = startAngle - (i * step)
-            const rad = (angle * Math.PI) / 180
-            const x = Math.cos(rad) * arcRadius
-            const y = Math.sin(rad) * arcRadius
-            
+        {/* Vertical menu — pops up above the toggle. Scales cleanly to any
+            number of items (replaced the old radial fan, which crowded past
+            ~6 items). */}
+        <div className={styles.menu} data-open={open || undefined} role="menu">
+          {ARC_ITEMS.map((item) => {
             const commonProps = {
-              className: styles.arcItem,
+              className: styles.menuItem,
+              role: "menuitem",
               onClick: () => handleNav(item),
               "data-panel-ignore": true,
-              style: {
-                "--arc-x": `${x}px`,
-                "--arc-y": `${y}px`,
-                "--arc-delay": `${i * 40}ms`,
-              } as React.CSSProperties
+              "data-active": item.active || undefined,
             }
 
             if (item.to || item.href) {
