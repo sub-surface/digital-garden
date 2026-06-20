@@ -175,7 +175,9 @@ function main() {
 
     index[slug] = {
       slug,
-      title: (data.title as string) ?? slug.split("/").pop() ?? slug,
+      // Coerce to string — YAML parses bare-number titles (e.g. `title: 2048`)
+      // as numbers, which breaks downstream consumers like FlexSearch (.normalize).
+      title: data.title != null ? String(data.title) : (slug.split("/").pop() ?? slug),
       tags: Array.isArray(data.tags) ? data.tags : [],
       type: data.type as string | undefined,
       date: data.date ? String(data.date) : undefined,

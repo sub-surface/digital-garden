@@ -56,11 +56,18 @@ export function SearchOverlay() {
         })
 
         Object.entries(contentIndex).forEach(([slug, meta]) => {
-          index.add({
-            id: slug,
-            title: meta.title,
-            excerpt: meta.excerpt || "",
-          })
+          // Coerce to strings — FlexSearch calls .normalize() on indexed fields,
+          // so a non-string title/excerpt (e.g. a bare-number YAML title) would
+          // otherwise throw and abort the entire index build.
+          try {
+            index.add({
+              id: slug,
+              title: String(meta.title ?? ""),
+              excerpt: String(meta.excerpt ?? ""),
+            })
+          } catch (err) {
+            console.warn(`SearchOverlay: skipped indexing "${slug}":`, err)
+          }
         })
 
         if (!cancelled) {
