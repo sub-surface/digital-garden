@@ -57,12 +57,22 @@
   border-radius: 6px;
   cursor: pointer;
   &:hover { border-color: var(--color-accent-base); color: var(--color-accent-base); }
+
+  // Inside a panel card, clear the 24px card-header tab on the left.
+  @container panel (min-width: 0px) {
+    left: calc(24px + 1rem);
+  }
 }
 
 .panel {
   position: absolute;
   top: 3.6rem;
   left: 1rem;
+
+  // Inside a panel card, clear the 24px card-header tab on the left.
+  @container panel (min-width: 0px) {
+    left: calc(24px + 1rem);
+  }
   z-index: 1600;
   width: 290px;
   max-height: calc(100vh - 5rem);
