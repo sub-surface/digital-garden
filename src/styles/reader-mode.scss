@@ -37,11 +37,15 @@
     }
   }
 
-  // Centre the measure and relax it a hair for focused reading.
+  // Centre the measure and relax it a hair for focused reading. The measure and
+  // font scale are user-adjustable in reader mode (persisted) and applied via
+  // CSS vars on the shell; fall back to the defaults when unset.
   .article-body {
     margin-left: auto;
     margin-right: auto;
     line-height: 1.6;
+    max-width: min(var(--reader-measure, 80ch), 100%);
+    font-size: calc(1rem * var(--reader-scale, 1));
   }
 
   // Strip link ornament — colour-only, no underlines or external arrows.

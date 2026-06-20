@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useAuth } from "@/hooks/useAuth"
+import { useFocusTrap } from "@/hooks/useFocusTrap"
 
 interface Props {
   onClose: () => void
@@ -25,6 +26,9 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
 
   const isSignup = tab === "signup"
   const usernameValid = /^[a-zA-Z0-9-]{3,30}$/.test(username)
+
+  // Trap focus inside the modal, close on Esc, restore focus to the trigger.
+  const trapRef = useFocusTrap<HTMLDivElement>({ active: true, onEscape: onClose })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -73,7 +77,14 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
 
   return (
     <div className="wiki-auth-overlay" onClick={onClose}>
-      <div className="wiki-auth-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="wiki-auth-modal"
+        ref={trapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={isSignup ? "Sign up" : "Log in"}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button className="wiki-auth-close" onClick={onClose} aria-label="Close">&times;</button>
 
         {sent ? (

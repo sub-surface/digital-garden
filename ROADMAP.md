@@ -105,8 +105,10 @@ Current story (`useHotkeys`): `\` theme, `b` background, `m` music, `Ctrl+K` sea
 Thin and undiscoverable.
 
 - [ ] **`?` opens a keyboard-shortcut cheat sheet** overlay — single source of truth for bindings.
-- [ ] **Audit focus management** on every overlay (Search, ThemePanel, WikiAuthModal, zen mode,
-  GifPicker, EmotePicker): focus trap while open, `Esc` to close, focus restored to trigger on close.
+- [~] **Audit focus management** on every overlay: a reusable `useFocusTrap` hook (focus capture →
+  in → Tab-cycle → restore, Esc) now wraps SearchOverlay + WikiAuthModal; CommandPalette +
+  KeyboardCheatSheet already had capture/restore/Esc. Remaining: ThemePanel, zen mode, GifPicker,
+  EmotePicker. (2026-06-20)
 - [~] **`aria-label`s on icon-only buttons** — done for the truly icon-only set (MusicBar
   prev/play/next/expand SVGs, SearchButton, RandomNote/Bookmark SVGs marked `aria-hidden`).
   QuickControls/CornerMenu/heXO close already had them. Remaining: profile SVG, chat controls,
@@ -120,12 +122,32 @@ Thin and undiscoverable.
 
 ---
 
+## 4b. Theme-styling consistency (light/dark parity audit)
+
+Some surfaces are hardcoded to dark and don't respond to the light theme. Known: the
+**Constellation / graph view appears dark in light mode**. Likely cause — canvas/PixiJS
+draws (LocalGraph, ConstellationPage, BgCanvas) read fixed colour literals instead of the
+CSS theme tokens, and any panel using a hardcoded `rgba(0,0,0,…)` / OLED `#0a0a0a` instead
+of `var(--color-bg*)`. Audit pass:
+
+- [ ] **Graph views** — make node/edge/label/background colours read the active theme tokens
+  (resolve `getComputedStyle` on the CSS vars, or thread `theme` into the renderer) so the
+  constellation inverts correctly in light mode.
+- [ ] **Grep for hardcoded colours** outside `tokens.scss` — `#0a0a0a`, `#1a1a1f`, `rgba(0,0,0`,
+  `rgba(255,255,255` literals in components/styles that should be `var(--color-*)`.
+- [ ] **Audit every canvas surface** (BgCanvas modes, game pages, OG/boot) for fixed palettes
+  that ignore `theme`.
+- [ ] **Sweep overlays/panels** (LinkPreview, lightbox, chat glass, dropdowns) in light mode for
+  dark-on-dark or low-contrast text.
+
+---
+
 ## 5. Performance & Core Web Vitals
 
 - [ ] **★ Lighthouse CI** (GitHub Actions, 95+ desktop) — do *first* so the rest has a scoreboard.
-- [ ] **★ Fix CLS — image dimensions.** Gallery, sidenotes, LinkPreview, lightbox images lack
-  `width`/`height`. prebuild already reads images for OG — have it emit intrinsic dimensions into
-  a manifest the components consume. Biggest *felt* win.
+- [x] **★ Fix CLS — image dimensions.** Shipped: `prebuild` emits `public/image-dimensions.json`
+  and `rehype-image-paths` stamps intrinsic `width`/`height` on MDX images (author-supplied
+  values kept). `img { max-width:100%; height:auto }` keeps them responsive. (verified 2026-06-20)
 - [ ] **Image optimisation pipeline** — prebuild → `sharp` → WebP variants + `<picture>`/srcset.
   Same pass as the dimensions manifest.
 - [ ] **Pre-render / SSG** for notes — worker already does SSR meta-tag injection; extend to full
@@ -202,11 +224,12 @@ Hex Life, Progressions, The Knotted Field (Persian carpet loom — 2026-06-15). 
 
 ## 9. Resilience — make failure visible (project's own design law)
 
-- [ ] **Error boundaries** around each lazy route and the three shells — a thrown render in one
-  note shouldn't white-screen the garden; a failed `lazy()` chunk (stale deploy / flaky net)
-  currently shows nothing. Add a retry-able fallback.
-- [ ] **content-index load failure is silent** (`AppShell` useEffect). If `content-index.json`
-  404s, search returns nothing forever with no signal. Surface it.
+- [x] **Error boundaries** around the Outlet in all three shells (`AppShell` label="note",
+  `WikiShell` label="page", `ChatShell` label="chat"), each reset on `location.pathname`. The
+  `ErrorBoundary` detects chunk-load failures (stale deploy) and offers RELOAD vs RETRY. The
+  out-of-Outlet floating `LocalGraph` has its own boundary too. (verified 2026-06-20)
+- [x] **content-index load failure is surfaced** — `AppShell` sets `contentIndexError` on a
+  failed/non-JSON fetch and `ContentIndexErrorBanner` renders a visible banner. (verified 2026-06-20)
 - [ ] **Supabase-down drill** — confirm the garden fully renders with auth/chat hard-failing
   (block the Supabase domain in devtools, click around). The architecture claims this; verify it.
 - [ ] **Unchecked `fetch` in worker handlers** — grep for un-checked `await fetch(`; some return
@@ -323,6 +346,7 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
 - **"On this day" resurfacer** — a small index-page module that surfaces a note created/edited
   on this calendar day in a past year (or a random seedling if none). Pairs with the content
   index's `date`; nudges old notes back into view. No backend.
-- **Adjustable measure / type-scale control** in reader mode — a couple of `±` steps on body
-  width (e.g. 70/80/90ch) and font size, persisted to localStorage. Cheap, and directly serves
-  the long-form reading focus the article layout is built around.
+- [x] **Adjustable measure / type-scale control** in reader mode — `±` steps on body width
+  (70/80/90/100ch) and font scale (95–135%), persisted to localStorage, applied via
+  `--reader-measure`/`--reader-scale` CSS vars on the shell. `ReaderControls` (pill, bottom-centre)
+  mounts only in reader mode and includes an Exit button. (shipped 2026-06-20)

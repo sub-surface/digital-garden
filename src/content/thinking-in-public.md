@@ -18,7 +18,7 @@ layout: article
 <div className="dropcap">
 
 Sometimes, it's not enough to be a recluse, misanthropic, solipsistic demon of hatred.   
-Sometimes, it's just worth letting go of things.
+...And sometimes, it's just worth letting go of things.
 </div>
 
 

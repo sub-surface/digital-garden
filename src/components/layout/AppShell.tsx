@@ -18,6 +18,7 @@ import { GlobalOverlays } from "./GlobalOverlays"
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
 import { SkipToContent } from "@/components/ui/SkipToContent"
 import { LinkPreview } from "@/components/ui/reader/LinkPreview"
+import { ReaderControls } from "@/components/ui/reader/ReaderControls"
 import { MusicPlayer } from "@/components/ui/MusicPlayer"
 import { MobileMusicBar } from "@/components/ui/MobileMusicBar"
 import { SearchOverlay } from "@/components/ui/SearchOverlay"
@@ -32,6 +33,8 @@ const LocalGraph = lazy(() => import("@/components/ui/graph/LocalGraph").then(m 
 export function AppShell() {
   const shell = useShell()
   const isReaderMode = useStore((s) => s.isReaderMode)
+  const readerMeasureCh = useStore((s) => s.readerMeasureCh)
+  const readerScale = useStore((s) => s.readerScale)
   const activeSlug = useStore((s) => s.activeGraphSlug)
   const activeLayout = useStore((s) => s.activeLayout)
   const location = useLocation()
@@ -98,6 +101,14 @@ export function AppShell() {
         data-reader={isReaderMode ? "true" : undefined}
         data-layout={activeLayout}
         data-testid="app-shell"
+        style={
+          isReaderMode
+            ? ({
+                "--reader-measure": `${readerMeasureCh}ch`,
+                "--reader-scale": String(readerScale),
+              } as React.CSSProperties)
+            : undefined
+        }
       >
         <SkipToContent />
         <BgCanvas />
@@ -133,6 +144,9 @@ export function AppShell() {
             </Suspense>
           </ErrorBoundary>
         )}
+
+        {/* Reader-mode typography controls (only mounts in reader mode) */}
+        <ReaderControls />
 
         {/* Corner menu — bottom-right (includes Theme toggle) */}
         <CornerMenu />

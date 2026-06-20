@@ -6,6 +6,7 @@ import { QuickControls } from "./QuickControls"
 import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
 import { LinkPreview } from "@/components/ui/reader/LinkPreview"
+import { ReaderControls } from "@/components/ui/reader/ReaderControls"
 import { SearchOverlay } from "@/components/ui/SearchOverlay"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
 import { SideChat } from "@/components/ui/chat/SideChat"
@@ -17,6 +18,8 @@ import styles from "./WikiShell.module.scss"
 export function WikiShell() {
   const activeLayout = useStore((s) => s.activeLayout)
   const isReaderMode = useStore((s) => s.isReaderMode)
+  const readerMeasureCh = useStore((s) => s.readerMeasureCh)
+  const readerScale = useStore((s) => s.readerScale)
   const isSideChatOpen = useStore((s) => s.isSideChatOpen)
   const sideChatWidth = useStore((s) => s.sideChatWidth)
   const location = useLocation()
@@ -32,6 +35,14 @@ export function WikiShell() {
         data-layout={activeLayout}
         data-reader={isReaderMode ? "true" : undefined}
         data-testid="wiki-shell"
+        style={
+          isReaderMode
+            ? ({
+                "--reader-measure": `${readerMeasureCh}ch`,
+                "--reader-scale": String(readerScale),
+              } as React.CSSProperties)
+            : undefined
+        }
       >
         <SkipToContent />
         <BgCanvas />
@@ -72,6 +83,7 @@ export function WikiShell() {
           <SideChat />
         </div>
         <CornerMenu variant="wiki" />
+        <ReaderControls />
       </div>
     </MDXProvider>
   )

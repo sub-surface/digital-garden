@@ -74,6 +74,11 @@ interface GardenStore {
   // Reader mode
   isReaderMode: boolean
   toggleReaderMode: () => void
+  // Reader typography (persisted): measure (line length) + font scale, as steps.
+  readerMeasureCh: number   // body measure in ch (e.g. 70 | 80 | 90)
+  readerScale: number       // font-size multiplier (e.g. 0.95 | 1 | 1.1 | 1.2)
+  cycleReaderMeasure: (dir: 1 | -1) => void
+  cycleReaderScale: (dir: 1 | -1) => void
 
   // Keyboard cheat sheet (? overlay)
   isCheatSheetOpen: boolean
@@ -221,6 +226,32 @@ export const useStore = create<GardenStore>((set) => ({
   // Reader mode
   isReaderMode: false,
   toggleReaderMode: () => set((s) => ({ isReaderMode: !s.isReaderMode })),
+
+  // Reader typography — clamped steps, persisted to localStorage.
+  readerMeasureCh:
+    typeof localStorage !== "undefined"
+      ? parseInt(localStorage.getItem("reader-measure") ?? "80", 10) || 80
+      : 80,
+  readerScale:
+    typeof localStorage !== "undefined"
+      ? parseFloat(localStorage.getItem("reader-scale") ?? "1") || 1
+      : 1,
+  cycleReaderMeasure: (dir) =>
+    set((s) => {
+      const steps = [70, 80, 90, 100]
+      const i = Math.max(0, steps.indexOf(s.readerMeasureCh))
+      const next = steps[Math.min(steps.length - 1, Math.max(0, i + dir))]
+      localStorage.setItem("reader-measure", String(next))
+      return { readerMeasureCh: next }
+    }),
+  cycleReaderScale: (dir) =>
+    set((s) => {
+      const steps = [0.95, 1, 1.1, 1.2, 1.35]
+      const i = Math.max(1, steps.indexOf(s.readerScale))
+      const next = steps[Math.min(steps.length - 1, Math.max(0, i + dir))]
+      localStorage.setItem("reader-scale", String(next))
+      return { readerScale: next }
+    }),
 
   // Search
   isCheatSheetOpen: false,

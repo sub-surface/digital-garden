@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { useStore } from "@/store"
+import { useFocusTrap } from "@/hooks/useFocusTrap"
 import { useIsWiki } from "@/hooks/useIsWiki"
 import { useNavigate } from "@tanstack/react-router"
 import type { Document } from "flexsearch"
@@ -26,6 +27,11 @@ export function SearchOverlay() {
   
   const searchIndexRef = useRef<Document<SearchResult> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Trap focus within the overlay and restore it to the trigger on close. Esc
+  // is already handled by the keydown effect below; initialFocus keeps the
+  // search input as the landing focus rather than the first tabbable child.
+  const trapRef = useFocusTrap<HTMLDivElement>({ active: isOpen, initialFocus: inputRef })
 
   // Build index lazily — only when search opens for the first time
   useEffect(() => {
@@ -173,7 +179,14 @@ export function SearchOverlay() {
 
   return (
     <div className={styles.overlay} onClick={() => setIsOpen(false)}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={styles.modal}
+        ref={trapRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search notes"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className={styles.searchBox}>
           <svg className={styles.searchIcon} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8" />
