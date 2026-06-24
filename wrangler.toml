@@ -10,10 +10,17 @@ invocation_logs = true
 directory = "./dist"
 not_found_handling = "single-page-application"
 binding = "ASSETS"
-# Without this, CF serves dist/index.html directly for "/" and the Worker never
-# runs — so injectMetaTags() is skipped and the homepage ships no og: tags.
-# Deep routes (/arcade, …) have no matching file, so they already hit the Worker.
-run_worker_first = ["/", "/index.html"]
+# Run the Worker for ALL requests. Without this, CF serves dist/index.html
+# directly for "/" and the Worker never runs, so injectMetaTags() is skipped and
+# the homepage ships no og: tags.
+#
+# NB: must be the boolean `true`, NOT an array of paths. The array form is
+# *exclusive* — only the listed routes invoke the Worker and everything else is
+# served assets-first with no Worker fallback, which silently breaks every
+# /api/* route (→ SPA HTML) and disables per-route OG/meta injection on all
+# non-listed pages. `true` runs the Worker everywhere; non-HTML assets pass
+# straight through (see worker/index.ts: non-GET / non-HTML returns as-is).
+run_worker_first = true
 
 [vars]
 NODE_VERSION = "20"
