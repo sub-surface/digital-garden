@@ -110,7 +110,12 @@ export function useBookmarks() {
   async function loadFromServer() {
     try {
       const res = await apiFetch("/api/bookmarks")
-      if (res.ok) {
+      // Guard the body type: when the Worker isn't in front of the assets
+      // (e.g. a `vite preview` build, or a misroute), `/api/bookmarks` resolves
+      // to the SPA fallback HTML with a 200 — calling res.json() on that throws
+      // a noisy "Unexpected token '<'". Only parse when it's actually JSON.
+      const isJson = res.headers.get("content-type")?.includes("application/json")
+      if (res.ok && isJson) {
         const data = await res.json() as { slug: string; title: string; added_at: string }[]
         setBookmarks(data.map((b) => ({ slug: b.slug, title: b.title, addedAt: b.added_at })))
       }

@@ -37,15 +37,22 @@
     }
   }
 
-  // Centre the measure and relax it a hair for focused reading. The measure and
-  // font scale are user-adjustable in reader mode (persisted) and applied via
-  // CSS vars on the shell; fall back to the defaults when unset.
-  .article-body {
+  // Collapse the article grid — its TOC / sidenote margin column is hidden above,
+  // but the grid track still reserves space and offsets the prose to the left.
+  // With the grid gone, both article and note bodies centre on their own. Width
+  // and font scale are driven by the measure / scale vars on the pane + content
+  // (see AppShell.module.scss `.mainPane` / `.mainContent`), so they apply
+  // uniformly to articles AND notes — not just `.article-body`.
+  .article-layout {
+    display: block;
+  }
+  .article-body,
+  .note-body {
+    grid-column: 1;
     margin-left: auto;
     margin-right: auto;
     line-height: 1.6;
-    max-width: min(var(--reader-measure, 80ch), 100%);
-    font-size: calc(1rem * var(--reader-scale, 1));
+    max-width: 100%;
   }
 
   // Strip link ornament — colour-only, no underlines or external arrows.

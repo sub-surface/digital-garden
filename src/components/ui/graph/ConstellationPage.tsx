@@ -159,8 +159,6 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
     window.addEventListener("resize", resize)
 
     const starById = new Map(stars.current.map((s) => [s.id, s]))
-    const accent = () =>
-      getComputedStyle(document.documentElement).getPropertyValue("--color-accent-base").trim() || "#b4424c"
 
     let raf = 0
     const draw = (t: number) => {
@@ -173,6 +171,20 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
       const cos = Math.cos(rot), sin = Math.sin(rot)
 
       ctx.clearRect(0, 0, W, H)
+
+      // Resolve theme-dependent colours ONCE per frame. The canvas is transparent
+      // and sits over the (theme-aware) BgCanvas, so in light mode the previously
+      // hardcoded white stars/lines/labels vanished. Reading these per-element
+      // inside the loops below also forced a style recalc every iteration — a
+      // measurable reflow on large graphs. Once per frame keeps them live when
+      // the user toggles theme/accent (the effect doesn't re-run on theme change).
+      const isLight = document.documentElement.getAttribute("data-theme") === "light"
+      const accentCol = getComputedStyle(document.documentElement).getPropertyValue("--color-accent-base").trim() || "#b4424c"
+      const lineCol = isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.06)"
+      const labelBaseCol = isLight ? "rgba(0,0,0,0.80)" : "rgba(255,255,255,0.82)"
+      const labelHovCol = isLight ? "#000" : "#fff"
+      const starLightness = isLight ? 45 : 72
+
       ctx.save()
       ctx.translate(W / 2 + v.x, H / 2 + v.y)
       ctx.scale(v.zoom, v.zoom)
@@ -189,7 +201,7 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
         if (!a || !b) continue
         const pa = place(a), pb = place(b)
         const isLit = hov && (l.source === hov || l.target === hov)
-        ctx.strokeStyle = isLit ? accent() : "rgba(255,255,255,0.06)"
+        ctx.strokeStyle = isLit ? accentCol : lineCol
         ctx.globalAlpha = isLit ? 0.5 : 0.5
         ctx.beginPath()
         ctx.moveTo(pa.x, pa.y)
@@ -207,7 +219,7 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
 
         // glow
         ctx.globalAlpha = (isLit ? 0.9 : 0.5) * tw
-        const col = isLit ? accent() : `hsl(${s.hue} 45% 72%)`
+        const col = isLit ? accentCol : `hsl(${s.hue} 45% ${starLightness}%)`
         ctx.fillStyle = col
         ctx.beginPath()
         ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
@@ -236,7 +248,7 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
           }
           if (alpha > 0.04) {
             ctx.globalAlpha = alpha
-            ctx.fillStyle = isHov ? "#fff" : "rgba(255,255,255,0.82)"
+            ctx.fillStyle = isHov ? labelHovCol : labelBaseCol
             ctx.font = `${(isHov ? 13 : 10) / v.zoom}px 'IBM Plex Mono', monospace`
             ctx.textAlign = "center"
             ctx.fillText(s.title, p.x, p.y - r - 6 / v.zoom)

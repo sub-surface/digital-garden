@@ -95,18 +95,25 @@
 }
 
 // ── Reader mode ──
+// The measure (line length) and font scale are user-adjustable via ReaderControls
+// and persisted; they arrive as `--reader-measure` / `--reader-scale` on the shell
+// (see AppShell.tsx). Drive the pane width and prose size from those vars rather
+// than hardcoded values. The pane is normally a fixed-basis flex item pinned to
+// `--main-width`, so reader mode must relax `flex` / `width` / `min-width` before
+// `max-width` can actually shrink it to a narrow measure.
 .shell[data-reader="true"] {
-// Reader mode specific shell adjustments if any
-// For example, you might want to adjust the main pane for better readability
   .mainPane {
-    max-width: 700px;
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: min(var(--reader-measure, 80ch), 100%);
     margin: 0 auto;
     border: none;
   }
   .mainContent {
     padding: 2rem;
-    font-size: 1.125rem;
-    line-height: 1.75rem;
+    font-size: calc(1.125rem * var(--reader-scale, 1));
+    line-height: 1.75;
   }
 }
 
