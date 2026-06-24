@@ -13,7 +13,7 @@ the sequenced/opinionated cut (`docs/iteration-spec.md`), the HeXO research pipe
 - Detail backers: `docs/future.md` (full backlog by domain), `docs/iteration-spec.md` (rationale
   + proposed shapes), `../hexgo-theory/{DIRECTION,SPEC}.md` (the theory).
 
-Last reconciled against the working tree: 2026-06-20.
+Last reconciled against the working tree: 2026-06-24.
 
 ---
 
@@ -23,15 +23,14 @@ Big structural items from the original cut have since shipped (verified 2026-06-
 **Worker split** (§2 — `src/worker/*` modules), **`ui/` grouping** (§3 — chat/wiki/games/
 shelves/reader/graph subdirs), **CLS image dimensions** (§5 — `rehype-image-paths` stamps
 intrinsic w/h from `public/image-dimensions.json`), the **command palette + `?` cheat sheet**
-(§4/§15 — `CommandPalette` + `KeyboardCheatSheet`), and **reading-progress bar** (§15 —
-`ReadingProgress` in `ArticleLayout`). Remaining recommended order:
+(§4/§15 — `CommandPalette` + `KeyboardCheatSheet`), **reading-progress bar** (§15 —
+`ReadingProgress` in `ArticleLayout`), and **error boundaries around all three shells** (§9 —
+`ErrorBoundary` with chunk-load detection; verified 2026-06-24). Remaining recommended order:
 
 1. **Lighthouse CI** (§5) — scoreboard *before* perf work. No `.github/workflows` for it yet.
-2. **Error boundaries around lazy routes** (§9) — router has none; a failed `lazy()` chunk
-   white-screens. Highest resilience win.
-3. **a11y / keyboard pass** (§4) — finish the focus-trap + reduced-motion tails.
-4. **Arcade cabinet shell** (§6) — before any new game.
-5. Everything else opportunistically.
+2. **a11y / keyboard pass** (§4) — finish the focus-trap + reduced-motion tails.
+3. **Arcade cabinet shell** (§6) — before any new game.
+4. Everything else opportunistically.
 
 ---
 
@@ -130,9 +129,10 @@ draws (LocalGraph, ConstellationPage, BgCanvas) read fixed colour literals inste
 CSS theme tokens, and any panel using a hardcoded `rgba(0,0,0,…)` / OLED `#0a0a0a` instead
 of `var(--color-bg*)`. Audit pass:
 
-- [ ] **Graph views** — make node/edge/label/background colours read the active theme tokens
-  (resolve `getComputedStyle` on the CSS vars, or thread `theme` into the renderer) so the
-  constellation inverts correctly in light mode.
+- [x] **Graph views** — `ConstellationPage` now resolves star/line/label colours from the
+  active theme once per frame (dark stars/lines/labels on light bg); `LocalGraph` already
+  re-derived `linkColor`/`labelColor` from `data-theme` in its tick loop. Both invert
+  correctly in light mode now. (fixed 2026-06-24)
 - [ ] **Grep for hardcoded colours** outside `tokens.scss` — `#0a0a0a`, `#1a1a1f`, `rgba(0,0,0`,
   `rgba(255,255,255` literals in components/styles that should be `var(--color-*)`.
 - [ ] **Audit every canvas surface** (BgCanvas modes, game pages, OG/boot) for fixed palettes
@@ -310,12 +310,23 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
 
 ## 13. OG image gen hardening
 
+- [x] **Homepage card shipped no og: tags** — `/` mapped directly to `dist/index.html`, so CF's
+  asset handler served it and bypassed the Worker → `injectMetaTags` never ran (deep routes hit
+  the Worker fine). Fixed with `run_worker_first = ["/", "/index.html"]` in `wrangler.toml`.
+  (fixed 2026-06-24; verify post-deploy: `curl -s https://subsurfaces.net/ | grep og:image`)
+- [x] **External image fetch failures** — resolved: `og-gen.ts` now inlines only LOCAL thumbnails
+  (base64 data URIs) and skips truly-external URLs entirely, so `covers.openlibrary.org` is never
+  fetched at build. A full run had zero skips. (verified 2026-06-24)
+- [~] **OG caching** — the `.cache.json` works locally (156/157 cached on a clean run) but isn't
+  tracked, so each machine starts cold. Moot for deploy: CF never runs `PROCESS_OG`, so OG images
+  ship as committed artifacts and the cache only matters when regenerating locally.
 - [ ] **SVG image support** — satori can't load `.svg`; detect SVG URLs in `og-gen.ts` and skip or
-  rasterise via `sharp`.
-- [ ] **External image fetch failures** — `covers.openlibrary.org` fetch fails in the CF build;
-  catch per-image and fall back gracefully.
-- [ ] **OG caching not working** — `0 cached` on every build; CF builds may not persist the cache
-  dir. Investigate the cache-key logic.
+  rasterise via `sharp` (not yet a dependency).
+- [ ] **6 orphaned cards** in `public/og/` (`Moltbook`, `Best-Of-Moltbook`, `On-philosophy`,
+  `Rebuild-Upgrade-Prompt`, `Wiki-Ape`, `Wiki-Sample-Article`) — notes since deleted/renamed; safe
+  to `git rm`. Re-running `PROCESS_OG` also rewrites ~13 system cards with different bytes (older
+  satori/resvg than current `node_modules`) — visually identical, but the committed artifacts
+  aren't bit-reproducible from current deps.
 
 ---
 
@@ -359,4 +370,8 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
 - [x] **Adjustable measure / type-scale control** in reader mode — `±` steps on body width
   (70/80/90/100ch) and font scale (95–135%), persisted to localStorage, applied via
   `--reader-measure`/`--reader-scale` CSS vars on the shell. `ReaderControls` (pill, bottom-centre)
-  mounts only in reader mode and includes an Exit button. (shipped 2026-06-20)
+  mounts only in reader mode and includes an Exit button. (shipped 2026-06-20; **the controls were
+  inert until 2026-06-24** — AppShell's hardcoded `.mainPane`/`.mainContent` reader rules overrode
+  the vars and the var rules only targeted `.article-body`, so notes never responded. Now both the
+  pane width and prose size are var-driven and the article grid collapses so notes + articles both
+  react.)
