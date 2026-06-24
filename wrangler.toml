@@ -10,6 +10,10 @@ invocation_logs = true
 directory = "./dist"
 not_found_handling = "single-page-application"
 binding = "ASSETS"
+# Without this, CF serves dist/index.html directly for "/" and the Worker never
+# runs — so injectMetaTags() is skipped and the homepage ships no og: tags.
+# Deep routes (/arcade, …) have no matching file, so they already hit the Worker.
+run_worker_first = ["/", "/index.html"]
 
 [vars]
 NODE_VERSION = "20"
