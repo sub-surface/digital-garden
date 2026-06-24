@@ -29,6 +29,90 @@ function resolveNote(notes: readonly BootNote[], query: string): BootNote | unde
   )
 }
 
+/**
+ * Evaluate an arithmetic/bitwise expression WITHOUT `eval`/`new Function`.
+ *
+ * A small recursive-descent (Pratt) parser — the boot CSP forbids
+ * `script-src 'unsafe-eval'`, so dynamic code generation is blocked at runtime.
+ * Supports + - * / % **, bitwise | ^ & ~ << >>, parentheses, unary +/-, and
+ * named variables supplied via `vars`. Throws on any unknown token.
+ */
+function evalExpr(expr: string, vars: Record<string, number> = {}): number {
+  let i = 0
+  const s = expr
+
+  const skip = () => { while (i < s.length && /\s/.test(s[i])) i++ }
+
+  // Operator precedence climbing. Higher binds tighter; ** is right-associative.
+  const BINARY: Record<string, { prec: number; right?: boolean; op: (a: number, b: number) => number }> = {
+    "|":  { prec: 1, op: (a, b) => a | b },
+    "^":  { prec: 2, op: (a, b) => a ^ b },
+    "&":  { prec: 3, op: (a, b) => a & b },
+    "<<": { prec: 4, op: (a, b) => a << b },
+    ">>": { prec: 4, op: (a, b) => a >> b },
+    "+":  { prec: 5, op: (a, b) => a + b },
+    "-":  { prec: 5, op: (a, b) => a - b },
+    "*":  { prec: 6, op: (a, b) => a * b },
+    "/":  { prec: 6, op: (a, b) => a / b },
+    "%":  { prec: 6, op: (a, b) => a % b },
+    "**": { prec: 7, right: true, op: (a, b) => a ** b },
+  }
+
+  const peekOp = (): string | null => {
+    skip()
+    for (const op of ["**", "<<", ">>"]) if (s.startsWith(op, i)) return op
+    const c = s[i]
+    return c && "|^&+-*/%".includes(c) ? c : null
+  }
+
+  function parsePrimary(): number {
+    skip()
+    if (i >= s.length) throw new Error("unexpected end of expression")
+    const c = s[i]
+    if (c === "(") {
+      i++
+      const v = parseExpr(0)
+      skip()
+      if (s[i] !== ")") throw new Error("missing closing parenthesis")
+      i++
+      return v
+    }
+    if (c === "-" || c === "+" || c === "~") {
+      i++
+      const v = parsePrimary()
+      return c === "-" ? -v : c === "~" ? ~v : v
+    }
+    const num = /^[0-9]*\.?[0-9]+([eE][+-]?[0-9]+)?/.exec(s.slice(i))
+    if (num) { i += num[0].length; return parseFloat(num[0]) }
+    const id = /^[a-zA-Z_][a-zA-Z0-9_]*/.exec(s.slice(i))
+    if (id) {
+      i += id[0].length
+      if (!(id[0] in vars)) throw new Error(`unknown identifier '${id[0]}'`)
+      return vars[id[0]]
+    }
+    throw new Error(`unexpected token '${c}'`)
+  }
+
+  function parseExpr(minPrec: number): number {
+    let left = parsePrimary()
+    for (;;) {
+      const op = peekOp()
+      if (!op) break
+      const info = BINARY[op]
+      if (!info || info.prec < minPrec) break
+      i += op.length
+      const nextMin = info.right ? info.prec : info.prec + 1
+      left = info.op(left, parseExpr(nextMin))
+    }
+    return left
+  }
+
+  const result = parseExpr(0)
+  skip()
+  if (i < s.length) throw new Error(`unexpected token '${s[i]}'`)
+  return result
+}
+
 export type ZoomPane = "none" | "log" | "scope" | "net" | "proc"
 
 const ZOOM_PANES: readonly ZoomPane[] = ["log", "scope", "net", "proc"]
@@ -851,6 +935,7 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
   },
   {
     name: "calc",
+    aliases: ["math"],
     help: { usage: "calc <expression>", description: "Evaluate a mathematical expression" },
     run: (ctx, args) => {
       const expr = args.join(" ")
@@ -862,7 +947,7 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
           articles: notes.filter(n => !n.slug.startsWith("users/")).length,
           tags: new Set(notes.flatMap(n => n.tags)).size
         }
-        const result = new Function(...Object.keys(vars), `return (${expr})`)(...Object.values(vars))
+        const result = evalExpr(expr, vars)
         if (typeof result !== "number" || isNaN(result)) throw new Error("Invalid output")
         ctx.injectLine(`  ${expr}`, "muted")
         ctx.injectLine(`  = ${result}`, "accent", "heading")
@@ -1348,28 +1433,6 @@ export const BOOT_COMMANDS: readonly BootCommand[] = [
       ctx.injectLine("  }", "accent")
       ctx.chime("tender")
     },
-  },
-  {
-    name: "calc",
-    aliases: ["math"],
-    help: { usage: "calc <expr>", description: "Evaluate a mathematical expression" },
-    run: (ctx, args) => {
-      const expr = args.join(" ")
-      if (!expr) {
-        ctx.injectLine("  usage: calc <expr>", "warning")
-        return
-      }
-      try {
-        if (/[^0-9\+\-\*\/\(\)\.\s\%\|\&\^\~\<\>]/g.test(expr)) {
-           ctx.injectLine("  calc: invalid characters in expression", "error")
-           return
-        }
-        const result = new Function(`return (${expr})`)()
-        ctx.injectLine(`  ${expr} = ${result}`, "accent")
-      } catch (err) {
-        ctx.injectLine(`  calc: error evaluating expression`, "error")
-      }
-    }
   },
   {
     name: "users",
