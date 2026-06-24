@@ -48,13 +48,19 @@ tree is clean. Remaining:
 
 ---
 
-## 2. ★ Worker split (highest manageability win)
+## 2. ★ Worker split (highest manageability win) — ✅ SHIPPED
 
-`src/worker.ts` is ~1900 lines / ~50 handlers in one file. Flagged in `future.md` Tier 0,
+- [x] **Done** (verified 2026-06-24): `src/worker.ts` is now a one-line re-export
+  (`export { default } from "./worker/index"`) and the logic lives in `src/worker/*`
+  (`index, lib, meta, auth, wiki, chat, stonks, keys, admin, security, types`) — matching
+  the proposed shape below. Route ordering preserved; `npm run typecheck:worker` covers it.
+  Section kept for the design rationale.
+
+`src/worker.ts` was ~1900 lines / ~50 handlers in one file. Flagged in `future.md` Tier 0,
 deferred pending "a verification deploy to confirm CF handles a multi-file Worker entry."
 
-**Decision: do it, de-risk with one throwaway deploy.** CF bundles via esbuild; multi-file
-entries are routine. Proposed shape — thin dispatcher + domain modules, all pure
+**Decision: did it, de-risked with one deploy.** CF bundles via esbuild; multi-file
+entries are routine. Shape — thin dispatcher + domain modules, all pure
 `(request, env, url)` functions:
 
 ```
@@ -79,10 +85,14 @@ src/worker/
 
 ---
 
-## 3. ★ Group `src/components/ui/` (56 flat files)
+## 3. ★ Group `src/components/ui/` — ✅ mostly shipped
 
-Real navigation tax. Churns import paths once; pays back forever. Do *after* the worker split
-(separate, mechanical). `tsc --noEmit` catches every miss.
+- [~] **Largely done** (verified 2026-06-24): the six subdirs below exist and are populated
+  (`chat` 15, `games` 16, `reader` 14, `wiki` 7, `shelves` 4, `graph` 4 components). **~22
+  files remain flat** in `src/components/ui/` (down from 56) — a tail of cross-cutting/loose
+  components. Finish opportunistically; `tsc --noEmit` catches any import miss.
+
+Real navigation tax. Churns import paths once; pays back forever. Target layout:
 
 ```
 ui/
@@ -100,10 +110,12 @@ ui/
 
 ## 4. ★ a11y & keyboard pass — the craft layer
 
-Current story (`useHotkeys`): `\` theme, `b` background, `m` music, `Ctrl+K` search, `Esc` (heXO).
-Thin and undiscoverable.
+Current story (`useHotkeys`): `\` theme, `b` background, `m` music, `r` random note,
+`Ctrl/Cmd+P` command palette, `?` (Shift+/) cheat sheet. Bindings declared canonically in
+`src/config/hotkeys.ts` and rendered by the cheat sheet.
 
-- [ ] **`?` opens a keyboard-shortcut cheat sheet** overlay — single source of truth for bindings.
+- [x] **`?` opens a keyboard-shortcut cheat sheet** overlay — shipped (`KeyboardCheatSheet`,
+  bound in `useHotkeys`, sourced from `src/config/hotkeys.ts`). (verified 2026-06-24)
 - [~] **Audit focus management** on every overlay: a reusable `useFocusTrap` hook (focus capture →
   in → Tab-cycle → restore, Esc) now wraps SearchOverlay + WikiAuthModal; CommandPalette +
   KeyboardCheatSheet already had capture/restore/Esc. Remaining: ThemePanel, zen mode, GifPicker,
@@ -340,12 +352,15 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
 
 ## 15. Dream / sweeping bets (none lose anything if skipped)
 
-- **Command palette (`Ctrl+P`)** — superset of search: jump to notes, run actions (theme, bg,
-  graph, new game), search content. Store actions all exist; mostly wiring. Could subsume hotkey
-  discoverability entirely.
+- [x] **Command palette (`Ctrl+P`)** — shipped (`CommandPalette`, toggled via Ctrl/Cmd+P in
+  `useHotkeys`, mounted in `GlobalOverlays`): jump to notes + run actions + search content.
+  (verified 2026-06-24)
 - **Generalised cabinet for all widgets** — graph, chess, heXO, music get the same zen/fullscreen
-  + keyboard model.
-- **Reading progress + "time to read"** on articles — thin top progress bar. Cheap, felt.
+  + keyboard model. (Partial: `GameCabinet` covers several arcade games — see §6 — but graph /
+  chess / heXO / music aren't unified yet.)
+- [x] **Reading progress bar** on articles — shipped (`ReadingProgress` in `ArticleLayout`).
+  "Time to read" is computed (`readingTime` in the content index); surface it on articles if not
+  already shown. (verified 2026-06-24)
 - **Inline backlink mini-map** in the article margin (you have `LocalGraph`) — the note's
   immediate neighbourhood inline, not just on the graph page.
 - **Named theme presets** beyond the ROYGBIV cycle — "terminal amber", "blueprint", "newsprint"
