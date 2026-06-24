@@ -324,7 +324,9 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
 
 - [x] **Homepage card shipped no og: tags** — `/` mapped directly to `dist/index.html`, so CF's
   asset handler served it and bypassed the Worker → `injectMetaTags` never ran (deep routes hit
-  the Worker fine). Fixed with `run_worker_first = ["/", "/index.html"]` in `wrangler.toml`.
+  the Worker fine). Fixed with `run_worker_first = true` in `wrangler.toml`. **CAUTION:** the
+  array form (`["/", "/index.html"]`) is *exclusive* — it broke every `/api/*` route and disabled
+  OG/meta injection on all non-listed pages; only the boolean `true` works here.
   (fixed 2026-06-24; verify post-deploy: `curl -s https://subsurfaces.net/ | grep og:image`)
 - [x] **External image fetch failures** — resolved: `og-gen.ts` now inlines only LOCAL thumbnails
   (base64 data URIs) and skips truly-external URLs entirely, so `covers.openlibrary.org` is never
