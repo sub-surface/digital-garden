@@ -28,3 +28,7 @@ daily-report.md
 # Local scratch / one-off debug scripts (not source)
 scratch/
 test-flexsearch.mjs
+
+# Agent/audit output (root-level, not source)
+anticipated-fails.md
+audit-report.json

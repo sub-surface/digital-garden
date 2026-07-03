@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { useStore } from "@/store"
 import { useShell } from "@/hooks/useShell"
 import { useRandomNote } from "@/hooks/useRandomNote"
-import { useMusic } from "@/components/ui/MusicContext"
+import { useMusic } from "@/components/ui/music/MusicContext"
 import styles from "./CommandPalette.module.scss"
 
 interface Command {

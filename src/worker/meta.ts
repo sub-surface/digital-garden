@@ -1,7 +1,11 @@
 import { NoteMeta } from "./types"
+import { buildSlugResolver, slugFromPathname as sharedSlugFromPathname, type SlugResolver } from "../lib/slug"
 
-// In-memory cache — survives for the lifetime of the Worker instance
+// In-memory cache — survives for the lifetime of the Worker instance.
+// The resolver (lowercase + basename maps) is built once alongside it so
+// per-request lookups are O(1) instead of scanning every index key.
 let contentIndexCache: Record<string, NoteMeta> | null = null
+let resolverCache: SlugResolver | null = null
 
 export async function getContentIndex(assetsFetcher: any): Promise<Record<string, NoteMeta>> {
   if (!assetsFetcher) return {};
@@ -10,6 +14,7 @@ export async function getContentIndex(assetsFetcher: any): Promise<Record<string
     const res = await assetsFetcher.fetch("https://assets.internal/content-index.json")
     if (res.ok) {
       contentIndexCache = await res.json()
+      resolverCache = buildSlugResolver(Object.keys(contentIndexCache!))
     } else {
       console.error(`content-index fetch non-ok (${res.status}) — OG meta will be skipped`)
     }
@@ -30,14 +35,16 @@ export function chatterImageForUsername(index: Record<string, NoteMeta>, usernam
   return null
 }
 
-export function slugFromPathname(pathname: string): string {
-  // Strip leading slash, decode, normalise spaces to hyphens
-  return decodeURIComponent(pathname.replace(/^\//, "").replace(/\/$/, "") || "index")
-    .replace(/\s+/g, "-")
-}
+export const slugFromPathname = sharedSlugFromPathname
 
 export function resolveMetaCaseInsensitive(index: Record<string, NoteMeta>, slug: string): NoteMeta | null {
   if (index[slug]) return index[slug]
+  // Fast path via the cached resolver; fall back to a scan when the index was
+  // passed in without going through getContentIndex (tests, cold errors).
+  if (resolverCache && index === contentIndexCache) {
+    const key = resolverCache.resolve(slug)
+    return key ? index[key] : null
+  }
   const lower = slug.toLowerCase()
   const key = Object.keys(index).find(k => k.toLowerCase() === lower)
   return key ? index[key] : null
@@ -84,5 +91,5 @@ export function injectMetaTags(html: string, meta: NoteMeta, slug: string, origi
     .replace("</head>", `    ${tags}\n  </head>`)
 }
 
-export function escAttr(s: string) { return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;") }
+export function escAttr(s: string) { return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;") }
 export function escText(s: string) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;") }

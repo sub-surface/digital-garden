@@ -6,7 +6,8 @@ import { NoteFooter } from "./NoteFooter"
 import { NoteBody } from "./NoteBody"
 import { WikiInfobox } from "../wiki/WikiInfobox"
 import { resolveSlug } from "@/lib/content-loader"
-import { useIsWiki } from "@/hooks/useIsWiki"
+import { normalizeSlug } from "@/lib/slug"
+import { useIsWiki } from "@/hooks/useShell"
 import { SYSTEM_PAGES } from "@/config/system-pages"
 import type { NoteMetadata } from "@/types/content"
 
@@ -45,10 +46,8 @@ function resolveLayout(
 }
 
 export function NoteRenderer({ slug: rawSlug }: Props) {
-  const slug = useMemo(() => 
-    decodeURIComponent(rawSlug)
-      .replace(/\.mdx?$/, "")
-      .replace(/\s+/g, "-"),
+  const slug = useMemo(
+    () => normalizeSlug(decodeURIComponent(rawSlug).replace(/\.mdx?$/, "")),
     [rawSlug]
   )
   

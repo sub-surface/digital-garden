@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist, createJSONStorage } from "zustand/middleware"
 import type { PanelCard, ContentIndex, NoteMetadata } from "@/types/content"
 import { SITE_DEFAULTS, type SiteConfig } from "@/config/site-defaults"
 import type { BotFlavour } from "@/lib/chessBot"
@@ -39,6 +40,10 @@ function applyTriadicPalette(hex: string) {
   el.style.setProperty("--color-accent-base", hex)
   el.style.setProperty("--color-secondary", secondary)
   el.style.setProperty("--color-tertiary", tertiary)
+}
+
+function applyTheme(theme: "light" | "dark") {
+  document.documentElement.setAttribute("data-theme", theme)
 }
 
 export const ROYGBIV_ACCENTS = [
@@ -116,8 +121,8 @@ interface GardenStore {
   setIsPlaylistExpanded: (expanded: boolean) => void
 
   // Background
-  bgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo" | "murmuration"
-  lastBgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo" | "murmuration"
+  bgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo" | "murmuration" | "chamber"
+  lastBgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo" | "murmuration" | "chamber"
   bgStyle: "vectors" | "glyphs" | "off"
   setBgMode: (mode: GardenStore["bgMode"]) => void
   toggleGraphBackground: () => void
@@ -166,231 +171,245 @@ interface GardenStore {
   setOverride: (slug: string, data: Partial<NoteMetadata>) => void
 }
 
-const getInitialTheme = (): "light" | "dark" => {
-  if (typeof window === "undefined") return "dark"
-  const stored = localStorage.getItem("theme")
-  if (stored === "light" || stored === "dark") return stored
-  return "light"
+// ─── Legacy localStorage keys ────────────────────────────────────────────────
+// Settings used to be scattered across individual keys. They now live in one
+// persisted slice ("garden-settings"); the legacy readers below seed initial
+// state so existing users keep their preferences on first run after upgrade.
+const isBrowser = typeof window !== "undefined"
+
+function legacy<T>(key: string, parse: (v: string) => T, fallback: T): T {
+  if (!isBrowser) return fallback
+  const raw = localStorage.getItem(key)
+  if (raw === null) return fallback
+  try { return parse(raw) } catch { return fallback }
 }
 
-const getInitialAccent = (): string => {
-  if (typeof window === "undefined") return "#427ab4"
-  return localStorage.getItem("accentBase") || "#427ab4"
-}
+const getInitialTheme = (): "light" | "dark" =>
+  legacy("theme", (v) => (v === "light" || v === "dark" ? v : "dark"), "dark")
 
-export const useStore = create<GardenStore>((set) => ({
-  // Config
-  config: SITE_DEFAULTS,
-  updateConfig: (updater) => set((s) => {
-    const next = { ...s.config }
-    updater(next)
-    return { config: next }
-  }),
+const getInitialAccent = (): string => legacy("accentBase", String, "#427ab4")
 
-  // Theme
-  theme: getInitialTheme(),
-  setTheme: (theme) => {
-    localStorage.setItem("theme", theme)
-    document.documentElement.setAttribute("data-theme", theme)
-    set({ theme })
-  },
-  toggleTheme: () =>
-    set((s) => {
-      const next = s.theme === "dark" ? "light" : "dark"
-      localStorage.setItem("theme", next)
-      document.documentElement.setAttribute("data-theme", next)
-      return { theme: next }
+// ?terminal=1 forces terminal chat for the session regardless of persisted pref
+const terminalUrlOverride =
+  isBrowser && new URLSearchParams(window.location.search).get("terminal") === "1"
+
+/** Keys persisted to localStorage under "garden-settings". Everything else is
+ * session state (overlays, panel stack, content index) and must NOT persist. */
+const PERSISTED_KEYS = [
+  "theme", "accentBase", "readerMeasureCh", "readerScale", "sideChatWidth",
+  "chessBot", "chatDensity", "chatFontScale", "chatTerminal",
+] as const
+
+export const useStore = create<GardenStore>()(
+  persist(
+    (set) => ({
+      // Config
+      config: SITE_DEFAULTS,
+      updateConfig: (updater) => set((s) => {
+        const next = { ...s.config }
+        updater(next)
+        return { config: next }
+      }),
+
+      // Theme — default matches the site's OLED-dark identity (tokens.scss)
+      theme: getInitialTheme(),
+      setTheme: (theme) => {
+        applyTheme(theme)
+        set({ theme })
+      },
+      toggleTheme: () =>
+        set((s) => {
+          const next = s.theme === "dark" ? "light" : "dark"
+          applyTheme(next)
+          return { theme: next }
+        }),
+
+      // Accent
+      accentBase: getInitialAccent(),
+      setAccentBase: (accentBase) => {
+        applyTriadicPalette(accentBase)
+        set({ accentBase })
+      },
+      cycleAccent: () =>
+        set((s) => {
+          const idx = ROYGBIV_ACCENTS.indexOf(s.accentBase)
+          const next = ROYGBIV_ACCENTS[(idx + 1) % ROYGBIV_ACCENTS.length]
+          applyTriadicPalette(next)
+          return { accentBase: next }
+        }),
+
+      // Theme Panel
+      isThemePanelOpen: false,
+      toggleThemePanel: () => set((s) => ({ isThemePanelOpen: !s.isThemePanelOpen })),
+      setThemePanel: (isThemePanelOpen) => set({ isThemePanelOpen }),
+
+      // Reader mode
+      isReaderMode: false,
+      toggleReaderMode: () => set((s) => ({ isReaderMode: !s.isReaderMode })),
+
+      // Reader typography — clamped steps
+      readerMeasureCh: legacy("reader-measure", (v) => parseInt(v, 10) || 80, 80),
+      readerScale: legacy("reader-scale", (v) => parseFloat(v) || 1, 1),
+      cycleReaderMeasure: (dir) =>
+        set((s) => {
+          const steps = [70, 80, 90, 100]
+          const i = steps.includes(s.readerMeasureCh) ? steps.indexOf(s.readerMeasureCh) : 1
+          const next = steps[Math.min(steps.length - 1, Math.max(0, i + dir))]
+          return { readerMeasureCh: next }
+        }),
+      cycleReaderScale: (dir) =>
+        set((s) => {
+          const steps = [0.95, 1, 1.1, 1.2, 1.35]
+          // includes-guard (not Math.max(1, …)) so index 0 cycles correctly
+          const i = steps.includes(s.readerScale) ? steps.indexOf(s.readerScale) : 1
+          const next = steps[Math.min(steps.length - 1, Math.max(0, i + dir))]
+          return { readerScale: next }
+        }),
+
+      // Search
+      isCheatSheetOpen: false,
+      toggleCheatSheet: () => set((s) => ({ isCheatSheetOpen: !s.isCheatSheetOpen })),
+      setCheatSheet: (isCheatSheetOpen) => set({ isCheatSheetOpen }),
+
+      isCommandPaletteOpen: false,
+      toggleCommandPalette: () => set((s) => ({ isCommandPaletteOpen: !s.isCommandPaletteOpen })),
+      setCommandPalette: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
+
+      isSearchOpen: false,
+      setSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
+      toggleSearch: () => set((s) => ({ isSearchOpen: !s.isSearchOpen })),
+
+      // Graph Overlay
+      isGraphOpen: false,
+      setGraphOpen: (isGraphOpen) => set({ isGraphOpen }),
+      toggleGraph: () => set((s) => ({ isGraphOpen: !s.isGraphOpen })),
+
+      // Side Chat
+      isSideChatOpen: false,
+      toggleSideChat: () => set((s) => ({ isSideChatOpen: !s.isSideChatOpen })),
+      setSideChatOpen: (isSideChatOpen) => set({ isSideChatOpen }),
+      sideChatWidth: legacy("sidechat-width", (v) => parseInt(v, 10) || 340, 340),
+      setSideChatWidth: (sideChatWidth) => set({ sideChatWidth }),
+
+      // Music
+      isMusicOpen: false,
+      toggleMusic: () => set((s) => ({ isMusicOpen: !s.isMusicOpen })),
+      isMusicExpanded: false,
+      setIsMusicExpanded: (isMusicExpanded) => set({ isMusicExpanded }),
+      isPlaylistExpanded: false,
+      setIsPlaylistExpanded: (isPlaylistExpanded) => set({ isPlaylistExpanded }),
+
+      // Background
+      bgMode: "murmuration",
+      lastBgMode: "murmuration",
+      bgStyle: "vectors",
+      setBgMode: (bgMode) =>
+        set((s) => ({
+          bgMode,
+          lastBgMode: bgMode === "chess" || bgMode === "hexo" ? s.lastBgMode : bgMode,
+        })),
+      toggleGraphBackground: () =>
+        set((s) => ({
+          bgMode: s.bgMode === "graph" ? s.lastBgMode : "graph",
+        })),
+      cycleBgMode: () =>
+        set((s) => {
+          const modes: GardenStore["bgMode"][] = [
+            "murmuration",
+            "graph",
+            "vectors",
+            "dots",
+            "terminal",
+            "chamber",
+          ]
+          const idx = modes.indexOf(s.bgMode)
+          const next = modes[(idx + 1) % modes.length]
+          return { bgMode: next, lastBgMode: next }
+        }),
+      setBgStyle: (bgStyle) => set({ bgStyle }),
+
+      // Chess
+      chessBot: legacy<BotFlavour>("chessBot", (v) => v as BotFlavour, "casual"),
+      setChessBot: (chessBot) => set({ chessBot }),
+
+      // Panel navigation
+      panelStack: [],
+      pushCard: (card, fromDepth) =>
+        set((s) => {
+          const depth = fromDepth + 1
+          const trimmed = s.panelStack.slice(0, depth)
+          return { panelStack: [...trimmed, { ...card, depth }] }
+        }),
+      popCard: () =>
+        set((s) => ({ panelStack: s.panelStack.slice(0, -1) })),
+      removeCard: (index) =>
+        set((s) => ({
+          panelStack: s.panelStack.slice(0, index),
+        })),
+      clearStack: () => set({ panelStack: [] }),
+
+      // Graph state
+      activeGraphSlug: "index",
+      setActiveGraphSlug: (activeGraphSlug) => set({ activeGraphSlug }),
+
+      activeLayout: "note",
+      setActiveLayout: (activeLayout) => set({ activeLayout }),
+
+      // Content index
+      contentIndex: null,
+      setContentIndex: (contentIndex) => set({ contentIndex }),
+      contentIndexError: false,
+      setContentIndexError: (contentIndexError) => set({ contentIndexError }),
+
+      // Image dimensions
+      imageDimensions: null,
+      setImageDimensions: (imageDimensions) => set({ imageDimensions }),
+
+      // Chat display
+      chatDensity: legacy("chatDensity", (v) =>
+        (["compact", "comfortable", "spacious"].includes(v) ? v : "comfortable") as GardenStore["chatDensity"],
+        "comfortable"),
+      setChatDensity: (chatDensity) => set({ chatDensity }),
+      chatFontScale: legacy("chatFontScale", (v) => Number(v) || 1, 1),
+      setChatFontScale: (chatFontScale) => set({ chatFontScale }),
+      chatTerminal: terminalUrlOverride || legacy("chatTerminal", (v) => v === "1", false),
+      setChatTerminal: (chatTerminal) => set({ chatTerminal }),
+
+      // Session overrides
+      sessionOverrides: {},
+      setOverride: (slug, data) =>
+        set((s) => ({
+          sessionOverrides: {
+            ...s.sessionOverrides,
+            [slug]: { ...s.sessionOverrides[slug], ...data }
+          }
+        })),
     }),
+    {
+      name: "garden-settings",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (s) =>
+        Object.fromEntries(PERSISTED_KEYS.map((k) => [k, s[k]])) as Pick<GardenStore, typeof PERSISTED_KEYS[number]>,
+      merge: (persisted, current) => {
+        const merged = { ...current, ...(persisted as Partial<GardenStore>) }
+        // URL override beats the persisted terminal preference for this session
+        if (terminalUrlOverride) merged.chatTerminal = true
+        return merged
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state || typeof document === "undefined") return
+        applyTheme(state.theme)
+        applyTriadicPalette(state.accentBase)
+      },
+    },
+  ),
+)
 
-  // Accent
-  accentBase: getInitialAccent(),
-  setAccentBase: (accentBase) => {
-    localStorage.setItem("accentBase", accentBase)
-    applyTriadicPalette(accentBase)
-    set({ accentBase })
-  },
-  cycleAccent: () =>
-    set((s) => {
-      const idx = ROYGBIV_ACCENTS.indexOf(s.accentBase)
-      const next = ROYGBIV_ACCENTS[(idx + 1) % ROYGBIV_ACCENTS.length]
-      localStorage.setItem("accentBase", next)
-      applyTriadicPalette(next)
-      return { accentBase: next }
-    }),
-
-  // Theme Panel
-  isThemePanelOpen: false,
-  toggleThemePanel: () => set((s) => ({ isThemePanelOpen: !s.isThemePanelOpen })),
-  setThemePanel: (isThemePanelOpen) => set({ isThemePanelOpen }),
-
-  // Reader mode
-  isReaderMode: false,
-  toggleReaderMode: () => set((s) => ({ isReaderMode: !s.isReaderMode })),
-
-  // Reader typography — clamped steps, persisted to localStorage.
-  readerMeasureCh:
-    typeof localStorage !== "undefined"
-      ? parseInt(localStorage.getItem("reader-measure") ?? "80", 10) || 80
-      : 80,
-  readerScale:
-    typeof localStorage !== "undefined"
-      ? parseFloat(localStorage.getItem("reader-scale") ?? "1") || 1
-      : 1,
-  cycleReaderMeasure: (dir) =>
-    set((s) => {
-      const steps = [70, 80, 90, 100]
-      const i = Math.max(0, steps.indexOf(s.readerMeasureCh))
-      const next = steps[Math.min(steps.length - 1, Math.max(0, i + dir))]
-      localStorage.setItem("reader-measure", String(next))
-      return { readerMeasureCh: next }
-    }),
-  cycleReaderScale: (dir) =>
-    set((s) => {
-      const steps = [0.95, 1, 1.1, 1.2, 1.35]
-      const i = Math.max(1, steps.indexOf(s.readerScale))
-      const next = steps[Math.min(steps.length - 1, Math.max(0, i + dir))]
-      localStorage.setItem("reader-scale", String(next))
-      return { readerScale: next }
-    }),
-
-  // Search
-  isCheatSheetOpen: false,
-  toggleCheatSheet: () => set((s) => ({ isCheatSheetOpen: !s.isCheatSheetOpen })),
-  setCheatSheet: (isCheatSheetOpen) => set({ isCheatSheetOpen }),
-
-  isCommandPaletteOpen: false,
-  toggleCommandPalette: () => set((s) => ({ isCommandPaletteOpen: !s.isCommandPaletteOpen })),
-  setCommandPalette: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
-
-  isSearchOpen: false,
-  setSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
-  toggleSearch: () => set((s) => ({ isSearchOpen: !s.isSearchOpen })),
-
-  // Graph Overlay
-  isGraphOpen: false,
-  setGraphOpen: (isGraphOpen) => set({ isGraphOpen }),
-  toggleGraph: () => set((s) => ({ isGraphOpen: !s.isGraphOpen })),
-
-  // Side Chat
-  isSideChatOpen: false,
-  toggleSideChat: () => set((s) => ({ isSideChatOpen: !s.isSideChatOpen })),
-  setSideChatOpen: (isSideChatOpen) => set({ isSideChatOpen }),
-  sideChatWidth: parseInt(typeof localStorage !== "undefined" ? localStorage.getItem("sidechat-width") ?? "340" : "340", 10),
-  setSideChatWidth: (width) => {
-    localStorage.setItem("sidechat-width", String(width))
-    set({ sideChatWidth: width })
-  },
-
-  // Music
-  isMusicOpen: false,
-  toggleMusic: () => set((s) => ({ isMusicOpen: !s.isMusicOpen })),
-  isMusicExpanded: false,
-  setIsMusicExpanded: (isMusicExpanded) => set({ isMusicExpanded }),
-  isPlaylistExpanded: false,
-  setIsPlaylistExpanded: (isPlaylistExpanded) => set({ isPlaylistExpanded }),
-
-  // Background
-  bgMode: "murmuration",
-  lastBgMode: "murmuration",
-  bgStyle: "vectors",
-  setBgMode: (bgMode) =>
-    set((s) => ({
-      bgMode,
-      lastBgMode: bgMode === "chess" || bgMode === "hexo" ? s.lastBgMode : bgMode,
-    })),
-  toggleGraphBackground: () =>
-    set((s) => ({
-      bgMode: s.bgMode === "graph" ? s.lastBgMode : "graph",
-    })),
-  cycleBgMode: () =>
-    set((s) => {
-      const modes: GardenStore["bgMode"][] = [
-        "murmuration",
-        "graph",
-        "vectors",
-        "dots",
-        "terminal",
-      ]
-      const currentMode = s.bgMode
-      const idx = modes.indexOf(currentMode as any)
-      const next = modes[(idx + 1) % modes.length]
-      return { bgMode: next, lastBgMode: next }
-    }),
-  setBgStyle: (bgStyle) => set({ bgStyle }),
-
-  // Chess
-  chessBot: (typeof localStorage !== "undefined"
-    ? (localStorage.getItem("chessBot") as BotFlavour | null) ?? "casual"
-    : "casual"),
-  setChessBot: (chessBot) => {
-    localStorage.setItem("chessBot", chessBot)
-    set({ chessBot })
-  },
-
-  // Panel navigation
-  panelStack: [],
-  pushCard: (card, fromDepth) =>
-    set((s) => {
-      const depth = fromDepth + 1
-      const trimmed = s.panelStack.slice(0, depth)
-      return { panelStack: [...trimmed, { ...card, depth }] }
-    }),
-  popCard: () =>
-    set((s) => ({ panelStack: s.panelStack.slice(0, -1) })),
-  removeCard: (index) =>
-    set((s) => ({
-      panelStack: s.panelStack.slice(0, index),
-    })),
-  clearStack: () => set({ panelStack: [] }),
-
-  // Graph state
-  activeGraphSlug: "index",
-  setActiveGraphSlug: (activeGraphSlug) => set({ activeGraphSlug }),
-
-  activeLayout: "note",
-  setActiveLayout: (activeLayout) => set({ activeLayout }),
-
-  // Content index
-  contentIndex: null,
-  setContentIndex: (contentIndex) => set({ contentIndex }),
-  contentIndexError: false,
-  setContentIndexError: (contentIndexError) => set({ contentIndexError }),
-
-  // Image dimensions
-  imageDimensions: null,
-  setImageDimensions: (imageDimensions) => set({ imageDimensions }),
-
-  // Chat display
-  chatDensity: (typeof localStorage !== "undefined"
-    ? (localStorage.getItem("chatDensity") as "compact" | "comfortable" | "spacious" | null) ?? "comfortable"
-    : "comfortable"),
-  setChatDensity: (d) => { localStorage.setItem("chatDensity", d); set({ chatDensity: d }) },
-  chatFontScale: (typeof localStorage !== "undefined"
-    ? Number(localStorage.getItem("chatFontScale") || "1")
-    : 1),
-  setChatFontScale: (s) => { localStorage.setItem("chatFontScale", String(s)); set({ chatFontScale: s }) },
-  chatTerminal: (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("terminal") === "1") ||
-    (typeof localStorage !== "undefined" ? localStorage.getItem("chatTerminal") === "1" : false),
-  setChatTerminal: (v) => {
-    localStorage.setItem("chatTerminal", v ? "1" : "0")
-    set({ chatTerminal: v })
-  },
-
-  // Session overrides
-  sessionOverrides: {},
-  setOverride: (slug, data) => 
-    set((s) => ({
-      sessionOverrides: {
-        ...s.sessionOverrides,
-        [slug]: { ...s.sessionOverrides[slug], ...data }
-      }
-    })),
-}))
-
-// Initialize attributes on load
-if (typeof window !== "undefined") {
-  document.documentElement.setAttribute("data-theme", getInitialTheme())
-  applyTriadicPalette(getInitialAccent())
+// Initialize attributes on load. localStorage rehydration is synchronous, so
+// getState() already reflects persisted (or legacy-seeded) values here.
+if (isBrowser) {
+  applyTheme(useStore.getState().theme)
+  applyTriadicPalette(useStore.getState().accentBase)
   // Dev-only: expose the store on window for the /__dev dashboard and
   // headless verification scripts. Stripped from production builds.
   if (import.meta.env.DEV) {

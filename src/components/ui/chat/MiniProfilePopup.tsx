@@ -15,7 +15,6 @@ interface MiniProfile {
   bio: string | null
   created_at: string | null
   name_color: string | null
-  stonk_balance: number | null
 }
 
 function initials(username: string): string {
@@ -124,9 +123,6 @@ export function MiniProfilePopup({ username, anchorEl, onClose }: Props) {
             </div>
           )}
           <div className={styles.miniProfileFooter}>
-            {profile.stonk_balance !== null && (
-              <span className={styles.miniProfileStonk}>◆ {profile.stonk_balance}</span>
-            )}
             {profile.created_at && (
               <span className={styles.miniProfileJoined}>
                 joined {formatJoined(profile.created_at)}

@@ -86,19 +86,26 @@ export function useChatMessages({
           filter: `room_id=eq.${roomId}`,
         },
         async (payload) => {
-          const newMsg = payload.new as ChatMessage
+          const newMsg = payload.new as ChatMessage & { username?: string | null; name_color?: string | null; avatar_url?: string | null }
           let enriched: ChatMessage
           if (newMsg.user_id === currentUserId) {
             enriched = { ...newMsg, profiles: { username: currentUsername ?? "unknown", avatar_url: currentAvatarUrl }, reactions: [] }
+          } else if (newMsg.username) {
+            // Denormalized identity rides the broadcast payload — no fetch needed.
+            enriched = {
+              ...newMsg,
+              profiles: { username: newMsg.username, avatar_url: newMsg.avatar_url ?? null, name_color: newMsg.name_color ?? null },
+              reactions: [],
+            }
           } else {
+            // Pre-migration row: fetch just this message (not the whole list).
             try {
-              const res = await fetch(`/api/chat/messages?room=${roomId}&limit=10`, {
+              const res = await fetch(`/api/chat/messages/${newMsg.id}`, {
                 headers: { Authorization: `Bearer ${accessToken}` },
               })
               if (res.ok) {
-                const data = await res.json() as { messages: ChatMessage[] }
-                const found = data.messages.find(m => m.id === newMsg.id)
-                enriched = found ?? { ...newMsg, profiles: null, reactions: [] }
+                const data = await res.json() as { message: ChatMessage }
+                enriched = data.message ?? { ...newMsg, profiles: null, reactions: [] }
               } else {
                 enriched = { ...newMsg, profiles: null, reactions: [] }
               }

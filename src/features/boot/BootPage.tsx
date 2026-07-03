@@ -39,7 +39,7 @@ import {
   type ZoomPane,
 } from "./bootCommands"
 import { SYSTEM_PAGES } from "../../config/system-pages"
-import { useMusic } from "@/components/ui/MusicContext"
+import { useMusic } from "@/components/ui/music/MusicContext"
 import { WikiAuthModal } from "../../components/ui/wiki/WikiAuthModal"
 import { useAuth } from "../../hooks/useAuth"
 

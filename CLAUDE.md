@@ -42,8 +42,9 @@ Dev dashboard: `/__dev` (dev mode only).
 | `content/Media/` | Images, audio | Yes |
 | `src/content/` | **Auto-generated** by prebuild | **NO** |
 | `src/components/layout/` | AppShell, WikiShell, TerminalTitle, CornerMenu, ThemePanel, QuickControls, BgCanvas | Yes |
-| `src/components/ui/` | All page + feature components | Yes |
+| `src/components/ui/` | Page + feature components, grouped: `chat/ wiki/ reader/ games/ shelves/ graph/ music/ overlays/` + small shared bits flat | Yes |
 | `src/components/panel/` | PanelStack, PanelCard, usePanelClick | Yes |
+| `src/features/boot/` | The `/boot` TUI — self-contained feature module (page + generators + audio + rng) | Yes |
 | `src/components/mdx/` | MDXProvider + registered components | Yes |
 | `src/lib/` | Remark/rehype plugins | Yes |
 | `src/styles/` | SCSS modules + global styles | Yes |
@@ -51,8 +52,10 @@ Dev dashboard: `/__dev` (dev mode only).
 | `src/router.tsx` | Hand-written route tree (not file-based) | Yes |
 | `src/config/system-pages.ts` | System page slug → component/layout registry | Yes |
 | `src/worker.ts` | Cloudflare Worker entry: API routes + asset/meta handling (`tsconfig.worker.json`) | Yes |
-| `scripts/` | prebuild.ts, og-gen.ts (NOT type-checked by tsconfig) | Yes |
+| `scripts/` | prebuild.ts, og-gen.ts, test-*.ts, dash.mjs (NOT type-checked by tsconfig) | Yes |
 | `public/` | Static assets + generated manifests | Manifests are generated |
+| `docs/` | Living docs; `docs/migrations/` (SQL), `docs/devlog/` (session logs), `docs/archive/` (shipped/superseded specs — reference only) | Yes |
+| `scratch/` | Gitignored local scratch — one-off scripts, agent output | Yes (never committed) |
 
 ---
 
@@ -88,7 +91,9 @@ Dev dashboard: `/__dev` (dev mode only).
 | `/boot` | BootPage (lazy) | Endless procedural TUI boot sequence |
 | `$` (catch-all) | NoteRenderer / ChatPage | Renders note content or ChatPage if in ChatShell |
 
-**System page slugs** live in `src/config/system-pages.ts`: `graph`, `chess`, `hexo`, `bookshelf`, `movieshelf`, `music-library`, `arcade`.
+**System page slugs** live in `src/config/system-pages.ts`: `graph`, `chess`, `hexo`, `sigil`, `bookshelf`, `movieshelf`, `music-library`, `arcade`, plus the smaller games/toys.
+
+**Background modes** (`BgCanvas.tsx`): `murmuration` (default), `graph`, `vectors`, `dots`, `terminal`, `chamber` (bubble-chamber particle tracks), plus page-scoped `chess`/`hexo`. Game pages auto-switch their themed bg via the slug map in `BgCanvasInner` (`sigil` → `chamber`); `chamber` is also user-selectable, so its auto-switch bypasses `setBgMode` (preserving `lastBgMode`) and reverts only when it was page-triggered (`autoChamberRef`). SIGIL board generation lives in `src/lib/sigil.ts` (pure, tested by `scripts/test-sigil.ts`).
 
 ---
 
@@ -109,17 +114,18 @@ System-page layout comes from `SYSTEM_PAGES`; `resolveLayout()` still owns the f
 
 ---
 
-## Three Shells
+## Four Shells
 
 | Shell | Activates when | Has | Doesn't have |
 |---|---|---|---|
 | AppShell | `subsurfaces.net` | Everything: BgCanvas, music, panels, graph, QuickControls | — |
 | WikiShell | `wiki.subsurfaces.net` or `VITE_WIKI_MODE=true` | MDXProvider, ThemePanel, SearchOverlay, LinkPreview, breadcrumb | Music, panels, graph |
 | ChatShell | `chat.subsurfaces.net` or `VITE_CHAT_MODE=true` | BgCanvas, ThemePanel, QuickControls (chat variant), ChatPage | Music, panels, graph, search |
+| OSShell | `os.subsurfaces.net` or `VITE_OS_MODE=true` | BootPage (endless procedural TUI) | Everything else |
 
-Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki" | "chat"`. `useIsWiki()` and `useIsChat()` are thin wrappers. AppShell calls all hooks first (React rules), then conditionally returns WikiShell or ChatShell.
+Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki" | "chat" | "os"`. `useIsWiki()` / `useIsChat()` / `useIsOS()` are thin wrappers. AppShell calls all hooks first (React rules), then conditionally returns the other shells.
 
-**`VITE_WIKI_MODE=true`** / **`VITE_CHAT_MODE=true`** — for local dev testing. Must NEVER be set in CF build env.
+**`VITE_WIKI_MODE`** / **`VITE_CHAT_MODE`** / **`VITE_OS_MODE`** — for local dev testing. Must NEVER be set in CF build env.
 
 ---
 
@@ -129,8 +135,23 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 - **Trigger:** Push to `main` → CF auto-build
 - **Build output:** `dist/`
 - **SPA routing:** `wrangler.toml` `[assets]` block + `public/_redirects` (`/* /index.html 200`)
-- **Custom domains:** `subsurfaces.net`, `www.subsurfaces.net`, `wiki.subsurfaces.net`, `chat.subsurfaces.net` (Worker custom domains)
+- **Custom domains:** `subsurfaces.net`, `www.subsurfaces.net`, `wiki.subsurfaces.net`, `chat.subsurfaces.net`, `os.subsurfaces.net` (Worker custom domains)
 - **Worker/API:** `src/worker.ts` — one Cloudflare Worker serves API routes, static assets, and per-route OG/meta injection. Excluded from the Vite SPA build and `tsconfig.json`; compiled by Wrangler/CF and type-checked via `tsconfig.worker.json`.
+
+### Worker architecture (src/worker/)
+
+`index.ts` is a declarative dispatcher: each route in the table declares `method`, `pattern`, and `auth` (`"user"` | `"admin"` | none). The dispatcher owns the cross-cutting layer — handlers never reimplement it:
+
+- **Auth:** resolved once per request (`verifyAuth`, cached in-isolate ~60s per bearer token); handlers receive the user via `ctx.auth`. Call `invalidateAuthCache(userId)` after profile mutations.
+- **Error boundary:** a thrown handler becomes a logged JSON 500 with a short `requestId` (correlate user reports with `wrangler tail`).
+- **CORS + security headers:** applied to every `/api` response by `applyApiHeaders` (origin allowlist in `lib.ts`). Handlers return plain `jsonResponse(...)`.
+- **Rate limiting:** write methods are limited per user/IP via the `WRITE_LIMITER` binding (wrangler.toml); absent binding = no-op (dev).
+- **Background work:** anything after the response (identity propagation, bookkeeping) MUST go through `ctx.waitUntil(...)` or the runtime may cancel it.
+- **Upstream failures:** use `upstreamError(label, res, clientMsg)` — logs status + body snippet, returns a safe error. Never swallow upstream detail (failure must be visible — design law).
+
+Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { request, env, url, match, auth, waitUntil }`.
+
+**Chat identity is denormalized:** `messages` carries `username`/`name_color`/`avatar_url`, written at POST time and propagated on profile change (see `docs/migrations/2026-07-chat-denormalize.sql`). Realtime broadcasts are self-describing — clients must not re-fetch message lists to enrich them.
 
 ---
 
@@ -151,6 +172,10 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 12b. **Music is SoundCloud-driven, NOT note-driven.** `public/music.json` is the committed source of truth, written by `npm run sync:music` (SoundCloud → R2). `prebuild` does NOT generate it (only seeds `[]` if missing). Audio/covers live in the `subsurfaces-music` R2 bucket. See `docs/music-workflow.md`. Per-track `content/Music/*.md` notes are now optional liner notes only.
 13. **`BgCanvas` skips on mobile (`≤800px`).** Implemented via an outer `BgCanvas` shell component that returns `null` and an inner `BgCanvasInner` holding all hooks — required to avoid hooks-after-return violation.
 14. **`content-index.json` is fetched in `AppShell` `useEffect`, not `main.tsx`.** Deferred post-render to avoid blocking first paint. Do not move it back to startup.
+15. **Slug semantics live in `src/lib/slug.ts` — never reimplement.** `normalizeSlug` / `slugifyPath` / `slugFromPathname` / `buildSlugResolver` are shared by the SPA, the Worker (`src/worker/meta.ts`), and `scripts/prebuild.ts`. Any new slug handling imports from there.
+16. **User settings persist via `zustand/persist`** under one localStorage key `garden-settings` (see `PERSISTED_KEYS` in `src/store/index.ts`). Do not add ad-hoc `localStorage.setItem` calls for store state — add the key to `PERSISTED_KEYS` instead. Legacy per-key reads seed initial state for pre-migration users.
+17. **Content policy is enforced in prebuild's `scan()`:** `private: true` frontmatter excludes a note entirely (no index entry, no raw copy in `public/content/`); `draft: true` keeps it rendered but out of RSS + sitemap. `public/content/*.md` raw copies are load-bearing (LinkPreview, WikiEditPage, BootPage fetch them) — don't remove.
+18. **Stonks was removed (2026-07).** No `stonk_*` tables, endpoints, or UI. If reviving points/economy, start from `docs/archive/specs/2026-03-15-stonks-phase2-design.md` as history, not from dead code.
 
 ---
 
@@ -164,7 +189,10 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 | New frontmatter field | `NoteMeta` in `prebuild.ts` + `NoteMetadata` in `src/types/content.ts` |
 | New MDX component | Register in `src/components/mdx/MDXProvider.tsx` |
 | New remark/rehype plugin | Add to `vite.config.ts` plugin array in correct order |
-| New wiki submit field | Update `WikiSubmitPage.tsx` form + `src/worker.ts` submit formatter |
+| New wiki submit field | Update `WikiSubmitPage.tsx` form + `src/worker/wiki.ts` submit formatter (user text must go through `yamlStr()`) |
+| New API endpoint | Handler `(ctx: RouteCtx) => Response` in the right `src/worker/*.ts` module + one row in the route table in `src/worker/index.ts` (declare `auth` there) |
+| New persisted user setting | Add to store + `PERSISTED_KEYS` in `src/store/index.ts` |
+| New DB schema change | SQL file in `docs/migrations/`, run via Supabase SQL Editor (REST can't do DDL) |
 | New music track | Upload to SoundCloud, run `npm run sync:music`, commit `public/music.json` (see `docs/music-workflow.md`) |
 
 ---

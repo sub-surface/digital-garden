@@ -117,7 +117,6 @@ function buildAll(
     persistent: true,
   })
 
-  // Future: stonks-ticker goes here (Phase 2)
 
   return notifs
 }

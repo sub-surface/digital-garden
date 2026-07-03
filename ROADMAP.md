@@ -2,7 +2,7 @@
 
 Single source of truth for outstanding work, for an agent picking up the repo. Merges the
 public wishlist (`content/index.md` "What's on my mind"), the long backlog (`docs/future.md`),
-the sequenced/opinionated cut (`docs/iteration-spec.md`), the HeXO research pipeline
+the sequenced/opinionated cut (`docs/archive/iteration-spec.md`), the HeXO research pipeline
 (`../hexgo-theory/DIRECTION.md`), and live threads that were only in memory/devlog.
 
 **Conventions**
@@ -10,7 +10,7 @@ the sequenced/opinionated cut (`docs/iteration-spec.md`), the HeXO research pipe
 - `★` = high win-to-effort (from iteration-spec)
 - **Do not edit anything in `content/` without asking Leon first.** `index.md` is the site
   landing page — only update it to reflect things that have actually shipped, and only with the OK.
-- Detail backers: `docs/future.md` (full backlog by domain), `docs/iteration-spec.md` (rationale
+- Detail backers: `docs/future.md` (full backlog by domain), `docs/archive/iteration-spec.md` (rationale
   + proposed shapes), `../hexgo-theory/{DIRECTION,SPEC}.md` (the theory).
 
 Last reconciled against the working tree: 2026-06-24.
@@ -85,12 +85,14 @@ src/worker/
 
 ---
 
-## 3. ★ Group `src/components/ui/` — ✅ mostly shipped
+## 3. ★ Group `src/components/ui/` — ✅ SHIPPED
 
-- [~] **Largely done** (verified 2026-06-24): the six subdirs below exist and are populated
-  (`chat` 15, `games` 16, `reader` 14, `wiki` 7, `shelves` 4, `graph` 4 components). **~22
-  files remain flat** in `src/components/ui/` (down from 56) — a tail of cross-cutting/loose
-  components. Finish opportunistically; `tsc --noEmit` catches any import miss.
+- [x] **Done** (finished 2026-07-03): eight subdirs — `chat/ games/ reader/ wiki/ shelves/
+  graph/ music/ overlays/`. `music/` holds MusicBar/MobileMusicBar/MusicPlayer/MusicContext/
+  usePopoutPlayer; `overlays/` holds SearchOverlay/CommandPalette/KeyboardCheatSheet;
+  PersianCarpetPage moved into `games/`. The ~12 files still flat are genuinely cross-cutting
+  singles (ErrorBoundary, NotFound, buttons, banners) — flat is correct for them.
+  `useIsWiki.ts` back-compat shim also removed (import `useIsWiki` from `hooks/useShell`).
 
 Real navigation tax. Churns import paths once; pays back forever. Target layout:
 
@@ -312,10 +314,11 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
 
 ---
 
-## 12. Stonks (Phase 2) & Identity
+## 12. Identity (Stonks removed 2026-07)
 
+- Stonks (Phase 2) was **removed entirely** 2026-07 — it never matured. Tables, endpoints, and UI
+  deleted; DB teardown in `docs/migrations/2026-07-chat-denormalize.sql`. Do not rebuild from dead code.
 - [ ] Easter-egg reactions with configurable effects (e.g. confetti via `canvas-confetti`).
-- [ ] Secondary stonks market — deliberately deferred; ledger schema already supports it.
 - [ ] Idle game (Identity Phase 3) — full design TBD.
 
 ---
@@ -392,3 +395,29 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
   the vars and the var rules only targeted `.article-body`, so notes never responded. Now both the
   pane width and prose size are var-driven and the article grid collapses so notes + articles both
   react.)
+
+---
+
+## 16. Chamber & SIGIL follow-ons (from SPEC-chamber-and-sigil appendix, 2026-07)
+
+`chamber` bg mode + SIGIL shipped 2026-07-03 (see `docs/archive/specs/chamber-and-sigil-spec.md`).
+The spec's appendix "idea bank" — all four ambient modes wanted, plus the aiming toy:
+
+- [ ] **`schematic` bg mode** — leader lines from drifting anchors to nothing; right-angle
+  dimension brackets; edge ruler ticks; sparse asemic glyph clusters fading in/out. The most
+  literally "blueprint" mode; could replace `chamber` as SIGIL's themed bg once it exists.
+- [ ] **`isometric` bg mode** — faint wireframe iso cubes drifting/rotating, some inscribed with
+  glyph columns; cursor parallax. Wireframe-only, cheap.
+- [ ] **`orrery` bg mode** — nested rotating astrolabe/armillary rings (thin arcs + tick radials),
+  centred, slowly precessing. The scribe's instrument as pure geometry.
+- [ ] **`plate-scan` bg mode** — a single Atkinson-dithered generative still rendered once and
+  slowly panned/scanline-swept; near-zero per-frame cost (a natural "battery saver" mode).
+- [ ] **Bubble-chamber aiming toy** (arcade) — fire tracks through the `chamber` flow field to hit
+  specimen targets; reuses `drawChamber`'s spawn/advection as the toy's physics. One-line
+  system-pages registration when built.
+- [ ] **Oracle toy** (stretch) — click to cast: reuse the SIGIL generator to auto-route a plate as
+  a "reading" (generative plate + asemic gloss + seed). Pairs with a shareable daily-SIGIL result
+  string (`SIGIL-<date> · <optimality>% · <moves> moves`).
+
+All are drop-in `drawX(ctx, state, config)` fns + one `config.backgrounds.<mode>` block + the
+ThemePanel/cycle/type-union registration — see `chamber` (2026-07) as the template.

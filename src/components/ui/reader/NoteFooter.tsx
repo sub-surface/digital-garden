@@ -2,7 +2,7 @@ import { useStore } from "@/store"
 import type { NoteMetadata } from "@/types/content"
 import styles from "./NoteFooter.module.scss"
 import { lazy, Suspense, useState, useEffect } from "react"
-import { useIsWiki } from "@/hooks/useIsWiki"
+import { useIsWiki } from "@/hooks/useShell"
 
 // Lazy load the local graph
 const LocalGraph = lazy(() => import("../graph/LocalGraph").then(m => ({ default: m.LocalGraph })))

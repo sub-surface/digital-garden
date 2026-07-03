@@ -11,7 +11,7 @@ import { createSocket as udpSocket } from "dgram"
 
 if (!process.stdin.isTTY) { console.error("dash needs an interactive terminal"); process.exit(1) }
 
-const ROOT = dirname(fileURLToPath(import.meta.url))
+const ROOT = dirname(dirname(fileURLToPath(import.meta.url))) // repo root (script lives in scripts/)
 const CONTENT = join(ROOT, "content")
 // Project-scoped singleton — hash ROOT to a unique port per project (49152–65535)
 const SINGLETON_PORT = 49152 + (parseInt(createHash("md5").update(ROOT).digest("hex").slice(0, 8), 16) % 16383)

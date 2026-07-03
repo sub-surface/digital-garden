@@ -1,71 +1,124 @@
-import { Env } from "./types"
-import { corsHeaders } from "./lib"
+import { Env, RouteCtx } from "./types"
+import { corsHeaders, applyApiHeaders, jsonResponse, verifyAuth } from "./lib"
 import { getContentIndex, slugFromPathname, resolveMetaCaseInsensitive, injectMetaTags } from "./meta"
 import { handleAuthMe, handleUpdateProfile, handleAvatarUpload, handleRegister } from "./auth"
 import { handleSubmit, handleEdit, handleNew, handleBookmarks, handleLockStatus, handleUserProfile } from "./wiki"
-import { handleChatRooms, handleChatMessages, handleChatPins, handleChatPin, handleChatReactions, handleChatSearch, handleChatUserMini, handleChatClaim, handleChatBan, handleGifSearch, handleChessGif, handleUserClaim, handleClaimBySlug } from "./chat"
-import { handleStonkHistory } from "./stonks"
+import {
+  handleChatRooms, handleChatMessages, handleChatMessageById, handleChatPins, handleChatPin,
+  handleChatReactions, handleChatSearch, handleChatUserMini, handleChatClaim, handleChatBan,
+  handleGifSearch, handleChessGif, handleUserClaim, handleClaimBySlug,
+} from "./chat"
 import { handleApiKeys } from "./keys"
 import { handleAdmin } from "./admin"
 import { addSecurityHeaders } from "./security"
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url)
-    
-    if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders() })
+/**
+ * Route table with declarative middleware:
+ *  - auth: "user" resolves + requires a logged-in user; "admin" additionally
+ *    requires role === "admin". Handlers receive the resolved user via ctx.auth
+ *    and never call verifyAuth themselves.
+ *  - Write methods (POST/PUT/PATCH/DELETE) are rate-limited per user/IP when
+ *    the WRITE_LIMITER binding is configured (no-op otherwise).
+ *  - The dispatcher owns CORS, security headers, and the error boundary: a
+ *    thrown handler becomes a logged, correlatable JSON 500 instead of a bare
+ *    exception with no CORS headers.
+ */
+interface Route {
+  method?: string
+  pattern: RegExp
+  auth?: "user" | "admin"
+  handler: (ctx: RouteCtx) => Promise<Response>
+}
+
+const routes: Route[] = [
+  { method: "GET", pattern: /^\/api\/chat\/rooms$/, auth: "user", handler: handleChatRooms },
+  { method: "POST", pattern: /^\/api\/chat\/rooms$/, auth: "admin", handler: handleChatRooms },
+  { method: "PATCH", pattern: /^\/api\/chat\/rooms\/[^/]+$/, auth: "admin", handler: handleChatRooms },
+  { pattern: /^\/api\/chat\/messages$/, auth: "user", handler: handleChatMessages },
+  { pattern: /^\/api\/chat\/messages\/[^/]+\/pin$/, auth: "admin", handler: handleChatPin },
+  { method: "GET", pattern: /^\/api\/chat\/messages\/([^/]+)$/, auth: "user", handler: handleChatMessageById },
+  { pattern: /^\/api\/chat\/messages\/[^/]+$/, auth: "user", handler: handleChatMessages },
+  { method: "GET", pattern: /^\/api\/chat\/pins$/, auth: "user", handler: handleChatPins },
+  { pattern: /^\/api\/chat\/reactions$/, auth: "user", handler: handleChatReactions },
+  { method: "GET", pattern: /^\/api\/chat\/search$/, auth: "user", handler: handleChatSearch },
+  { method: "GET", pattern: /^\/api\/chat\/users\/([^/]+)\/mini$/, handler: handleChatUserMini },
+  { method: "POST", pattern: /^\/api\/chat\/claim$/, auth: "user", handler: handleChatClaim },
+  { method: "POST", pattern: /^\/api\/chat\/(ban|unban)$/, auth: "admin", handler: handleChatBan },
+  { method: "GET", pattern: /^\/api\/chat\/gif-search$/, auth: "user", handler: handleGifSearch },
+  { method: "POST", pattern: /^\/api\/chess\/gif$/, handler: handleChessGif },
+
+  { method: "POST", pattern: /^\/api\/submit$/, handler: handleSubmit },
+  { method: "GET", pattern: /^\/api\/auth\/me$/, auth: "user", handler: handleAuthMe },
+  { method: "PUT", pattern: /^\/api\/auth\/profile$/, auth: "user", handler: handleUpdateProfile },
+  { method: "POST", pattern: /^\/api\/profile\/avatar$/, auth: "user", handler: handleAvatarUpload },
+  { method: "POST", pattern: /^\/api\/auth\/register$/, handler: handleRegister },
+
+  { method: "GET", pattern: /^\/api\/users\/([^/]+)\/claim$/, handler: handleUserClaim },
+  { method: "GET", pattern: /^\/api\/claims\/by-slug\/(.+)$/, handler: handleClaimBySlug },
+  { method: "GET", pattern: /^\/api\/user\/(.+)$/, handler: handleUserProfile },
+
+  { method: "POST", pattern: /^\/api\/edit$/, auth: "user", handler: handleEdit },
+  { method: "POST", pattern: /^\/api\/new$/, auth: "user", handler: handleNew },
+  { method: "GET", pattern: /^\/api\/lock-status$/, handler: handleLockStatus },
+
+  { pattern: /^\/api\/bookmarks/, auth: "user", handler: handleBookmarks },
+
+  { pattern: /^\/api\/(keys|admin\/api-keys)(\/[^/]+)?$/, auth: "user", handler: handleApiKeys },
+
+  { pattern: /^\/api\/admin\//, auth: "admin", handler: handleAdmin },
+]
+
+const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"])
+
+async function dispatch(request: Request, env: Env, ctx: ExecutionContext, url: URL): Promise<Response> {
+  const requestId = crypto.randomUUID().slice(0, 8)
+
+  for (const route of routes) {
+    if (route.method && route.method !== request.method) continue
+    const match = url.pathname.match(route.pattern)
+    if (!match) continue
+
+    const waitUntil = (p: Promise<unknown>) => ctx.waitUntil(p)
+    const auth = route.auth ? await verifyAuth(request, env, waitUntil) : null
+    if (route.auth && !auth) return jsonResponse({ error: "Unauthorized" }, 401)
+    if (route.auth === "admin" && auth!.role !== "admin") {
+      return jsonResponse({ error: "Admin access required" }, 403)
     }
 
-    const pathname = url.pathname
-
-    const routes: { method?: string; pattern: RegExp; handler: (req: Request, env: Env, url: URL, match: RegExpMatchArray) => Promise<Response> }[] = [
-      { pattern: /^\/api\/chat\/rooms$/, handler: (req, e) => handleChatRooms(req, e) },
-      { pattern: /^\/api\/chat\/rooms\/[^/]+$/, handler: (req, e) => handleChatRooms(req, e) },
-      { pattern: /^\/api\/chat\/messages$/, handler: (req, e, u) => handleChatMessages(req, e, u) },
-      { pattern: /^\/api\/chat\/messages\/[^/]+\/pin$/, handler: (req, e, u) => handleChatPin(req, e, u) },
-      { pattern: /^\/api\/chat\/messages\/[^/]+$/, handler: (req, e, u) => handleChatMessages(req, e, u) },
-      { pattern: /^\/api\/chat\/pins$/, handler: (req, e, u) => handleChatPins(req, e, u) },
-      { pattern: /^\/api\/chat\/reactions$/, handler: (req, e) => handleChatReactions(req, e) },
-      { pattern: /^\/api\/chat\/search$/, handler: (req, e, u) => handleChatSearch(req, e, u) },
-      { pattern: /^\/api\/chat\/users\/([^/]+)\/stonk-history$/, handler: (req, e, u, m) => handleStonkHistory(req, e, decodeURIComponent(m[1])) },
-      { pattern: /^\/api\/chat\/users\/([^/]+)\/mini$/, handler: (req, e, u, m) => handleChatUserMini(req, e, decodeURIComponent(m[1])) },
-      { method: "POST", pattern: /^\/api\/chat\/claim$/, handler: (req, e) => handleChatClaim(req, e) },
-      { pattern: /^\/api\/chat\/ban$/, handler: (req, e) => handleChatBan(req, e) },
-      { pattern: /^\/api\/chat\/unban$/, handler: (req, e) => handleChatBan(req, e) },
-      { method: "GET", pattern: /^\/api\/chat\/gif-search$/, handler: (req, e, u) => handleGifSearch(req, e, u) },
-      { method: "POST", pattern: /^\/api\/chess\/gif$/, handler: (req) => handleChessGif(req) },
-
-      { method: "POST", pattern: /^\/api\/submit$/, handler: (req, e) => handleSubmit(req, e) },
-      { method: "GET", pattern: /^\/api\/auth\/me$/, handler: (req, e) => handleAuthMe(req, e) },
-      { method: "PUT", pattern: /^\/api\/auth\/profile$/, handler: (req, e) => handleUpdateProfile(req, e) },
-      { method: "POST", pattern: /^\/api\/profile\/avatar$/, handler: (req, e) => handleAvatarUpload(req, e) },
-      { method: "POST", pattern: /^\/api\/auth\/register$/, handler: (req, e) => handleRegister(req, e) },
-      
-      { method: "GET", pattern: /^\/api\/users\/([^/]+)\/claim$/, handler: (req, e, u, m) => handleUserClaim(e, decodeURIComponent(m[1])) },
-      { method: "GET", pattern: /^\/api\/claims\/by-slug\/(.+)$/, handler: (req, e, u, m) => handleClaimBySlug(e, decodeURIComponent(m[1])) },
-      { method: "GET", pattern: /^\/api\/user\/(.+)$/, handler: (req, e, u, m) => handleUserProfile(e, decodeURIComponent(m[1])) },
-      
-      { method: "POST", pattern: /^\/api\/edit$/, handler: (req, e) => handleEdit(req, e) },
-      { method: "POST", pattern: /^\/api\/new$/, handler: (req, e) => handleNew(req, e) },
-      { method: "GET", pattern: /^\/api\/lock-status$/, handler: (req, e) => handleLockStatus(req, e) },
-      
-      { pattern: /^\/api\/bookmarks/, handler: (req, e, u) => handleBookmarks(req, e, u.pathname) },
-      
-      { pattern: /^\/api\/keys$/, handler: (req, e, u) => handleApiKeys(req, e, u) },
-      { pattern: /^\/api\/keys\/[^/]+$/, handler: (req, e, u) => handleApiKeys(req, e, u) },
-      { pattern: /^\/api\/admin\/api-keys$/, handler: (req, e, u) => handleApiKeys(req, e, u) },
-      { pattern: /^\/api\/admin\/api-keys\/[^/]+$/, handler: (req, e, u) => handleApiKeys(req, e, u) },
-      
-      { pattern: /^\/api\/admin\//, handler: (req, e, u) => handleAdmin(req, e, u.pathname) },
-    ]
-
-    for (const route of routes) {
-      if (route.method && route.method !== request.method) continue
-      const match = pathname.match(route.pattern)
-      if (match) {
-        return route.handler(request, env, url, match)
+    // Rate-limit writes: per user when authed, per IP otherwise.
+    if (WRITE_METHODS.has(request.method) && env.WRITE_LIMITER) {
+      const key = auth?.id ?? request.headers.get("CF-Connecting-IP") ?? "anon"
+      try {
+        const { success } = await env.WRITE_LIMITER.limit({ key })
+        if (!success) return jsonResponse({ error: "Too many requests — slow down" }, 429)
+      } catch (e) {
+        console.error(`[${requestId}] rate-limiter error (allowing request):`, e)
       }
+    }
+
+    try {
+      return await route.handler({ request, env, url, match, auth, waitUntil })
+    } catch (err) {
+      console.error(`[${requestId}] ${request.method} ${url.pathname} handler threw:`, err)
+      return jsonResponse({ error: "Internal error", requestId }, 500)
+    }
+  }
+
+  return jsonResponse({ error: "Not found" }, 404)
+}
+
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url)
+    const origin = request.headers.get("Origin")
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders(origin) })
+    }
+
+    if (url.pathname.startsWith("/api/")) {
+      const response = await dispatch(request, env, ctx, url)
+      return applyApiHeaders(response, origin)
     }
 
     if (!env.ASSETS) {
@@ -84,9 +137,7 @@ export default {
     const index = await getContentIndex(env.ASSETS)
     const meta = resolveMetaCaseInsensitive(index, slug)
 
-    const injected = meta
-      ? injectMetaTags(html, meta, slug, url.origin)
-      : injectMetaTags(html, {}, slug, url.origin)
+    const injected = injectMetaTags(html, meta ?? {}, slug, url.origin)
 
     const headers = new Headers(response.headers)
     addSecurityHeaders(headers)

@@ -96,7 +96,7 @@ const TIPS_POOL = [
   '"Emotes are a language. :kek: speaks volumes."',
   '"A message sent cannot be unsent. But it can be /clear\'d locally."',
   '"Philosophy: the art of asking questions no one can answer at dinner."',
-  '"Pro tip: your stonks go up when people react to you. Vibes = value."',
+  '"Pro tip: reactions are the local currency. Vibes = value."',
   '"Cat fact: cats have 32 muscles in each ear. You have this chat."',
   '"The terminal has no ads. No algorithm. No engagement metrics. Just chat."',
   '"Footnotes: add [^1] inline, [^1]: content at end of message."',
@@ -384,7 +384,7 @@ export function TerminalBootScreen({ onDone }: Props) {
     // ── ELEMENT: module_load ──
     async function elModuleLoad() {
       if (!alive.current || skipPhase0Ref.current) return
-      const mods = ["kernel", "auth", "chat", "realtime", "stonks"]
+      const mods = ["kernel", "auth", "chat", "realtime", "emotes"]
       let out = "Loading modules: "
       for (const mod of mods) {
         if (!alive.current || skipPhase0Ref.current) break

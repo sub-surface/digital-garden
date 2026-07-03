@@ -1,4 +1,4 @@
-import { useMusic } from "../MusicContext"
+import { useMusic } from "@/components/ui/music/MusicContext"
 import { useStore } from "@/store"
 import styles from "./Collections.module.scss"
 

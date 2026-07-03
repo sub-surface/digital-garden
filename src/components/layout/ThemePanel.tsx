@@ -121,7 +121,7 @@ export function ThemePanel() {
               </button>
             </div>
             <div className={styles.scrollSelect}>
-              {(["murmuration", "graph", "vectors", "dots", "terminal"] as const).map((m) => (
+              {(["murmuration", "graph", "vectors", "dots", "terminal", "chamber"] as const).map((m) => (
                 <button
                   key={m}
                   className={styles.textLink}

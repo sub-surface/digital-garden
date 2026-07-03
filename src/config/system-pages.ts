@@ -26,5 +26,6 @@ export const SYSTEM_PAGES: Record<string, SystemPage> = {
   life:            { component: lazy(() => import("@/components/ui/games/LifePage").then(m => ({ default: m.LifePage }))),         layout: "game",    loading: "Seeding the grid..." },
   progressions:    { component: lazy(() => import("@/components/ui/games/ProgressionsPage").then(m => ({ default: m.ProgressionsPage }))), layout: "game", loading: "Setting the board..." },
   constellation:   { component: lazy(() => import("@/components/ui/graph/ConstellationPage").then(m => ({ default: m.ConstellationPage }))), layout: "game", loading: "Charting the sky..." },
-  "persian-carpet": { component: lazy(() => import("@/components/ui/PersianCarpetPage").then(m => ({ default: m.PersianCarpetPage }))), layout: "game", loading: "Stringing the loom…" },
+  "persian-carpet": { component: lazy(() => import("@/components/ui/games/PersianCarpetPage").then(m => ({ default: m.PersianCarpetPage }))), layout: "game", loading: "Stringing the loom…" },
+  sigil:           { component: lazy(() => import("@/components/ui/games/SigilPage").then(m => ({ default: m.SigilPage }))),         layout: "game",    loading: "Preparing the plate..." },
 }

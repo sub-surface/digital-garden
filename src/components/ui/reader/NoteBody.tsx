@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState, Suspense } from "react"
 import { useTelescopicHandlers } from "../TelescopicHandler"
 import { NotFound } from "../NotFound"
-import { useMusic } from "../MusicContext"
+import { useMusic } from "@/components/ui/music/MusicContext"
 import { useStore } from "@/store"
 import { mdxComponents } from "@/components/mdx/MDXProvider"
 import { TagPage } from "./TagPage"
 import { FolderPage } from "./FolderPage"
 import { SYSTEM_PAGES } from "@/config/system-pages"
+import { normalizeSlug } from "@/lib/slug"
 
 // `music` is an alias for the music-library system page used in older links.
 const SYSTEM_ALIASES: Record<string, string> = { music: "music-library" }
@@ -17,10 +18,8 @@ interface Props {
 }
 
 export function NoteBody({ slug: rawSlug, onLoad }: Props) {
-  const slug = React.useMemo(() => 
-    rawSlug
-      .replace(/\.mdx?$/, "")
-      .replace(/\s+/g, "-"),
+  const slug = React.useMemo(
+    () => normalizeSlug(rawSlug.replace(/\.mdx?$/, "")),
     [rawSlug]
   )
   const [loading, setLoading] = useState(true)

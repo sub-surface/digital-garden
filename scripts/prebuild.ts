@@ -1,15 +1,35 @@
+/**
+ * Prebuild — content pipeline.
+ *
+ * Shape: scan() → resolve() → emitters. Each emitter is a small function over
+ * the resolved model that writes one artifact; adding an output means adding
+ * one emitter, and content-policy rules (private/draft) live in exactly one
+ * place (the scan filter / feed predicates).
+ *
+ * Content policy:
+ *  - `private: true` frontmatter → excluded ENTIRELY (no index entry, no copy
+ *    to public/content — its raw source stays unpublished).
+ *  - `draft: true` → indexed & rendered (wiki submissions rely on this), but
+ *    excluded from RSS feeds and the sitemap (not promoted).
+ */
 import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "url"
 import matter from "gray-matter"
-import { execSync } from "child_process"
+import { execFileSync } from "child_process"
 import { imageSize } from "image-size"
+import { slugifyPath, buildSlugResolver, normalizeSlug } from "../src/lib/slug"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CONTENT_DIR = path.resolve(__dirname, "../content")
 const PUBLIC_DIR = path.resolve(__dirname, "../public")
+const SRC_CONTENT_DIR = path.resolve(__dirname, "../src/content")
 
 const IGNORE_PATTERNS = ["private", "templates", ".obsidian", "Misc", "Daily"]
+const SITE_URL = "https://subsurfaces.net"
+const WIKI_URL = "https://wiki.subsurfaces.net"
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface NoteMeta {
   slug: string
@@ -21,7 +41,7 @@ interface NoteMeta {
   excerpt?: string
   growth?: string
   featured?: boolean
-  private?: boolean
+  draft?: boolean
   readingTime?: number
   aliases?: string[]
   published?: boolean
@@ -39,6 +59,15 @@ interface NoteMeta {
   folder?: string
   contentPath?: string
 }
+
+interface Model {
+  index: Record<string, NoteMeta>
+  files: string[]           // absolute paths of included content files
+  linkMap: Map<string, string[]>
+  resolveLink: (raw: string) => string | null
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function extractExcerpt(content: string, maxLen = 200): string {
   const lines = content.split("\n")
@@ -62,13 +91,10 @@ function extractExcerpt(content: string, maxLen = 200): string {
     paragraph += (paragraph ? " " : "") + trimmed
   }
 
-  // Strip wikilinks to plain text
-  paragraph = paragraph.replace(
-    /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
-    (_, slug, alias) => alias || slug,
-  )
-  // Strip markdown formatting
-  paragraph = paragraph.replace(/[*_`~]/g, "")
+  // Strip wikilinks to plain text, then markdown formatting
+  paragraph = paragraph
+    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, slug, alias) => alias || slug)
+    .replace(/[*_`~]/g, "")
 
   if (paragraph.length > maxLen) {
     paragraph = paragraph.slice(0, maxLen).replace(/\s\S*$/, "") + "..."
@@ -79,10 +105,6 @@ function extractExcerpt(content: string, maxLen = 200): string {
 function calcReadingTime(content: string): number {
   const words = content.replace(/```[\s\S]*?```/g, "").split(/\s+/).filter(Boolean).length
   return Math.max(1, Math.ceil(words / 200))
-}
-
-interface ContentIndex {
-  [slug: string]: NoteMeta
 }
 
 function shouldIgnore(filePath: string): boolean {
@@ -105,72 +127,54 @@ function extractWikiLinks(content: string): string[] {
     const rawTarget = match[1].trim()
     const targetWithoutFragment = rawTarget.replace(/#.*$/, "").trim()
     if (!targetWithoutFragment) continue
-    // Normalise the target to match our slug system (hyphenated)
-    const normalized = targetWithoutFragment.replace(/\s+/g, "-")
-    links.push(normalized)
+    links.push(normalizeSlug(targetWithoutFragment))
   }
   return links
-}
-
-function slugify(filePath: string): string {
-  const rel = path.relative(CONTENT_DIR, filePath)
-  // Remove .md / .mdx extension, normalise separators
-  return rel
-    .replace(/\\/g, "/")
-    .replace(/\.mdx?$/, "")
-    .replace(/\/index$/, "")
-    .replace(/\s+/g, "-")
 }
 
 function walkDir(dir: string): string[] {
   const results: string[] = []
   if (!fs.existsSync(dir)) return results
-
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) {
-      results.push(...walkDir(full))
-    } else if (/\.mdx?$/.test(entry.name)) {
-      results.push(full)
-    }
+    if (entry.isDirectory()) results.push(...walkDir(full))
+    else if (/\.mdx?$/.test(entry.name)) results.push(full)
   }
   return results
 }
 
-function main() {
-  console.log("Prebuild: scanning content directory...")
+function writeJson(relPath: string, data: unknown) {
+  fs.writeFileSync(path.join(PUBLIC_DIR, relPath), JSON.stringify(data, null, 2))
+}
 
-  if (!fs.existsSync(CONTENT_DIR)) {
-    console.warn("No content/ directory found. Creating empty manifests.")
-    fs.writeFileSync(path.join(PUBLIC_DIR, "content-index.json"), "{}")
-    fs.writeFileSync(
-      path.join(PUBLIC_DIR, "graph.json"),
-      '{"nodes":[],"links":[]}',
-    )
-    // music.json is owned by `npm run sync:music` (SoundCloud -> R2). Only
-    // seed an empty manifest if none exists; never clobber a synced one.
-    const musicPath = path.join(PUBLIC_DIR, "music.json")
-    if (!fs.existsSync(musicPath)) fs.writeFileSync(musicPath, "[]")
-    return
-  }
+// ─── Scan + resolve ──────────────────────────────────────────────────────────
 
-  const files = walkDir(CONTENT_DIR).filter((f) => !shouldIgnore(f) && !path.basename(f).startsWith("_"))
-  const index: ContentIndex = {}
-  const linkMap: Map<string, string[]> = new Map() // slug → raw link targets
+function scan(): Model {
+  const allFiles = walkDir(CONTENT_DIR).filter(
+    (f) => !shouldIgnore(f) && !path.basename(f).startsWith("_"),
+  )
 
-  // Pass 1: parse all notes
-  for (const file of files) {
+  const index: Record<string, NoteMeta> = {}
+  const files: string[] = []
+  const linkMap = new Map<string, string[]>()
+  let privateCount = 0
+
+  for (const file of allFiles) {
     const raw = fs.readFileSync(file, "utf-8")
     const { data, content } = matter(raw)
-    const slug = slugify(file)
+
+    // Content policy: `private: true` frontmatter excludes the note entirely.
+    if (data.private === true) { privateCount++; continue }
+
+    const slug = slugifyPath(path.relative(CONTENT_DIR, file))
     const folder = slug.includes("/") ? slug.split("/").slice(0, -1).join("/") : undefined
     const contentPath = path.relative(CONTENT_DIR, file).replace(/\\/g, "/")
 
-    const links = extractWikiLinks(content)
-    linkMap.set(slug, links)
+    files.push(file)
+    linkMap.set(slug, extractWikiLinks(content))
 
     const aliases = Array.isArray(data.aliases)
-      ? (data.aliases as string[]).map((a) => String(a).replace(/\s+/g, "-"))
+      ? (data.aliases as string[]).map((a) => normalizeSlug(String(a)))
       : []
 
     index[slug] = {
@@ -185,7 +189,7 @@ function main() {
       excerpt: (data.description as string) || extractExcerpt(content),
       growth: data.growth as string | undefined,
       featured: data.featured === true,
-      private: false,
+      draft: data.draft === true || undefined,
       readingTime: calcReadingTime(content),
       aliases: aliases.length ? aliases : undefined,
       published: data.published === true,
@@ -198,81 +202,60 @@ function main() {
       year: data.year != null ? Number(data.year) : undefined,
       rating: data.rating != null ? Number(data.rating) : undefined,
       status: data.status as string | undefined,
-      links: [], // resolved in pass 2
+      links: [], // resolved below
       backlinks: [],
       folder,
       contentPath,
     }
   }
 
-  // Build slug lookup for resolution
-  const allSlugs = Object.keys(index)
-  const slugByBasename = new Map<string, string>()
-  for (const s of allSlugs) {
-    const base = s.split("/").pop()!.toLowerCase()
-    slugByBasename.set(base, s)
-  }
+  if (privateCount > 0) console.log(`  ${privateCount} note(s) excluded via private: true`)
 
-  function resolveLink(raw: string): string | null {
-    // Direct match
-    if (index[raw]) return raw
-    // Case-insensitive
-    const lower = raw.toLowerCase()
-    const direct = allSlugs.find((s) => s.toLowerCase() === lower)
-    if (direct) return direct
-    // Basename match
-    return slugByBasename.get(lower) ?? null
+  // Shared slug semantics (same module the SPA and Worker use)
+  const resolver = buildSlugResolver(Object.keys(index))
+  for (const [base, slugs] of resolver.collisions) {
+    console.warn(`  [ambiguous basename] "${base}" → ${slugs.join(", ")} — bare [[${base}]] links resolve to ${slugs[0]}; qualify with the folder`)
   }
+  const resolveLink = (raw: string) => resolver.resolve(raw)
 
-  // Pass 2: resolve links and compute backlinks
+  // Resolve links and compute backlinks
   for (const [slug, rawLinks] of linkMap) {
-    const resolved = rawLinks
-      .map(resolveLink)
-      .filter((s): s is string => s !== null)
+    const resolved = rawLinks.map(resolveLink).filter((s): s is string => s !== null)
     index[slug].links = [...new Set(resolved)]
-
-    // Register backlinks
     for (const target of resolved) {
-      if (index[target] && target !== slug) {
-        index[target].backlinks.push(slug)
-      }
+      if (index[target] && target !== slug) index[target].backlinks.push(slug)
     }
   }
-
-  // Deduplicate backlinks
   for (const meta of Object.values(index)) {
     meta.backlinks = [...new Set(meta.backlinks)]
   }
 
-  // Write content index
-  fs.writeFileSync(
-    path.join(PUBLIC_DIR, "content-index.json"),
-    JSON.stringify(index, null, 2),
-  )
-  console.log(`  content-index.json: ${Object.keys(index).length} notes`)
+  return { index, files, linkMap, resolveLink }
+}
 
-  // Write slug map for link resolution (includes aliases)
+// ─── Emitters ────────────────────────────────────────────────────────────────
+
+function emitContentIndex({ index }: Model) {
+  writeJson("content-index.json", index)
+  console.log(`  content-index.json: ${Object.keys(index).length} notes`)
+}
+
+function emitSlugMap({ index }: Model) {
   const slugMap: Record<string, string> = {}
-  for (const s of allSlugs) {
+  for (const s of Object.keys(index)) {
     const base = s.split("/").pop()!.toLowerCase()
     slugMap[base] = s
     slugMap[s.toLowerCase()] = s
-    // Register aliases
-    const meta = index[s]
-    if (meta.aliases) {
-      for (const alias of meta.aliases) {
-        slugMap[alias.toLowerCase()] = s
-      }
+    for (const alias of index[s].aliases ?? []) {
+      slugMap[alias.toLowerCase()] = s
     }
   }
-  fs.writeFileSync(
-    path.join(PUBLIC_DIR, "slug-map.json"),
-    JSON.stringify(slugMap, null, 2),
-  )
+  writeJson("slug-map.json", slugMap)
   console.log(`  slug-map.json generated`)
+}
 
-  // Broken link detection (skip media files — they aren't in the slug-map by design)
-  const MEDIA_EXT = /\.(png|jpe?g|gif|webp|svg|mp3|mp4|wav|pdf|gif)$/i
+function emitBrokenLinks({ linkMap, resolveLink }: Model) {
+  const MEDIA_EXT = /\.(png|jpe?g|gif|webp|svg|mp3|mp4|wav|pdf)$/i
   const brokenBySlug: Record<string, string[]> = {}
   let brokenCount = 0
   for (const [slug, rawLinks] of linkMap) {
@@ -285,89 +268,65 @@ function main() {
       }
     }
   }
-  // Emit a machine-readable report so the count is trackable (and CI can fail
-  // above a threshold). Sorted by source slug for stable diffs.
-  const brokenReport = {
+  writeJson("broken-links.json", {
     total: brokenCount,
     bySlug: Object.fromEntries(
       Object.entries(brokenBySlug).sort(([a], [b]) => a.localeCompare(b)),
     ),
-  }
-  fs.writeFileSync(
-    path.join(PUBLIC_DIR, "broken-links.json"),
-    JSON.stringify(brokenReport, null, 2),
-  )
+  })
   if (brokenCount > 0) {
     console.warn(`  ${brokenCount} broken wikilink(s) found — see public/broken-links.json`)
   } else {
     console.log(`  broken-links.json generated (0 broken)`)
   }
+}
 
-  // Write graph data
-  const nodes = Object.values(index).map((n) => ({
-    id: n.slug,
-    title: n.title,
-    tags: n.tags,
-  }))
+function emitGraph({ index }: Model) {
+  const nodes = Object.values(index).map((n) => ({ id: n.slug, title: n.title, tags: n.tags }))
   const links: { source: string; target: string }[] = []
   for (const meta of Object.values(index)) {
-    for (const target of meta.links) {
-      links.push({ source: meta.slug, target })
-    }
+    for (const target of meta.links) links.push({ source: meta.slug, target })
   }
-  fs.writeFileSync(
-    path.join(PUBLIC_DIR, "graph.json"),
-    JSON.stringify({ nodes, links }, null, 2),
-  )
+  writeJson("graph.json", { nodes, links })
   console.log(`  graph.json: ${nodes.length} nodes, ${links.length} links`)
+}
 
+function emitMusicSeed() {
   // music.json is owned by `npm run sync:music` (SoundCloud -> R2), NOT by
-  // prebuild. We only seed an empty manifest on a fresh checkout so the app
-  // always has a valid file to fetch. Never overwrite a synced manifest.
+  // prebuild. Only seed an empty manifest on a fresh checkout; never overwrite.
   const musicPath = path.join(PUBLIC_DIR, "music.json")
   if (!fs.existsSync(musicPath)) {
     fs.writeFileSync(musicPath, "[]")
     console.log("  music.json: seeded empty (run `npm run sync:music`)")
   } else {
     const count = (() => {
-      try {
-        return JSON.parse(fs.readFileSync(musicPath, "utf-8")).length
-      } catch {
-        return "?"
-      }
+      try { return JSON.parse(fs.readFileSync(musicPath, "utf-8")).length } catch { return "?" }
     })()
     console.log(`  music.json: left as-is (${count} tracks, managed by sync:music)`)
   }
+}
 
-  // Generate folders manifest
+function emitFolders({ index }: Model) {
   const folders: Record<string, string[]> = {}
   for (const meta of Object.values(index)) {
-    if (meta.folder) {
-      const parts = meta.folder.split("/")
-      let current = ""
-      for (const part of parts) {
-        current = current ? `${current}/${part}` : part
-        if (!folders[current]) folders[current] = []
-      }
-      folders[meta.folder].push(meta.slug)
+    if (!meta.folder) continue
+    const parts = meta.folder.split("/")
+    let current = ""
+    for (const part of parts) {
+      current = current ? `${current}/${part}` : part
+      folders[current] ??= []
     }
+    folders[meta.folder].push(meta.slug)
   }
-  fs.writeFileSync(
-    path.join(PUBLIC_DIR, "folders.json"),
-    JSON.stringify(folders, null, 2),
-  )
+  writeJson("folders.json", folders)
   console.log(`  folders.json: ${Object.keys(folders).length} folders`)
+}
 
-  // Generate albums manifest from content/Photos/*.md
+function emitAlbums() {
   const PHOTOS_DIR = path.join(CONTENT_DIR, "Photos")
-  interface AlbumPhoto { file: string; caption?: string }
   interface Album {
-    slug: string
-    title: string
-    description?: string
-    date?: string
-    cover?: string
-    photos: AlbumPhoto[]
+    slug: string; title: string; description?: string; date?: string; cover?: string
+    photos: { file: string; caption?: string }[]
   }
   const albums: Album[] = []
   if (fs.existsSync(PHOTOS_DIR)) {
@@ -387,13 +346,14 @@ function main() {
     }
     albums.sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
   }
-  fs.writeFileSync(
-    path.join(PUBLIC_DIR, "albums.json"),
-    JSON.stringify(albums, null, 2),
-  )
+  writeJson("albums.json", albums)
   console.log(`  albums.json: ${albums.length} albums`)
+}
 
-  // Copy markdown files to public/content/ for potential runtime fallback
+function emitPublicContentCopies({ files }: Model) {
+  // Raw sources are fetched at runtime by LinkPreview, WikiEditPage, BootPage
+  // and loadNoteSource — this copy is load-bearing, not a vestige. Private
+  // notes never reach `files`, so their raw source is never published.
   const publicContent = path.join(PUBLIC_DIR, "content")
   for (const file of files) {
     const rel = path.relative(CONTENT_DIR, file).replace(/\\/g, "/")
@@ -402,122 +362,119 @@ function main() {
     fs.copyFileSync(file, dest)
   }
   console.log(`  public/content/: ${files.length} files copied`)
+}
 
-  // Ensure src/content exists and sync there too for Vite/MDX imports
-  const srcContent = path.resolve(__dirname, "../src/content")
-  if (fs.existsSync(srcContent)) {
-    fs.rmSync(srcContent, { recursive: true, force: true })
+function emitSrcContentCopies({ files }: Model) {
+  // Wiped + resynced every run: Vite/MDX imports compiled copies from here.
+  if (fs.existsSync(SRC_CONTENT_DIR)) {
+    fs.rmSync(SRC_CONTENT_DIR, { recursive: true, force: true })
   }
-  fs.mkdirSync(srcContent, { recursive: true })
-  
+  fs.mkdirSync(SRC_CONTENT_DIR, { recursive: true })
+
   for (const file of files) {
-    const slug = slugify(file)
+    const slug = slugifyPath(path.relative(CONTENT_DIR, file))
     const ext = path.extname(file)
-    const dest = path.join(srcContent, `${slug}${ext}`)
+    const dest = path.join(SRC_CONTENT_DIR, `${slug}${ext}`)
     fs.mkdirSync(path.dirname(dest), { recursive: true })
     fs.copyFileSync(file, dest)
   }
   console.log(`  src/content/: ${files.length} files synced for MDX (slugified names)`)
+}
 
-  // Copy media assets (images, audio, etc.)
+function emitMediaAndDimensions() {
   const mediaDir = path.join(CONTENT_DIR, "Media")
-  if (fs.existsSync(mediaDir)) {
-    function copyDirRecursive(src: string, dest: string) {
-      fs.mkdirSync(dest, { recursive: true })
-      for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-        const srcPath = path.join(src, entry.name)
-        const destPath = path.join(dest, entry.name)
-        if (entry.isDirectory()) {
-          copyDirRecursive(srcPath, destPath)
-        } else {
-          fs.copyFileSync(srcPath, destPath)
-        }
-      }
+  if (!fs.existsSync(mediaDir)) return
+
+  const publicContent = path.join(PUBLIC_DIR, "content")
+  function copyDirRecursive(src: string, dest: string) {
+    fs.mkdirSync(dest, { recursive: true })
+    for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+      const srcPath = path.join(src, entry.name)
+      const destPath = path.join(dest, entry.name)
+      if (entry.isDirectory()) copyDirRecursive(srcPath, destPath)
+      else fs.copyFileSync(srcPath, destPath)
     }
-    copyDirRecursive(mediaDir, path.join(publicContent, "Media"))
-    console.log("  public/content/Media/: media assets copied")
+  }
+  copyDirRecursive(mediaDir, path.join(publicContent, "Media"))
+  console.log("  public/content/Media/: media assets copied")
 
-    // Emit intrinsic image dimensions so <img> tags can reserve layout space
-    // (fixes Cumulative Layout Shift). Keyed by the same /content/Media/... path
-    // that rehype-image-paths produces at runtime. Header-only read via image-size.
-    const DIMENSION_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif", ".svg"])
-    const dimensions: Record<string, { width: number; height: number }> = {}
+  // Emit intrinsic image dimensions so <img> tags can reserve layout space
+  // (fixes Cumulative Layout Shift). Keyed by the same /content/Media/... path
+  // that rehype-image-paths produces at runtime.
+  const DIMENSION_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif", ".svg"])
+  const dimensions: Record<string, { width: number; height: number }> = {}
 
-    function scanDimensions(dir: string, relPrefix: string) {
-      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-        const abs = path.join(dir, entry.name)
-        const rel = relPrefix ? `${relPrefix}/${entry.name}` : entry.name
-        if (entry.isDirectory()) {
-          scanDimensions(abs, rel)
-        } else if (DIMENSION_EXTS.has(path.extname(entry.name).toLowerCase())) {
-          try {
-            const { width, height } = imageSize(fs.readFileSync(abs))
-            if (width && height) {
-              dimensions[`/content/Media/${rel}`] = { width, height }
-            }
-          } catch {
-            // Unreadable/corrupt image — skip; the <img> simply won't reserve space.
+  function scanDimensions(dir: string, relPrefix: string) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, entry.name)
+      const rel = relPrefix ? `${relPrefix}/${entry.name}` : entry.name
+      if (entry.isDirectory()) {
+        scanDimensions(abs, rel)
+      } else if (DIMENSION_EXTS.has(path.extname(entry.name).toLowerCase())) {
+        try {
+          const { width, height } = imageSize(fs.readFileSync(abs))
+          if (width && height) {
+            dimensions[`/content/Media/${rel}`] = { width, height }
           }
+        } catch {
+          // Unreadable/corrupt image — skip; the <img> simply won't reserve space.
         }
       }
     }
-
-    scanDimensions(mediaDir, "")
-    fs.writeFileSync(
-      path.join(PUBLIC_DIR, "image-dimensions.json"),
-      JSON.stringify(dimensions, null, 2),
-    )
-    console.log(`  public/image-dimensions.json: ${Object.keys(dimensions).length} images measured`)
   }
 
-  // Generate emote index from public/emotes/
+  scanDimensions(mediaDir, "")
+  writeJson("image-dimensions.json", dimensions)
+  console.log(`  public/image-dimensions.json: ${Object.keys(dimensions).length} images measured`)
+}
+
+function emitEmoteIndex() {
   const emotesDir = path.join(PUBLIC_DIR, "emotes")
-  if (fs.existsSync(emotesDir)) {
-    const EMOTE_EXTS = new Set([".gif", ".png", ".webp"])
-    const emoteEntries = fs
-      .readdirSync(emotesDir)
-      .filter((f) => EMOTE_EXTS.has(path.extname(f).toLowerCase()) && f !== "index.json")
-      .map((f) => ({ name: path.basename(f, path.extname(f)), ext: path.extname(f).slice(1) }))
-      // If same name exists as gif and png/webp, prefer gif then webp then png
-      .reduce<Map<string, { name: string; ext: string }>>((map, entry) => {
-        const existing = map.get(entry.name)
-        const rank = (e: string) => e === "gif" ? 0 : e === "webp" ? 1 : 2
-        if (!existing || rank(entry.ext) < rank(existing.ext)) map.set(entry.name, entry)
-        return map
-      }, new Map())
-    const sorted = [...emoteEntries.values()].sort((a, b) => a.name.localeCompare(b.name))
-    fs.writeFileSync(path.join(emotesDir, "index.json"), JSON.stringify(sorted, null, 2))
-    console.log(`  emotes/index.json: ${sorted.length} emotes`)
-  }
+  if (!fs.existsSync(emotesDir)) return
+  const EMOTE_EXTS = new Set([".gif", ".png", ".webp"])
+  const rank = (e: string) => (e === "gif" ? 0 : e === "webp" ? 1 : 2)
+  const emoteEntries = fs
+    .readdirSync(emotesDir)
+    .filter((f) => EMOTE_EXTS.has(path.extname(f).toLowerCase()) && f !== "index.json")
+    .map((f) => ({ name: path.basename(f, path.extname(f)), ext: path.extname(f).slice(1) }))
+    // If same name exists as gif and png/webp, prefer gif then webp then png
+    .reduce<Map<string, { name: string; ext: string }>>((map, entry) => {
+      const existing = map.get(entry.name)
+      if (!existing || rank(entry.ext) < rank(existing.ext)) map.set(entry.name, entry)
+      return map
+    }, new Map())
+  const sorted = [...emoteEntries.values()].sort((a, b) => a.name.localeCompare(b.name))
+  fs.writeFileSync(path.join(emotesDir, "index.json"), JSON.stringify(sorted, null, 2))
+  console.log(`  emotes/index.json: ${sorted.length} emotes`)
+}
 
-  // Generate RSS feeds (opt-in, curated)
-  const SITE_URL = "https://subsurfaces.net"
-  const WIKI_URL = "https://wiki.subsurfaces.net"
+// RSS + sitemap share the promotion rule: drafts are never promoted.
+const promotable = (n: NoteMeta) => n.draft !== true
 
-  function cleanText(text: string): string {
-    return text
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2")
-      .replace(/\[\[([^\]]+)\]\]/g, "$1")
-      .replace(/\[(\^[^\]]+)\]/g, "")
-      .replace(/\\([\[\]])/g, "$1")
-      .replace(/[*_`~]+/g, "")
-      .replace(/^#+\s+/gm, "")
-      .replace(/^>\s+/gm, "")
-      .replace(/\s+/g, " ")
-      .trim()
-  }
+function cleanText(text: string): string {
+  return text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2")
+    .replace(/\[\[([^\]]+)\]\]/g, "$1")
+    .replace(/\[(\^[^\]]+)\]/g, "")
+    .replace(/\\([\[\]])/g, "$1")
+    .replace(/[*_`~]+/g, "")
+    .replace(/^#+\s+/gm, "")
+    .replace(/^>\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
 
-  function buildRssItem(n: NoteMeta, baseUrl: string): string {
-    const link = `${baseUrl}/${n.slug}`
-    const desc = cleanText(n.description || n.excerpt || "")
-    const imgTag = n.image
-      ? `<img src="${n.image.startsWith("http") ? n.image : `${baseUrl}${n.image}`}" alt="${n.title}" style="max-width:100%;margin-bottom:1em;" />`
-      : ""
-    const siteName = baseUrl.includes("wiki") ? "wiki.subsurfaces.net" : "subsurfaces.net"
-    const body = `${imgTag}${desc ? `<p>${desc}</p>` : ""}<p><a href="${link}">Read on ${siteName} →</a></p>`
+function buildRssItem(n: NoteMeta, baseUrl: string): string {
+  const link = `${baseUrl}/${n.slug}`
+  const desc = cleanText(n.description || n.excerpt || "")
+  const imgTag = n.image
+    ? `<img src="${n.image.startsWith("http") ? n.image : `${baseUrl}${n.image}`}" alt="${n.title}" style="max-width:100%;margin-bottom:1em;" />`
+    : ""
+  const siteName = baseUrl.includes("wiki") ? "wiki.subsurfaces.net" : "subsurfaces.net"
+  const body = `${imgTag}${desc ? `<p>${desc}</p>` : ""}<p><a href="${link}">Read on ${siteName} →</a></p>`
 
-    return `
+  return `
     <item>
       <title><![CDATA[${n.title}]]></title>
       <link>${link}</link>
@@ -526,15 +483,15 @@ function main() {
       <description><![CDATA[${body}]]></description>
       ${n.tags.map((t) => `<category>${t}</category>`).join("")}
     </item>`
-  }
+}
 
-  function buildFeed(title: string, description: string, feedUrl: string, baseUrl: string, items: NoteMeta[]): string {
-    const sorted = items
-      .filter((n) => n.date && !isNaN(new Date(n.date).getTime()))
-      .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
-      .slice(0, 40)
+function buildFeed(title: string, description: string, feedUrl: string, baseUrl: string, items: NoteMeta[]): string {
+  const sorted = items
+    .filter((n) => n.date && !isNaN(new Date(n.date).getTime()))
+    .sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime())
+    .slice(0, 40)
 
-    return `<?xml version="1.0" encoding="UTF-8"?>
+  return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>${title}</title>
@@ -545,9 +502,10 @@ function main() {
     ${sorted.map((n) => buildRssItem(n, baseUrl)).join("")}
   </channel>
 </rss>`.trim()
-  }
+}
 
-  const allNotes = Object.values(index)
+function emitRss({ index }: Model) {
+  const allNotes = Object.values(index).filter(promotable)
 
   // Main feed: Writing/ folder OR published: true, non-wiki
   const mainFeedNotes = allNotes.filter((n) =>
@@ -569,28 +527,70 @@ function main() {
     buildFeed("Philchat Wiki", "New articles and profiles from wiki.subsurfaces.net", `${WIKI_URL}/wiki-rss.xml`, WIKI_URL, wikiFeedNotes)
   )
   console.log(`  wiki-rss.xml: ${wikiFeedNotes.filter(n => n.date).length} items`)
+}
 
-  // Generate sitemap
-  const sitemapUrls = Object.keys(index).map((slug) =>
-    `  <url><loc>${SITE_URL}/${slug}</loc></url>`
-  ).join("\n")
+function emitSitemap({ index }: Model) {
+  const notes = Object.values(index).filter(promotable)
+  const urls = notes.map((n) => {
+    const lastmod = n.date && !isNaN(new Date(n.date).getTime())
+      ? `<lastmod>${new Date(n.date).toISOString().slice(0, 10)}</lastmod>`
+      : ""
+    return `  <url><loc>${SITE_URL}/${n.slug}</loc>${lastmod}</url>`
+  }).join("\n")
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${sitemapUrls}
+${urls}
 </urlset>`
 
   fs.writeFileSync(path.join(PUBLIC_DIR, "sitemap.xml"), sitemap.trim())
-  console.log(`  sitemap.xml: ${Object.keys(index).length} urls`)
+  console.log(`  sitemap.xml: ${notes.length} urls`)
+}
 
-  // Generate OG images (opt-in: set PROCESS_OG=true)
-  if (process.env.PROCESS_OG === "true") {
-    try {
-      execSync("tsx scripts/og-gen.ts", { stdio: "inherit" })
-    } catch (err) {
-      console.error("Failed to generate OG images:", err)
-    }
+function emitOgImages() {
+  // Opt-in: set PROCESS_OG=true (slow; PNGs are committed — CF doesn't run this)
+  if (process.env.PROCESS_OG !== "true") return
+  try {
+    execFileSync("tsx", ["scripts/og-gen.ts"], { stdio: "inherit", shell: process.platform === "win32" })
+  } catch (err) {
+    console.error("Failed to generate OG images:", err)
   }
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────────
+
+function main() {
+  console.log("Prebuild: scanning content directory...")
+
+  if (!fs.existsSync(CONTENT_DIR)) {
+    console.warn("No content/ directory found. Creating empty manifests.")
+    writeJson("content-index.json", {})
+    writeJson("graph.json", { nodes: [], links: [] })
+    emitMusicSeed()
+    return
+  }
+
+  const model = scan()
+
+  const emitters = [
+    emitContentIndex,
+    emitSlugMap,
+    emitBrokenLinks,
+    emitGraph,
+    emitFolders,
+    emitPublicContentCopies,
+    emitSrcContentCopies,
+    emitRss,
+    emitSitemap,
+  ]
+  for (const emit of emitters) emit(model)
+
+  // Model-independent emitters
+  emitMusicSeed()
+  emitAlbums()
+  emitMediaAndDimensions()
+  emitEmoteIndex()
+  emitOgImages()
 
   console.log("Prebuild complete.")
 }

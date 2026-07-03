@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import { useStore } from "@/store"
-import { parseMarkdown } from "@/lib/markdown"
 import { useShell } from "@/hooks/useShell"
+import { slugFromPathname } from "@/lib/slug"
 
 /**
  * Global capture-phase click interceptor for internal links.
@@ -60,8 +60,8 @@ export function usePanelClick() {
         event.preventDefault()
         event.stopPropagation()
 
-        // Extract slug from URL path, normalise spaces→hyphens
-        const slug = decodeURIComponent(url.pathname.replace(/^\//, "")).replace(/\/$/, "").replace(/\s+/g, "-")
+        // Extract slug from URL path
+        const slug = slugFromPathname(url.pathname)
         if (!slug) return
 
         // Update active graph target
@@ -73,20 +73,11 @@ export function usePanelClick() {
           ? parseInt(cardEl.getAttribute("data-index")!, 10)
           : -1 // -1 = from main body
 
-        // Fetch the note content for the card
-        fetchNoteForCard(slug, fromDepth)
+        const title = contentIndex?.[slug]?.title ?? slug.split("/").pop() ?? slug
+        pushCard({ url: `/${slug}`, slug, title, html: "" }, fromDepth)
       } catch {
         return
       }
-    }
-
-    async function fetchNoteForCard(slug: string, fromDepth: number) {
-      const title = contentIndex?.[slug]?.title ?? slug.split("/").pop() ?? slug
-
-      pushCard(
-        { url: `/${slug}`, slug, title, html: "" },
-        fromDepth,
-      )
     }
 
     // Capture phase to intercept before normal click handlers
@@ -95,7 +86,7 @@ export function usePanelClick() {
     return () => {
       document.removeEventListener("click", handleClick, true)
     }
-  }, [pushCard, contentIndex])
+  }, [pushCard, contentIndex, shell, setActiveGraphSlug])
 
   // Escape key: pop rightmost card
   useEffect(() => {

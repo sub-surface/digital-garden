@@ -1,0 +1,59 @@
+.plateWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.plate {
+  width: min(78vh, 640px, 100%);
+  aspect-ratio: 1;
+  display: block;
+  touch-action: none; // pointer-drag routing owns the gesture
+  cursor: crosshair;
+  background: transparent;
+}
+
+.telemetry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+
+  span::before {
+    content: "▸ ";
+    opacity: 0.5;
+  }
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+
+  button {
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-default),
+      border-color var(--duration-fast) var(--ease-default);
+
+    &:hover {
+      color: var(--color-text);
+      border-color: var(--color-accent);
+    }
+
+    &[data-active] {
+      color: var(--color-accent);
+      border-color: var(--color-accent);
+    }
+  }
+}

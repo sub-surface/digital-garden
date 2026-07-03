@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { useStore } from "@/store"
-import { useMusic } from "@/components/ui/MusicContext"
+import { useMusic } from "@/components/ui/music/MusicContext"
 import { useRandomNote } from "@/hooks/useRandomNote"
 
 /**

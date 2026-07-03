@@ -1,21 +1,29 @@
-import { Env, ProfileData } from "./types"
-import { ghApi, jsonResponse, verifyAuth, supabaseRest } from "./lib"
+import { Env, ProfileData, RouteCtx } from "./types"
+import { ghApi, jsonResponse, supabaseRest, upstreamError } from "./lib"
 import { getContentIndex, chatterImageForUsername } from "./meta"
 
-export async function handleSubmit(request: Request, env: Env): Promise<Response> {
+/** Encode a user-supplied scalar as a safe YAML value. JSON strings are valid
+ * YAML, so this neutralises quote/newline/key injection into frontmatter —
+ * a crafted submission must not be able to add frontmatter keys or break the
+ * prebuild parser after the PR merges. */
+function yamlStr(value: string): string {
+  return JSON.stringify(value.replace(/[\r\n]+/g, " ").trim())
+}
+
+export async function handleSubmit({ request, env }: RouteCtx): Promise<Response> {
   if (!env.TURNSTILE_SECRET_KEY || !env.GITHUB_TOKEN) {
-    return Response.json({ error: "Server misconfiguration" }, { status: 500 })
+    return jsonResponse({ error: "Server misconfiguration" }, 500)
   }
 
   let body: Record<string, any>
   try {
     body = await request.json()
   } catch {
-    return Response.json({ error: "Invalid request body" }, { status: 400 })
+    return jsonResponse({ error: "Invalid request body" }, 400)
   }
 
   if (!body.name?.trim() || !body.username?.trim() || !body.turnstileToken) {
-    return Response.json({ error: "Missing required fields" }, { status: 400 })
+    return jsonResponse({ error: "Missing required fields" }, 400)
   }
 
   const tsRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
@@ -25,7 +33,7 @@ export async function handleSubmit(request: Request, env: Env): Promise<Response
   })
   const tsData = await tsRes.json<{ success: boolean }>()
   if (!tsData.success) {
-    return Response.json({ error: "Captcha validation failed" }, { status: 400 })
+    return jsonResponse({ error: "Captcha validation failed" }, 400)
   }
 
   const gh = ghApi(env)
@@ -38,7 +46,9 @@ export async function handleSubmit(request: Request, env: Env): Promise<Response
     }
     const { object: { sha: mainSha } } = await refRes.json<{ object: { sha: string } }>()
 
-    const safeName = body.username.replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
+    const name = String(body.name).trim()
+    const username = String(body.username).trim()
+    const safeName = username.replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
     const branchName = `submit/${safeName}-${Date.now()}-${Math.floor(Math.random() * 0xffff).toString(16).padStart(4, "0")}`
 
     const branchRes = await gh("/repos/sub-surface/digital-garden/git/refs", "POST", {
@@ -55,7 +65,7 @@ export async function handleSubmit(request: Request, env: Env): Promise<Response
       const ext = ["jpg", "jpeg", "png", "gif", "webp"].includes(rawExt) ? rawExt : "jpg"
       const imgPath = `content/Media/Wiki/chatters/${safeName}.${ext}`
       const imgRes = await gh(`/repos/sub-surface/digital-garden/contents/${imgPath}`, "PUT", {
-        message: `wiki: add profile image for ${body.username}`,
+        message: `wiki: add profile image for ${safeName}`,
         content: body.imageBase64,
         branch: branchName,
       })
@@ -65,15 +75,15 @@ export async function handleSubmit(request: Request, env: Env): Promise<Response
 
     const fm = [
       "---",
-      `title: "${body.name}'s Profile"`,
-      `description: "Philchat wiki profile for ${body.name}"`,
+      `title: ${yamlStr(`${name}'s Profile`)}`,
+      `description: ${yamlStr(`Philchat wiki profile for ${name}`)}`,
       "tags: [wiki, chatter]", "type: chatter",
-      `username: "${body.username}"`,
-      body.pronouns ? `pronouns: "${body.pronouns}"` : null,
-      resolvedImageUrl ? `image: "${resolvedImageUrl}"` : null,
-      body.tradition ? `tradition: "${body.tradition}"` : null,
-      body.aos ? `aos: "${body.aos}"` : null,
-      body.influences ? `influences: "${body.influences}"` : null,
+      `username: ${yamlStr(username)}`,
+      body.pronouns ? `pronouns: ${yamlStr(String(body.pronouns))}` : null,
+      resolvedImageUrl ? `image: ${yamlStr(String(resolvedImageUrl))}` : null,
+      body.tradition ? `tradition: ${yamlStr(String(body.tradition))}` : null,
+      body.aos ? `aos: ${yamlStr(String(body.aos))}` : null,
+      body.influences ? `influences: ${yamlStr(String(body.influences))}` : null,
       "draft: true", "---",
     ].filter(Boolean).join("\n")
 
@@ -105,20 +115,20 @@ export async function handleSubmit(request: Request, env: Env): Promise<Response
 
     const notes = body.additionalNotes ? `\n\n---\n## Additional Notes\n${body.additionalNotes}` : ""
     const bodySection = body.bodyContent?.trim() ? `\n\n${body.bodyContent.trim()}\n\n---\n\n` : ""
-    const markdown = `${fm}\n\n# ${body.name}'s Profile\n\n${bodySection}${sections}${notes}\n`
+    const markdown = `${fm}\n\n# ${name}'s Profile\n\n${bodySection}${sections}${notes}\n`
 
     const filePath = `content/Wiki/chatters/${safeName}.md`
     const commitRes = await gh(`/repos/sub-surface/digital-garden/contents/${filePath}`, "PUT", {
-      message: `wiki: add profile submission for ${body.username}`,
+      message: `wiki: add profile submission for ${safeName}`,
       content: btoa(unescape(encodeURIComponent(markdown))),
       branch: branchName,
     })
     if (!commitRes.ok) throw new Error(`commit file: ${commitRes.status}`)
 
     const prRes = await gh("/repos/sub-surface/digital-garden/pulls", "POST", {
-      title: `Wiki profile: ${body.username}`,
+      title: `Wiki profile: ${safeName}`,
       head: branchName, base: "master",
-      body: `New wiki profile submission for **${body.name}** (${body.username}).\n\nSubmitted via wiki.subsurfaces.net/wiki/submit`,
+      body: `New wiki profile submission for **${name.replace(/[*_`[\]]/g, "")}** (${safeName}).\n\nSubmitted via wiki.subsurfaces.net/wiki/submit`,
     })
     if (!prRes.ok) throw new Error(`create PR: ${prRes.status}`)
     const { html_url } = await prRes.json<{ html_url: string }>()
@@ -127,44 +137,46 @@ export async function handleSubmit(request: Request, env: Env): Promise<Response
       env.EMAIL.send({
         from: { email: "system@subsurfaces.net", name: "Subsurface Wiki" },
         to: "admin@subsurfaces.net",
-        subject: `New Profile Submission: ${body.username}`,
-        text: `A new profile has been submitted by ${body.name} (${body.username}).\n\nReview it here: ${html_url}`,
-        html: `<p>A new profile has been submitted by <strong>${body.name}</strong> (@${body.username}).</p><p><a href="${html_url}">Review Pull Request</a></p>`
+        subject: `New Profile Submission: ${safeName}`,
+        text: `A new profile has been submitted by ${name} (${safeName}).\n\nReview it here: ${html_url}`,
+        html: `<p>A new profile has been submitted (@${safeName}).</p><p><a href="${html_url}">Review Pull Request</a></p>`
       }).catch(err => console.error("Email send error:", err))
     }
 
-    return Response.json({ prUrl: html_url }, { status: 200 })
+    return jsonResponse({ prUrl: html_url })
   } catch (err) {
     console.error("Submit error:", err)
-    return Response.json({ error: "Failed to create submission" }, { status: 500 })
+    return jsonResponse({ error: "Failed to create submission" }, 500)
   }
 }
 
-export async function handleUserProfile(env: Env, username: string): Promise<Response> {
-  // Fetch profile by username
+export async function handleUserProfile({ env, match }: RouteCtx): Promise<Response> {
+  const username = decodeURIComponent(match[1])
   const profileRes = await supabaseRest(
     env,
     `profiles?username=eq.${encodeURIComponent(username)}&select=id,username,role,bio,avatar_url,created_at,name_color`
   )
-  if (!profileRes.ok) return jsonResponse({ error: "Failed to fetch profile" }, 500)
+  if (!profileRes.ok) return upstreamError("user profile", profileRes, "Failed to fetch profile")
   const profiles = await profileRes.json<(ProfileData & { id: string })[]>()
   if (!profiles.length) return jsonResponse({ error: "User not found" }, 404)
 
   const profile = profiles[0]
 
-  // Chatter image fallback
-  let avatar_url = profile.avatar_url
-  if (!avatar_url) {
-    const index = await getContentIndex(env.ASSETS)
-    avatar_url = chatterImageForUsername(index, username)
-  }
-
-  // Fetch edit history
-  const logRes = await supabaseRest(
-    env,
-    `edit_log?user_id=eq.${profile.id}&select=slug,pr_url,edit_summary,created_at&order=created_at.desc&limit=50`
-  )
-  const edits = logRes.ok ? await logRes.json<{ slug: string; pr_url: string; edit_summary: string | null; created_at: string }[]>() : []
+  // Chatter image fallback + edit history are independent — run concurrently.
+  const [avatar_url, edits] = await Promise.all([
+    (async () => {
+      if (profile.avatar_url) return profile.avatar_url
+      const index = await getContentIndex(env.ASSETS)
+      return chatterImageForUsername(index, username)
+    })(),
+    (async () => {
+      const logRes = await supabaseRest(
+        env,
+        `edit_log?user_id=eq.${profile.id}&select=slug,pr_url,edit_summary,created_at&order=created_at.desc&limit=50`
+      )
+      return logRes.ok ? logRes.json<{ slug: string; pr_url: string; edit_summary: string | null; created_at: string }[]>() : []
+    })(),
+  ])
 
   return jsonResponse({
     username: profile.username,
@@ -178,9 +190,8 @@ export async function handleUserProfile(env: Env, username: string): Promise<Res
   })
 }
 
-export async function handleEdit(request: Request, env: Env): Promise<Response> {
-  const auth = await verifyAuth(request, env)
-  if (!auth || (auth.role !== "editor" && auth.role !== "admin")) {
+export async function handleEdit({ request, env, auth }: RouteCtx): Promise<Response> {
+  if (auth!.role !== "editor" && auth!.role !== "admin") {
     return jsonResponse({ error: "Unauthorized" }, 403)
   }
 
@@ -226,10 +237,10 @@ export async function handleEdit(request: Request, env: Env): Promise<Response> 
         return jsonResponse({ error: "Could not find the source file on GitHub" }, 404)
       }
       const altData = await altRes.json<{ sha: string; path: string }>()
-      return await createEditPR(gh, env, auth, altData.path, altData.sha, body.content, slug, body.editSummary)
+      return await createEditPR(gh, env, auth!, altData.path, altData.sha, body.content, slug, body.editSummary)
     }
     const fileData = await fileRes.json<{ sha: string; path: string }>()
-    return await createEditPR(gh, env, auth, fileData.path, fileData.sha, body.content, slug, body.editSummary)
+    return await createEditPR(gh, env, auth!, fileData.path, fileData.sha, body.content, slug, body.editSummary)
   } catch (err) {
     console.error("Edit error:", err)
     return jsonResponse({ error: "Failed to create edit" }, 500)
@@ -297,9 +308,8 @@ export async function createEditPR(
   return jsonResponse({ prUrl: html_url })
 }
 
-export async function handleNew(request: Request, env: Env): Promise<Response> {
-  const auth = await verifyAuth(request, env)
-  if (!auth || (auth.role !== "editor" && auth.role !== "admin")) {
+export async function handleNew({ request, env, auth }: RouteCtx): Promise<Response> {
+  if (auth!.role !== "editor" && auth!.role !== "admin") {
     return jsonResponse({ error: "Unauthorized" }, 403)
   }
 
@@ -335,7 +345,7 @@ export async function handleNew(request: Request, env: Env): Promise<Response> {
     if (!refRes.ok) throw new Error(`get ref: ${refRes.status}`)
     const { object: { sha: masterSha } } = await refRes.json<{ object: { sha: string } }>()
 
-    const safeName = auth.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
+    const safeName = auth!.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
     const branchName = `new/${safeName}-${Date.now().toString(36)}`
 
     // Create branch
@@ -357,7 +367,7 @@ export async function handleNew(request: Request, env: Env): Promise<Response> {
       title: `Wiki new: ${body.title}`,
       head: branchName,
       base: "master",
-      body: `New wiki article: **${body.title}** (${body.articleType || "misc"}) by ${auth.email}.${body.editSummary ? `\n\n**Summary:** ${body.editSummary}` : ""}\n\nSubmitted via wiki editor.`,
+      body: `New wiki article: **${body.title}** (${body.articleType || "misc"}) by ${auth!.email}.${body.editSummary ? `\n\n**Summary:** ${body.editSummary}` : ""}\n\nSubmitted via wiki editor.`,
     })
     if (!prRes.ok) throw new Error(`create PR: ${prRes.status}`)
     const { html_url } = await prRes.json<{ html_url: string }>()
@@ -365,7 +375,7 @@ export async function handleNew(request: Request, env: Env): Promise<Response> {
     // Log the creation
     const slug = filePath.replace(/^content\//, "").replace(/\.md$/, "")
     await supabaseRest(env, "edit_log", "POST", {
-      slug, user_id: auth.id, pr_url: html_url, edit_summary: body.editSummary || null,
+      slug, user_id: auth!.id, pr_url: html_url, edit_summary: body.editSummary || null,
     })
 
     if (env.EMAIL) {
@@ -373,8 +383,8 @@ export async function handleNew(request: Request, env: Env): Promise<Response> {
         from: { email: "system@subsurfaces.net", name: "Subsurface Wiki" },
         to: "admin@subsurfaces.net",
         subject: `New Article: ${body.title}`,
-        text: `A new article "${body.title}" was submitted by ${auth.email}.\n\nReview it here: ${html_url}`,
-        html: `<p>A new article <strong>${body.title}</strong> was submitted by ${auth.email}.</p><p><a href="${html_url}">Review Pull Request</a></p>`
+        text: `A new article "${body.title}" was submitted by ${auth!.email}.\n\nReview it here: ${html_url}`,
+        html: `<p>A new article <strong>${body.title}</strong> was submitted by ${auth!.email}.</p><p><a href="${html_url}">Review Pull Request</a></p>`
       }).catch(err => console.error("Email send error:", err))
     }
 
@@ -385,14 +395,13 @@ export async function handleNew(request: Request, env: Env): Promise<Response> {
   }
 }
 
-export async function handleBookmarks(request: Request, env: Env, pathname: string): Promise<Response> {
-  const auth = await verifyAuth(request, env)
-  if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+export async function handleBookmarks({ request, env, url, auth }: RouteCtx): Promise<Response> {
+  const pathname = url.pathname
 
   // GET /api/bookmarks — list own bookmarks
   if (pathname === "/api/bookmarks" && request.method === "GET") {
-    const res = await supabaseRest(env, `bookmarks?user_id=eq.${auth.id}&select=slug,title,added_at&order=added_at.desc`)
-    if (!res.ok) return jsonResponse({ error: "Failed to fetch bookmarks" }, 500)
+    const res = await supabaseRest(env, `bookmarks?user_id=eq.${auth!.id}&select=slug,title,added_at&order=added_at.desc`)
+    if (!res.ok) return upstreamError("bookmarks list", res, "Failed to fetch bookmarks")
     return jsonResponse(await res.json())
   }
 
@@ -402,12 +411,12 @@ export async function handleBookmarks(request: Request, env: Env, pathname: stri
     try { body = await request.json() } catch { return jsonResponse({ error: "Invalid body" }, 400) }
     if (!body.slug?.trim() || !body.title?.trim()) return jsonResponse({ error: "slug and title required" }, 400)
     const res = await supabaseRest(env, "bookmarks", "POST", {
-      user_id: auth.id, slug: body.slug.trim(), title: body.title.trim(),
+      user_id: auth!.id, slug: body.slug.trim(), title: body.title.trim(),
     })
     if (!res.ok) {
       // 409 = already exists (UNIQUE constraint) — treat as success
       if (res.status === 409) return jsonResponse({ ok: true })
-      return jsonResponse({ error: "Failed to add bookmark" }, 500)
+      return upstreamError("bookmark add", res, "Failed to add bookmark")
     }
     return jsonResponse({ ok: true })
   }
@@ -415,8 +424,8 @@ export async function handleBookmarks(request: Request, env: Env, pathname: stri
   // DELETE /api/bookmarks/:slug — remove bookmark
   if (pathname.startsWith("/api/bookmarks/") && request.method === "DELETE") {
     const slug = decodeURIComponent(pathname.slice("/api/bookmarks/".length))
-    const res = await supabaseRest(env, `bookmarks?user_id=eq.${auth.id}&slug=eq.${encodeURIComponent(slug)}`, "DELETE")
-    if (!res.ok) return jsonResponse({ error: "Failed to remove bookmark" }, 500)
+    const res = await supabaseRest(env, `bookmarks?user_id=eq.${auth!.id}&slug=eq.${encodeURIComponent(slug)}`, "DELETE")
+    if (!res.ok) return upstreamError("bookmark remove", res, "Failed to remove bookmark")
     return jsonResponse({ ok: true })
   }
 
@@ -429,7 +438,7 @@ export async function handleBookmarks(request: Request, env: Env, pathname: stri
     // Upsert all — ignore conflicts
     for (const b of valid) {
       await supabaseRest(env, "bookmarks", "POST", {
-        user_id: auth.id, slug: b.slug.trim(), title: b.title.trim(),
+        user_id: auth!.id, slug: b.slug.trim(), title: b.title.trim(),
       })
     }
     return jsonResponse({ ok: true, migrated: valid.length })
@@ -438,8 +447,7 @@ export async function handleBookmarks(request: Request, env: Env, pathname: stri
   return jsonResponse({ error: "Not found" }, 404)
 }
 
-export async function handleLockStatus(request: Request, env: Env): Promise<Response> {
-  const url = new URL(request.url)
+export async function handleLockStatus({ env, url }: RouteCtx): Promise<Response> {
   const slug = url.searchParams.get("slug")
   if (!slug || !env.SUPABASE_URL) return jsonResponse({ locked: false })
 

@@ -1,7 +1,7 @@
 # Iteration Spec — Love, Care & Attention
 
 A grounded plan for the next passes on the garden. Every item below was checked against the
-actual code, not assumed. Cross-reference: [`future.md`](future.md) holds the long roadmap; this
+actual code, not assumed. Cross-reference: [`future.md`](../future.md) holds the long roadmap; this
 doc is the *curated, sequenced, opinionated* cut — what to do, in what order, and why each one
 earns its place.
 

@@ -8,18 +8,16 @@
     "dev": "npm run prebuild && concurrently -n worker,vite,watch -c magenta,cyan,yellow \"wrangler dev --config wrangler.dev.toml --port 8787\" \"vite\" \"nodemon --watch content -e md,mdx,yaml --exec npm run prebuild\"",
     "build": "tsc --noEmit && vite build",
     "typecheck:worker": "tsc -p tsconfig.worker.json",
-    "test": "node scripts/test-slugs.mjs && tsx scripts/test-footnotes.ts && node scripts/test-package-scripts.mjs",
+    "test": "node scripts/test-slugs.mjs && tsx scripts/test-footnotes.ts && tsx scripts/test-sigil.ts && node scripts/test-package-scripts.mjs",
     "check": "npm test && npm run typecheck:worker && npm run build",
     "preview": "vite preview",
     "sync:music": "tsx scripts/sync-music.ts",
-    "dash": "node dash.mjs"
+    "dash": "node scripts/dash.mjs"
   },
   "dependencies": {
     "@mdx-js/react": "^3.1.0",
-    "@mdx-js/rollup": "^3.1.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tanstack/react-router": "^1.112.0",
-    "@types/d3": "^7.4.3",
     "buffer": "^6.0.3",
     "chess.js": "^1.4.0",
     "d3": "^7.9.0",
@@ -49,8 +47,10 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241230.0",
+    "@mdx-js/rollup": "^3.1.0",
     "@resvg/resvg-js": "^2.6.2",
     "@tanstack/router-plugin": "^1.112.0",
+    "@types/d3": "^7.4.3",
     "@types/node": "^25.3.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useStore } from "@/store"
 import { useFocusTrap } from "@/hooks/useFocusTrap"
-import { useIsWiki } from "@/hooks/useIsWiki"
+import { useIsWiki } from "@/hooks/useShell"
 import { useNavigate } from "@tanstack/react-router"
 import type { Document } from "flexsearch"
 import styles from "./SearchOverlay.module.scss"

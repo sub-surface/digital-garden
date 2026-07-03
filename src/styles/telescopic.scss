@@ -96,14 +96,27 @@
       display: inline;
       opacity: 1;
       filter: blur(0);
+      // Perf note: animating `filter` on INLINE content can't be GPU-composited
+      // (inline boxes are never layer-promoted), so every frame is a CPU repaint
+      // of the whole text run. Blur cost scales ~quadratically with radius —
+      // 8px over 0.6s was the stutter. 3px over 0.45s keeps the materialise
+      // feel at a fraction of the paint cost. Don't raise the radius back up.
       transition:
-        opacity 0.6s cubic-bezier(0, 0, 0.2, 1),
-        filter 0.6s cubic-bezier(0, 0, 0.2, 1),
-        display 0.6s allow-discrete;
+        opacity 0.45s cubic-bezier(0, 0, 0.2, 1),
+        filter 0.45s cubic-bezier(0, 0, 0.2, 1),
+        display 0.45s allow-discrete;
 
       @starting-style {
         opacity: 0;
-        filter: blur(8px);
+        filter: blur(3px);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: opacity 0.2s linear, display 0.2s allow-discrete;
+        @starting-style {
+          opacity: 0;
+          filter: none;
+        }
       }
     }
   }

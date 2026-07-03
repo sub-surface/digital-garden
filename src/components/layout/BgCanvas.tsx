@@ -108,22 +108,41 @@ function BgCanvasInner() {
     drops: [] as { x: number; y: number; text: string; speed: number; opacity: number; color: string }[],
     pops: [] as any[],
     boids: [] as { x: number; y: number; vx: number; vy: number }[],
+    boidGrid: [] as number[][],
+    emitters: [] as any[],
+    tracks: [] as any[],
     lastFrame: 0,
     w: 0,
     h: 0
   })
 
+  // True when chamber was auto-selected by the sigil page (vs picked by the
+  // user) — only then does leaving the page revert it. chess/hexo are never
+  // user-selectable so they don't need the flag.
+  const autoChamberRef = useRef(false)
+
   // Automatically switch to the matching board background on game pages
   useEffect(() => {
     const slug = activeSlug.toLowerCase()
-    const gameMode = slug === "chess" ? "chess" : slug === "hexo" ? "hexo" : null
+    const gameMode =
+      slug === "chess" ? "chess" :
+      slug === "hexo" ? "hexo" :
+      slug === "sigil" ? "chamber" : null
     if (gameMode) {
       if (bgMode !== gameMode) {
-        useStore.getState().setBgMode(gameMode)
+        if (gameMode === "chamber") {
+          // Page-scoped switch: bypass setBgMode so lastBgMode (the user's
+          // actual choice) is preserved for the revert.
+          autoChamberRef.current = true
+          useStore.setState({ bgMode: "chamber" })
+        } else {
+          useStore.getState().setBgMode(gameMode)
+        }
       }
     } else {
       // Revert if we were in a game-board mode because of the slug
-      if (bgMode === "chess" || bgMode === "hexo") {
+      if (bgMode === "chess" || bgMode === "hexo" || (bgMode === "chamber" && autoChamberRef.current)) {
+        autoChamberRef.current = false
         const lastMode = useStore.getState().lastBgMode
         useStore.getState().setBgMode(lastMode)
       }
@@ -153,8 +172,9 @@ function BgCanvasInner() {
       canvas.height = h * dpr
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       stateRef.current.colorValid = false
-      // reseed the flock across the new viewport
+      // reseed the flock / chamber emitters across the new viewport
       stateRef.current.boids = []
+      stateRef.current.emitters = []
     }
 
     const refreshColors = () => {
@@ -222,6 +242,8 @@ function BgCanvasInner() {
         drawGraph(ctx, state, config)
       } else if (bgMode === "murmuration") {
         drawMurmuration(ctx, state)
+      } else if (bgMode === "chamber") {
+        drawChamber(ctx, state, config)
       }
     }
 
@@ -477,25 +499,39 @@ function drawHexo(ctx: CanvasRenderingContext2D, state: any) {
   ctx.strokeStyle = state.colorCache.secondary
   ctx.lineWidth = 1
 
+  // Two passes: all base-alpha hexes batched into ONE path/stroke (one draw
+  // call instead of cols×rows), then only cursor-proximate hexes re-stroked
+  // individually with their glow alpha.
+  const hexPath = (cx: number, cy: number) => {
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 180) * (60 * i - 30)
+      const x = cx + size * Math.cos(a)
+      const y = cy + size * Math.sin(a)
+      if (i === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.closePath()
+  }
+
+  const glow: { cx: number; cy: number; prox: number }[] = []
+  ctx.globalAlpha = 0.025 * state.readerAlpha
+  ctx.beginPath()
   for (let r = -1; r < rows; r++) {
     for (let c = -1; c < cols; c++) {
       const cx = c * hw + (r % 2 ? hw / 2 : 0)
       const cy = r * vh
+      hexPath(cx, cy)
       const d = Math.hypot(cx - state.mx, cy - state.my)
-      const prox = d < 220 ? (1 - d / 220) * 0.06 : 0
-      ctx.globalAlpha = (0.025 + prox) * state.readerAlpha
-
-      ctx.beginPath()
-      for (let i = 0; i < 6; i++) {
-        const a = (Math.PI / 180) * (60 * i - 30)
-        const x = cx + size * Math.cos(a)
-        const y = cy + size * Math.sin(a)
-        if (i === 0) ctx.moveTo(x, y)
-        else ctx.lineTo(x, y)
-      }
-      ctx.closePath()
-      ctx.stroke()
+      if (d < 220) glow.push({ cx, cy, prox: (1 - d / 220) * 0.06 })
     }
+  }
+  ctx.stroke()
+
+  for (const g of glow) {
+    ctx.globalAlpha = g.prox * state.readerAlpha
+    ctx.beginPath()
+    hexPath(g.cx, g.cy)
+    ctx.stroke()
   }
 }
 
@@ -541,6 +577,117 @@ function drawGraph(ctx: CanvasRenderingContext2D, state: any, config: any) {
   })
 }
 
+// ── Bubble-chamber background ──
+// Drifting emitters fire particle "tracks" that curve through the simplex flow
+// field (plus a constant curl for spiral arcs), leaving stippled trails that
+// linger then fade — the particle-track / annotation-stream motif of plotter-era
+// scientific plates. Tracks are integrated once at spawn (only alpha ages), so
+// redraw is a flat loop of fillRects; the pool is capped. Mostly monochrome with
+// a small fraction of accent "signal" tracks.
+const CHAMBER_GLYPHS = "⊕⊗⊙∮∇∂≡·°"
+
+function spawnTrack(state: any, p: any, now: number) {
+  const e = state.emitters[(Math.random() * state.emitters.length) | 0]
+  const charge = Math.random() < 0.5 ? 1 : -1
+  let x = e.x, y = e.y
+  let ang = Math.random() * Math.PI * 2
+  const pts: { x: number; y: number }[] = [{ x, y }]
+  for (let i = 0; i < p.steps; i++) {
+    const fa = simplex(x * p.fieldScale, y * p.fieldScale + now * p.drift) * Math.PI * 2
+    ang += Math.sin(fa - ang) * 0.35 + charge * p.curl   // steer toward field + curl
+    x += Math.cos(ang) * p.stepLen
+    y += Math.sin(ang) * p.stepLen
+    pts.push({ x, y })
+  }
+  // mostly monochrome (palette[0]); occasional accent "signal" track
+  const spot = p.spot ?? 0.15
+  const ci = Math.random() < spot ? 1 + ((Math.random() * 3) | 0) : 0
+  const head = pts[pts.length - 1]
+  state.tracks.push({
+    pts,
+    life: 1 + Math.random() * 0.6,
+    ci,
+    glyph: Math.random() < p.glyphChance ? CHAMBER_GLYPHS[(Math.random() * CHAMBER_GLYPHS.length) | 0] : null,
+    gx: head.x + 4,
+    gy: head.y,
+  })
+}
+
+function drawChamber(ctx: CanvasRenderingContext2D, state: any, config: any) {
+  const p = config.backgrounds.chamber
+  if (!p) return
+  const W = state.w, H = state.h
+  const now = performance.now() / 1000
+
+  // lazy-init emitters + pre-warm a full-ish set of tracks so the very first
+  // frame (and the reduced-motion one-shot) already looks composed.
+  if (!state.emitters || state.emitters.length !== p.emitters) {
+    state.emitters = Array.from({ length: p.emitters }, () => ({ x: W / 2, y: H / 2 }))
+    state.tracks = []
+    // position emitters before pre-warm so tracks don't all radiate from centre
+    for (let i = 0; i < state.emitters.length; i++) {
+      const e = state.emitters[i]
+      e.x = W * (0.5 + 0.34 * Math.sin(now * 0.05 + i * 2.1))
+      e.y = H * (0.5 + 0.30 * Math.cos(now * 0.041 + i * 1.7))
+    }
+    for (let i = 0; i < p.maxTracks * 0.6; i++) spawnTrack(state, p, now - Math.random() * 4)
+  }
+
+  // emitters wander on slow Lissajous curves → the convergence points drift
+  for (let i = 0; i < state.emitters.length; i++) {
+    const e = state.emitters[i]
+    e.x = W * (0.5 + 0.34 * Math.sin(now * 0.05 + i * 2.1))
+    e.y = H * (0.5 + 0.30 * Math.cos(now * 0.041 + i * 1.7))
+  }
+
+  if (state.tracks.length < p.maxTracks && Math.random() < p.spawnRate) spawnTrack(state, p, now)
+
+  const pal = state.colorCache.palette
+  ctx.textAlign = "left"
+  ctx.font = "10px 'IBM Plex Mono', monospace"
+  state.tracks = state.tracks.filter((tr: any) => {
+    tr.life -= p.fade
+    if (tr.life <= 0) return false
+    const a = Math.min(1, tr.life) * p.opacity * state.readerAlpha
+    if (a < 0.008) return true
+    ctx.fillStyle = pal[tr.ci] || state.colorCache.secondary
+    ctx.globalAlpha = a
+    for (let i = 0; i < tr.pts.length; i += p.gap) {
+      const pt = tr.pts[i]
+      const s = p.dot * (0.5 + 0.5 * (i / tr.pts.length))   // taper toward head
+      ctx.fillRect(pt.x, pt.y, s, s)
+    }
+    // bright origin vertex (the convergence node)
+    ctx.globalAlpha = Math.min(1, a * 1.6)
+    ctx.fillRect(tr.pts[0].x - 1, tr.pts[0].y - 1, 2.4, 2.4)
+    if (tr.glyph) {
+      ctx.globalAlpha = a
+      ctx.fillText(tr.glyph, tr.gx, tr.gy)
+    }
+    return true
+  })
+
+  // drafting-terminal reticle + live coordinate readout at the cursor
+  if (p.reticle && state.mx > -9000) {
+    const r = 9
+    ctx.globalAlpha = 0.5 * state.readerAlpha
+    ctx.strokeStyle = state.colorCache.secondary
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(state.mx - r, state.my); ctx.lineTo(state.mx - 3, state.my)
+    ctx.moveTo(state.mx + 3, state.my); ctx.lineTo(state.mx + r, state.my)
+    ctx.moveTo(state.mx, state.my - r); ctx.lineTo(state.mx, state.my - 3)
+    ctx.moveTo(state.mx, state.my + 3); ctx.lineTo(state.mx, state.my + r)
+    ctx.stroke()
+    ctx.globalAlpha = 0.35 * state.readerAlpha
+    ctx.fillStyle = state.colorCache.secondary
+    ctx.font = "9px 'IBM Plex Mono', monospace"
+    const pad = (n: number) => n.toFixed(0).padStart(4, "0")
+    ctx.fillText(`${pad(state.mx)}·${pad(state.my)}`, state.mx + 12, state.my - 8)
+  }
+  ctx.globalAlpha = 1
+}
+
 // ── Murmuration background ──
 // A large flock of boids (Reynolds rules + a drifting simplex "wind" current).
 // Uses a spatial hash so it stays cheap at high counts. Birds are semi-opaque
@@ -580,7 +727,14 @@ function drawMurmuration(ctx: CanvasRenderingContext2D, state: any) {
   const cell = MURM.percept
   const cols = Math.max(1, Math.ceil(W / cell))
   const rows = Math.max(1, Math.ceil(H / cell))
-  const grid: number[][] = Array.from({ length: cols * rows }, () => [])
+  // Reuse bucket arrays across frames (truncate instead of reallocate) — the
+  // per-frame Array.from(...) allocated hundreds of arrays/frame of GC churn.
+  let grid: number[][] = state.boidGrid
+  if (!grid || grid.length !== cols * rows) {
+    grid = state.boidGrid = Array.from({ length: cols * rows }, () => [])
+  } else {
+    for (let i = 0; i < grid.length; i++) grid[i].length = 0
+  }
   const cellIndex = (x: number, y: number) => {
     const cx = Math.min(cols - 1, Math.max(0, Math.floor(x / cell)))
     const cy = Math.min(rows - 1, Math.max(0, Math.floor(y / cell)))

@@ -12,11 +12,6 @@ const PRESET_COLORS = [
 
 const API_KEYS_ENDPOINT = "/api/keys"
 
-interface StonkConfigRow {
-  key: string
-  value: number
-}
-
 interface ApiKey {
   id: string
   name: string
@@ -34,9 +29,9 @@ interface Props {
   accessToken?: string
 }
 
-type Tab = "appearance" | "keys" | "admin"
+type Tab = "appearance" | "keys"
 
-export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin, accessToken }: Props) {
+export function ChatSettings({ anchorRef, currentColor, onSave, onClose, accessToken }: Props) {
   const [tab, setTab] = useState<Tab>("appearance")
   const [color, setColor] = useState(currentColor ?? "")
   const ref = useRef<HTMLDivElement>(null)
@@ -53,10 +48,6 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
   ]
 
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
-
-  // Stonk config (admin tab)
-  const [stonkConfig, setStonkConfig] = useState<StonkConfigRow[]>([])
-  const [stonkLoading, setStonkLoading] = useState(false)
 
   // API keys tab
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
@@ -86,17 +77,6 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
       document.removeEventListener("keydown", handleKey)
     }
   }, [onClose])
-
-  // Load stonk config when admin tab opens
-  useEffect(() => {
-    if (tab !== "admin" || !isAdmin || !accessToken) return
-    setStonkLoading(true)
-    fetch("/api/admin/stonk-config", { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then((data: StonkConfigRow[]) => setStonkConfig(data))
-      .catch((e) => console.warn("ChatSettings: stonk-config load failed:", e))
-      .finally(() => setStonkLoading(false))
-  }, [tab, isAdmin, accessToken])
 
   // Load API keys when keys tab opens
   useEffect(() => {
@@ -149,7 +129,6 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
   const tabs: { id: Tab; label: string }[] = [
     { id: "appearance", label: "appearance" },
     { id: "keys", label: "api keys" },
-    ...(isAdmin ? [{ id: "admin" as Tab, label: "admin" }] : []),
   ]
 
   return createPortal(
@@ -281,63 +260,6 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, isAdmin
         </div>
       )}
 
-      {tab === "admin" && isAdmin && accessToken && (
-        <div className={styles.tabContent}>
-          <div className={styles.sectionLabel}>stonk config</div>
-          {stonkLoading ? (
-            <div className={styles.loadingText}>loading...</div>
-          ) : (
-            <div className={styles.stonkTable}>
-              {stonkConfig.map((row) => (
-                <div key={row.key} className={styles.stonkRow}>
-                  {row.key === "stonks_enabled" ? (
-                    <>
-                      <span className={styles.stonkKey}>{row.key}</span>
-                      <button
-                        className={`${styles.stonkToggle} ${row.value ? styles.stonkToggleOn : ""}`}
-                        onClick={() => {
-                          const newVal = row.value ? 0 : 1
-                          setStonkConfig(prev => prev.map(r => r.key === row.key ? { ...r, value: newVal } : r))
-                          fetch("/api/admin/stonk-config", {
-                            method: "PUT",
-                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-                            body: JSON.stringify({ key: row.key, value: newVal }),
-                          }).catch(() => {
-                            setStonkConfig(prev => prev.map(r => r.key === row.key ? { ...r, value: row.value } : r))
-                          })
-                        }}
-                        type="button"
-                      >{row.value ? "on" : "off"}</button>
-                    </>
-                  ) : (
-                    <>
-                      <span className={styles.stonkKey}>{row.key}</span>
-                      <input
-                        className={styles.stonkInput}
-                        type="number"
-                        value={row.value}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value, 10)
-                          if (isNaN(val)) return
-                          setStonkConfig(prev => prev.map(r => r.key === row.key ? { ...r, value: val } : r))
-                        }}
-                        onBlur={() => {
-                          fetch("/api/admin/stonk-config", {
-                            method: "PUT",
-                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-                            body: JSON.stringify({ key: row.key, value: row.value }),
-                          }).catch((e) => console.error("ChatSettings: stonk-config save failed:", e))
-                        }}
-                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                      />
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>,
     document.body
   )

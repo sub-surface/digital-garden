@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from "@tanstack/react-router"
-import { useEffect, Suspense, lazy } from "react"
+import { useEffect, useSyncExternalStore, Suspense, lazy } from "react"
 import { useStore } from "@/store"
 import { PanelStack } from "@/components/panel/PanelStack"
 import { usePanelClick } from "@/components/panel/usePanelClick"
@@ -19,9 +19,9 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
 import { SkipToContent } from "@/components/ui/SkipToContent"
 import { LinkPreview } from "@/components/ui/reader/LinkPreview"
 import { ReaderControls } from "@/components/ui/reader/ReaderControls"
-import { MusicPlayer } from "@/components/ui/MusicPlayer"
-import { MobileMusicBar } from "@/components/ui/MobileMusicBar"
-import { SearchOverlay } from "@/components/ui/SearchOverlay"
+import { MusicPlayer } from "@/components/ui/music/MusicPlayer"
+import { MobileMusicBar } from "@/components/ui/music/MobileMusicBar"
+import { SearchOverlay } from "@/components/ui/overlays/SearchOverlay"
 import { GraphOverlay } from "@/components/ui/graph/GraphOverlay"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
 import { CookieConsent } from "./CookieConsent"
@@ -29,6 +29,20 @@ import styles from "./AppShell.module.scss"
 
 // Lazy-load LocalGraph — pulls in D3 + PixiJS (~570KB), only needed on desktop
 const LocalGraph = lazy(() => import("@/components/ui/graph/LocalGraph").then(m => ({ default: m.LocalGraph })))
+
+// Reactive mobile check — a plain window.innerWidth read only ran at mount, so
+// resizing/rotating never re-evaluated the floating graph.
+const mobileQuery = typeof window !== "undefined" ? window.matchMedia("(max-width: 800px)") : null
+function useIsMobile(): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      mobileQuery?.addEventListener("change", onChange)
+      return () => mobileQuery?.removeEventListener("change", onChange)
+    },
+    () => mobileQuery?.matches ?? false,
+    () => false,
+  )
+}
 
 export function AppShell() {
   const shell = useShell()
@@ -86,12 +100,12 @@ export function AppShell() {
   usePanelClick()
   useHotkeys()
   useDynamicFavicon()
+  const isMobile = useIsMobile() // hooks before shell branch (React rules)
 
   if (shell === "wiki") return <Suspense fallback={null}><WikiShell /><GlobalOverlays /><CookieConsent /></Suspense>
   if (shell === "chat") return <Suspense fallback={null}><ChatShell /><GlobalOverlays /><CookieConsent /></Suspense>
   if (shell === "os") return <Suspense fallback={null}><OSShell /><GlobalOverlays /><CookieConsent /></Suspense>
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 800
   const showFloatingGraph = !isMobile
 
   return (

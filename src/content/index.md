@@ -10,7 +10,7 @@ growth: becoming
 #### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ **[Arcade](/arcade)** ~ [[Housekeeping]] ~ [Github](https://github.com/sub-surface)
 
 > [[Bookshelf]] ~ [[Movieshelf]] ~ [Musicshelf](/music-library) ~ [[Photography|Photoshelf]]  
-> [Anabasis](https://anabasis.subsurfaces.net) ~ [[Chess]] ~ [[Wiki]] ~ [Constellation](/constellation) ~ [Tags](/tags) 
+> [Anabasis](https://anabasis.subsurfaces.net) ~ [[Chess]] ~ [[Wiki]] ~ [Constellation](/constellation) ~ [Tags](/tags) ~ [Shop](https://newplace2frown.com/prints)
 
 <AsciiAvatar label="glorp" align="right" interval={1500} />
 

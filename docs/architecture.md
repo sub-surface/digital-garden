@@ -30,7 +30,7 @@ subsurfaces.net        (no Supabase dependency — must load if Supabase is down
        ↓
 wiki.subsurfaces.net   (Supabase auth + GitHub API)
        ↓
-chat.subsurfaces.net   (Supabase Realtime + stonks ledger)
+chat.subsurfaces.net   (Supabase Realtime)
 ```
 
 Nothing flows upward. The garden has no Supabase dependency. Bookmarks must not import Supabase into `AppShell`. If a module must be Supabase-aware, it belongs in wiki or chat.
@@ -44,17 +44,17 @@ One Worker (`src/worker.ts`) serves all three domains intentionally. A clear par
 ```
 // garden:  subsurfaces.net        → static assets + OG meta injection
 // wiki:    wiki.subsurfaces.net   → auth, editing, profiles, bookmarks
-// chat:    chat.subsurfaces.net   → realtime, stonks, bans, GIF search
+// chat:    chat.subsurfaces.net   → realtime, bans, GIF search
 ```
 
 ---
 
 ## Community Platform Phase Order
 
-Three interlocking systems: Chat (Phase 1), Stonks (Phase 2), Identity & Avatar (Phase 3). All share the existing Supabase auth and `profiles` table.
+Chat and Identity & Avatar share the existing Supabase auth and `profiles` table. (Stonks was removed 2026-07 — never matured.)
 
 **Phase order is strict — do not skip ahead:**
-`shared cookie auth` → `chat` → `stonks` → `identity`. Stonks UI must not be built before chat reactions exist to feed it.
+`shared cookie auth` → `chat` → `identity`.
 
 ---
 

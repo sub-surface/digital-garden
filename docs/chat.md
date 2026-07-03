@@ -2,10 +2,9 @@
 
 ## Chatter Community Platform
 
-Three interlocking systems: **Chat** (Phase 1), **Stonks** (Phase 2), **Identity & Avatar** (Phase 3). All share the existing Supabase auth and `profiles` table.
+**Chat** and **Identity & Avatar** share the existing Supabase auth and `profiles` table.
 
-**Phase order is strict — do not skip ahead:**
-`shared cookie auth` → `chat` → `stonks` → `identity`. Stonks UI must not be built before chat reactions exist to feed it.
+> **Stonks (Phase 2) was removed 2026-07** — it never matured. Tables/endpoints/UI deleted (see `docs/migrations/2026-07-chat-denormalize.sql`). The Phase 2 sections below are retained as historical record only.
 
 **Strict layering — dependencies flow one way only:**
 ```
@@ -13,7 +12,7 @@ subsurfaces.net        (no Supabase dependency — must load if Supabase is down
        ↓
 wiki.subsurfaces.net   (Supabase auth + GitHub API)
        ↓
-chat.subsurfaces.net   (Supabase Realtime + stonks ledger)
+chat.subsurfaces.net   (Supabase Realtime)
 ```
 Nothing flows upward. A chat outage must not affect the wiki. A wiki outage must not affect the garden.
 
@@ -21,7 +20,7 @@ Nothing flows upward. A chat outage must not affect the wiki. A wiki outage must
 ```
 // garden:  subsurfaces.net        → static assets + OG meta injection
 // wiki:    wiki.subsurfaces.net   → auth, editing, profiles, bookmarks
-// chat:    chat.subsurfaces.net   → realtime, stonks, bans, GIF search
+// chat:    chat.subsurfaces.net   → realtime, bans, GIF search
 ```
 
 ---

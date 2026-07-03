@@ -36,6 +36,23 @@ export const SITE_DEFAULTS = {
       "opacity": 0.67,
       "speed": 0.08,
       "scale": 0.0008
+    },
+    "chamber": {
+      "emitters": 3,
+      "spawnRate": 0.18,
+      "maxTracks": 90,
+      "steps": 34,
+      "stepLen": 7,
+      "fieldScale": 0.0016,
+      "drift": 0.12,
+      "curl": 0.06,
+      "fade": 0.006,
+      "dot": 1.3,
+      "gap": 2,
+      "opacity": 0.5,
+      "spot": 0.15,
+      "glyphChance": 0.15,
+      "reticle": true
     }
   }
 }

@@ -1,5 +1,5 @@
-import { KeyboardCheatSheet } from "@/components/ui/KeyboardCheatSheet"
-import { CommandPalette } from "@/components/ui/CommandPalette"
+import { KeyboardCheatSheet } from "@/components/ui/overlays/KeyboardCheatSheet"
+import { CommandPalette } from "@/components/ui/overlays/CommandPalette"
 import { ContentIndexErrorBanner } from "@/components/ui/ContentIndexErrorBanner"
 
 /**

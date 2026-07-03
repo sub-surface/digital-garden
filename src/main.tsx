@@ -7,7 +7,7 @@ import { createRoot } from "react-dom/client"
 import { RouterProvider } from "@tanstack/react-router"
 import { router } from "./router"
 import { useStore } from "./store"
-import { MusicProvider } from "@/components/ui/MusicContext"
+import { MusicProvider } from "@/components/ui/music/MusicContext"
 import "./styles/global.scss"
 
 // Apply initial theme before render

@@ -1,4 +1,5 @@
 import type { ContentIndex, GraphData, Track } from "@/types/content"
+import { normalizeSlug, buildSlugResolver, type SlugResolver } from "./slug"
 
 let cachedIndex: ContentIndex | null = null
 let cachedGraph: GraphData | null = null
@@ -26,38 +27,28 @@ export async function loadMusicManifest(): Promise<Track[]> {
 }
 
 export async function loadNoteSource(slug: string): Promise<string> {
-  // Use normalized slug (hyphenated)
-  const normalized = slug.replace(/\s+/g, "-")
-  
+  const normalized = normalizeSlug(slug)
+
   // Try .md first (most common)
   const res = await fetch(`/content/${normalized}.md`)
   if (res.ok) return res.text()
-  
+
   // Try .mdx
   const res2 = await fetch(`/content/${normalized}.mdx`)
   if (res2.ok) return res2.text()
-  
+
   throw new Error(`Note source not found: ${normalized}`)
 }
 
+// Resolver memoized per index instance — shared slug semantics (src/lib/slug.ts),
+// O(1) lookups instead of scanning every key per call.
+let resolverFor: ContentIndex | null = null
+let resolver: SlugResolver | null = null
+
 export function resolveSlug(raw: string, contentIndex: ContentIndex): string | null {
-  // Normalise raw input first
-  const normalizedRaw = raw.replace(/\s+/g, "-")
-  
-  // Direct match
-  if (contentIndex[normalizedRaw]) return normalizedRaw
-
-  // Case-insensitive match
-  const lower = normalizedRaw.toLowerCase()
-  const match = Object.keys(contentIndex).find(
-    (k) => k.toLowerCase() === lower,
-  )
-  if (match) return match
-
-  // Basename match (e.g. "foo" matches "Books/foo")
-  const baseMatch = Object.keys(contentIndex).find((k) => {
-    const base = k.split("/").pop()?.toLowerCase()
-    return base === lower
-  })
-  return baseMatch ?? null
+  if (resolverFor !== contentIndex) {
+    resolver = buildSlugResolver(Object.keys(contentIndex))
+    resolverFor = contentIndex
+  }
+  return resolver!.resolve(raw)
 }
