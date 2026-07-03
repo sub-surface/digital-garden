@@ -61,6 +61,7 @@ const GAMES: GameCard[] = [
   { href: "progressions", name: "Progressions", blurb: "Two agents race to build the longest arithmetic progression. A toy.", live: true },
   { href: "persian-carpet", name: "Persian Carpet", blurb: "Born from a shower thought about asking Claude to weave cute rugs. Seed a loom, pick a dye lot, find the deliberate flaw.", live: true },
   { href: "sigil", name: "SIGIL", blurb: "Inscribe the plate: route leader lines between instrument pairs without crossing. Solved boards read as drawn sigils. Daily plate included.", live: true },
+  { href: "collider", name: "Collider", blurb: "Fire particle tracks through an invisible flow field to strike specimen targets. Aim is skill; the currents are the puzzle. A toy.", live: true },
 ]
 
 export function ArcadePage() {

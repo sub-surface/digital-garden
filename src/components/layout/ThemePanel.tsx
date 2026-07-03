@@ -1,4 +1,4 @@
-import { useStore } from "@/store"
+import { useStore, BG_MODES } from "@/store"
 import styles from "./ThemePanel.module.scss"
 import { useState } from "react"
 
@@ -121,7 +121,7 @@ export function ThemePanel() {
               </button>
             </div>
             <div className={styles.scrollSelect}>
-              {(["murmuration", "graph", "vectors", "dots", "terminal", "chamber"] as const).map((m) => (
+              {BG_MODES.map((m) => (
                 <button
                   key={m}
                   className={styles.textLink}

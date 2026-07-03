@@ -28,4 +28,5 @@ export const SYSTEM_PAGES: Record<string, SystemPage> = {
   constellation:   { component: lazy(() => import("@/components/ui/graph/ConstellationPage").then(m => ({ default: m.ConstellationPage }))), layout: "game", loading: "Charting the sky..." },
   "persian-carpet": { component: lazy(() => import("@/components/ui/games/PersianCarpetPage").then(m => ({ default: m.PersianCarpetPage }))), layout: "game", loading: "Stringing the loom…" },
   sigil:           { component: lazy(() => import("@/components/ui/games/SigilPage").then(m => ({ default: m.SigilPage }))),         layout: "game",    loading: "Preparing the plate..." },
+  collider:        { component: lazy(() => import("@/components/ui/games/ColliderPage").then(m => ({ default: m.ColliderPage }))),   layout: "game",    loading: "Charging the field..." },
 }

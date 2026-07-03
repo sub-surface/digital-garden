@@ -46,6 +46,18 @@ function applyTheme(theme: "light" | "dark") {
   document.documentElement.setAttribute("data-theme", theme)
 }
 
+/** All ambient modes are user-selectable; chess/hexo are page-scoped boards. */
+export type BgMode =
+  | "murmuration" | "graph" | "vectors" | "dots" | "terminal"
+  | "chamber" | "schematic" | "isometric" | "orrery" | "plate-scan"
+  | "chess" | "hexo"
+
+/** The user-facing cycle/picker order (page-scoped boards excluded). */
+export const BG_MODES = [
+  "murmuration", "graph", "vectors", "dots", "terminal",
+  "chamber", "schematic", "isometric", "orrery", "plate-scan",
+] as const
+
 export const ROYGBIV_ACCENTS = [
   "#b4424c", // Red
   "#b47a42", // Orange
@@ -121,8 +133,8 @@ interface GardenStore {
   setIsPlaylistExpanded: (expanded: boolean) => void
 
   // Background
-  bgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo" | "murmuration" | "chamber"
-  lastBgMode: "graph" | "vectors" | "dots" | "terminal" | "chess" | "hexo" | "murmuration" | "chamber"
+  bgMode: BgMode
+  lastBgMode: BgMode
   bgStyle: "vectors" | "glyphs" | "off"
   setBgMode: (mode: GardenStore["bgMode"]) => void
   toggleGraphBackground: () => void
@@ -314,16 +326,8 @@ export const useStore = create<GardenStore>()(
         })),
       cycleBgMode: () =>
         set((s) => {
-          const modes: GardenStore["bgMode"][] = [
-            "murmuration",
-            "graph",
-            "vectors",
-            "dots",
-            "terminal",
-            "chamber",
-          ]
-          const idx = modes.indexOf(s.bgMode)
-          const next = modes[(idx + 1) % modes.length]
+          const idx = BG_MODES.indexOf(s.bgMode as typeof BG_MODES[number])
+          const next = BG_MODES[(idx + 1) % BG_MODES.length]
           return { bgMode: next, lastBgMode: next }
         }),
       setBgStyle: (bgStyle) => set({ bgStyle }),

@@ -111,6 +111,10 @@ function BgCanvasInner() {
     boidGrid: [] as number[][],
     emitters: [] as any[],
     tracks: [] as any[],
+    anchors: [] as any[],       // schematic
+    cubes: [] as any[],         // isometric
+    plate: null as HTMLCanvasElement | null,  // plate-scan offscreen still
+    plateKey: "",
     lastFrame: 0,
     w: 0,
     h: 0
@@ -127,7 +131,7 @@ function BgCanvasInner() {
     const gameMode =
       slug === "chess" ? "chess" :
       slug === "hexo" ? "hexo" :
-      slug === "sigil" ? "chamber" : null
+      slug === "sigil" || slug === "collider" ? "chamber" : null
     if (gameMode) {
       if (bgMode !== gameMode) {
         if (gameMode === "chamber") {
@@ -172,9 +176,12 @@ function BgCanvasInner() {
       canvas.height = h * dpr
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       stateRef.current.colorValid = false
-      // reseed the flock / chamber emitters across the new viewport
+      // reseed viewport-dependent mode state
       stateRef.current.boids = []
       stateRef.current.emitters = []
+      stateRef.current.anchors = []
+      stateRef.current.cubes = []
+      stateRef.current.plateKey = ""
     }
 
     const refreshColors = () => {
@@ -244,6 +251,14 @@ function BgCanvasInner() {
         drawMurmuration(ctx, state)
       } else if (bgMode === "chamber") {
         drawChamber(ctx, state, config)
+      } else if (bgMode === "schematic") {
+        drawSchematic(ctx, state)
+      } else if (bgMode === "isometric") {
+        drawIsometric(ctx, state)
+      } else if (bgMode === "orrery") {
+        drawOrrery(ctx, state)
+      } else if (bgMode === "plate-scan") {
+        drawPlateScan(ctx, state)
       }
     }
 
@@ -685,6 +700,254 @@ function drawChamber(ctx: CanvasRenderingContext2D, state: any, config: any) {
     const pad = (n: number) => n.toFixed(0).padStart(4, "0")
     ctx.fillText(`${pad(state.mx)}·${pad(state.my)}`, state.mx + 12, state.my - 8)
   }
+  ctx.globalAlpha = 1
+}
+
+// ── Schematic background ──
+// Drifting anchor points with right-angle leader lines out to asemic glyph
+// clusters that fade in and out; ruler ticks along the viewport edges. The most
+// literally "blueprint" of the ambient modes. All geometry derives from each
+// anchor's phase, so frame 0 is already composed (reduced-motion safe).
+const SCHEMATIC_GLYPHS = "∮∇∂≡⊕⊗·°∆⟁"
+
+function drawSchematic(ctx: CanvasRenderingContext2D, state: any) {
+  const W = state.w, H = state.h
+  const now = performance.now() / 1000
+  const pen = state.colorCache.secondary
+
+  if (!state.anchors.length) {
+    state.anchors = Array.from({ length: 9 }, (_, i) => ({
+      i, phase: i * 1.37,
+      glyphs: Array.from({ length: 2 + (i % 3) }, (_, g) =>
+        SCHEMATIC_GLYPHS[(i * 3 + g * 7) % SCHEMATIC_GLYPHS.length]).join(""),
+    }))
+  }
+
+  // edge ruler ticks
+  ctx.strokeStyle = pen
+  ctx.lineWidth = 1
+  ctx.globalAlpha = 0.05 * state.readerAlpha
+  ctx.beginPath()
+  for (let x = 0; x < W; x += 24) {
+    const len = x % 120 === 0 ? 8 : 4
+    ctx.moveTo(x, 0); ctx.lineTo(x, len)
+    ctx.moveTo(x, H); ctx.lineTo(x, H - len)
+  }
+  for (let y = 0; y < H; y += 24) {
+    const len = y % 120 === 0 ? 8 : 4
+    ctx.moveTo(0, y); ctx.lineTo(len, y)
+    ctx.moveTo(W, y); ctx.lineTo(W - len, y)
+  }
+  ctx.stroke()
+
+  ctx.font = "10px 'IBM Plex Mono', monospace"
+  ctx.textAlign = "left"
+  for (const a of state.anchors) {
+    const ax = W * (0.5 + 0.4 * Math.sin(now * 0.04 + a.phase * 2.3))
+    const ay = H * (0.5 + 0.38 * Math.cos(now * 0.031 + a.phase * 1.9))
+    // visibility breathes on a long cycle — clusters fade in/out
+    const vis = Math.max(0, Math.sin(now * 0.13 + a.phase * 3.1))
+    if (vis < 0.02) continue
+    const alpha = 0.16 * vis * state.readerAlpha
+
+    // leader line with a right-angle elbow out to the label point
+    const lx = ax + 46 + 34 * Math.sin(a.phase * 5)
+    const ly = ay - 30 - 22 * Math.cos(a.phase * 4)
+    ctx.globalAlpha = alpha
+    ctx.beginPath()
+    ctx.moveTo(ax, ay)
+    ctx.lineTo(lx, ay)
+    ctx.lineTo(lx, ly)
+    ctx.stroke()
+    // anchor node + dimension bracket at the label end
+    ctx.fillStyle = pen
+    ctx.fillRect(ax - 1.5, ay - 1.5, 3, 3)
+    ctx.beginPath()
+    ctx.moveTo(lx - 4, ly); ctx.lineTo(lx + 4, ly)
+    ctx.stroke()
+    ctx.globalAlpha = alpha * 1.4
+    ctx.fillText(a.glyphs, lx + 7, ly + 3)
+  }
+  ctx.globalAlpha = 1
+}
+
+// ── Isometric background ──
+// Faint wireframe cubes rotating slowly about Y, orthographically projected;
+// some carry a glyph column. Cursor parallax: deeper cubes shift less.
+function drawIsometric(ctx: CanvasRenderingContext2D, state: any) {
+  const W = state.w, H = state.h
+  const now = performance.now() / 1000
+  const pen = state.colorCache.secondary
+
+  if (!state.cubes.length) {
+    state.cubes = Array.from({ length: 10 }, (_, i) => ({
+      x: ((i * 0.618) % 1) * W,                 // golden-ratio scatter
+      y: ((i * 0.382 + 0.19) % 1) * H,
+      s: 18 + ((i * 37) % 40),                  // size
+      depth: 0.3 + ((i * 53) % 100) / 140,      // parallax factor
+      spin: 0.05 + ((i * 29) % 100) / 900,
+      phase: i * 1.1,
+      glyph: i % 3 === 0 ? GLYPH_POOL[(i * 11) % GLYPH_POOL.length] : null,
+    }))
+  }
+
+  const px = (state.mx > -9000 ? state.mx - W / 2 : 0)
+  const py = (state.my > -9000 ? state.my - H / 2 : 0)
+  ctx.strokeStyle = pen
+  ctx.lineWidth = 1
+  ctx.font = "10px 'IBM Plex Mono', monospace"
+  ctx.textAlign = "center"
+
+  for (const c of state.cubes) {
+    const ang = now * c.spin + c.phase
+    const cx = c.x - px * 0.02 * c.depth
+    const cy = c.y - py * 0.02 * c.depth
+    // 8 cube verts rotated about Y, orthographic projection with a fixed tilt
+    const cos = Math.cos(ang), sin = Math.sin(ang)
+    const tilt = 0.42 // vertical foreshortening of the "3D" y axis
+    const v: [number, number][] = []
+    for (let i = 0; i < 8; i++) {
+      const X = (i & 1 ? 1 : -1), Y = (i & 2 ? 1 : -1), Z = (i & 4 ? 1 : -1)
+      const rx = X * cos - Z * sin
+      const rz = X * sin + Z * cos
+      v.push([cx + rx * c.s, cy + Y * c.s * 0.8 + rz * c.s * tilt])
+    }
+    ctx.globalAlpha = 0.07 * c.depth * state.readerAlpha
+    ctx.beginPath()
+    // 12 edges: pairs of vert indices differing in one bit
+    for (let i = 0; i < 8; i++) for (const b of [1, 2, 4]) {
+      const j = i | b
+      if (j !== i && j > i) { ctx.moveTo(v[i][0], v[i][1]); ctx.lineTo(v[j][0], v[j][1]) }
+    }
+    ctx.stroke()
+    if (c.glyph) {
+      ctx.globalAlpha = 0.12 * c.depth * state.readerAlpha
+      ctx.fillStyle = pen
+      ctx.fillText(c.glyph, cx, cy + 3)
+    }
+  }
+  ctx.globalAlpha = 1
+}
+
+// ── Orrery background ──
+// Nested astrolabe rings centred on the viewport: thin circles, tick radials,
+// and a "body" node per ring, each precessing at its own slow rate.
+function drawOrrery(ctx: CanvasRenderingContext2D, state: any) {
+  const W = state.w, H = state.h
+  const now = performance.now() / 1000
+  const pen = state.colorCache.secondary
+  const pal = state.colorCache.palette
+  const cx = W / 2, cy = H / 2
+  const maxR = Math.min(W, H) * 0.44
+  const RINGS = 6
+
+  ctx.lineWidth = 1
+  for (let i = 0; i < RINGS; i++) {
+    const r = maxR * ((i + 1) / RINGS)
+    const rot = now * 0.03 * (i % 2 ? 1 : -1) * (1 + i * 0.35) + i * 0.8
+    // slow precession: the ring's ellipse aspect breathes slightly
+    const squash = 1 - 0.06 * Math.sin(now * 0.05 + i * 1.3)
+    ctx.strokeStyle = pen
+    ctx.globalAlpha = 0.05 * state.readerAlpha
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, r, r * squash, 0, 0, Math.PI * 2)
+    ctx.stroke()
+    // tick radials
+    const ticks = 12 + i * 6
+    ctx.beginPath()
+    for (let t = 0; t < ticks; t++) {
+      const a = (t / ticks) * Math.PI * 2 + rot * 0.4
+      const inner = t % 3 === 0 ? 0.965 : 0.985
+      ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r * squash)
+      ctx.lineTo(cx + Math.cos(a) * r * inner, cy + Math.sin(a) * r * squash * inner)
+    }
+    ctx.stroke()
+    // orbiting body + a short trailing arc
+    const ba = rot
+    ctx.globalAlpha = 0.22 * state.readerAlpha
+    ctx.fillStyle = pal[i % pal.length]
+    ctx.beginPath()
+    ctx.arc(cx + Math.cos(ba) * r, cy + Math.sin(ba) * r * squash, 2.2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.globalAlpha = 0.09 * state.readerAlpha
+    ctx.strokeStyle = pal[i % pal.length]
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, r, r * squash, 0, ba - 0.5, ba)
+    ctx.stroke()
+  }
+  // centre node
+  ctx.globalAlpha = 0.3 * state.readerAlpha
+  ctx.fillStyle = pen
+  ctx.beginPath()
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.globalAlpha = 1
+}
+
+// ── Plate-scan background ──
+// A single Atkinson-dithered generative still (simplex-octave field → 1-bit
+// stipple) rendered ONCE to an offscreen canvas, then slowly panned with a
+// scanline sweep. Near-zero per-frame cost: one drawImage + one gradient bar.
+function buildPlate(state: any): HTMLCanvasElement {
+  const W = state.w, H = state.h
+  const cellPx = 4                       // stipple resolution
+  const gw = Math.ceil(W / cellPx), gh = Math.ceil(H / cellPx)
+  // grayscale field from simplex octaves
+  const gray = new Float32Array(gw * gh)
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+    let v = simplex(x * 0.02, y * 0.02) * 0.6 + simplex(x * 0.07, y * 0.07) * 0.3 + simplex(x * 0.21, y * 0.21) * 0.1
+    gray[y * gw + x] = Math.min(1, Math.max(0, v * 0.5 + 0.5))
+  }
+  // Atkinson dither: threshold at 0.5, diffuse 6/8 of the error forward
+  const off = document.createElement("canvas")
+  off.width = W; off.height = H
+  const octx = off.getContext("2d")!
+  octx.fillStyle = state.colorCache.secondary
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+    const i = y * gw + x
+    const old = gray[i]
+    const bit = old > 0.5 ? 1 : 0
+    const err = (old - bit) / 8
+    if (bit) octx.fillRect(x * cellPx, y * cellPx, 1.6, 1.6)
+    if (x + 1 < gw) gray[i + 1] += err
+    if (x + 2 < gw) gray[i + 2] += err
+    if (y + 1 < gh) {
+      if (x > 0) gray[i + gw - 1] += err
+      gray[i + gw] += err
+      if (x + 1 < gw) gray[i + gw + 1] += err
+    }
+    if (y + 2 < gh) gray[i + 2 * gw] += err
+  }
+  return off
+}
+
+function drawPlateScan(ctx: CanvasRenderingContext2D, state: any) {
+  const W = state.w, H = state.h
+  const now = performance.now() / 1000
+  const key = `${W}x${H}:${state.colorCache.secondary}`
+  if (state.plateKey !== key) {
+    state.plate = buildPlate(state)
+    state.plateKey = key
+  }
+
+  // slow diagonal pan (wrapped 2×2 tile so edges never show)
+  const panX = (now * 3) % W
+  const panY = (now * 1.7) % H
+  ctx.globalAlpha = 0.12 * state.readerAlpha
+  ctx.drawImage(state.plate!, -panX, -panY)
+  ctx.drawImage(state.plate!, W - panX, -panY)
+  ctx.drawImage(state.plate!, -panX, H - panY)
+  ctx.drawImage(state.plate!, W - panX, H - panY)
+
+  // scanline sweep — a soft bright band drifting down the plate
+  const sy = ((now * 26) % (H * 1.4)) - H * 0.2
+  const grad = ctx.createLinearGradient(0, sy - 40, 0, sy + 40)
+  grad.addColorStop(0, "transparent")
+  grad.addColorStop(0.5, state.colorCache.secondary)
+  grad.addColorStop(1, "transparent")
+  ctx.globalAlpha = 0.05 * state.readerAlpha
+  ctx.fillStyle = grad
+  ctx.fillRect(0, sy - 40, W, 80)
   ctx.globalAlpha = 1
 }
 

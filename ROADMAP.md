@@ -403,16 +403,16 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
 `chamber` bg mode + SIGIL shipped 2026-07-03 (see `docs/archive/specs/chamber-and-sigil-spec.md`).
 The spec's appendix "idea bank" — all four ambient modes wanted, plus the aiming toy:
 
-- [ ] **`schematic` bg mode** — leader lines from drifting anchors to nothing; right-angle
+- [x] **`schematic` bg mode** (shipped 2026-07-03) — leader lines from drifting anchors to nothing; right-angle
   dimension brackets; edge ruler ticks; sparse asemic glyph clusters fading in/out. The most
   literally "blueprint" mode; could replace `chamber` as SIGIL's themed bg once it exists.
-- [ ] **`isometric` bg mode** — faint wireframe iso cubes drifting/rotating, some inscribed with
+- [x] **`isometric` bg mode** (shipped 2026-07-03) — faint wireframe iso cubes drifting/rotating, some inscribed with
   glyph columns; cursor parallax. Wireframe-only, cheap.
-- [ ] **`orrery` bg mode** — nested rotating astrolabe/armillary rings (thin arcs + tick radials),
+- [x] **`orrery` bg mode** (shipped 2026-07-03) — nested rotating astrolabe/armillary rings (thin arcs + tick radials),
   centred, slowly precessing. The scribe's instrument as pure geometry.
-- [ ] **`plate-scan` bg mode** — a single Atkinson-dithered generative still rendered once and
+- [x] **`plate-scan` bg mode** (shipped 2026-07-03) — a single Atkinson-dithered generative still rendered once and
   slowly panned/scanline-swept; near-zero per-frame cost (a natural "battery saver" mode).
-- [ ] **Bubble-chamber aiming toy** (arcade) — fire tracks through the `chamber` flow field to hit
+- [x] **Bubble-chamber aiming toy** — shipped 2026-07-03 as **Collider** (`/collider`) — fire tracks through the `chamber` flow field to hit
   specimen targets; reuses `drawChamber`'s spawn/advection as the toy's physics. One-line
   system-pages registration when built.
 - [ ] **Oracle toy** (stretch) — click to cast: reuse the SIGIL generator to auto-route a plate as
