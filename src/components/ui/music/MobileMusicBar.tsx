@@ -14,12 +14,12 @@ export function MobileMusicBar() {
     <div className={styles.mobileMusicBar} data-panel-ignore>
       <div className={styles.content}>
         <div className={styles.controls}>
-          <button className={styles.iconBtn} onClick={prevTrack}>
+          <button className={styles.iconBtn} onClick={prevTrack} aria-label="Previous track">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 20L9 12L19 4V20ZM5 19V5H7V19H5Z" />
             </svg>
           </button>
-          <button className={styles.playBtn} onClick={togglePlay}>
+          <button className={styles.playBtn} onClick={togglePlay} aria-label="Play or pause">
             {isPlaying ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M6 19H10V5H6V19ZM14 5V19H18V5H14Z" />
@@ -30,7 +30,7 @@ export function MobileMusicBar() {
               </svg>
             )}
           </button>
-          <button className={styles.iconBtn} onClick={nextTrack}>
+          <button className={styles.iconBtn} onClick={nextTrack} aria-label="Next track">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M5 4L15 12L5 20V4ZM19 5V19H17V5H19Z" />
             </svg>

@@ -207,6 +207,11 @@ export function TerminalBootScreen({ onDone }: Props) {
 
   // ── Phase 0: BIOS ──────────────────────────────────────────────────────────
   useEffect(() => {
+    // Reduced motion: the boot sequence is pure flourish — skip straight in.
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      dismiss()
+      return
+    }
     alive.current = true
     phaseRef.current = 0
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react"
+import { useFocusTrap } from "@/hooks/useFocusTrap"
 import styles from "./EmotePicker.module.scss"
 
 interface EmoteEntry { name: string; ext: string }
@@ -34,7 +35,8 @@ export function EmotePicker({ onSelect, onSelectGif, onClose }: Props) {
   const [gifResults, setGifResults] = useState<GifResult[]>([])
   const [gifLoading, setGifLoading] = useState(false)
   const [gifError, setGifError] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  // Focus trap doubles as the container ref (Tab-cycle, Esc, focus restore)
+  const ref = useFocusTrap<HTMLDivElement>({ active: true, onEscape: onClose })
   const gifDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch emote index
@@ -63,14 +65,7 @@ export function EmotePicker({ onSelect, onSelectGif, onClose }: Props) {
     return () => document.removeEventListener("mousedown", handleMouseDown)
   }, [onClose])
 
-  // Dismiss on Escape
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose()
-    }
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [onClose])
+  // (Escape handled by the focus trap)
 
   // GIF fetching
   const fetchGifs = useCallback((q: string) => {

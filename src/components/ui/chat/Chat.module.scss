@@ -1423,6 +1423,10 @@
 
 .messageRow[data-glow="1"] {
   animation: reactionGlow 0.9s ease-out forwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 
 // ── Footnote sidenotes ──

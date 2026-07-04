@@ -1,6 +1,7 @@
 import { useStore, BG_MODES } from "@/store"
 import styles from "./ThemePanel.module.scss"
 import { useState } from "react"
+import { useFocusTrap } from "@/hooks/useFocusTrap"
 
 const ACCENTS = [
   { name: "Red", color: "#b4424c" },
@@ -35,6 +36,8 @@ export function ThemePanel() {
   const config = useStore((s) => s.config)
   const updateConfig = useStore((s) => s.updateConfig)
 
+  const trapRef = useFocusTrap<HTMLElement>({ active: isOpen, onEscape: close })
+
   if (!isOpen) return null
 
   const handleCopyCommit = () => {
@@ -44,7 +47,7 @@ export function ThemePanel() {
   }
 
   return (
-    <aside className={styles.floatingPanel}>
+    <aside className={styles.floatingPanel} ref={trapRef} role="dialog" aria-label="Theme settings">
       <header className={styles.header}>
         <div className={styles.tabs}>
           <button 

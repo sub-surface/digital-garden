@@ -270,6 +270,16 @@ th {
   outline: none;
 }
 
+// ── Focus rings ──
+// Keyboard users always get an accent-aware ring; mouse clicks don't
+// (:focus-visible matches keyboard/programmatic focus only). Inputs that
+// deliberately swap the ring for an accent border keep their look for mouse
+// focus; keyboard focus still gets the ring for visibility.
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 // ── Responsive ──
 
 @media (max-width: 800px) {

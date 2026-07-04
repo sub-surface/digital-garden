@@ -13,7 +13,8 @@ the sequenced/opinionated cut (`docs/archive/iteration-spec.md`), the HeXO resea
 - Detail backers: `docs/future.md` (full backlog by domain), `docs/archive/iteration-spec.md` (rationale
   + proposed shapes), `../hexgo-theory/{DIRECTION,SPEC}.md` (the theory).
 
-Last reconciled against the working tree: 2026-06-24.
+Last reconciled against the working tree: 2026-07-03 (post worker-refactor / chamber / SIGIL /
+Collider / four ambient modes / repo reorg).
 
 ---
 
@@ -118,20 +119,25 @@ Current story (`useHotkeys`): `\` theme, `b` background, `m` music, `r` random n
 
 - [x] **`?` opens a keyboard-shortcut cheat sheet** overlay — shipped (`KeyboardCheatSheet`,
   bound in `useHotkeys`, sourced from `src/config/hotkeys.ts`). (verified 2026-06-24)
-- [~] **Audit focus management** on every overlay: a reusable `useFocusTrap` hook (focus capture →
-  in → Tab-cycle → restore, Esc) now wraps SearchOverlay + WikiAuthModal; CommandPalette +
-  KeyboardCheatSheet already had capture/restore/Esc. Remaining: ThemePanel, zen mode, GifPicker,
-  EmotePicker. (2026-06-20)
+- [x] **Audit focus management** on every overlay — `useFocusTrap` now wraps SearchOverlay,
+  WikiAuthModal, ThemePanel, GameCabinet zen mode, and EmotePicker (which owns the GIF tab);
+  CommandPalette + KeyboardCheatSheet had capture/restore/Esc already. The hook keeps `onEscape`/
+  `initialFocus` in refs so inline closures don't tear the trap down every parent re-render
+  (that bug silently bounced initial focus back out). (2026-07-03)
 - [~] **`aria-label`s on icon-only buttons** — done for the truly icon-only set (MusicBar
   prev/play/next/expand SVGs, SearchButton, RandomNote/Bookmark SVGs marked `aria-hidden`).
-  QuickControls/CornerMenu/heXO close already had them. Remaining: profile SVG, chat controls,
-  any per-game zoom buttons not yet audited. (2026-06-16)
-- [~] **`prefers-reduced-motion`** — BgCanvas now paints one static frame and runs no loop under
+  QuickControls/CornerMenu/heXO close already had them. MusicPlayer + MobileMusicBar transport
+  buttons labelled 2026-07-03; MessageInput picker/cancel already labelled. Remaining tail: per-game
+  zoom buttons (grep `<button` next to `<svg` without `aria-label` — currently clean). (2026-07-03)
+- [x] **`prefers-reduced-motion`** — BgCanvas now paints one static frame and runs no loop under
   reduced-motion (JS `matchMedia` check). Also added: pause on hidden tab, and skip redraw during
-  active scroll (fixes a scroll hitch from the full-viewport fixed canvas). Remaining: emote glow,
-  telescopic transitions, terminal boot. (2026-06-16)
+  active scroll (fixes a scroll hitch from the full-viewport fixed canvas). Telescopic transitions gained a reduced-motion guard
+  2026-07-03 (blur dropped; opacity-only); reaction glow disabled and the chat terminal boot
+  sequence skips straight to the room under reduced motion. Closed. (2026-07-03)
 - [x] **Skip-to-content link** (first focusable, visually hidden until focused). (2026-06-16)
-- [ ] **Visible accent-aware focus rings** — verify nothing `outline: none`'s them away.
+- [x] **Visible accent-aware focus rings** — global `:focus-visible` rule in `base.scss`
+  (2px accent, 2px offset; keyboard-only so mouse clicks stay clean). The scattered component
+  `outline: none` rules target plain `:focus` and swap in accent borders — acceptable. (2026-07-03)
 
 ---
 
@@ -158,7 +164,10 @@ of `var(--color-bg*)`. Audit pass:
 
 ## 5. Performance & Core Web Vitals
 
-- [ ] **★ Lighthouse CI** (GitHub Actions, 95+ desktop) — do *first* so the rest has a scoreboard.
+- [x] **★ Lighthouse CI** — `.github/workflows/lighthouse.yml` + `lighthouserc.json`: builds the
+  SPA, audits static dist (desktop preset, 3 runs), warn-level thresholds (perf/a11y/BP/SEO ≥0.9,
+  CLS ≤0.1, LCP ≤3s, TBT ≤300ms), report uploaded as artifact + temporary-public-storage. Tighten
+  to error-level once a baseline exists. (2026-07-03)
 - [x] **★ Fix CLS — image dimensions.** Shipped: `prebuild` emits `public/image-dimensions.json`
   and `rehype-image-paths` stamps intrinsic `width`/`height` on MDX images (author-supplied
   values kept). `img { max-width:100%; height:auto }` keeps them responsive. (verified 2026-06-20)
@@ -210,7 +219,8 @@ Hex Life, Progressions, The Knotted Field (Persian carpet loom — 2026-06-15). 
   Serve as a standalone Worker with the HTML as the root response — no React/Vite needed.
   Alternatively, could live as an iframe game like The Knotted Field, but it uses `overflow:hidden` on `<html>` for its
   own full-viewport loop, and the sidebar-less "whole screen" contract is cleaner as its own domain.
-  **Decision deferred to Leon** — subdomain name, and whether it gets a content/lore note on the garden to link to it.
+  **Shipped as `omega.subsurfaces.net`** — listed live in ArcadePage as "The Predictor" (featured,
+  external). Remaining: optional content/lore note on the garden linking to it (Leon's call).
 
 ---
 
@@ -248,10 +258,12 @@ Hex Life, Progressions, The Knotted Field (Persian carpet loom — 2026-06-15). 
   out-of-Outlet floating `LocalGraph` has its own boundary too. (verified 2026-06-20)
 - [x] **content-index load failure is surfaced** — `AppShell` sets `contentIndexError` on a
   failed/non-JSON fetch and `ContentIndexErrorBanner` renders a visible banner. (verified 2026-06-20)
-- [ ] **Supabase-down drill** — confirm the garden fully renders with auth/chat hard-failing
-  (block the Supabase domain in devtools, click around). The architecture claims this; verify it.
-- [ ] **Unchecked `fetch` in worker handlers** — grep for un-checked `await fetch(`; some return
-  500 on `!res.ok`, some swallow.
+- [x] **Supabase-down drill** — PASSED 2026-07-03: with all fetch + WebSocket to *.supabase.co
+  hard-rejected, six garden routes (index, note, arcade, graph, bookshelf, recent) all rendered
+  full content, no error boundary, zero console errors. The layering law holds.
+- [x] **Unchecked `fetch` in worker handlers** — resolved by the 2026-07 worker refactor:
+  handlers route upstream failures through `upstreamError(label, res, msg)` (logs status + body
+  snippet), and the dispatcher's error boundary catches anything thrown (JSON 500 + requestId).
 
 ---
 

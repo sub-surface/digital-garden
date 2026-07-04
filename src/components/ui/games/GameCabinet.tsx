@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
+import { useFocusTrap } from "@/hooks/useFocusTrap"
 import styles from "./GameCabinet.module.scss"
 
 export type CabinetStatus = "ready" | "playing" | "won" | "lost"
@@ -70,15 +71,12 @@ export function GameCabinet({
     }
   }, [score?.value, score?.bestKey, best])
 
-  // Esc exits zen.
-  useEffect(() => {
-    if (!isZen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.stopPropagation(); setIsZen(false) }
-    }
-    document.addEventListener("keydown", onKey, true)
-    return () => document.removeEventListener("keydown", onKey, true)
-  }, [isZen])
+  // Zen is a fullscreen modal: trap focus inside it (Tab-cycle, Esc to exit,
+  // restore focus to the toggle on close).
+  const trapRef = useFocusTrap<HTMLDivElement>({
+    active: isZen,
+    onEscape: () => setIsZen(false),
+  })
 
   const toggleZen = useCallback(() => setIsZen((z) => !z), [])
   const overlayRef = useRef<HTMLDivElement>(null)
@@ -87,6 +85,7 @@ export function GameCabinet({
 
   return (
     <div
+      ref={trapRef}
       className={styles.cabinet}
       data-zen={isZen || undefined}
       data-win={status === "won" || undefined}

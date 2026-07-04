@@ -39,6 +39,17 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>({
   const containerRef = useRef<T>(null)
   const restoreRef = useRef<HTMLElement | null>(null)
 
+  // Callers routinely pass inline closures (`onEscape: () => close()`). Keep
+  // them in refs so the trap effect keys on `active` alone — otherwise every
+  // parent re-render tears the trap down (cancelling the initial focus move
+  // and bouncing focus back out) and rebuilds it.
+  const onEscapeRef = useRef(onEscape)
+  const initialFocusRef = useRef(initialFocus)
+  useEffect(() => {
+    onEscapeRef.current = onEscape
+    initialFocusRef.current = initialFocus
+  })
+
   useEffect(() => {
     if (!active) return
     const container = containerRef.current
@@ -55,14 +66,14 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>({
     // Move focus in. Defer a tick so the overlay has painted (and any
     // autoFocus/initialFocus element is mounted).
     const focusId = window.setTimeout(() => {
-      const target = initialFocus?.current ?? focusables()[0] ?? container
+      const target = initialFocusRef.current?.current ?? focusables()[0] ?? container
       target.focus()
     }, 10)
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation()
-        onEscape?.()
+        onEscapeRef.current?.()
         return
       }
       if (e.key !== "Tab") return
@@ -96,7 +107,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>({
       const restore = restoreRef.current
       if (restore && document.contains(restore)) restore.focus()
     }
-  }, [active, onEscape, initialFocus])
+  }, [active])
 
   return containerRef
 }
