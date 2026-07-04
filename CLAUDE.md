@@ -93,7 +93,9 @@ Dev dashboard: `/__dev` (dev mode only).
 
 **System page slugs** live in `src/config/system-pages.ts`: `graph`, `chess`, `hexo`, `sigil`, `bookshelf`, `movieshelf`, `music-library`, `arcade`, plus the smaller games/toys.
 
-**Background modes** (`BgCanvas.tsx`): `murmuration` (default), `graph`, `vectors`, `dots`, `terminal`, `chamber` (bubble-chamber particle tracks), plus page-scoped `chess`/`hexo`. Game pages auto-switch their themed bg via the slug map in `BgCanvasInner` (`sigil` → `chamber`); `chamber` is also user-selectable, so its auto-switch bypasses `setBgMode` (preserving `lastBgMode`) and reverts only when it was page-triggered (`autoChamberRef`). SIGIL board generation lives in `src/lib/sigil.ts` (pure, tested by `scripts/test-sigil.ts`).
+**Background modes** (`BgCanvas.tsx`): `murmuration` (default), `graph`, `vectors`, `dots`, `terminal`, `chamber`, `schematic`, `isometric`, `orrery`, `plate-scan` — all user-selectable, ordered by `BG_MODES` in the store — plus page-scoped `chess`/`hexo`. Game pages auto-switch their themed bg via the slug map in `BgCanvasInner` (`sigil`/`collider` → `chamber`); `chamber` is also user-selectable, so its auto-switch bypasses `setBgMode` (preserving `lastBgMode`) and reverts only when it was page-triggered (`autoChamberRef`). SIGIL board generation lives in `src/lib/sigil.ts` (pure, tested by `scripts/test-sigil.ts`).
+
+**Every ambient mode is config-driven** via `config.backgrounds.<mode>` (`src/config/site-defaults.ts`) — each `drawX(ctx, state, config)` reads its own block. The `\` **ThemePanel** dev tab is schema-driven: `BG_CONTROLS` in `ThemePanel.tsx` maps each mode → its sliders, and the dev tab contextually edits whatever mode is live. **Adding a mode = draw fn + one `config.backgrounds` block + one `BG_CONTROLS` entry + `BG_MODES`/`BgMode` in the store.** Global **`bgOpacity`** (persisted store key, System-tab "Intensity") is folded into `readerTarget`, so every mode honours it for free via the existing `* readerAlpha` sites.
 
 ---
 

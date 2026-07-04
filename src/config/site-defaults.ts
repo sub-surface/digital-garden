@@ -2,7 +2,6 @@ export const SITE_DEFAULTS = {
   "initialTheme": "light",
   "initialPalette": "complimentary",
   "initialAccent": "#427ab4",
-  "masterOpacity": 1,
   "backgrounds": {
     "vectors": {
       "step": 54,
@@ -53,6 +52,35 @@ export const SITE_DEFAULTS = {
       "spot": 0.15,
       "glyphChance": 0.15,
       "reticle": true
+    },
+    "murmuration": {
+      "count": 460,
+      "maxSpeed": 2.4,
+      "cohere": 0.001,
+      "wind": 0.05,
+      "opacity": 0.34
+    },
+    "schematic": {
+      "anchors": 9,
+      "driftSpeed": 1,
+      "opacity": 1
+    },
+    "isometric": {
+      "count": 10,
+      "spin": 1,
+      "parallax": 1,
+      "opacity": 1
+    },
+    "orrery": {
+      "rings": 6,
+      "spin": 1,
+      "opacity": 1
+    },
+    "plate-scan": {
+      "panSpeed": 1,
+      "scanSpeed": 1,
+      "cell": 4,
+      "opacity": 1
     }
   }
 }

@@ -88,6 +88,7 @@ function BgCanvasInner() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bgMode = useStore((s) => s.bgMode)
   const bgStyle = useStore((s) => s.bgStyle)
+  const bgOpacity = useStore((s) => s.bgOpacity)
   const isReaderMode = useStore((s) => s.isReaderMode)
   const theme = useStore((s) => s.theme)
   const accentBase = useStore((s) => s.accentBase)
@@ -153,9 +154,13 @@ function BgCanvasInner() {
     }
   }, [activeSlug])
 
+  // readerAlpha is the universal per-mode alpha multiplier (every draw multiplies
+  // by it). Folding the global bgOpacity in here means all modes — current and
+  // future — honour the global intensity control for free, and it animates
+  // smoothly via the existing lerp toward readerTarget.
   useEffect(() => {
-    stateRef.current.readerTarget = isReaderMode ? 0.04 : 1
-  }, [isReaderMode])
+    stateRef.current.readerTarget = (isReaderMode ? 0.04 : 1) * bgOpacity
+  }, [isReaderMode, bgOpacity])
 
   useEffect(() => {
     stateRef.current.colorValid = false
@@ -248,17 +253,17 @@ function BgCanvasInner() {
       } else if (bgMode === "graph") {
         drawGraph(ctx, state, config)
       } else if (bgMode === "murmuration") {
-        drawMurmuration(ctx, state)
+        drawMurmuration(ctx, state, config)
       } else if (bgMode === "chamber") {
         drawChamber(ctx, state, config)
       } else if (bgMode === "schematic") {
-        drawSchematic(ctx, state)
+        drawSchematic(ctx, state, config)
       } else if (bgMode === "isometric") {
-        drawIsometric(ctx, state)
+        drawIsometric(ctx, state, config)
       } else if (bgMode === "orrery") {
-        drawOrrery(ctx, state)
+        drawOrrery(ctx, state, config)
       } else if (bgMode === "plate-scan") {
-        drawPlateScan(ctx, state)
+        drawPlateScan(ctx, state, config)
       }
     }
 
@@ -710,13 +715,17 @@ function drawChamber(ctx: CanvasRenderingContext2D, state: any, config: any) {
 // anchor's phase, so frame 0 is already composed (reduced-motion safe).
 const SCHEMATIC_GLYPHS = "∮∇∂≡⊕⊗·°∆⟁"
 
-function drawSchematic(ctx: CanvasRenderingContext2D, state: any) {
+function drawSchematic(ctx: CanvasRenderingContext2D, state: any, config: any) {
+  const p = config.backgrounds.schematic
   const W = state.w, H = state.h
-  const now = performance.now() / 1000
+  const drift = performance.now() / 1000 * (p?.driftSpeed ?? 1)
+  const now = drift
+  const op = p?.opacity ?? 1
   const pen = state.colorCache.secondary
+  const anchorCount = Math.round(p?.anchors ?? 9)
 
-  if (!state.anchors.length) {
-    state.anchors = Array.from({ length: 9 }, (_, i) => ({
+  if (state.anchors.length !== anchorCount) {
+    state.anchors = Array.from({ length: anchorCount }, (_, i) => ({
       i, phase: i * 1.37,
       glyphs: Array.from({ length: 2 + (i % 3) }, (_, g) =>
         SCHEMATIC_GLYPHS[(i * 3 + g * 7) % SCHEMATIC_GLYPHS.length]).join(""),
@@ -726,7 +735,7 @@ function drawSchematic(ctx: CanvasRenderingContext2D, state: any) {
   // edge ruler ticks
   ctx.strokeStyle = pen
   ctx.lineWidth = 1
-  ctx.globalAlpha = 0.05 * state.readerAlpha
+  ctx.globalAlpha = 0.05 * op * state.readerAlpha
   ctx.beginPath()
   for (let x = 0; x < W; x += 24) {
     const len = x % 120 === 0 ? 8 : 4
@@ -748,7 +757,7 @@ function drawSchematic(ctx: CanvasRenderingContext2D, state: any) {
     // visibility breathes on a long cycle — clusters fade in/out
     const vis = Math.max(0, Math.sin(now * 0.13 + a.phase * 3.1))
     if (vis < 0.02) continue
-    const alpha = 0.16 * vis * state.readerAlpha
+    const alpha = 0.16 * vis * op * state.readerAlpha
 
     // leader line with a right-angle elbow out to the label point
     const lx = ax + 46 + 34 * Math.sin(a.phase * 5)
@@ -774,13 +783,18 @@ function drawSchematic(ctx: CanvasRenderingContext2D, state: any) {
 // ── Isometric background ──
 // Faint wireframe cubes rotating slowly about Y, orthographically projected;
 // some carry a glyph column. Cursor parallax: deeper cubes shift less.
-function drawIsometric(ctx: CanvasRenderingContext2D, state: any) {
+function drawIsometric(ctx: CanvasRenderingContext2D, state: any, config: any) {
+  const p = config.backgrounds.isometric
   const W = state.w, H = state.h
   const now = performance.now() / 1000
+  const spinScale = p?.spin ?? 1
+  const parallax = p?.parallax ?? 1
+  const op = p?.opacity ?? 1
   const pen = state.colorCache.secondary
+  const cubeCount = Math.round(p?.count ?? 10)
 
-  if (!state.cubes.length) {
-    state.cubes = Array.from({ length: 10 }, (_, i) => ({
+  if (state.cubes.length !== cubeCount) {
+    state.cubes = Array.from({ length: cubeCount }, (_, i) => ({
       x: ((i * 0.618) % 1) * W,                 // golden-ratio scatter
       y: ((i * 0.382 + 0.19) % 1) * H,
       s: 18 + ((i * 37) % 40),                  // size
@@ -799,9 +813,9 @@ function drawIsometric(ctx: CanvasRenderingContext2D, state: any) {
   ctx.textAlign = "center"
 
   for (const c of state.cubes) {
-    const ang = now * c.spin + c.phase
-    const cx = c.x - px * 0.02 * c.depth
-    const cy = c.y - py * 0.02 * c.depth
+    const ang = now * c.spin * spinScale + c.phase
+    const cx = c.x - px * 0.02 * parallax * c.depth
+    const cy = c.y - py * 0.02 * parallax * c.depth
     // 8 cube verts rotated about Y, orthographic projection with a fixed tilt
     const cos = Math.cos(ang), sin = Math.sin(ang)
     const tilt = 0.42 // vertical foreshortening of the "3D" y axis
@@ -812,7 +826,7 @@ function drawIsometric(ctx: CanvasRenderingContext2D, state: any) {
       const rz = X * sin + Z * cos
       v.push([cx + rx * c.s, cy + Y * c.s * 0.8 + rz * c.s * tilt])
     }
-    ctx.globalAlpha = 0.07 * c.depth * state.readerAlpha
+    ctx.globalAlpha = 0.07 * c.depth * op * state.readerAlpha
     ctx.beginPath()
     // 12 edges: pairs of vert indices differing in one bit
     for (let i = 0; i < 8; i++) for (const b of [1, 2, 4]) {
@@ -821,7 +835,7 @@ function drawIsometric(ctx: CanvasRenderingContext2D, state: any) {
     }
     ctx.stroke()
     if (c.glyph) {
-      ctx.globalAlpha = 0.12 * c.depth * state.readerAlpha
+      ctx.globalAlpha = 0.12 * c.depth * op * state.readerAlpha
       ctx.fillStyle = pen
       ctx.fillText(c.glyph, cx, cy + 3)
     }
@@ -832,23 +846,26 @@ function drawIsometric(ctx: CanvasRenderingContext2D, state: any) {
 // ── Orrery background ──
 // Nested astrolabe rings centred on the viewport: thin circles, tick radials,
 // and a "body" node per ring, each precessing at its own slow rate.
-function drawOrrery(ctx: CanvasRenderingContext2D, state: any) {
+function drawOrrery(ctx: CanvasRenderingContext2D, state: any, config: any) {
+  const p = config.backgrounds.orrery
   const W = state.w, H = state.h
   const now = performance.now() / 1000
+  const spinScale = p?.spin ?? 1
+  const op = p?.opacity ?? 1
   const pen = state.colorCache.secondary
   const pal = state.colorCache.palette
   const cx = W / 2, cy = H / 2
   const maxR = Math.min(W, H) * 0.44
-  const RINGS = 6
+  const RINGS = Math.round(p?.rings ?? 6)
 
   ctx.lineWidth = 1
   for (let i = 0; i < RINGS; i++) {
     const r = maxR * ((i + 1) / RINGS)
-    const rot = now * 0.03 * (i % 2 ? 1 : -1) * (1 + i * 0.35) + i * 0.8
+    const rot = now * 0.03 * spinScale * (i % 2 ? 1 : -1) * (1 + i * 0.35) + i * 0.8
     // slow precession: the ring's ellipse aspect breathes slightly
     const squash = 1 - 0.06 * Math.sin(now * 0.05 + i * 1.3)
     ctx.strokeStyle = pen
-    ctx.globalAlpha = 0.05 * state.readerAlpha
+    ctx.globalAlpha = 0.05 * op * state.readerAlpha
     ctx.beginPath()
     ctx.ellipse(cx, cy, r, r * squash, 0, 0, Math.PI * 2)
     ctx.stroke()
@@ -864,19 +881,19 @@ function drawOrrery(ctx: CanvasRenderingContext2D, state: any) {
     ctx.stroke()
     // orbiting body + a short trailing arc
     const ba = rot
-    ctx.globalAlpha = 0.22 * state.readerAlpha
+    ctx.globalAlpha = 0.22 * op * state.readerAlpha
     ctx.fillStyle = pal[i % pal.length]
     ctx.beginPath()
     ctx.arc(cx + Math.cos(ba) * r, cy + Math.sin(ba) * r * squash, 2.2, 0, Math.PI * 2)
     ctx.fill()
-    ctx.globalAlpha = 0.09 * state.readerAlpha
+    ctx.globalAlpha = 0.09 * op * state.readerAlpha
     ctx.strokeStyle = pal[i % pal.length]
     ctx.beginPath()
     ctx.ellipse(cx, cy, r, r * squash, 0, ba - 0.5, ba)
     ctx.stroke()
   }
   // centre node
-  ctx.globalAlpha = 0.3 * state.readerAlpha
+  ctx.globalAlpha = 0.3 * op * state.readerAlpha
   ctx.fillStyle = pen
   ctx.beginPath()
   ctx.arc(cx, cy, 3, 0, Math.PI * 2)
@@ -888,9 +905,9 @@ function drawOrrery(ctx: CanvasRenderingContext2D, state: any) {
 // A single Atkinson-dithered generative still (simplex-octave field → 1-bit
 // stipple) rendered ONCE to an offscreen canvas, then slowly panned with a
 // scanline sweep. Near-zero per-frame cost: one drawImage + one gradient bar.
-function buildPlate(state: any): HTMLCanvasElement {
+function buildPlate(state: any, cell: number): HTMLCanvasElement {
   const W = state.w, H = state.h
-  const cellPx = 4                       // stipple resolution
+  const cellPx = Math.max(2, Math.round(cell))   // stipple resolution
   const gw = Math.ceil(W / cellPx), gh = Math.ceil(H / cellPx)
   // grayscale field from simplex octaves
   const gray = new Float32Array(gw * gh)
@@ -921,31 +938,37 @@ function buildPlate(state: any): HTMLCanvasElement {
   return off
 }
 
-function drawPlateScan(ctx: CanvasRenderingContext2D, state: any) {
+function drawPlateScan(ctx: CanvasRenderingContext2D, state: any, config: any) {
+  const p = config.backgrounds["plate-scan"]
   const W = state.w, H = state.h
   const now = performance.now() / 1000
-  const key = `${W}x${H}:${state.colorCache.secondary}`
+  const panSpeed = p?.panSpeed ?? 1
+  const scanSpeed = p?.scanSpeed ?? 1
+  const op = p?.opacity ?? 1
+  const cell = p?.cell ?? 4
+  // cell is part of the plate identity — changing it rebuilds the offscreen still
+  const key = `${W}x${H}:${state.colorCache.secondary}:${Math.round(cell)}`
   if (state.plateKey !== key) {
-    state.plate = buildPlate(state)
+    state.plate = buildPlate(state, cell)
     state.plateKey = key
   }
 
   // slow diagonal pan (wrapped 2×2 tile so edges never show)
-  const panX = (now * 3) % W
-  const panY = (now * 1.7) % H
-  ctx.globalAlpha = 0.12 * state.readerAlpha
+  const panX = (now * 3 * panSpeed) % W
+  const panY = (now * 1.7 * panSpeed) % H
+  ctx.globalAlpha = 0.12 * op * state.readerAlpha
   ctx.drawImage(state.plate!, -panX, -panY)
   ctx.drawImage(state.plate!, W - panX, -panY)
   ctx.drawImage(state.plate!, -panX, H - panY)
   ctx.drawImage(state.plate!, W - panX, H - panY)
 
   // scanline sweep — a soft bright band drifting down the plate
-  const sy = ((now * 26) % (H * 1.4)) - H * 0.2
+  const sy = ((now * 26 * scanSpeed) % (H * 1.4)) - H * 0.2
   const grad = ctx.createLinearGradient(0, sy - 40, 0, sy + 40)
   grad.addColorStop(0, "transparent")
   grad.addColorStop(0.5, state.colorCache.secondary)
   grad.addColorStop(1, "transparent")
-  ctx.globalAlpha = 0.05 * state.readerAlpha
+  ctx.globalAlpha = 0.05 * op * state.readerAlpha
   ctx.fillStyle = grad
   ctx.fillRect(0, sy - 40, W, 80)
   ctx.globalAlpha = 1
@@ -971,13 +994,21 @@ const MURM = {
   baseAlpha: 0.34,  // semi-opaque so it's present but calm
 }
 
-function drawMurmuration(ctx: CanvasRenderingContext2D, state: any) {
+function drawMurmuration(ctx: CanvasRenderingContext2D, state: any, config: any) {
+  const p = config.backgrounds.murmuration
+  // Tunable subset from config; the rest of the flock's character stays in MURM.
+  const count = Math.round(p?.count ?? MURM.count)
+  const maxSpeed = p?.maxSpeed ?? MURM.maxSpeed
+  const cohere = p?.cohere ?? MURM.cohere
+  const wind = p?.wind ?? MURM.wind
+  const baseAlpha = p?.opacity ?? MURM.baseAlpha
   const W = state.w, H = state.h
   const boids: { x: number; y: number; vx: number; vy: number }[] = state.boids
 
-  // (re)seed if empty or the viewport changed a lot
-  if (boids.length === 0) {
-    for (let i = 0; i < MURM.count; i++) {
+  // (re)seed if empty, count changed, or the viewport changed a lot
+  if (boids.length !== count) {
+    boids.length = 0
+    for (let i = 0; i < count; i++) {
       boids.push({
         x: Math.random() * W,
         y: Math.random() * H,
@@ -1012,7 +1043,7 @@ function drawMurmuration(ctx: CanvasRenderingContext2D, state: any) {
   const color = state.colorCache.secondary
 
   ctx.fillStyle = color
-  const alpha = MURM.baseAlpha * state.readerAlpha
+  const alpha = baseAlpha * state.readerAlpha
 
   for (let i = 0; i < boids.length; i++) {
     const b = boids[i]
@@ -1041,16 +1072,16 @@ function drawMurmuration(ctx: CanvasRenderingContext2D, state: any) {
     if (n > 0) {
       b.vx += (ax / n - b.vx) * MURM.align
       b.vy += (ay / n - b.vy) * MURM.align
-      b.vx += (cx / n - b.x) * MURM.cohere
-      b.vy += (cy / n - b.y) * MURM.cohere
+      b.vx += (cx / n - b.x) * cohere
+      b.vy += (cy / n - b.y) * cohere
     }
     b.vx += sx * MURM.separate
     b.vy += sy * MURM.separate
 
     // drifting wind current (simplex flow field) — gives the flock organic sweeps
     const ang = simplex(b.x * MURM.windScale, b.y * MURM.windScale + t * 0.15) * Math.PI * 2
-    b.vx += Math.cos(ang) * MURM.wind
-    b.vy += Math.sin(ang) * MURM.wind
+    b.vx += Math.cos(ang) * wind
+    b.vy += Math.sin(ang) * wind
 
     // flee the cursor
     const mdx = b.x - state.mx, mdy = b.y - state.my
@@ -1064,7 +1095,7 @@ function drawMurmuration(ctx: CanvasRenderingContext2D, state: any) {
 
     // clamp speed to a band so the flock keeps moving but never rockets
     let sp = Math.hypot(b.vx, b.vy)
-    if (sp > MURM.maxSpeed) { b.vx = (b.vx / sp) * MURM.maxSpeed; b.vy = (b.vy / sp) * MURM.maxSpeed; sp = MURM.maxSpeed }
+    if (sp > maxSpeed) { b.vx = (b.vx / sp) * maxSpeed; b.vy = (b.vy / sp) * maxSpeed; sp = maxSpeed }
     else if (sp < MURM.minSpeed && sp > 0) { b.vx = (b.vx / sp) * MURM.minSpeed; b.vy = (b.vy / sp) * MURM.minSpeed; sp = MURM.minSpeed }
 
     b.x += b.vx; b.y += b.vy
@@ -1072,7 +1103,7 @@ function drawMurmuration(ctx: CanvasRenderingContext2D, state: any) {
     if (b.y < -10) b.y += H + 20; else if (b.y > H + 10) b.y -= H + 20
 
     // faster birds read a touch brighter — subtle life
-    ctx.globalAlpha = alpha * (0.7 + 0.3 * (sp / MURM.maxSpeed))
+    ctx.globalAlpha = alpha * (0.7 + 0.3 * (sp / maxSpeed))
     // Rotate+translate the 3 triangle vertices by hand instead of
     // save/translate/rotate/restore. Per-boid ctx.save/restore snapshots the
     // entire canvas state — at 460 boids/frame that dominated the bg cost

@@ -136,10 +136,14 @@ interface GardenStore {
   bgMode: BgMode
   lastBgMode: BgMode
   bgStyle: "vectors" | "glyphs" | "off"
+  /** Global intensity multiplier applied to EVERY background mode (0–1),
+   * folded into the reader-dim pipeline so all modes honour it for free. */
+  bgOpacity: number
   setBgMode: (mode: GardenStore["bgMode"]) => void
   toggleGraphBackground: () => void
   cycleBgMode: () => void
   setBgStyle: (style: GardenStore["bgStyle"]) => void
+  setBgOpacity: (v: number) => void
 
   // Chess
   chessBot: BotFlavour
@@ -209,7 +213,7 @@ const terminalUrlOverride =
  * session state (overlays, panel stack, content index) and must NOT persist. */
 const PERSISTED_KEYS = [
   "theme", "accentBase", "readerMeasureCh", "readerScale", "sideChatWidth",
-  "chessBot", "chatDensity", "chatFontScale", "chatTerminal",
+  "chessBot", "chatDensity", "chatFontScale", "chatTerminal", "bgOpacity",
 ] as const
 
 export const useStore = create<GardenStore>()(
@@ -315,6 +319,7 @@ export const useStore = create<GardenStore>()(
       bgMode: "murmuration",
       lastBgMode: "murmuration",
       bgStyle: "vectors",
+      bgOpacity: legacy("bgOpacity", (v) => Math.min(1, Math.max(0, parseFloat(v))) || 1, 1),
       setBgMode: (bgMode) =>
         set((s) => ({
           bgMode,
@@ -331,6 +336,7 @@ export const useStore = create<GardenStore>()(
           return { bgMode: next, lastBgMode: next }
         }),
       setBgStyle: (bgStyle) => set({ bgStyle }),
+      setBgOpacity: (bgOpacity) => set({ bgOpacity: Math.min(1, Math.max(0, bgOpacity)) }),
 
       // Chess
       chessBot: legacy<BotFlavour>("chessBot", (v) => v as BotFlavour, "casual"),
