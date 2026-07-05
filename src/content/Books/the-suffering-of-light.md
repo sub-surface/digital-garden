@@ -1,8 +1,9 @@
 ---
 id: book
+type: book
 title: The Suffering of Light
 author: Alex Webb
-year: 2011-03-01
+year: 2011
 subtitle: Thirty Years of Photographs
 publisher: Thames & Hudson
 isbn: "9780500543979"
