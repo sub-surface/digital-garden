@@ -8,6 +8,7 @@ export interface NoteMetadata {
   growth?: "larval" | "becoming" | "actual"
   featured?: boolean
   private?: boolean
+  draft?: boolean
   excerpt?: string      // first paragraph plain text, for hover previews
   readingTime?: number  // minutes, rounded up
   aliases?: string[]    // alternate slug names
@@ -29,6 +30,11 @@ export interface NoteMetadata {
 
 export interface ContentIndex {
   [slug: string]: NoteMetadata
+}
+
+export interface BrokenLinksManifest {
+  total: number
+  bySlug: Record<string, string[]>
 }
 
 export interface GraphData {

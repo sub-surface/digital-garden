@@ -9,12 +9,12 @@ growth: becoming
 
 #### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ **[Arcade](/arcade)** ~ [[Housekeeping]] ~ [Github](https://github.com/sub-surface)
 
-> [[Bookshelf]] ~ [[Movieshelf]] ~ [Musicshelf](/music-library) ~ [[Photography|Photoshelf]]  
+> [[Bookshelf]] ~ [[Movieshelf]] ~ [Musicshelf](/music-library) ~ [[Photography|Photoshelf]] ~ [[Inbox]]  
 > [Anabasis](https://anabasis.subsurfaces.net) ~ [[Chess]] ~ [[Wiki]] ~ [Constellation](/constellation) ~ [Tags](/tags) ~ [Shop](https://newplace2frown.com/prints)
 
 <AsciiAvatar label="glorp" align="right" interval={1500} />
 
-Hey there!  
+Hey there!  Welcome to my website.  This is a space for thinking in public, and for sharing my thoughts on philosophy, technology, and the history of images.  I hope you find something here that interests you, and that you enjoy exploring the site.  
 
 Below is a telescopic text block, it can be expanded or closed using the buttons to the left of each block.  
 ```telescopic

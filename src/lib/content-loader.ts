@@ -1,9 +1,10 @@
-import type { ContentIndex, GraphData, Track } from "@/types/content"
+import type { ContentIndex, GraphData, Track, BrokenLinksManifest } from "@/types/content"
 import { normalizeSlug, buildSlugResolver, type SlugResolver } from "./slug"
 
 let cachedIndex: ContentIndex | null = null
 let cachedGraph: GraphData | null = null
 let cachedMusic: Track[] | null = null
+let cachedBrokenLinks: BrokenLinksManifest | null = null
 
 export async function loadContentIndex(): Promise<ContentIndex> {
   if (cachedIndex) return cachedIndex
@@ -24,6 +25,13 @@ export async function loadMusicManifest(): Promise<Track[]> {
   const res = await fetch("/music.json")
   cachedMusic = await res.json()
   return cachedMusic!
+}
+
+export async function loadBrokenLinks(): Promise<BrokenLinksManifest> {
+  if (cachedBrokenLinks) return cachedBrokenLinks
+  const res = await fetch("/broken-links.json")
+  cachedBrokenLinks = await res.json()
+  return cachedBrokenLinks!
 }
 
 export async function loadNoteSource(slug: string): Promise<string> {

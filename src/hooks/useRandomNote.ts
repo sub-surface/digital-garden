@@ -30,8 +30,11 @@ export function isLandableNote(slug: string, meta: { private?: boolean }): boole
  * Returns a callback that jumps to a random note. On the main shell it opens the
  * note as a panel card (matching search/link behaviour); on wiki it navigates.
  * Returns a no-op until the content index has loaded.
+ *
+ * Pass `candidateSlugs` to pick from a narrower pool (e.g. the Inbox's current
+ * filtered view) instead of every landable note in the garden.
  */
-export function useRandomNote() {
+export function useRandomNote(candidateSlugs?: string[]) {
   const contentIndex = useStore((s) => s.contentIndex)
   const pushCard = useStore((s) => s.pushCard)
   const navigate = useNavigate()
@@ -41,7 +44,7 @@ export function useRandomNote() {
     // Chat shell has no notes to land on; the dice is a garden/wiki affordance.
     if (!contentIndex || shell === "chat") return
 
-    const slugs = Object.keys(contentIndex).filter((slug) =>
+    const slugs = candidateSlugs ?? Object.keys(contentIndex).filter((slug) =>
       isLandableNote(slug, contentIndex[slug])
     )
     if (slugs.length === 0) return
@@ -62,5 +65,5 @@ export function useRandomNote() {
         -1 // from main body
       )
     }
-  }, [contentIndex, pushCard, navigate, shell])
+  }, [contentIndex, pushCard, navigate, shell, candidateSlugs])
 }
