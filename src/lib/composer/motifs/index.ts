@@ -16,6 +16,10 @@ import { specimenPanel } from "./specimen-panel"
 import { geometer } from "./geometer"
 import { instrument } from "./instrument"
 import { glyphSeal } from "./glyph-seal"
+import { polyhedron } from "./polyhedron"
+import { waveform } from "./waveform"
+import { sunburst } from "./sunburst"
+import { zodiacWheel } from "./zodiac-wheel"
 
 export const MOTIFS: MotifDef[] = [
   voxelMass,
@@ -29,6 +33,10 @@ export const MOTIFS: MotifDef[] = [
   geometer,
   instrument,
   glyphSeal,
+  polyhedron,
+  waveform,
+  sunburst,
+  zodiacWheel,
 ]
 
 const BY_KEY: Record<string, MotifDef> = Object.fromEntries(MOTIFS.map((m) => [m.key, m]))

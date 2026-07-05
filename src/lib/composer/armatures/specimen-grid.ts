@@ -19,7 +19,7 @@ export const specimenGrid: Armature = {
       role: "satellite",
       region: { x: 0.08, y: 0.1, w: 0.84, h: 0.78 },
       count: [6, 12],
-      motifKeys: ["specimen-panel", "instrument", "glyph-seal"],
+      motifKeys: ["specimen-panel", "instrument", "glyph-seal", "sunburst", "polyhedron"],
       penRole: "structure",
       scale: [0.11, 0.15],
     },

@@ -19,7 +19,7 @@ export const cascadeStream: Armature = {
       role: "satellite",
       region: { x: 0.08, y: 0.08, w: 0.84, h: 0.84 },
       count: [4, 7],
-      motifKeys: ["voxel-mass", "chamber", "instrument", "glyph-seal", "lattice"],
+      motifKeys: ["voxel-mass", "chamber", "instrument", "glyph-seal", "lattice", "polyhedron", "sunburst", "waveform"],
       penRole: "structure",
       scale: [0.1, 0.15],
     },

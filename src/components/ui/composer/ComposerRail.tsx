@@ -24,6 +24,7 @@ export interface RailProps {
   onPrev: () => void
   onNext: () => void
   onRandom: () => void
+  onRandomAll: () => void
   onRegenerate: () => void
   paletteId: string
   onPalette: (id: string) => void
@@ -35,6 +36,7 @@ export interface RailProps {
   onVibeToggle: (tag: string) => void
   ratio: [number, number]
   onRatio: (r: [number, number]) => void
+  onFlipRatio: () => void
   post: PostParams
   onPost: (key: keyof PostParams, value: number) => void
 }
@@ -63,11 +65,14 @@ export function ComposerRail(props: RailProps) {
           </button>
         </div>
         <div className={styles.btnRow}>
-          <button onClick={props.onRegenerate} title="Re-roll everything (R)">
+          <button onClick={props.onRegenerate} title="Re-roll everything within this archetype (R)">
             ⟳ Regenerate
           </button>
           <button onClick={props.onRandom} title="Jump to a random seed">
             Random
+          </button>
+          <button onClick={props.onRandomAll} title="Randomise everything — archetype, palette, era, ratio">
+            ⚄ Random all
           </button>
         </div>
       </section>
@@ -152,15 +157,17 @@ export function ComposerRail(props: RailProps) {
       <section className={styles.section}>
         <h2 className={styles.heading}>Ratio</h2>
         <div className={styles.chips}>
-          {RATIOS.map(({ r, label }) => (
-            <button
-              key={label}
-              data-active={(props.ratio[0] === r[0] && props.ratio[1] === r[1]) || undefined}
-              onClick={() => props.onRatio(r)}
-            >
-              {label}
-            </button>
-          ))}
+          {RATIOS.map(({ r, label }) => {
+            const active = (props.ratio[0] === r[0] && props.ratio[1] === r[1]) || (props.ratio[0] === r[1] && props.ratio[1] === r[0])
+            return (
+              <button key={label} data-active={active || undefined} onClick={() => props.onRatio(r)}>
+                {label}
+              </button>
+            )
+          })}
+          <button onClick={props.onFlipRatio} title="Flip orientation (swap width/height)">
+            ⇄ flip
+          </button>
         </div>
       </section>
 

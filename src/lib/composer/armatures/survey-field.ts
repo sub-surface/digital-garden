@@ -28,7 +28,7 @@ export const surveyField: Armature = {
       role: "satellite",
       region: { x: 0.12, y: 0.12, w: 0.76, h: 0.72 },
       count: [2, 5],
-      motifKeys: ["specimen-panel", "instrument", "glyph-seal"],
+      motifKeys: ["specimen-panel", "instrument", "glyph-seal", "waveform", "sunburst"],
       penRole: "highlight",
       scale: [0.09, 0.13],
     },

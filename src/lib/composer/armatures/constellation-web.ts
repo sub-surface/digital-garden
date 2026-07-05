@@ -28,7 +28,7 @@ export const constellationWeb: Armature = {
       role: "satellite",
       region: { x: 0.12, y: 0.12, w: 0.76, h: 0.76 },
       count: [3, 6],
-      motifKeys: ["glyph-seal", "instrument", "orrery-rings"],
+      motifKeys: ["glyph-seal", "instrument", "orrery-rings", "sunburst", "polyhedron"],
       penRole: "highlight",
       scale: [0.09, 0.14],
     },

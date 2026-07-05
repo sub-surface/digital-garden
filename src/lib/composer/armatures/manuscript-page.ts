@@ -37,7 +37,7 @@ export const manuscriptPage: Armature = {
       role: "margin",
       region: { x: 0.09, y: 0.09, w: 0.13, h: 0.13 },
       count: [1, 1],
-      motifKeys: ["glyph-seal", "geometer"],
+      motifKeys: ["glyph-seal", "geometer", "sunburst", "zodiac-wheel"],
       penRole: "highlight",
       scale: [0.13, 0.13],
     },

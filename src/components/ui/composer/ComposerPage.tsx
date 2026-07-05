@@ -154,6 +154,28 @@ export function ComposerPage() {
   const prev = useCallback(() => commit(() => buildPlate({ seed: `plate-${Math.max(0, seedNum - 1)}`, salt: 0 })), [commit, buildPlate, seedNum])
   const next = useCallback(() => commit(() => buildPlate({ seed: `plate-${seedNum + 1}`, salt: 0 })), [commit, buildPlate, seedNum])
   const random = useCallback(() => commit(() => buildPlate({ seed: `plate-${1000 + Math.floor(Math.random() * 9_000_000)}`, salt: 0 })), [commit, buildPlate])
+  // Randomise everything — seed, archetype, palette, era and ratio (either orientation).
+  const randomAll = useCallback(() => {
+    const arch = ARMATURES[Math.floor(Math.random() * ARMATURES.length)]
+    const pal = PALETTES[Math.floor(Math.random() * PALETTES.length)]
+    const eraPick = ERAS[Math.floor(Math.random() * ERAS.length)]
+    const bases: [number, number][] = [[1, 1], [4, 5], [2, 3], [3, 4], [16, 9]]
+    let ratio = bases[Math.floor(Math.random() * bases.length)]
+    if (Math.random() < 0.5) ratio = [ratio[1], ratio[0]]
+    setArchetypeSel(arch.id)
+    setVibes([])
+    commit(() =>
+      generate({
+        seed: `plate-${1000 + Math.floor(Math.random() * 9_000_000)}`,
+        salt: 0,
+        archetype: arch.id,
+        ratio,
+        palette: getPalette(pal.id),
+        era: eraPick.id,
+        post: plateRef.current.post,
+      }),
+    )
+  }, [commit])
   // Regenerate re-rolls the unlocked rest *within the current archetype*, keeping locks.
   const regenerate = useCallback(() => commit((p) => buildPlate({ salt: p.salt + 1, archetype: p.archetype, keep: true })), [commit, buildPlate])
   const onArchetype = useCallback(
@@ -184,6 +206,10 @@ export function ComposerPage() {
     [commit, vibes],
   )
   const onRatio = useCallback((r: [number, number]) => commit((p) => buildPlate({ ratio: r, archetype: p.archetype, salt: p.salt, keep: true })), [commit, buildPlate])
+  const flipRatio = useCallback(() => {
+    const r = plateRef.current.ratio
+    onRatio([r[1], r[0]])
+  }, [onRatio])
 
   // ─── Render-time settings (no geometry change) ───────────────────────────────
   const onPalette = useCallback((id: string) => commit((p) => ({ ...p, palette: id === "accent" ? accentPalette() : getPalette(id) })), [commit])
@@ -404,6 +430,7 @@ export function ComposerPage() {
             onPrev={prev}
             onNext={next}
             onRandom={random}
+            onRandomAll={randomAll}
             onRegenerate={regenerate}
             paletteId={plate.palette.id}
             onPalette={onPalette}
@@ -415,9 +442,21 @@ export function ComposerPage() {
             onVibeToggle={onVibeToggle}
             ratio={plate.ratio}
             onRatio={onRatio}
+            onFlipRatio={flipRatio}
             post={plate.post}
             onPost={onPost}
           />
+        </div>
+        <ComposerStage
+          plate={plate}
+          selection={selection}
+          onSelect={onSelect}
+          onDragStart={onDragStart}
+          onCommitMove={onCommitMove}
+          ref={stageRef}
+        />
+        {/* Inspector is its own always-present column — selecting never reflows the stage. */}
+        <div className={styles.rightCol}>
           <Inspector
             plate={plate}
             selection={selection}
@@ -431,14 +470,6 @@ export function ComposerPage() {
             onConnectorLabel={onConnectorLabel}
           />
         </div>
-        <ComposerStage
-          plate={plate}
-          selection={selection}
-          onSelect={onSelect}
-          onDragStart={onDragStart}
-          onCommitMove={onCommitMove}
-          ref={stageRef}
-        />
       </div>
 
       <div className={styles.telemetry}>
@@ -449,7 +480,6 @@ export function ComposerPage() {
         <span>{getEra(plate.era).name}</span>
         <span>{plate.ratio[0]}:{plate.ratio[1]}</span>
         <span>{plate.nodes.length} nodes</span>
-        {selection.length > 0 && <span>{selection.length} selected</span>}
       </div>
     </div>
   )
