@@ -13,6 +13,8 @@ interface Command {
   /** Lowercased haystack for matching (label + keywords). */
   keywords: string
   run: () => void
+  /** Category label shown as a header when browsing with an empty query. */
+  group?: string
 }
 
 /** Slugs in the content index that are pages, not notes you'd "go to" as text. */
@@ -62,35 +64,36 @@ export function CommandPalette() {
   const actions = useMemo<Command[]>(() => {
     const theme = useStore.getState().theme
     const base: Command[] = [
-      { id: "search", label: "Search notes", hint: "Ctrl+K", keywords: "search find notes", run: toggleSearch },
-      { id: "random", label: "Random note", hint: "R", keywords: "random surprise lucky note", run: goRandom },
-      { id: "shortcuts", label: "Keyboard shortcuts", hint: "?", keywords: "help shortcuts keyboard cheat", run: toggleCheatSheet },
-      { id: "theme", label: theme === "dark" ? "Switch to light mode" : "Switch to dark mode", keywords: "theme dark light mode toggle appearance", run: () => setTheme(theme === "dark" ? "light" : "dark") },
-      { id: "accent", label: "Cycle accent colour", keywords: "accent colour color palette roygbiv", run: cycleAccent },
-      { id: "themepanel", label: "Open theme panel", hint: "\\", keywords: "theme panel settings appearance customise", run: toggleThemePanel },
-      { id: "reader", label: "Toggle reader mode", keywords: "reader focus distraction mode clean prose", run: toggleReaderMode },
+      { id: "search", label: "Search notes", hint: "Ctrl+K", keywords: "search find notes", run: toggleSearch, group: "Search & Help" },
+      { id: "random", label: "Random note", hint: "R", keywords: "random surprise lucky note", run: goRandom, group: "Search & Help" },
+      { id: "shortcuts", label: "Keyboard shortcuts", hint: "?", keywords: "help shortcuts keyboard cheat", run: toggleCheatSheet, group: "Search & Help" },
+      { id: "theme", label: theme === "dark" ? "Switch to light mode" : "Switch to dark mode", keywords: "theme dark light mode toggle appearance", run: () => setTheme(theme === "dark" ? "light" : "dark"), group: "Appearance" },
+      { id: "accent", label: "Cycle accent colour", keywords: "accent colour color palette roygbiv", run: cycleAccent, group: "Appearance" },
+      { id: "themepanel", label: "Open theme panel", hint: "\\", keywords: "theme panel settings appearance customise", run: toggleThemePanel, group: "Appearance" },
+      { id: "reader", label: "Toggle reader mode", keywords: "reader focus distraction mode clean prose", run: toggleReaderMode, group: "Appearance" },
     ]
     if (shell === "main") {
       base.push(
-        { id: "bg", label: "Cycle background", hint: "B", keywords: "background bg canvas murmuration graph vectors", run: cycleBgMode },
-        { id: "bg-murmuration", label: "Background: Murmuration", keywords: "background murmuration boids flock birds", run: () => setBgMode("murmuration") },
-        { id: "bg-vectors", label: "Background: Vector field", keywords: "background vectors field flow noise", run: () => setBgMode("vectors") },
-        { id: "bg-dots", label: "Background: Constellation dots", keywords: "background dots constellation lattice", run: () => setBgMode("dots") },
-        { id: "bg-terminal", label: "Background: Terminal rain", keywords: "background terminal matrix rain glyphs", run: () => setBgMode("terminal") },
-        { id: "music", label: "Play / pause music", hint: "M", keywords: "music play pause audio track", run: togglePlay },
-        { id: "music-next", label: "Next track", keywords: "music next skip forward track", run: nextTrack },
-        { id: "music-prev", label: "Previous track", keywords: "music previous back track", run: prevTrack },
-        { id: "music-open", label: "Open music player", keywords: "music player turntable vinyl open panel", run: () => toggleMusic() },
-        { id: "graph-overlay", label: "Open graph overlay", keywords: "graph overlay constellation network map", run: () => toggleGraph() },
-        { id: "share", label: "Copy link to this page", keywords: "share copy link url clipboard permalink", run: () => { void navigator.clipboard?.writeText(window.location.href) } },
-        { id: "nav-boot", label: "Enter boot sequence", hint: "/boot", keywords: "boot terminal tui console firmware startup go navigate", run: () => navigate({ to: "/boot" }) },
-        { id: "nav-graph", label: "Go to Graph", keywords: "graph constellation network map go navigate", run: () => navigate({ to: "/$", params: { _splat: "graph" } as any }) },
-        { id: "nav-arcade", label: "Go to Arcade", keywords: "arcade games go navigate play", run: () => openNote("Arcade", "Arcade") },
-        { id: "nav-chess", label: "Go to Chess", keywords: "chess game board go navigate", run: () => openNote("Chess", "Chess") },
-        { id: "nav-hexo", label: "Go to heXO", keywords: "hexo hex game go navigate", run: () => openNote("heXO", "heXO") },
-        { id: "nav-bookshelf", label: "Go to Bookshelf", keywords: "books bookshelf reading go navigate", run: () => openNote("Bookshelf", "Bookshelf") },
-        { id: "nav-movieshelf", label: "Go to Movieshelf", keywords: "movies film movieshelf go navigate", run: () => openNote("Movieshelf", "Movieshelf") },
-        { id: "nav-music-library", label: "Go to Music Library", keywords: "music library tracks songs go navigate", run: () => openNote("music-library", "Music Library") },
+        { id: "bg", label: "Cycle background", hint: "B", keywords: "background bg canvas murmuration graph vectors", run: cycleBgMode, group: "Background" },
+        { id: "bg-murmuration", label: "Background: Murmuration", keywords: "background murmuration boids flock birds", run: () => setBgMode("murmuration"), group: "Background" },
+        { id: "bg-vectors", label: "Background: Vector field", keywords: "background vectors field flow noise", run: () => setBgMode("vectors"), group: "Background" },
+        { id: "bg-dots", label: "Background: Constellation dots", keywords: "background dots constellation lattice", run: () => setBgMode("dots"), group: "Background" },
+        { id: "bg-terminal", label: "Background: Terminal rain", keywords: "background terminal matrix rain glyphs", run: () => setBgMode("terminal"), group: "Background" },
+        { id: "music", label: "Play / pause music", hint: "M", keywords: "music play pause audio track", run: togglePlay, group: "Music" },
+        { id: "music-next", label: "Next track", keywords: "music next skip forward track", run: nextTrack, group: "Music" },
+        { id: "music-prev", label: "Previous track", keywords: "music previous back track", run: prevTrack, group: "Music" },
+        { id: "music-open", label: "Open music player", keywords: "music player turntable vinyl open panel", run: () => toggleMusic(), group: "Music" },
+        { id: "graph-overlay", label: "Open graph overlay", keywords: "graph overlay constellation network map", run: () => toggleGraph(), group: "Navigation" },
+        { id: "share", label: "Copy link to this page", keywords: "share copy link url clipboard permalink", run: () => { void navigator.clipboard?.writeText(window.location.href) }, group: "Navigation" },
+        { id: "nav-boot", label: "Enter boot sequence", hint: "/boot", keywords: "boot terminal tui console firmware startup go navigate", run: () => navigate({ to: "/boot" }), group: "Navigation" },
+        { id: "nav-graph", label: "Go to Graph", keywords: "graph constellation network map go navigate", run: () => navigate({ to: "/$", params: { _splat: "graph" } as any }), group: "Navigation" },
+        { id: "nav-arcade", label: "Go to Arcade", keywords: "arcade games go navigate play", run: () => openNote("Arcade", "Arcade"), group: "Navigation" },
+        { id: "nav-chess", label: "Go to Chess", keywords: "chess game board go navigate", run: () => openNote("Chess", "Chess"), group: "Navigation" },
+        { id: "nav-hexo", label: "Go to heXO", keywords: "hexo hex game go navigate", run: () => openNote("heXO", "heXO"), group: "Navigation" },
+        { id: "nav-bookshelf", label: "Go to Bookshelf", keywords: "books bookshelf reading go navigate", run: () => openNote("Bookshelf", "Bookshelf"), group: "Navigation" },
+        { id: "nav-movieshelf", label: "Go to Movieshelf", keywords: "movies film movieshelf go navigate", run: () => openNote("Movieshelf", "Movieshelf"), group: "Navigation" },
+        { id: "nav-music-library", label: "Go to Music Library", keywords: "music library tracks songs go navigate", run: () => openNote("music-library", "Music Library"), group: "Navigation" },
+        { id: "nav-inbox", label: "Go to Inbox", keywords: "inbox loose threads growth untagged orphaned draft go navigate", run: () => openNote("Inbox", "Inbox"), group: "Navigation" },
       )
     }
     return base
@@ -204,18 +207,25 @@ export function CommandPalette() {
 
         <div className={styles.results} ref={listRef}>
           {results.length > 0 ? (
-            results.map((cmd, i) => (
-              <button
-                key={cmd.id}
-                data-idx={i}
-                className={`${styles.item} ${i === activeIndex ? styles.active : ""}`}
-                onMouseMove={() => setActiveIndex(i)}
-                onClick={() => dispatch(cmd)}
-              >
-                <span className={styles.itemLabel}>{cmd.label}</span>
-                {cmd.hint && <span className={styles.itemHint}>{cmd.hint}</span>}
-              </button>
-            ))
+            results.map((cmd, i) => {
+              // Group headers only make sense while browsing (empty query) — once
+              // the user types, fuzzy search takes over and results are flat.
+              const showHeader = !query.trim() && cmd.group && cmd.group !== results[i - 1]?.group
+              return (
+                <div key={cmd.id}>
+                  {showHeader && <div className={styles.groupLabel}>{cmd.group}</div>}
+                  <button
+                    data-idx={i}
+                    className={`${styles.item} ${i === activeIndex ? styles.active : ""}`}
+                    onMouseMove={() => setActiveIndex(i)}
+                    onClick={() => dispatch(cmd)}
+                  >
+                    <span className={styles.itemLabel}>{cmd.label}</span>
+                    {cmd.hint && <span className={styles.itemHint}>{cmd.hint}</span>}
+                  </button>
+                </div>
+              )
+            })
           ) : (
             <div className={styles.empty}>No matches</div>
           )}

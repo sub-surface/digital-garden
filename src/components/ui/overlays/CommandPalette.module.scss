@@ -85,6 +85,16 @@
   &::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
 }
 
+.groupLabel {
+  padding: 10px 14px 4px;
+  font-size: 0.65rem;
+  font-family: var(--font-code);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.35;
+}
+
 .item {
   width: 100%;
   display: flex;
