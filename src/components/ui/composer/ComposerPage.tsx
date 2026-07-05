@@ -247,18 +247,19 @@ export function ComposerPage() {
   const onConnectorRoute = useCallback((id: string, route: Connector["route"]) => commit((p) => ({ ...p, connectors: p.connectors.map((c) => (c.id === id ? { ...c, route } : c)) })), [commit])
   const onConnectorLabel = useCallback((id: string, label: string) => commit((p) => ({ ...p, connectors: p.connectors.map((c) => (c.id === id ? { ...c, label: label || undefined } : c)) })), [commit])
 
-  // ─── Drag (single undo entry per gesture) ────────────────────────────────────
+  // ─── Drag (one undo entry + one IR update per gesture) ───────────────────────
+  // The stage moves the motif live during the drag (GPU transform / overlay);
+  // the IR is touched only here, once, on release — so no mid-drag re-render.
   const onDragStart = useCallback(() => {
     undoRef.current.push(plateRef.current)
     if (undoRef.current.length > 60) undoRef.current.shift()
     redoRef.current = []
   }, [])
-  const onMoveNode = useCallback((id: string, box: Box) => {
+  const onCommitMove = useCallback((id: string, box: Box) => {
     const next = withNode(plateRef.current, id, (n) => ({ ...n, box }))
     plateRef.current = next
     setPlate(next)
   }, [])
-  const onDragEnd = useCallback(() => {}, [])
 
   // ─── Export / fullscreen ─────────────────────────────────────────────────────
   const exportSVG = useCallback(() => {
@@ -435,8 +436,7 @@ export function ComposerPage() {
           selection={selection}
           onSelect={onSelect}
           onDragStart={onDragStart}
-          onMoveNode={onMoveNode}
-          onDragEnd={onDragEnd}
+          onCommitMove={onCommitMove}
           ref={stageRef}
         />
       </div>

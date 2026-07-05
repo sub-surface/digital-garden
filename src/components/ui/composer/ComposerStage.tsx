@@ -13,8 +13,7 @@ interface StageProps {
   selection: Sel[]
   onSelect: (sel: Sel | null, additive: boolean) => void
   onDragStart: () => void
-  onMoveNode: (id: string, box: Box) => void
-  onDragEnd: () => void
+  onCommitMove: (id: string, box: Box) => void
 }
 
 function inBox(b: Box, x: number, y: number): boolean {
@@ -32,12 +31,15 @@ function distToSeg(px: number, py: number, ax: number, ay: number, bx: number, b
 
 /**
  * The stage: the era output (vector SVG or dithered canvas) with a transparent,
- * pointer-interactive SVG overlay for selection, anchor ports and dragging.
- * Hit-testing and drag are done in plate-space via the overlay's own coordinate
- * matrix, so they work identically across eras and letterboxing.
+ * pointer-interactive SVG overlay for selection, ports and dragging.
+ *
+ * Performance: the plate is NEVER re-rendered mid-drag. In vector eras the
+ * dragged node's `<g>` is moved by a direct GPU `transform` (no React, no
+ * re-serialize); in every era the overlay outline + ports track the cursor from
+ * a light local state. The new box is committed to the IR once, on release.
  */
 export const ComposerStage = forwardRef<HTMLDivElement, StageProps>(function ComposerStage(
-  { plate, selection, onSelect, onDragStart, onMoveNode, onDragEnd },
+  { plate, selection, onSelect, onDragStart, onCommitMove },
   ref,
 ) {
   const era = getEra(plate.era)
@@ -49,26 +51,32 @@ export const ComposerStage = forwardRef<HTMLDivElement, StageProps>(function Com
 
   const svg = useMemo(() => (era.vector ? renderSVG(plate) : ""), [plate, era.vector])
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const plateContentRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<SVGSVGElement>(null)
   const [rasterFailed, setRasterFailed] = useState(false)
   const [hover, setHover] = useState<Sel | null>(null)
-  const drag = useRef<{ id: string; startX: number; startY: number; box: Box; moved: boolean } | null>(null)
+  const [dragBox, setDragBox] = useState<{ id: string; box: Box } | null>(null)
+  const drag = useRef<{ id: string; startX: number; startY: number; box: Box; gEl: Element | null; box2: Box; moved: boolean } | null>(null)
 
+  // Device-era raster, debounced so rapid edits (slider drags) coalesce into one
+  // dither pass instead of thrashing. Drag itself no longer changes the plate.
   useEffect(() => {
     if (era.vector) return
     let cancelled = false
-    setRasterFailed(false)
-    rasterizePlate(plate, era)
-      .then((low) => {
-        if (cancelled || !canvasRef.current) return
-        const c = canvasRef.current
-        c.width = low.width
-        c.height = low.height
-        c.getContext("2d")!.drawImage(low, 0, 0)
-      })
-      .catch(() => !cancelled && setRasterFailed(true))
+    const timer = setTimeout(() => {
+      rasterizePlate(plate, era)
+        .then((low) => {
+          if (cancelled || !canvasRef.current) return
+          const c = canvasRef.current
+          c.width = low.width
+          c.height = low.height
+          c.getContext("2d")!.drawImage(low, 0, 0)
+        })
+        .catch(() => !cancelled && setRasterFailed(true))
+    }, 40)
     return () => {
       cancelled = true
+      clearTimeout(timer)
     }
   }, [plate, era])
 
@@ -102,16 +110,13 @@ export const ComposerStage = forwardRef<HTMLDivElement, StageProps>(function Com
   const onPointerDown = (e: React.PointerEvent) => {
     const [px, py] = toPlate(e)
     const hit = hitTest(px, py)
-    if (hit) {
-      const already = selection.some((s) => sameSel(s, hit))
-      if (!already) onSelect(hit, e.shiftKey)
-      if (hit.kind === "node") {
-        const node = plate.nodes.find((n) => n.id === hit.id)!
-        drag.current = { id: hit.id, startX: px, startY: py, box: { ...node.box }, moved: false }
-        ;(e.target as Element).setPointerCapture(e.pointerId)
-      }
-    } else {
-      onSelect(null, false)
+    if (!hit) return onSelect(null, false)
+    if (!selection.some((s) => sameSel(s, hit))) onSelect(hit, e.shiftKey)
+    if (hit.kind === "node") {
+      const node = plate.nodes.find((n) => n.id === hit.id)!
+      const gEl = era.vector ? plateContentRef.current?.querySelector(`[data-src="node:${hit.id}"]`) ?? null : null
+      drag.current = { id: hit.id, startX: px, startY: py, box: { ...node.box }, gEl, box2: { ...node.box }, moved: false }
+      ;(e.target as Element).setPointerCapture(e.pointerId)
     }
   }
 
@@ -119,7 +124,9 @@ export const ComposerStage = forwardRef<HTMLDivElement, StageProps>(function Com
     const [px, py] = toPlate(e)
     const d = drag.current
     if (!d) {
-      setHover(hitTest(px, py))
+      const h = hitTest(px, py)
+      // Only trigger a re-render when the hovered element actually changes.
+      setHover((prev) => (prev === h || (prev && h && sameSel(prev, h)) ? prev : h))
       return
     }
     if (!d.moved && Math.hypot(px - d.startX, py - d.startY) < 0.005) return
@@ -129,26 +136,28 @@ export const ComposerStage = forwardRef<HTMLDivElement, StageProps>(function Com
     }
     const nx = Math.max(0.02, Math.min(0.98 - d.box.w, d.box.x + (px - d.startX)))
     const ny = Math.max(0.02, Math.min(0.98 - d.box.h, d.box.y + (py - d.startY)))
-    onMoveNode(d.id, { ...d.box, x: nx, y: ny })
+    d.box2 = { ...d.box, x: nx, y: ny }
+    // Vector: move the real motif live via a GPU transform — no re-render.
+    if (d.gEl) d.gEl.setAttribute("transform", `translate(${(nx - d.box.x) * W} ${(ny - d.box.y) * H})`)
+    setDragBox({ id: d.id, box: d.box2 })
   }
 
   const onPointerUp = () => {
-    if (drag.current?.moved) onDragEnd()
+    const d = drag.current
     drag.current = null
+    setDragBox(null)
+    if (d?.moved) onCommitMove(d.id, d.box2) // single IR update; undo was snapshotted at drag start
   }
 
-  // Overlay selection outlines + anchor ports.
-  const overlays = selection
+  const selectedNodes = selection
     .map((s) => (s.kind === "node" ? plate.nodes.find((n) => n.id === s.id) : null))
     .filter((n): n is NonNullable<typeof n> => !!n)
 
   return (
     <div className={styles.stage} ref={ref}>
       <div className={styles.plateHolder}>
-        {/* keyed on the generation identity so the plot-in flourish replays on
-            regeneration but NOT on edits / re-skins (which mutate in place). */}
         {era.vector ? (
-          <div key={genKey} className={`${styles.plate} ${styles.plotIn}`} dangerouslySetInnerHTML={{ __html: svg }} />
+          <div key={genKey} ref={plateContentRef} className={`${styles.plate} ${styles.plotIn}`} dangerouslySetInnerHTML={{ __html: svg }} />
         ) : rasterFailed ? (
           <div className={styles.rasterError}>era “{era.name}” could not rasterize</div>
         ) : (
@@ -163,25 +172,25 @@ export const ComposerStage = forwardRef<HTMLDivElement, StageProps>(function Com
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
           onPointerLeave={() => setHover(null)}
         >
           {hover && hover.kind === "node" && !selection.some((s) => sameSel(s, hover)) && (
             <HoverRect box={plate.nodes.find((n) => n.id === hover.id)?.box} W={W} H={H} />
           )}
-          {overlays.map((n) => (
-            <g key={n.id}>
-              <rect
-                x={n.box.x * W}
-                y={n.box.y * H}
-                width={n.box.w * W}
-                height={n.box.h * H}
-                className={styles.selRect}
-              />
-              {n.anchors.map((a) => (
-                <circle key={a.id} cx={a.x * W} cy={a.y * H} r={4} className={styles.port} />
-              ))}
-            </g>
-          ))}
+          {selectedNodes.map((n) => {
+            const dragging = dragBox?.id === n.id
+            const box = dragging ? dragBox!.box : n.box
+            const dx = dragging ? dragBox!.box.x - n.box.x : 0
+            const dy = dragging ? dragBox!.box.y - n.box.y : 0
+            return (
+              <g key={n.id}>
+                <rect x={box.x * W} y={box.y * H} width={box.w * W} height={box.h * H} className={styles.selRect} />
+                {!dragging &&
+                  n.anchors.map((a) => <circle key={a.id} cx={(a.x + dx) * W} cy={(a.y + dy) * H} r={4} className={styles.port} />)}
+              </g>
+            )
+          })}
         </svg>
       </div>
     </div>

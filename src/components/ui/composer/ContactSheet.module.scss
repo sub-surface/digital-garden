@@ -68,14 +68,34 @@
   }
 }
 
-.thumb {
-  aspect-ratio: 1;
+.thumbImg {
   display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
 
-  :global(svg) {
-    width: 100%;
-    height: 100%;
-    display: block;
+.skeleton {
+  width: 100%;
+  aspect-ratio: 1;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--color-text) 6%, transparent) 50%, transparent 70%),
+    color-mix(in srgb, var(--color-bg) 40%, transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.1s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
   }
 }
 
