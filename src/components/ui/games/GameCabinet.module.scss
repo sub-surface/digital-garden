@@ -14,7 +14,7 @@
     z-index: 1500;
     max-width: none;
     margin: 0;
-    padding: var(--space-6);
+    padding: var(--space-4);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -23,9 +23,27 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 
+    // Slim the chrome so the board can own the viewport without the header or
+    // status bar getting clipped under justify-content: center.
+    .header { margin-bottom: var(--space-3); }
+    .title { font-size: 1.6rem; }
+    .blurb { display: none; }
+    .statusBar { margin-top: var(--space-3); }
+
     .board {
-      max-width: min(86vh, 96vw);
+      // Fill most of the viewport height, leaving room for the slim chrome.
+      max-width: min(82vh, 94vw);
       flex: 0 1 auto;
+
+      // Games cap their own play surface for the in-page layout (SIGIL's 640px,
+      // Collider's 720px). In zen we lift that cap so the canvas fills the
+      // enlarged board — each game keeps its own aspect-ratio, so height still
+      // follows correctly. Snake already uses width:100% (unaffected); the
+      // div/SVG boards (2048, Hex Mines) have no canvas to match.
+      canvas {
+        width: 100%;
+        max-width: none;
+      }
     }
   }
 }

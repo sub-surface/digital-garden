@@ -1,0 +1,91 @@
+.backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1100px;
+  max-height: 100%;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+
+  button {
+    font-family: var(--font-code);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    padding: 2px 8px;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--color-accent);
+      border-color: var(--color-accent);
+    }
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-2, 0.5rem);
+  padding: var(--space-3, 1rem);
+  overflow-y: auto;
+}
+
+.cell {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color var(--duration-fast, 0.15s) var(--ease-default, ease);
+
+  &:hover {
+    border-color: var(--color-accent);
+  }
+}
+
+.thumb {
+  aspect-ratio: 1;
+  display: block;
+
+  :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+}
+
+.seedNo {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-family: var(--font-code);
+  font-size: 0.56rem;
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-bg) 70%, transparent);
+  padding: 0 3px;
+}

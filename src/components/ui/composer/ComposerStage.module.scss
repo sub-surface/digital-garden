@@ -1,0 +1,120 @@
+.stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4, 1.5rem);
+  overflow: hidden;
+  // A subtle neutral working surface — the plate reads against it without a
+  // hard box. BgCanvas still shows faintly through.
+  background: color-mix(in srgb, var(--color-bg-surface) 28%, transparent);
+
+  &:fullscreen {
+    background: var(--color-bg);
+    padding: 3vmin;
+  }
+}
+
+// Fills the stage; the plate and overlay both letterbox (meet/contain) inside it
+// so their coordinate systems align regardless of era or aspect.
+.plateHolder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.plate {
+  position: absolute;
+  inset: 0;
+
+  :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
+    filter: drop-shadow(0 6px 26px rgba(0, 0, 0, 0.5));
+  }
+}
+
+// Device-era output: low-res canvas contained + scaled up as chunky pixels.
+.rasterPlate {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 6px 26px rgba(0, 0, 0, 0.5));
+}
+
+// One-shot plot-in flourish on regeneration — a left-to-right reveal, no glow.
+@keyframes plotIn {
+  from {
+    opacity: 0.2;
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.plotIn {
+  animation: plotIn 0.6s var(--ease-default, ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plotIn {
+    animation: none;
+  }
+}
+
+.rasterError {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  border: 1px dashed var(--color-accent);
+  color: var(--color-accent);
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+// Transparent interactive overlay: selection, ports, drag. Same viewBox + meet
+// as the plate, so pointer coords map exactly onto the visible plate.
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.selRect {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.hoverRect {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1;
+  opacity: 0.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.port {
+  fill: var(--color-accent);
+  stroke: var(--color-bg);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}

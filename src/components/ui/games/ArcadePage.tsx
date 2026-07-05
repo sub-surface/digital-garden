@@ -62,6 +62,7 @@ const GAMES: GameCard[] = [
   { href: "persian-carpet", name: "Persian Carpet", blurb: "Born from a shower thought about asking Claude to weave cute rugs. Seed a loom, pick a dye lot, find the deliberate flaw.", live: true },
   { href: "sigil", name: "SIGIL", blurb: "Inscribe the plate: route leader lines between instrument pairs without crossing. Solved boards read as drawn sigils. Daily plate included.", live: true },
   { href: "collider", name: "Collider", blurb: "Fire particle tracks through an invisible flow field to strike specimen targets. Aim is skill; the currents are the puzzle. A toy.", live: true },
+  { href: "apparatus", name: "Apparatus", blurb: "A seeded studio for generative dithered plates — compose whole plates, lock the good bits and re-roll the rest, then re-emulate through vintage output devices (Mac 1-bit, Game Boy, CGA, plotter…). Square by default; exports SVG/PNG.", live: true, featured: true },
 ]
 
 export function ArcadePage() {

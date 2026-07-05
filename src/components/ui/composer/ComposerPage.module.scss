@@ -1,0 +1,199 @@
+.shell {
+  position: relative; // positioning context for the contact-sheet overlay
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  font-family: var(--font-code);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 1rem);
+  padding: 0.55rem 0.9rem;
+  // Clear the fixed "‹ Arcade" button (absolute, top-left of .game-layout).
+  padding-left: 7.5rem;
+  border-bottom: 1px solid var(--color-border);
+
+  @media (max-width: 800px) {
+    padding-left: 6rem;
+  }
+}
+
+.wordmark {
+  font-family: var(--font-code);
+  font-size: 0.9rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 1rem);
+}
+
+.seedStepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  font-size: 0.74rem;
+  color: var(--color-text);
+
+  span {
+    min-width: 3.5ch;
+    text-align: center;
+  }
+}
+
+.topbar button {
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  padding: 3px 9px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast, 0.15s) var(--ease-default, ease),
+    border-color var(--duration-fast, 0.15s) var(--ease-default, ease);
+
+  &:hover {
+    color: var(--color-text);
+    border-color: var(--color-accent);
+  }
+}
+
+.iconBtn {
+  letter-spacing: 0.05em;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+
+  @media (max-width: 900px) {
+    flex-direction: column;
+  }
+}
+
+.leftCol {
+  flex: 0 0 244px;
+  width: 244px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1.5rem);
+  padding: var(--space-3, 1rem) var(--space-3, 1rem) var(--space-5, 2rem);
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-surface) 40%, transparent);
+
+  // Mobile: the rail/inspector become a bottom sheet under the stage (the stage
+  // keeps default order 0, so this order:2 drops the panel below it).
+  @media (max-width: 900px) {
+    order: 2;
+    flex: 0 0 auto;
+    width: 100%;
+    max-height: 46vh;
+    border-right: none;
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+.telemetry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3, 1rem);
+  padding: 0.45rem 0.9rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.66rem;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+
+  span::before {
+    content: "▸ ";
+    opacity: 0.5;
+  }
+}
+
+.helpBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.help {
+  min-width: 300px;
+  max-width: 440px;
+  padding: 1.2rem 1.4rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+
+  h2 {
+    margin: 0 0 0.9rem;
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--color-text-muted);
+  }
+
+  dl {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  dl > div {
+    display: grid;
+    grid-template-columns: 6.5em 1fr;
+    align-items: baseline;
+    gap: 0.8rem;
+  }
+
+  dt {
+    font-family: var(--font-code);
+    font-size: 0.72rem;
+    color: var(--color-accent);
+  }
+
+  dd {
+    margin: 0;
+    font-family: var(--font-code);
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+  }
+}
+
+.helpFoot {
+  margin: 1rem 0 0;
+  font-family: var(--font-code);
+  font-size: 0.64rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.srSummary {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

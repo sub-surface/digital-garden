@@ -1,0 +1,29 @@
+- date: 2026-07-05
+  area: garden
+  title: "Apparatus — generative plate composer (M0–M6 shipped)"
+  status: done
+  files:
+    - src/lib/composer/               # pure, headlessly-tested core
+    - src/components/ui/composer/      # full-bleed React studio shell
+    - src/config/system-pages.ts       # + apparatus → /apparatus (layout game)
+    - src/components/ui/games/ArcadePage.tsx  # + live featured card
+    - scripts/test-composer.ts         # wired into npm test
+    - package.json                     # test chain
+    - docs/composer-spec.md            # the guiding spec
+  changes:
+    - "Built Apparatus (spec working-title PLATE), a seeded, curatable engine for 1-bit/low-bit-depth dithered plates in a nostalgic-mystical-technical idiom. Three decoupled layers: IR (types.ts) → grammar (generate.ts) → layout solver (layout.ts) → renderer (render/svg.ts). Vector-first: renders to crisp pen-coloured SVG; an optional era pass rasterizes + dithers to a vintage device. Everything is plate-space 0..1, deterministic per (seed, salt)."
+    - "M0+M1 — full-bleed shell (data-fullbleed, NOT GameCabinet) + first generated plate: one armature, three motifs, radial solver, seed/regenerate/next/prev."
+    - "M2 — semantic pens (named + site-accent) + the era/dither pass (render/dither.ts Bayer/Atkinson/Floyd/blue-noise, render/raster.ts browser-only) across 9 eras (plotter-ink, mac-1bit, phosphor, newsprint, gameboy-dmg, cga, ega, c64, hi-res); PNG export; live post sliders (ink/contrast/hand-jitter/line-weight)."
+    - "M3 — routed connectors (leader/manhattan/arc/dotted/stream/text-path, connectors.ts), full apparatus chrome (frame/corner-reg/ruler/scale-bar/legend/seal/compass/caption/colophon, apparatus.ts), and a generative token lexicon (lexicon.ts: roman numerals, greek, catalog codes, invented units, plate numbers, coords) themed per armature vibe."
+    - "M4 — curation: the IR became editable state with an undo/redo stack; select (hit-test overlay) / lock / re-roll-this / drag / delete / param + pen-role + z-order edits (Inspector.tsx). Locked elements are carried verbatim into regeneration; the solver treats locked boxes as fixed obstacles (generate keep + layout separate)."
+    - "M5 — breadth: 8 armatures total (centered-radial, specimen-grid, exploded-axis, hero-annotated, survey-field, manuscript-page, cascade-stream, constellation-web) × 11 motifs (voxel-mass, orrery-rings, asemic-script, chamber, node-graph, contour-field, lattice, specimen-panel, geometer, instrument, glyph-seal); grid/axis/hero/free solver strategies; per-seed coherent asemic stroke-alphabet (threaded via MotifCtx.plateSeed); vibe-tag biasing; ratios (1:1/4:5/2:3/3:4/16:9); permalink codes (serialize.ts, URL hash round-trip); contact sheet."
+    - "M6 — polish: full keyboard (R/←→/1-8/0/E/P/L/Backspace/Ctrl-Z/F/Esc/?) + cheatsheet, reduced-motion-aware plot-in flourish (replays on regeneration only), screen-reader plate summary (aria-live), mobile bottom-sheet rail. Arcade card flipped live + featured."
+    - "Folded-in §15 future items: plotter-ordered SVG export (renderSVG plotter mode — stroke-only, pen-grouped, AxiDraw-ready) and the plot-in animation flourish."
+  decisions:
+    - "Product name is 'Apparatus' (Leon's pick from the spec's shortlist). Slug /apparatus and the arcade label carry the name; the internal module dirs stay src/lib/composer/ and src/components/ui/composer/ to avoid colliding with the IR's Apparatus chrome type and the 'apparatus' pen role."
+    - "Pens are semantic, eras are devices: the SVG carries pen-role colours; the era pass quantizes them to the device gamut. Re-skinning the palette or re-emulating the era is a one-click, geometry-preserving operation — a cheap, large source of variety."
+    - "The composer core (src/lib/composer/*) is pure and DOM-free except render/raster.ts (guarded, browser-only), so scripts/test-composer.ts exercises the whole pipeline headlessly: determinism (IR + SVG), slot-fill validity, anchor resolution, semantic-pen invariance, dither palette-closure, lock preservation, and permalink round-trip."
+    - "Regeneration pins the current archetype so locks survive (a new salt can otherwise pick a different armature); seed changes are a fresh composition and drop locks (spec §4)."
+    - "Verified via headless SVG/PNG rendering (@resvg/resvg-js + the real dither kernel), typecheck, and the full build rather than the live preview — the animated bg + dev server has crashed this machine before. Interactive curation (drag/select) is best exercised by opening /apparatus."
+    - "Hershey single-stroke font (spec §8/§13) is deferred: on-screen/raster label text renders in the mono face (legible everywhere); true single-stroke glyphs matter mainly for the plotter path and can land later. Breeding/DSL/node-graph patcher/Supabase gallery are graduation-scale and left for their own pass."
+  next: "Open /apparatus to exercise interactive curation. Optional follow-ups: true Hershey single-stroke font for the plotter path; more eras (Spectrum/MSX/Teletext/Risograph); saved-galleries backend."

@@ -1,0 +1,107 @@
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1.5rem);
+
+  @media (max-width: 900px) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-3, 1rem);
+  }
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+
+  &[data-stub] {
+    opacity: 0.55;
+    margin-top: auto;
+  }
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-code);
+  font-size: 0.62rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--color-text-muted);
+}
+
+.seedRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+}
+
+.seedLabel {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  color: var(--color-text);
+  letter-spacing: 0.03em;
+}
+
+.btnRow,
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+}
+
+.stubNote {
+  margin: 0;
+  font-family: var(--font-code);
+  font-size: 0.62rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.slider {
+  display: grid;
+  grid-template-columns: 3.4em 1fr 2.6em;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  font-family: var(--font-code);
+  font-size: 0.64rem;
+  color: var(--color-text-muted);
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+  }
+}
+
+.sliderVal {
+  text-align: right;
+  color: var(--color-text);
+}
+
+// Shared SIGIL control idiom — ghost buttons, accent on hover / active.
+.rail button {
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  padding: 3px 9px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast, 0.15s) var(--ease-default, ease),
+    border-color var(--duration-fast, 0.15s) var(--ease-default, ease);
+
+  &:hover {
+    color: var(--color-text);
+    border-color: var(--color-accent);
+  }
+
+  &[data-active] {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+}

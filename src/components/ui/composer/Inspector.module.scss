@@ -1,0 +1,125 @@
+.inspector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 1rem);
+  padding-top: var(--space-3, 1rem);
+  border-top: 1px solid var(--color-border);
+}
+
+.heading {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  font-family: var(--font-code);
+  font-size: 0.66rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-text);
+}
+
+.elId {
+  font-size: 0.58rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+}
+
+.hint {
+  margin: 0;
+  font-family: var(--font-code);
+  font-size: 0.64rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.label {
+  font-family: var(--font-code);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+}
+
+.value {
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  color: var(--color-text);
+}
+
+.btnRow,
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+}
+
+.slider {
+  display: grid;
+  grid-template-columns: 3.6em 1fr 2.6em;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  font-family: var(--font-code);
+  font-size: 0.64rem;
+  color: var(--color-text-muted);
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+  }
+}
+
+.sliderVal {
+  text-align: right;
+  color: var(--color-text);
+}
+
+.textInput {
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  padding: 3px 7px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+}
+
+.inspector button {
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  padding: 3px 9px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast, 0.15s) var(--ease-default, ease),
+    border-color var(--duration-fast, 0.15s) var(--ease-default, ease);
+
+  &:hover {
+    color: var(--color-text);
+    border-color: var(--color-accent);
+  }
+
+  &[data-active] {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+}
+
+.danger:hover {
+  color: var(--color-error, #d9534f) !important;
+  border-color: var(--color-error, #d9534f) !important;
+}
