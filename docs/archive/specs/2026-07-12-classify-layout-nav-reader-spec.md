@@ -1,9 +1,9 @@
 # Spec: shared layout classification, three-branch link handling, reader-mode sidenotes
 
 **Covers:** ROADMAP §19 (both symptoms), §21, §23, and the §22 test seed that guards them.
-**Status:** ready to implement — written from a code read 2026-07-12; no code changed yet.
+**Status:** shipped and archived 2026-07-12 in commit `37cbbd6`.
 **Prerequisite reading:** the corresponding ROADMAP sections, which carry the root-cause analyses.
-When done, move this file to `docs/archive/specs/` and mark the ROADMAP items shipped.
+The ROADMAP sections are marked shipped; the manual browser checklist below remains useful for visual verification.
 
 These four items form one dependency cluster: the pure-data system-pages split (step 1) feeds the
 shared classifier (step 2), which feeds both the click-interceptor rewrite (step 4) and the Query

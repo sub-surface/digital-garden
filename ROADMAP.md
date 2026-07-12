@@ -16,26 +16,36 @@ the sequenced/opinionated cut (`docs/archive/iteration-spec.md`), the HeXO resea
 Last reconciled against the working tree: 2026-07-12 (post A&D essay publish / sidenotes +
 epigraph + dropcap article polish / Inbox page / codebase stale-file hygiene sweep).
 
+2026-07-12 (later session): elegance-review pass over the open proposals — §18–§21, §23, §25
+gained implementation notes from a code read (corrected the §21 prebuild/`SYSTEM_PAGES` approach,
+which was unbuildable as written; pinned §19's navigate mechanics and ripple effects). The
+§19+§21+§23 cluster now has a full implementation spec:
+`docs/archive/specs/2026-07-12-classify-layout-nav-reader-spec.md`.
+
 ---
 
 ## 0. Now — sequenced top picks
 
-Everything in the previous "Now" list has shipped: **Lighthouse CI** (§5, 2026-07-03),
-**a11y / keyboard pass** (§4, 2026-07-03 — only the theme-consistency tail below remains), and
-the **arcade cabinet shell** (§6, 2026-06-20 — the cabinet itself; heXO integration is a
-separate remaining item). Also shipped since the last reconciliation and not previously
-tracked here: the **Inbox page** (`/inbox` — untagged/orphaned/draft/broken-link triage,
-linked from `index.md`) and a full article-typography pass (frontmatter-driven epigraph,
-dropcap font + competing-floats fixes, sidenotes mobile toggle/breakpoints/Roman numerals) —
-see `docs/garden.md` / article-typography memory for detail; the Attention & Difference essay
-publish itself is content, tracked by Leon, not here. Revised order:
+Everything in the previous "Now" list has shipped: **Lighthouse CI** (§5, tightened to
+error-level 2026-07-12), **a11y / keyboard pass** (§4, 2026-07-03), the **theme-styling
+consistency audit** (§4b, 2026-07-12), and the **arcade cabinet shell** (§6, 2026-06-20 — the
+cabinet itself; heXO integration is a separate remaining item, its pointer-capture bug fixed
+2026-07-12). Also shipped since the last reconciliation and not previously tracked here: the
+**Inbox page** (`/inbox` — untagged/orphaned/draft/broken-link triage, linked from `index.md`),
+a full article-typography pass (frontmatter-driven epigraph, dropcap font + competing-floats
+fixes, sidenotes mobile toggle/breakpoints/Roman numerals), and the **§19+§21+§23 nav/layout/
+reader-mode cluster** (2026-07-12, see those sections) — see `docs/garden.md` /
+article-typography memory for detail; the Attention & Difference essay publish itself is
+content, tracked by Leon, not here. Revised order:
 
-1. **Theme-styling consistency audit** (§4b) — 3 unchecked items (hardcoded-colour grep, canvas
-   surfaces, overlay sweep); cheap and directly visible.
-2. **Tighten Lighthouse CI to error-level** (§5) — warn-level thresholds have had a baseline
-   since 2026-07-03; flip to error now that there's real data.
-3. **heXO → arcade cabinet integration + polish threads** (§6) — reframed from "before any new
+1. **Mobile breakpoints foundation** (§18) — named breakpoint tokens (SCSS + mirrored
+   `src/config/breakpoints.ts`) + the container-vs-media-query ownership rule; unblocks the
+   rest of §18 cleanly instead of another one-off point fix.
+2. **heXO → arcade cabinet integration + polish threads** (§6) — reframed from "before any new
    game" (stale premise — a dozen games shipped without it) to whenever heXO gets its next pass.
+   The `setPointerCapture` bug is fixed; zen-mode generalization and touch-pinch remain.
+3. **Component/hook test coverage** (§22) — now unblocked (`classifyLayout()` exists); cheapest
+   while `usePanelClick`'s rewrite is still fresh.
 4. Everything else opportunistically.
 
 ---
@@ -158,21 +168,71 @@ of `var(--color-bg*)`. Audit pass:
   active theme once per frame (dark stars/lines/labels on light bg); `LocalGraph` already
   re-derived `linkColor`/`labelColor` from `data-theme` in its tick loop. Both invert
   correctly in light mode now. (fixed 2026-06-24)
-- [ ] **Grep for hardcoded colours** outside `tokens.scss` — `#0a0a0a`, `#1a1a1f`, `rgba(0,0,0`,
-  `rgba(255,255,255` literals in components/styles that should be `var(--color-*)`.
-- [ ] **Audit every canvas surface** (BgCanvas modes, game pages, OG/boot) for fixed palettes
-  that ignore `theme`.
-- [ ] **Sweep overlays/panels** (LinkPreview, lightbox, chat glass, dropdowns) in light mode for
-  dark-on-dark or low-contrast text.
+- [x] **Grep for hardcoded colours** outside `tokens.scss` (2026-07-12) — grepped
+  `#0a0a0a`/`#1a1a1f`/`rgba(0,0,0`/`rgba(255,255,255` across `src/`. Findings:
+  - **Exact-hex matches** (`#0a0a0a`/`#1a1a1f`) were all already theme-safe — either a
+    `var(--color-bg[-surface], #0a0a0a)` fallback pattern (fallback never fires in practice)
+    or an explicit `isDark ? … : …` branch (`useDynamicFavicon.ts`). No bug there.
+  - **`rgba(0,0,0,…)`** is overwhelmingly `box-shadow`/`drop-shadow`/`text-shadow` or a
+    scrim over an image/video thumbnail — correct in both themes by convention (shadows and
+    media dimmers are black-based regardless of site theme). Left alone.
+  - **`rgba(255,255,255,N)`** used as a `background`/`border` "raise this surface" tint on
+    global chrome was the real bug class — a token (`--color-highlight`, already theme-aware)
+    existed for exactly this, but ~15 chrome components hardcoded the white literal directly
+    instead, at a dozen different tuned opacities. A single shared token would've visibly
+    changed each component's tuned intensity, so instead added `--color-overlay-tint`
+    (`#fff` dark / `#000` light) to `tokens.scss` and mechanically converted every
+    `rgba(255,255,255,N)` → `color-mix(in srgb, var(--color-overlay-tint) N%, transparent)`
+    in the global-chrome set: `ThemePanel`, `CommandPalette`, `KeyboardCheatSheet`,
+    `NotificationBanner`, `QuickControls`, `LocalGraph`, `MDXComponents` (article
+    pullquote/blockquote — every article), `ChatSettings` (colour-swatch picker, see below).
+    Preserves every component's exact dark-mode appearance (color-mix at N% ≈ rgba at N)
+    while correctly inverting to a dark tint in light mode instead of vanishing.
+  - **`ChatSettings`'s active colour-swatch ring** was a literal `border-color: white` —
+    genuinely invisible against a light-mode panel. Fixed to `var(--color-text)`, matching
+    the already-correct idiom `ThemePanel.module.scss`'s `.accentOption[data-active]`
+    already used for the same "selected swatch" pattern.
+  - **Deliberately left alone** (confirmed correct-as-is, not bugs): `MusicPlayer`'s vinyl
+    record chrome, `PersianCarpetPage`'s woven-carpet pixel simulation, `Chat`'s
+    `Terminal.module.scss` CRT aesthetic, `Game2048Page`'s coloured tile chips + white text —
+    all are deliberately fixed-palette "objects" independent of site theme, same reasoning as
+    a vinyl record staying black regardless of the page around it.
+  - **Not touched, scoped as a follow-on**: per-game module CSS (`ChessPage`, `HexoPage`,
+    `TetrisPage`, `SnakePage`, `Game2048Page`, `HexMinesPage`, `HexLifePage`, `BoidsPage`,
+    `AntFarmPage`, `ArcadePage`, `Collections`/shelves, `WikiInfobox`, `ComposerStage`) still
+    carries ~50 `rgba(255,255,255,N)` texture/hover literals at the same bug class as above.
+    Lower priority than global chrome (visited less, mostly very-low-opacity 0.02–0.05 grain
+    that's barely perceptible either way) but same fix mechanically applies — swap to
+    `color-mix(in srgb, var(--color-overlay-tint) N%, transparent)` per file, then eyeball
+    each game in light mode before committing (higher visual-regression risk per file since
+    each was hand-tuned; not safe to batch-convert blind).
+- [x] **Audit every canvas surface** (2026-07-12) — `BgCanvas`'s ten ambient modes already
+  pull every colour from live CSS custom properties via `colorCache` (invalidated on
+  `[theme, accentBase]` change), so they're fully theme-reactive already; `ConstellationPage`/
+  `LocalGraph` confirmed above; `HexLifePage` already reads `--color-accent-base`/
+  `--color-bg-surface` live. **Found and fixed**: `ProgressionsPage`'s empty-cell grid fill
+  was a hardcoded `rgba(255,255,255,0.03)` canvas `fillStyle` — invisible in light mode
+  (white-on-white). Now reads `--color-overlay-tint` via `getComputedStyle` once per frame
+  (cheap relative to the existing per-frame grid iteration) and builds a `color-mix()` fill
+  string, same mechanism as the CSS fix above but for a canvas context (which can't resolve
+  `var()` directly). OG image generation (build-time, satori) and `/boot`'s terminal aesthetic
+  are intentionally theme-invariant by design — not bugs.
+- [x] **Sweep overlays/panels** (2026-07-12) — `LinkPreview`, `ImageLightbox`, `WikiInfobox`,
+  and the chat frosted-glass surfaces (`SideChat`, `Chat.module.scss`'s `.reactPicker`) were
+  already fully token-driven; no light-mode contrast bugs found there. `ChatSettings`'s swatch
+  picker was the one real find (see above, folded into the hardcoded-colour pass since it's
+  the same root cause). Dropdowns (`ChatAutocomplete`, `EmotePicker`) only had shadow-class
+  `rgba(0,0,0,…)`, already fine.
 
 ---
 
 ## 5. Performance & Core Web Vitals
 
 - [x] **★ Lighthouse CI** — `.github/workflows/lighthouse.yml` + `lighthouserc.json`: builds the
-  SPA, audits static dist (desktop preset, 3 runs), warn-level thresholds (perf/a11y/BP/SEO ≥0.9,
-  CLS ≤0.1, LCP ≤3s, TBT ≤300ms), report uploaded as artifact + temporary-public-storage. Tighten
-  to error-level once a baseline exists. (2026-07-03)
+  SPA, audits static dist (desktop preset, 3 runs), all assertions flipped from `warn` to
+  `error` (perf/a11y/BP/SEO ≥0.9, CLS ≤0.1, LCP ≤3s, TBT ≤300ms) now that a baseline exists,
+  report uploaded as artifact + temporary-public-storage. (baseline 2026-07-03, tightened
+  2026-07-12)
 - [x] **★ Fix CLS — image dimensions.** Shipped: `prebuild` emits `public/image-dimensions.json`
   and `rehype-image-paths` stamps intrinsic `width`/`height` on MDX images (author-supplied
   values kept). `img { max-width:100%; height:auto }` keeps them responsive. (verified 2026-06-20)
@@ -201,8 +261,9 @@ Extract the cabinet *before* building the next game.
 - [ ] **Generalise heXO zen mode** into the cabinet — Esc-to-exit handler, overlay, bottom bar,
   wide viewBox are all reusable. Currently live in `HexoPage`.
 - [ ] heXO polish threads from the code review:
-  - `setPointerCapture` targets the *cell* (`e.target`), not the SVG — works via bubbling but
-    breaks if a child calls `stopPropagation`. Capture on `svgRef.current`.
+  - [x] `setPointerCapture` targeted the *cell* (`e.target`), not the SVG — worked via
+    bubbling but broke if a child called `stopPropagation`. Now captures on `svgRef.current`.
+    (fixed 2026-07-12)
   - Nested `setPan` inside `setZoom` reads `z` from captured scope — correct, but reads like a
     stale-closure bug; add a one-line comment.
   - No touch-pinch zoom (wheel only). The cabinet should own a touch story.
@@ -368,11 +429,11 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
   ship as committed artifacts and the cache only matters when regenerating locally.
 - [ ] **SVG image support** — satori can't load `.svg`; detect SVG URLs in `og-gen.ts` and skip or
   rasterise via `sharp` (not yet a dependency).
-- [ ] **6 orphaned cards** in `public/og/` (`Moltbook`, `Best-Of-Moltbook`, `On-philosophy`,
-  `Rebuild-Upgrade-Prompt`, `Wiki-Ape`, `Wiki-Sample-Article`) — notes since deleted/renamed; safe
-  to `git rm`. Re-running `PROCESS_OG` also rewrites ~13 system cards with different bytes (older
-  satori/resvg than current `node_modules`) — visually identical, but the committed artifacts
-  aren't bit-reproducible from current deps.
+- [x] **6 orphaned cards** in `public/og/` (`Moltbook`, `Best-Of-Moltbook`, `On-philosophy`,
+  `Rebuild-Upgrade-Prompt`, `Wiki-Ape`, `Wiki-Sample-Article`) — notes since deleted/renamed;
+  `git rm`'d, no live references found. (2026-07-12) Re-running `PROCESS_OG` also rewrites ~13
+  system cards with different bytes (older satori/resvg than current `node_modules`) — visually
+  identical, but the committed artifacts aren't bit-reproducible from current deps.
 
 ---
 
@@ -506,6 +567,12 @@ model, not another point fix. Preliminary findings from this session (not yet a 
   the sidenote toggle fix just patched once. **Fix shape:** add 1–2 named breakpoints to
   `tokens.scss` (e.g. a phone width and a tablet/narrow-desktop width) and migrate component
   modules onto them over time; new mobile CSS should never hardcode a bare px value again.
+  **Include the JS side in the same convention**: `window.innerWidth <= 800` is also hardcoded in
+  at least `usePanelClick.ts:43` and BgCanvas's mobile skip (CLAUDE.md gotcha #13) — add a
+  `src/config/breakpoints.ts` exporting the same numbers, with a comment in each file pointing at
+  the other (SCSS can't import TS; a documented mirrored-constant pair beats generation machinery
+  at this scale). The 800px value is effectively already the site's de-facto "phone" breakpoint —
+  name it rather than invent a new number.
 - [ ] **Two responsive mechanisms coexist without a stated rule.** Many game/shelf pages respond
   to `@container panel (max-width: 560px)` (their width inside the panel-stack "note" layout) while
   also carrying plain `@media (max-width: Npx)` rules (viewport width) in the same stylesheet —
@@ -538,9 +605,20 @@ model, not another point fix. Preliminary findings from this session (not yet a 
 
 ---
 
-## 19. `usePanelClick` gap: small panel-card games, AND full page reloads on article links (Leon, 2026-07-12)
+## 19. `usePanelClick` gap: small panel-card games, AND full page reloads on article links — ✅ SHIPPED
 
-Root cause found, not yet fixed — Hex Life was the reported symptom but this affects **every**
+**Done** (2026-07-12): `src/lib/layout.ts` (`classifyLayout`) is now the shared source of truth,
+used by both `NoteRenderer.resolveLayout()` and `usePanelClick`. `usePanelClick` classifies the
+*destination* slug before deciding whether to open a panel card; games/articles (and any click
+made while on an article/game page, and all mobile clicks) now go through `navigate()` — a real SPA
+transition, panel stack cleared — instead of either a 750px-card mis-render or a full page reload.
+`npm run check` (tests + worker typecheck + build) passes. Manual click-path verification (home →
+game, article internal link keeps music playing, mobile navigate) is still Leon's to eyeball per
+the spec's verification checklist. Full implementation spec, now archived:
+`docs/archive/specs/2026-07-12-classify-layout-nav-reader-spec.md`. Section kept for the root-cause
+analysis below.
+
+Root cause (fixed) — Hex Life was the reported symptom but this affected **every**
 game, from most navigation paths.
 
 `usePanelClick.ts` (the global click interceptor that turns internal links into panel cards for
@@ -559,19 +637,42 @@ it has nothing to do with the actual `.game-layout` CSS, which is already correc
 width, `margin: -2rem -3rem` to cancel the content padding — `article.scss:302-317`). The game
 renders fine; it's just being stuffed into the wrong container.
 
-- [ ] **Fix**: make `usePanelClick` check the *destination* slug's resolved layout before
+- [x] **Fix**: make `usePanelClick` check the *destination* slug's resolved layout before
   deciding to intercept, not the current page's. Concretely: extract the classification logic
   inside `NoteRenderer.resolveLayout()` (frontmatter/type/slug-prefix/`SYSTEM_PAGES` lookup) into
-  a shared helper — e.g. `classifyLayout(slug, frontmatter, meta)` in `src/lib/` — so both
-  `NoteRenderer` and `usePanelClick` call the same function instead of one being a partial,
-  drifted copy of the other. `usePanelClick` already computes `slug` and has `contentIndex` in
-  scope, so this is a same-shape call, not new plumbing. (This is the same "shared logic drifts
-  when duplicated" lesson as `src/lib/slug.ts` — see the 2026-07-12 hygiene sweep above.)
-- [ ] Once fixed, re-check whether any game *should* still open as a panel card from certain entry
-  points (e.g. a quick peek from the arcade grid?) — default should probably be "games always
-  navigate full-page, no exceptions" given the complaint, but flag if Leon wants a deliberate
-  peek-preview UX for any specific game.
-- [ ] The same shared `classifyLayout()` helper would also directly enable §21's Query type-tag
+  a shared helper so both `NoteRenderer` and `usePanelClick` call the same function instead of
+  one being a partial, drifted copy of the other. `usePanelClick` already computes `slug` and has
+  `contentIndex` in scope, so this is a same-shape call, not new plumbing. (This is the same
+  "shared logic drifts when duplicated" lesson as `src/lib/slug.ts` — see the 2026-07-12 hygiene
+  sweep above.) **Implementation notes from a code read (2026-07-12), to save the implementer
+  re-deriving them:**
+  - **Signature**: `classifyLayout(slug: string, opts: { layout?: string; type?: string }): "article" | "note" | "game"`
+    in `src/lib/layout.ts`. The `opts` shape is deliberately satisfiable by *either* full
+    frontmatter (NoteRenderer's case — it passes `{ layout: fm.layout, type: fm.type ?? meta?.type }`)
+    or a bare content-index entry (`usePanelClick`'s case — `{ layout: meta?.layout, type: meta?.type }`).
+    Rule order must exactly mirror `resolveLayout()` (`NoteRenderer.tsx:30-47`): explicit layout →
+    book/movie/chatter/philosopher type → `wiki`/`wiki/` prefix → `writing/` prefix →
+    `SYSTEM_PAGES[slug].layout` → `"note"`. Keep `resolveLayout()` as a thin wrapper that feeds
+    frontmatter in, so its callers don't churn.
+  - **Prerequisite — the content index doesn't carry `layout`.** `NoteMetadata`
+    (`src/types/content.ts`) and prebuild's `NoteMeta` have `type` but no `layout` field, so
+    classification from index data alone would silently miss any note using the explicit
+    `layout:` frontmatter override. One-line fix in both type defs + the frontmatter passthrough
+    in `prebuild.ts`'s `scan()` (around line 184-195, next to `type`). Without this the fix
+    *mostly* works and drifts later — do it as part of the same change.
+  - **`SYSTEM_PAGES` import is safe for the SPA bundle** — `NoteRenderer` already imports it into
+    the entry graph, and the `lazy()` wrappers don't load the page chunks until render. If §21's
+    data/meta split lands (see there), `classifyLayout` should import the pure meta module
+    instead; either order works, but doing §19+§21 together means writing it against the meta
+    module once.
+  - **Known edge**: `contentIndex` loads deferred post-render (CLAUDE.md gotcha #14), so a click
+    in the first ~second may classify with `meta === undefined`. System pages still classify
+    correctly (pure `SYSTEM_PAGES` lookup); a content note relying on the `layout:` override
+    would fall back to panel-card behaviour. Acceptable — don't add loading-state plumbing for it.
+- [x] ~~Once fixed, re-check whether any game *should* still open as a panel card from certain
+  entry points~~ — **decided (Leon, 2026-07-12): games always navigate full-page, no exceptions.**
+  No peek-preview UX for any game.
+- [x] The same shared `classifyLayout()` helper would also directly enable §21's Query type-tag
   feature (below) — worth doing both in the same pass.
 
 **Second symptom, same root cause, found 2026-07-12 (Leon: clicking a link on an article page
@@ -587,14 +688,37 @@ isn't "a partial refresh," it's a full reload that happens to feel fast on a CF-
 This almost certainly also resets reader-mode state, theme-panel state, scroll position, and
 anything else held in memory — the music pause is just the most *noticeable* symptom, not the only
 one.
-- [ ] **Fix, same pass as the panel-card fix above**: `usePanelClick` needs a third branch, not
+- [x] **Fix, same pass as the panel-card fix above**: `usePanelClick` needs a third branch, not
   just two. Today it's binary (panel-card / do-nothing-and-hope). It needs: (1) panel-card for
   note-mode exploration, (2) **client-side `navigate()`, no panel card** — for article/game pages,
   or any click whose destination resolves to article/game — so the SPA transition still happens,
   just without opening a side panel, (3) true no-op only for genuinely special cases (hash links,
   `music:` links, modifier-key clicks, external origins) which already exist. Once
-  `classifyLayout()` exists (above), branch (2) is a one-line check plus a `router.navigate()`
-  call instead of the current bare `return`.
+  `classifyLayout()` exists (above), branch (2) is a one-line check plus a navigate call instead
+  of the current bare `return`. **Implementation notes (2026-07-12 code read):**
+  - **Use the `useNavigate()` hook from `@tanstack/react-router`, NOT `import { router } from
+    "@/router"`.** The latter is a circular import: `router.tsx` imports `AppShell`, which calls
+    `usePanelClick`. The hook is safe — `AppShell` is the root route's component, so router
+    context exists. Add the returned `navigate` to the effect's dep array (it's stable, but the
+    lint rule will want it).
+  - **Branch ordering matters.** Today the `activeLayout` bail (`usePanelClick.ts:32-33`) runs
+    *before* the special-case bails (hash, `music:`, modifiers, `data-panel-ignore`, `_blank`,
+    external origin, mobile). When replacing it with destination classification, keep all the
+    special-case bails FIRST so they behave identically regardless of which branch fires —
+    e.g. a Ctrl+click on a game link must still open a new tab, not client-navigate.
+  - **Branch (2) should `clearStack()`** (already in the store, `src/store/index.ts:359`) before
+    `navigate()` + `preventDefault()`. Today's accidental full reload wipes the panel stack;
+    keeping stale cards behind a full-page game/article would be a new behaviour, not a
+    preservation of the old one. Also call `setActiveGraphSlug(slug)` as the panel branch does.
+  - **Decide branch (2)'s trigger precisely**: it fires when *either* the destination classifies
+    as article/game (fixes the Hex-Life-in-a-750px-card symptom) *or* the current `activeLayout`
+    is article/game (fixes the music-killing full reload for note→note links clicked from within
+    an article). I.e. the current-page check doesn't disappear — it just routes to branch (2)
+    instead of a bare return.
+  - **The mobile bail (`window.innerWidth <= 800`, line 43) currently means full reloads on
+    mobile too** — same music-wipe bug, no panel stack involved. Branch (2) should handle mobile
+    (client-navigate everything internal on mobile) rather than keeping the bare return. Cheap to
+    include; easy to miss.
 
 ---
 
@@ -629,9 +753,26 @@ an inline, Command-Palette-triggered edit mode, not limited to the wiki.
   edit and push" literally, but loses the PR as an audit trail / one-command revert point — though
   note every commit is still individually revertable via git regardless, so the PR's main value
   here would just be the GitHub UI diff view, not safety. Leaning direct-commit given Leon is the
-  only admin and it's his own site, but worth confirming before building.
-- [ ] Skip Turnstile for authenticated admin requests — it's redundant with role-gating and just
-  adds latency to an interaction meant to feel instant.
+  only admin and it's his own site, but worth confirming before building. Direct-commit is
+  mechanically small: a `commitDirect()` sibling of `createEditPR` (`wiki.ts:250`) using the
+  GitHub Contents API `PUT` with the file `sha` — `handleEdit` already fetches that sha
+  (`wiki.ts:242`), so it's the same call minus the branch/PR steps.
+- [ ] **Expectation-setting that MUST be in the UI copy**: a commit to `master` triggers a full
+  CF build + deploy (~minutes), and the SPA reads content from the *built* index — so the save is
+  instant but the published change is not. Inline edit mode should say so ("saved — live in a few
+  minutes") rather than pretending to be a CMS. `WikiMarkdownEditor`'s live preview covers the
+  "did I write it right" need; nothing needs to fake instant publish. Also: N quick successive
+  edits = N deploys. Fine at Leon's volume; if it ever isn't, batch by committing to a branch and
+  merging on a timer — noting the option, not recommending the complexity now.
+- [ ] Skip Turnstile for authenticated **admin** requests — it's redundant with role-gating and
+  just adds latency to an interaction meant to feel instant. Concretely: `handleEdit` requires
+  `turnstileToken` as a field (`wiki.ts:203`) and verifies it (`wiki.ts:207-214`); make both
+  conditional on `ctx.auth.role !== "admin"` (keep it for editors — they're the
+  public-submission tier the captcha exists for).
+- [ ] Check `WRITE_LIMITER` (the per-user write rate limit in the dispatcher) against the
+  expected editing rhythm — frequent small admin saves could plausibly trip it. Either exempt
+  admin in the dispatcher's rate-limit step or confirm the current limit is comfortably above
+  realistic use before shipping.
 - [ ] Reuse `page_locks` — lock the slug for the duration of an inline edit session.
 - [ ] **Nice synergy**: since this produces one commit per edit, it's a ready-made feed for the
   already-wishlisted "What changed" timeline (§15) — surfacing admin edits there is close to free
@@ -643,31 +784,75 @@ an inline, Command-Palette-triggered edit mode, not limited to the wiki.
 
 ---
 
-## 21. Query "type" display + system pages are invisible to the content index (Leon, 2026-07-12)
+## 21. Query "type" display + system pages are invisible to the content index — ✅ SHIPPED
+
+**Done** (2026-07-12): `src/config/system-pages-meta.ts` is the pure-data split; `prebuild.ts`
+synthesizes a `NoteMetadata` entry per system page not shadowed by a real content file (9 of 24
+were synthesized on the current tree — the rest already have companion notes), tagged
+`system: true`. `emitGraph` excludes them (no orphan stars), the sitemap includes them (Leon's
+call), `InboxPage`/`useRandomNote` were already safe (they filter by the `SYSTEM_PAGES` key set,
+not index shape — verified unaffected), and `LinkPreview` skips the body fetch for `system`
+entries. `Query.tsx` renders a `classifyLayout()`-driven type pill (game/article/note) in all three
+display modes. `npm run check` passes.
 
 Leon: the `<Query sort="-date">` "new additions" list on `index.md` shows only title + date;
 wants type (article/note/game) shown as a tag/row, and noted this "may require tracking when new
 games/arcade items are added" — correct, and the reason is more fundamental than a missing column.
 
-- [ ] **System pages (all arcade games, HeXO, SIGIL, Collider, Apparatus, chess, graph…) have zero
+- [x] **System pages (all arcade games, HeXO, SIGIL, Collider, Apparatus, chess, graph…) have zero
   content-index entries.** `scripts/prebuild.ts` only scans `content/*.md` — it has no awareness
   of `SYSTEM_PAGES` (`src/config/system-pages.ts`) at all. `<Query>` reads `contentIndex`
   (`Query.tsx:87`), so today it is **structurally incapable** of listing a new game as a "recent
   addition" no matter what display changes are made — there's no date, no title, no entry to sort.
-- [ ] **Fix shape**: give `SystemPage` two more fields — `title` and `since` (a date, manually
-  set when a game ships; most existing ones are recoverable from this ROADMAP's own shipped-dates,
-  e.g. Snake/Blackjack 2026-06-17, HexLife/2048/Sandbox 2026-06-20, SIGIL/Collider/Apparatus
-  2026-07-03/05). Have `prebuild.ts` import `SYSTEM_PAGES` and synthesize one lightweight
-  `NoteMetadata`-shaped entry per game (`type: "game"`, `date: since`, empty tags/links) into the
-  content index alongside the real notes. Keeps the "one line in `system-pages.ts` to add a game"
-  convention (CLAUDE.md gotcha #6) — just a couple more fields on that one line.
-- [ ] **Display fix** (`Query.tsx`): what Leon actually asked for is the resolved *layout*
+- [x] **Fix shape — REVISED 2026-07-12 after a code read**: the original idea ("have `prebuild.ts`
+  import `SYSTEM_PAGES`") **doesn't work as written** — every `SYSTEM_PAGES` value holds a
+  `lazy(() => import("...Page"))` React component, so a Node script importing that module drags
+  React and every page component (and their `.scss` imports, which `tsx` can't resolve) into the
+  prebuild process. The elegant fix is a **data/component split**:
+  - New pure-data module `src/config/system-pages-meta.ts`: `SYSTEM_PAGE_META: Record<string,
+    { layout: "article" | "note" | "game"; title: string; since?: string; loading: string }>` —
+    no imports, no React. `since` is a date, manually set when a game ships; most existing ones
+    are recoverable from this ROADMAP's own shipped-dates (Snake/Blackjack 2026-06-17,
+    HexLife/2048/Sandbox 2026-06-20, SIGIL/Collider/Apparatus 2026-07-03/05).
+  - `system-pages.ts` keeps only the `component` map and joins it onto the meta at module scope
+    (build-time assert or type-level check that the key sets match, so a game added to one map
+    but not the other fails loudly). "One line to add a game" (CLAUDE.md gotcha #6) becomes two
+    short lines — one data, one component — still trivially cheap.
+  - `prebuild.ts` imports the meta module only (precedent: it already imports `src/lib/slug.ts` —
+    gotcha #15) and synthesizes one `NoteMetadata`-shaped entry per system page (`type: "game"`
+    for game-layout pages, `date: since`, empty tags/links, **plus a `system: true` marker
+    field** — see ripple effects below). §19's `classifyLayout` should also read this meta module
+    rather than `SYSTEM_PAGES`, which is why doing §19+§21 in one pass is cheapest.
+- [x] **Ripple effects of synthetic index entries — each consumer of the index needs a decision,
+  and `system: true` gives them all one cheap filter** (found 2026-07-12; missing any of these
+  ships a regression):
+  - **`InboxPage` would flood**: ~20 new entries with no tags, no links, no backlinks land
+    straight in its untagged/orphaned triage buckets. Filter `system` entries out of Inbox
+    entirely — a game is never "incomplete writing."
+  - **`graph.json` (`emitGraph`, prebuild) would gain ~20 orphan nodes** with zero links —
+    floating disconnected stars in the Constellation. Probably exclude `system` entries from the
+    graph (or, later, deliberately link them from an "arcade" hub node — but that's a design
+    choice, not a default).
+  - **`LinkPreview` / hover excerpts fetch `public/content/<contentPath>.md`** — synthetic
+    entries have no `contentPath` and no raw copy. Guard the fetch (skip preview when
+    `contentPath` is missing) rather than 404ing.
+  - **RSS is already safe** — promotion is opt-in (`published: true` or `Writing/` folder,
+    prebuild `emitRss`), synthetic entries qualify for neither. **Sitemap**: include game pages
+    (decided by Leon, 2026-07-12 — they're real indexable pages).
+  - **`RecentPage` and `<Query sort="-date">` showing games is the entire point** — no filter
+    there. **`useRandomNote` already excludes `SYSTEM_PAGES` keys** case-insensitively — verify
+    it keeps excluding once entries exist in the index (it checks the slug against the registry,
+    not the index, so it should be unaffected).
+- [x] **Display fix** (`Query.tsx`): what Leon actually asked for is the resolved *layout*
   (article/note/game), not the content `type` field (book/movie/chatter/philosopher/undefined) —
   those are different axes today. Once games have index entries, showing "game" is easy (their
   `type` literally is `"game"`), but showing "article" vs "note" for everything else means
   running the same classification `NoteRenderer.resolveLayout()` does. This is the same
   `classifyLayout()` extraction as §19 — do it once, use it in both places, then add a small tag/
-  pill next to the title in `Query`'s list/grid/table renders.
+  pill next to the title in `Query`'s list/grid/table renders. With §19's index `layout`
+  passthrough in place, the pill is exactly `classifyLayout(note.slug, note)` per row — no extra
+  data fetch. (Note this needs the prebuild `layout` field from §19's prerequisite bullet, or
+  explicit-`layout:` articles will show as "note".)
 
 ---
 
@@ -699,9 +884,22 @@ Ideas surfaced while working the above, not requested — housekeeping foresight
 
 ---
 
-## 23. Reader mode: sidenotes get cut off, controls feel disjunctive (Leon, 2026-07-12)
+## 23. Reader mode: sidenotes get cut off, controls feel disjunctive — ✅ SHIPPED
 
-**Root cause of the sidenote clipping, found:** `reader-mode.scss` forces `.article-layout {
+**Done** (2026-07-12), option (b) as Leon decided: `reader-mode.scss` now only collapses
+`.note-layout` to a block; `.article-layout` keeps `display: grid`, with a reader-mode-scoped
+`grid-template-columns` override (above the `$article-narrow` breakpoint) that drives the prose
+track from `--reader-measure` while keeping the `calc(4rem + 250px)` margin track intact, so the
+sidenote float math (`sidenotes.scss`, unchanged) stays valid. `AppShell.module.scss`'s
+`.mainPane` reader-mode max-width has a `[data-layout="article"]` override sized for prose +
+margin track, not just the prose measure. `ReaderControls` (the fixed bottom pill) is retired;
+its steppers + exit/enter toggle moved into a new "Reader" tab in `ThemePanel`, auto-selected when
+reader mode is switched on from the System tab. `npm run check` passes; the actual float-math
+verification (does the sidenote visibly clip at any `--reader-measure` step, does the ~1300px
+handoff look clean) is on Leon's plate per the spec's manual verification checklist — CSS grid math
+checked by inspection, not a running browser.
+
+**Root cause of the sidenote clipping (fixed):** `reader-mode.scss` forces `.article-layout {
 display: block }` (line 46-48) to collapse the article grid when reader mode is on. But
 `sidenotes.scss`'s wide-viewport rule (`@media (min-width: $article-narrow + 1)`, i.e. above
 1300px — independent of reader mode, it doesn't check `data-reader`) still applies
@@ -711,7 +909,12 @@ the right for it to float into (`article.scss`'s `grid-template-columns`). Once 
 switches the container to `display: block`, that track no longer exists — the sidenote still
 tries to float 290px right of the (now `max-width: 100%`, reader-measure-driven) prose column, and
 sails past the edge of the visible content area. It isn't disappearing, it's floating off-canvas.
-- [ ] **Fix direction (two options, pick one):** (a) in reader mode, force sidenotes into the same
+- [x] **Fix direction — DECIDED (Leon, 2026-07-12): option (b), keep the floating sidenotes.**
+  The archived spec (`docs/archive/specs/2026-07-12-classify-layout-nav-reader-spec.md`, step 6) carries the
+  (b) implementation shape — preserve the article grid in reader mode, drive the prose track from
+  `--reader-measure`, keep the margin track's width intact so the float math stays valid. The
+  original analysis of both options is kept below for context:
+  (a) in reader mode, force sidenotes into the same
   treatment `sidenotes.scss` already uses for narrow viewports — `float: none; width: 100%;`
   inline toggle-expand cards — since reader mode is *specifically* a narrower, customizable
   reading measure, treating it like "narrow" rather than "wide" is arguably the more correct model
@@ -720,6 +923,20 @@ sails past the edge of the visible content area. It isn't disappearing, it's flo
   margin-column track survives and the float math stays valid. (a) is less code and matches how
   the narrow-viewport case already looks; (b) preserves the "cute" floating sidenotes Leon
   mentioned liking. Worth a quick gut-check with Leon on which look he wants before picking.
+  **Concrete shape for (a), the recommended option (2026-07-12 code read):** the narrow-viewport
+  treatment currently lives only inside `@media (max-width: $article-narrow)` in `sidenotes.scss`
+  (~line 201) — it can't be reused by selector because media queries don't compose with
+  `[data-reader]`. Extract those rules (marker/toggle swap, `.sidenote` inline-card styles, the
+  `:checked + label + aside` display chain) into an SCSS mixin (e.g. `@mixin sidenotes-inline`),
+  then include it from **both** the existing media query **and** a new
+  `[data-reader="true"] .article-layout` scope. The mixin must also neutralise the wide-mode
+  float rules (`float: none; margin-right: 0; width: 100%` — it already sets these) *and* mirror
+  the wide-mode `.footnote-marker[data-content]::after { display: none }` / toggle-visibility
+  swap, or reader mode gets the wide markers with narrow cards. Note against (b): reader mode's
+  grid collapse (`reader-mode.scss:46-48`) exists because the measure/scale vars drive the pane
+  directly — resurrecting the grid means reconciling `--reader-measure` with
+  `grid-template-columns` and the TOC column that reader mode hides, i.e. (b) is a layout-system
+  change, not a one-liner. Prefer (a) unless Leon specifically wants the floats.
 
 **Controls feel disjunctive** — `ReaderControls` is a fixed bottom-centre pill with its own visual
 language (see `ReaderControls.module.scss`), while every other settings surface on the site is the
@@ -727,9 +944,17 @@ right-anchored `ThemePanel` (`position: fixed; right: var(--space-8)`), opened b
 `ThemePanel` **already has a tab system** (`activeTab: "system" | "dev"`, `styles.tabs`/
 `tabBtn`/`tabContent` — `ThemePanel.tsx:100,174-185`), so folding reader controls in as a third
 tab is a small, well-shaped change, not a rebuild:
-- [ ] Move `ReaderControls`'s width/scale steppers + exit button into a new `"reader"` tab inside
+- [x] Move `ReaderControls`'s width/scale steppers + exit button into a new `"reader"` tab inside
   `ThemePanel`, only shown/auto-selected while `isReaderMode` is true (or always present, greyed
   until reader mode is on — Leon's call on which reads better). Retire the standalone fixed pill.
+  Mechanics: widen the `activeTab` union at `ThemePanel.tsx:100` (`"system" | "dev"` →
+  `+ "reader"`), add the tab button beside System/Dev; note the System tab **already hosts the
+  Reader on/off toggle** (`ThemePanel.tsx:235`) — keep that toggle where it is (it's how you
+  *enter* reader mode) and have it auto-select the reader tab when switched on. One judgment
+  call: the pill's virtue was being reachable *without leaving the reading posture* (bottom
+  centre, no panel). If losing that stings, the compromise is keeping a minimal "Aa" affordance
+  that just opens ThemePanel on the reader tab — but default to full retirement first and see if
+  it's missed.
 - [ ] **Bigger picture, per Leon**: keep growing `ThemePanel` generally as *the* personalization
   and aesthetic-tuning surface for the site — accent/theme/background already live there, reader
   typography would join them, and it's the natural home for anything else in this vein (future
@@ -825,7 +1050,14 @@ user keeps a tab open on, rather than anything that follows a single tab around.
 
 - [ ] New shell (`MusicShell` or similar) + `VITE_MUSIC_MODE` / hostname detection, matching the
   existing `useShell()` pattern (`"main" | "wiki" | "chat" | "os"` → add `"music"`).
-  `MusicProvider`/`MusicContext` already exists and is mostly reusable as-is.
+  `MusicProvider`/`MusicContext` already exists and is mostly reusable as-is. One caveat to
+  design around: **localStorage is per-origin**, so the garden's persisted settings
+  (`garden-settings` key — theme, accent, volume, queue position) will NOT carry over to
+  `music.subsurfaces.net`; only the Supabase auth cookie crosses subdomains
+  (`VITE_COOKIE_DOMAIN`). Fine for a standalone player (it keeps its own state), just don't
+  promise "picks up where the garden left off" without building an explicit handoff (e.g. a
+  `?track=&t=` URL param when launching the subdomain from the garden — which is probably the
+  right minimal handoff anyway).
 - [ ] Decide the relationship to the in-garden `MusicBar`/pop-out: does the subdomain replace the
   pop-out, or do both coexist (quick controls in-garden, full app on the subdomain)? Leaning
   toward both existing — the in-garden bar is for casual listening while browsing, the subdomain
@@ -840,7 +1072,7 @@ user keeps a tab open on, rather than anything that follows a single tab around.
   proper playlist/queue view, maybe a shareable "now playing" state if that's ever wanted.
 - [ ] Not yet decided: whether this is a fully separate Worker (like `omega.subsurfaces.net`'s
   standalone HTML approach) or a lazy-loaded shell within the existing Worker/SPA build, same as
-  the other three shells. The latter is far less infra to stand up and is probably right unless
+  the other four shells. The latter is far less infra to stand up and is probably right unless
   there's a reason to want it fully decoupled from a garden deploy.
 
 ---

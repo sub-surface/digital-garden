@@ -48,7 +48,7 @@
 ## Wiki Subdomain UX Fixes
 
 - [x] **Submit page 404 in wiki subdomain**: added dedicated `/submit` route in router (before catch-all) rendering `WikiSubmitPage`
-- [x] **Tag/folder pages unconstrained width in wiki**: removed `tags`/`folder` from article slug list in `resolveLayout`; also fixed `NoteBody` frontmatter override to not force article layout for tag/folder pages
+- [x] **Tag/folder pages unconstrained width in wiki**: removed `tags`/`folder` from the article-classification rules now owned by `classifyLayout()`; also fixed `NoteBody` frontmatter override to not force article layout for tag/folder pages
 - [x] **Search overlay links broken in wiki**: `handleSelect` now uses `navigate()` in wiki mode instead of `pushCard` (which requires PanelStack)
 - [x] **TerminalTitle home button**: wiki logo now links to `/` (wiki root) instead of `https://subsurfaces.net`
 - [x] **Tag/folder links not navigating in wiki**: `usePanelClick` was intercepting all clicks (hooks run before conditional shell return) — added `isWiki` bail-out so wiki lets links navigate normally

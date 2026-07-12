@@ -92,11 +92,11 @@
 
 ## Typography & Content
 
-- [x] **Tufte sidenotes in article layout**: `remarkSidenotes` plugin converts GFM footnotes (`[^1]`) at remark stage (rehype-level approach failed in MDX); injects `<aside class="sidenote">` after the containing block; floats into right margin at `>1101px`, checkbox toggle on narrow viewports
+- [x] **Tufte sidenotes in article layout**: `remarkSidenotes` plugin converts GFM footnotes (`[^1]`) at remark stage (rehype-level approach failed in MDX); injects `<aside class="sidenote">` after the containing block; floats into the right margin above `$article-narrow` (1300px), checkbox toggle on narrow viewports
 - [x] **Obsidian callouts**: `>[!type] Title` syntax renders as styled callout divs; fixed single-node collapse (remark-gfm collapses blockquote continuations into one `\n`-joined text node — plugin now splits on first `\n`)
 - [x] **External link styling**: `href^="http"` links not pointing to `subsurfaces.net` get muted colour + `↗` superscript arrow; print stylesheet updated to show full URL only for external links
 - [x] **WikiInfobox image expand**: clicking avatar opens fullscreen lightbox overlay; click backdrop to close; `cursor: zoom-in` hint
-- [x] **`Writing/` slug → article layout**: `resolveLayout` now returns `article` for any `writing/` slug without needing `layout: article` in frontmatter (though frontmatter still wins)
+- [x] **`Writing/` slug → article layout**: shared `classifyLayout()` returns `article` for any `writing/` slug without needing `layout: article` in frontmatter (though frontmatter still wins)
 - [x] **`rehypeImagePaths` double-prefix fix**: strips leading `media/` or `Media/` before prepending `/content/Media/` — prevents `media/media/` doubling when images are referenced from sidenotes or raw HTML
 - [x] **Sample writing note**: `content/Writing/On-Attention.md` — demos dropcap, pullquote, callouts, sidenotes with wikilink + external link + image, `<Query>` component, `published: true` for RSS
 - [x] **Writing template**: `content/Writing/Writing-Template.md` — style reference covering all supported features with inline examples

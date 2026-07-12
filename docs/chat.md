@@ -15,12 +15,14 @@ wiki.subsurfaces.net   (Supabase auth + GitHub API)
 chat.subsurfaces.net   (Supabase Realtime)
 ```
 Nothing flows upward. A chat outage must not affect the wiki. A wiki outage must not affect the garden.
+`os.subsurfaces.net` is a standalone presentation shell outside this community-platform dependency chain.
 
-**`src/worker.ts` domain routing** — one Worker serves all three domains intentionally. Keep a clear partition comment at the top of the routing block:
+**`src/worker.ts` domain routing** — one Worker serves all four domains intentionally. Keep a clear partition comment at the top of the routing block:
 ```
 // garden:  subsurfaces.net        → static assets + OG meta injection
 // wiki:    wiki.subsurfaces.net   → auth, editing, profiles, bookmarks
 // chat:    chat.subsurfaces.net   → realtime, bans, GIF search
+// os:      os.subsurfaces.net     → dedicated BootPage shell
 ```
 
 ---
@@ -32,7 +34,7 @@ Nothing flows upward. A chat outage must not affect the wiki. A wiki outage must
 - [x] **Shared cookie auth first** — cookie-based `storage` adapter in `src/lib/supabase.ts` writes session to `document.cookie` with `domain=.subsurfaces.net`; falls back to default (localStorage) when `VITE_COOKIE_DOMAIN` unset. Deploy + verify test matrix before building chat UI: login on `wiki.*` → navigate to `chat.*` → still logged in; logout on `chat.*` → `wiki.*` also logged out
 - [x] Add `VITE_COOKIE_DOMAIN` env var (`.subsurfaces.net` in `.env`, unset in `.env.local` for localhost dev)
 - [x] Add `chat.subsurfaces.net` as a custom domain in `wrangler.toml` (CF dashboard custom domain already added by user)
-- [x] `useShell()` hook returning `"main" | "wiki" | "chat"` in `src/hooks/useShell.ts`; `useIsWiki()` and `useIsChat()` are thin wrappers; `src/hooks/useIsWiki.ts` re-exports from `useShell`
+- [x] `useShell()` hook introduced for `"main" | "wiki" | "chat"`, later extended to `"os"`; `useIsWiki()`, `useIsChat()`, and `useIsOS()` are thin wrappers in `src/hooks/useShell.ts`
 - [x] Create `ChatShell.tsx` — lean skeleton shell (no BgCanvas, no panels, no music); `ChatUserMenu` with auth modal; `TerminalTitle context="chat"`
 - [x] Add chat shell detection in `AppShell.tsx` — `if (shell === "chat") return <ChatShell />`; content-index fetch shared across all shells
 - [x] **Cross-subdomain auth (shared cookie)**: cookie `storage` adapter in `src/lib/supabase.ts` — `VITE_COOKIE_DOMAIN` controls domain scope; `cookieOptions` field on browser client doesn't work (SSR-only), so custom `storage` adapter used instead

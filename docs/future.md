@@ -13,7 +13,7 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 
 ### Tier 0: Org review (reviewed 2026-06-09)
 
-- [x] **systemPages registry**: `src/config/system-pages.ts` is now the single source of truth for system-page slug → component + layout, consumed by `NoteRenderer.resolveLayout`/`renderContent`. Adding a system page (e.g. an arcade game) is now one registry line. (2026-06-09)
+- [x] **System-page registry**: introduced as one component/layout map in 2026-06-09; split in 2026-07-12 into pure metadata (`system-pages-meta.ts`) plus matching lazy components (`system-pages.ts`) so prebuild, layout classification, and React rendering share the same registered slugs. `scripts/test-layout.ts` enforces key parity.
 - [x] **Split `src/worker.ts`** into `worker/{index,lib,meta,auth,wiki,chat,keys,admin,security,types}.ts` + a thin route-table dispatcher — shipped, see ROADMAP §2. (2026-06-24)
 - [x] **Group `src/components/ui/`** — done 2026-07-03: `ui/{chat,wiki,games,shelves,reader,graph,music,overlays}/`, remaining flat files are cross-cutting singles.
 
@@ -75,7 +75,7 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 - [ ] **`glob@11` deprecation warning**: track — update when fix is released upstream
 - [~] **Broken wikilinks** — down to 4 as of 2026-06-16 (was 35); see ROADMAP §7. `public/broken-links.json` now tracks the count automatically.
 - [ ] **Detailed documentation**: comprehensive docs for the codebase
-- [ ] Fix CLS fully: image `width`/`height` attributes (Gallery, sidenotes, link preview, lightbox)
+- [x] **Fix CLS — intrinsic image dimensions**: prebuild emits `public/image-dimensions.json` and `rehype-image-paths` stamps `width`/`height` onto compiled MDX images while preserving responsive CSS. (2026-06-20)
 
 ---
 
@@ -119,5 +119,5 @@ design pass**, and note that `stonk_ledger`/`stonk_balance`/`stonk_config` no lo
 ## Infrastructure & Legal
 
 - [ ] **Trusted Types**: evaluate `require-trusted-types-for 'script'` — audit PixiJS/D3 compatibility first
-- [x] **GDPR cookie consent**: `CookieConsent` component in all three shells. Accept/Reject stored in `localStorage`. Reject disables cross-domain cookie, reloads for localStorage-only auth.
+- [x] **GDPR cookie consent**: `CookieConsent` component in all four shells. Accept/Reject stored in `localStorage`. Reject disables cross-domain cookie, reloads for localStorage-only auth.
 - [x] **Privacy policy page**: `/privacy` route on all shells. Links from CornerMenu + cookie consent banner. Covers auth, cookies, third parties, data retention, rights.

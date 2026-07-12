@@ -1,12 +1,11 @@
-# PLATE — Generative Plate Composer
+# PLATE — Generative Plate Composer (shipped as Apparatus)
 
-> **Working title.** `PLATE` dovetails with the vocabulary already in the repo
-> (SIGIL renders a "plate", `plate-scan` is a bg mode, the IR's top object is a
-> `Plate`). Alternatives to consider at approval: **CODEX**, **ATLAS**,
-> **INCUNABULA**, **APPARATUS**, **FRONTISPIECE**, **VELLUM**. The arcade route
-> slug is assumed `composer` here but tracks the final name.
+> **Historical naming note.** This spec used `PLATE` as its working title. Leon
+> chose **Apparatus** for the shipped product; the public route is `/apparatus`,
+> while internal module directories remain `composer` to avoid colliding with
+> the IR's `Apparatus` chrome type.
 
-Status: **draft for approval** · Owner: Leon · Target: in-repo arcade system page
+Status: **shipped (M0–M6, 2026-07-05)** · Owner: Leon · Retained as the guiding design spec; see `docs/devlog/2026-07-05.yaml`
 
 ---
 
@@ -623,7 +622,8 @@ src/components/ui/composer/       ← the React shell
   ContactSheet.tsx                N-seed thumbnail grid
   ComposerPage.module.scss  ComposerStage.module.scss  …
 
-src/config/system-pages.ts        + one line: composer → ComposerPage, layout "game"
+src/config/system-pages-meta.ts   + apparatus metadata, layout "game"
+src/config/system-pages.ts        + apparatus → ComposerPage lazy component
 src/components/ui/games/ArcadePage.tsx  + one GameCard
 scripts/test-composer.ts          headless: determinism, slot-fill validity,
                                    anchor resolution, serialize round-trip  (wired into `npm test`)
@@ -691,7 +691,9 @@ new armatures/motifs/eras/palettes land continuously without touching the shell.
 
 ---
 
-## 16. Open questions for approval
+## 16. Approval questions (resolved during implementation)
+
+The wording below is retained as the historical approval checklist; the shipped choices are recorded in `docs/devlog/2026-07-05.yaml`.
 
 1. **Name.** `PLATE` (working) vs CODEX / ATLAS / INCUNABULA / APPARATUS /
    FRONTISPIECE / VELLUM — your call. Arcade blurb copy?
@@ -709,5 +711,5 @@ new armatures/motifs/eras/palettes land continuously without touching the shell.
 
 ---
 
-*Once approved, first PR is M0 + M1 (skeleton → first generated plate), then we
-iterate the registries.*
+*Implemented through M6 and shipped as Apparatus on 2026-07-05. Later follow-up
+is recorded in the roadmap and `docs/devlog/2026-07-05.yaml`.*

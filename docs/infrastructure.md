@@ -32,7 +32,7 @@
 - [x] **Enable Vite minification**: `sourcemap: false` + no disabled minify — fixed alongside sourcemap removal
 - [x] **Reduce unused JS**: split vendor/page chunks done — D3, PixiJS, Chess, FlexSearch, and Supabase no longer load with the main garden entry
 - [x] **BgCanvas: skip on mobile**: early return added — canvas never mounts on `≤800px`
-- [x] **Fix CLS (partial)**: added `@font-face` fallbacks with `size-adjust`, `ascent-override`, `descent-override` in `base.scss` for all three fonts; updated `--font-*` tokens to include fallbacks. Image `width`/`height` attributes remain TODO (affects Gallery, sidenotes, link preview, lightbox)
+- [x] **Fix CLS**: added `@font-face` fallbacks with `size-adjust`, `ascent-override`, `descent-override` for all three fonts; prebuild now emits `public/image-dimensions.json` and `rehype-image-paths` stamps intrinsic `width`/`height` on MDX images while responsive CSS keeps them fluid. (completed 2026-06-20)
 - [x] **Fix render-blocking requests** (est. 300ms savings): `index.html` Google Fonts now use `rel="preload"` + `onload` swap + `<noscript>` fallback
 - [x] **Cache lifetimes** (est. 122KB savings): `public/_headers` sets 1-year immutable cache on `/content/Media/*` and `/assets/*`, 7-day cache on `/og/*`
 
@@ -78,5 +78,5 @@
 
 ## Legal & Compliance
 
-- [ ] **GDPR cookie consent**: cookie consent banner for EU users — required since we set a cross-domain session cookie (`domain=.subsurfaces.net`). Minimal UI: bottom bar with "Accept" / "Reject" buttons; reject disables Supabase auth cookie (localStorage fallback only). Store consent in `localStorage`. Only show on first visit.
-- [ ] **Privacy policy page**: document what data is stored (Supabase auth, profiles, messages, bookmarks), cookie usage, and contact info. Link from footer of all three shells.
+- [x] **GDPR cookie consent**: `CookieConsent` is mounted across all four shells; Accept/Reject persists in `localStorage`, and rejection disables the cross-domain auth cookie in favour of localStorage-only auth.
+- [x] **Privacy policy page**: `/privacy` documents stored data, cookies, third parties, retention, and user rights; linked from CornerMenu and the consent banner.

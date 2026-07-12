@@ -1,7 +1,7 @@
 /**
  * Layout classification — exercises the real shared module (src/lib/layout.ts),
  * the single source of truth NoteRenderer and usePanelClick both call into
- * (see ROADMAP §19/§21, docs/specs/2026-07-12-classify-layout-nav-reader-spec.md).
+ * (see ROADMAP §19/§21, docs/archive/specs/2026-07-12-classify-layout-nav-reader-spec.md).
  */
 import assert from "node:assert"
 import { classifyLayout } from "../src/lib/layout"

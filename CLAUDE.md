@@ -6,7 +6,7 @@ Quick-start for AI agents working on this codebase. Read this first, refer to `d
 
 ## What This Is
 
-Custom React 19 + Vite 6 SPA. A digital garden (notes, essays, collections) at `subsurfaces.net`, with a wiki subdomain at `wiki.subsurfaces.net` and a chat subdomain at `chat.subsurfaces.net`. Three shells, one codebase — see [Three Shells](#three-shells). Deployed as a Cloudflare Worker (not Pages — despite the name).
+Custom React 19 + Vite 6 SPA. A digital garden (notes, essays, collections) at `subsurfaces.net`, with wiki, chat, and OS subdomains. Four shells, one codebase — see [Four Shells](#four-shells). Deployed as a Cloudflare Worker (not Pages — despite the name).
 
 **Not Quartz, not Next.js, not Astro.** Fully custom.
 
@@ -17,7 +17,7 @@ Custom React 19 + Vite 6 SPA. A digital garden (notes, essays, collections) at `
 ```bash
 npm run dev          # prebuild + Vite HMR + nodemon watching content/
 npm run build        # prebuild (via npm lifecycle) + tsc --noEmit + vite build → dist/
-npm test             # lightweight script checks (slug parity + sidenote order + package scripts)
+npm test             # lightweight script checks (slug/layout parity, sidenotes, generators, package scripts)
 npm run typecheck:worker  # type-check the Cloudflare Worker entry point
 npm run check        # npm test + Worker typecheck + full build
 npm run prebuild     # content index rebuild
@@ -50,7 +50,8 @@ Dev dashboard: `/__dev` (dev mode only).
 | `src/styles/` | SCSS modules + global styles | Yes |
 | `src/store/` | Zustand store (single flat store) | Yes |
 | `src/router.tsx` | Hand-written route tree (not file-based) | Yes |
-| `src/config/system-pages.ts` | System page slug → component/layout registry | Yes |
+| `src/config/system-pages-meta.ts` | Pure system-page slug → title/layout/date metadata (safe for prebuild) | Yes |
+| `src/config/system-pages.ts` | React component registry joined onto system-page metadata | Yes |
 | `src/worker.ts` | Cloudflare Worker entry: API routes + asset/meta handling (`tsconfig.worker.json`) | Yes |
 | `scripts/` | prebuild.ts, og-gen.ts, test-*.ts, dash.mjs (NOT type-checked by tsconfig) | Yes |
 | `public/` | Static assets + generated manifests | Manifests are generated |
@@ -91,7 +92,7 @@ Dev dashboard: `/__dev` (dev mode only).
 | `/boot` | BootPage (lazy) | Endless procedural TUI boot sequence |
 | `$` (catch-all) | NoteRenderer / ChatPage | Renders note content or ChatPage if in ChatShell |
 
-**System page slugs** live in `src/config/system-pages.ts`: `graph`, `chess`, `hexo`, `sigil`, `bookshelf`, `movieshelf`, `music-library`, `arcade`, plus the smaller games/toys.
+**System page slugs** have pure metadata in `src/config/system-pages-meta.ts` and matching lazy component entries in `src/config/system-pages.ts`: `graph`, `chess`, `hexo`, `sigil`, `bookshelf`, `movieshelf`, `music-library`, `arcade`, plus the smaller games/toys. The key sets must stay identical; `npm test` checks parity.
 
 **Background modes** (`BgCanvas.tsx`): `murmuration` (default), `graph`, `vectors`, `dots`, `terminal`, `chamber`, `schematic`, `isometric`, `orrery`, `plate-scan` — all user-selectable, ordered by `BG_MODES` in the store — plus page-scoped `chess`/`hexo`. Game pages auto-switch their themed bg via the slug map in `BgCanvasInner` (`sigil`/`collider` → `chamber`); `chamber` is also user-selectable, so its auto-switch bypasses `setBgMode` (preserving `lastBgMode`) and reverts only when it was page-triggered (`autoChamberRef`). SIGIL board generation lives in `src/lib/sigil.ts` (pure, tested by `scripts/test-sigil.ts`).
 
@@ -101,14 +102,15 @@ Dev dashboard: `/__dev` (dev mode only).
 
 ## Layout System
 
-`NoteRenderer.resolveLayout()` determines article vs note:
+`classifyLayout()` in `src/lib/layout.ts` is the single source of truth for article/note/game classification:
 1. `frontmatter.layout` explicit override → wins
 2. `type` is `book`/`movie`/`chatter`/`philosopher` → article
 3. Slug starts with `wiki/` → article
-4. System page slugs → article (layout supplied by `SYSTEM_PAGES`)
-5. Default → note
+4. Slug starts with `writing/` → article
+5. System page slug → layout supplied by `SYSTEM_PAGE_META`
+6. Default → note
 
-System-page layout comes from `SYSTEM_PAGES`; `resolveLayout()` still owns the frontmatter/type/wiki/default rules.
+`NoteRenderer`, `usePanelClick`, and `<Query>` all call this helper. Prebuild passes explicit `layout` through the content index and synthesizes `system: true` entries for registered system pages that have no companion content note.
 
 **Article layout:** 900px body, right margin column (TOC + sidenotes), WikiInfobox for chatter/philosopher. Justified text.
 
@@ -134,7 +136,7 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 ## Deployment
 
 - **Platform:** Cloudflare Workers (not Pages, despite project name)
-- **Trigger:** Push to `main` → CF auto-build
+- **Trigger:** Push to `master` → CF auto-build
 - **Build output:** `dist/`
 - **SPA routing:** `wrangler.toml` `[assets]` block + `public/_redirects` (`/* /index.html 200`)
 - **Custom domains:** `subsurfaces.net`, `www.subsurfaces.net`, `wiki.subsurfaces.net`, `chat.subsurfaces.net`, `os.subsurfaces.net` (Worker custom domains)
@@ -164,7 +166,7 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 3. **`BgCanvas` is z-index 0.** All containers must be `background: transparent`. Global bg color on `body` only.
 4. **`import.meta.glob` is build-time.** New content files need a rebuild. `npm run dev` watches automatically.
 5. **`src/worker.ts` is NOT in the Vite SPA build.** Excluded from `tsconfig.json`; compiled by Wrangler/CF. VS Code errors against it are ignorable — type-check it with `npm run typecheck:worker`.
-6. **`SYSTEM_PAGES` is the source of truth for system pages.** Add new game/tool pages in `src/config/system-pages.ts` (one line). Add new content-driven layout rules in `NoteRenderer.resolveLayout()`.
+6. **System pages use a paired registry.** Add pure title/layout/date metadata in `src/config/system-pages-meta.ts` and the matching lazy React component in `src/config/system-pages.ts`; `scripts/test-layout.ts` enforces key parity. Add content-driven layout rules only in `src/lib/layout.ts`'s `classifyLayout()`.
 7. **Sidenote footnotes — two plugins, two pipelines, never both at once.** `remark-sidenotes.ts` is the one that matters for published notes — wired into `vite.config.ts`'s MDX build. It converts footnote identifiers to sequential Roman numerals for display (the `[^bateson]`-style identifier is just an internal key, never shown to readers), and inserts the checkbox/label/aside triplet as siblings of the nearest *block* ancestor rather than inline — an `<aside>` can't legally nest inside a `<p>`/heading, and letting the HTML parser silently hoist it out breaks the CSS `:checked + label + aside` sibling chain the narrow-viewport toggle depends on. `rehype-sidenotes-runtime.ts` is unrelated to that pipeline — it's only for `markdown.ts`'s standalone runtime `unified()` processor (LinkPreview hover, WikiEditPage live preview, BootPage terminal rendering), which unwraps the first `<p>` inside footnote definitions. Don't wrap sidenote content in block elements there either.
 8. **Case sensitivity:** Routes are case-insensitive at runtime. CF is case-sensitive for static assets — keep media filenames consistent.
 9. **Graph route** exists as both a dedicated route AND a NoteRenderer system page. Dedicated route wins via router specificity.
@@ -186,7 +188,7 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 | Task | Where |
 |---|---|
 | New note | Drop `.md`/`.mdx` in `content/`, add `title` frontmatter, rebuild |
-| New system page | Add one entry to `src/config/system-pages.ts` |
+| New system page | Add matching metadata + component entries to `src/config/system-pages-meta.ts` and `src/config/system-pages.ts` |
 | New floating UI | `position: fixed` inside AppShell, correct z-index, no transform on parent |
 | New frontmatter field | `NoteMeta` in `prebuild.ts` + `NoteMetadata` in `src/types/content.ts` |
 | New MDX component | Register in `src/components/mdx/MDXProvider.tsx` |
