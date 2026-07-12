@@ -7,7 +7,7 @@ tags:
 created: 2026-06-14
 layout: article
 id: blog
-growth: seedling
+growth: larval
 ---
 
 HeXO is a game I've been playing and picking apart for a while: **infinite

@@ -6,7 +6,7 @@ tags:
   - writing
 type: note
 date: 2026-07-11
-growth: budding
+growth: larval
 published: "true"
 ---
 

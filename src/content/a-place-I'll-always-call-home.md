@@ -4,6 +4,7 @@ tags:
   - Photography
   - Lancaster
 id: blog
+growth: larval
 ---
 ![[ESSO AFTER DARK.jpeg]]
 

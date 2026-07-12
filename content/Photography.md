@@ -7,6 +7,7 @@ tags:
 date: 2026-03-07
 published: true
 layout: article
+growth: becoming
 ---
 
 ## The Pencil of Nature; History's Mirror; The art of Seeing; Painting with Light...

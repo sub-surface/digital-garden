@@ -4,6 +4,7 @@ tags:
   - thoughts
   - film
   - limitations
+growth: becoming
 ---
 
 # Lars von Trier

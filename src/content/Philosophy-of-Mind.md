@@ -4,6 +4,7 @@ tags:
   - thoughts
   - philosophy
   - mind
+growth: becoming
 ---
 
 # Philosophy of Mind

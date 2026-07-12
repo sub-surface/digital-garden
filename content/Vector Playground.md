@@ -4,6 +4,7 @@ tags:
   - interactive
   - experiments
   - meta
+growth: larval
 ---
 
 An interactive control panel for the background vector field. The controls panel opens automatically on this page — press `\` to toggle it on any other page.

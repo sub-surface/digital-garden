@@ -5,6 +5,7 @@ tags:
   - thoughts
   - Aesthetics
 id: blog
+growth: becoming
 ---
 # On Diagrams
 

@@ -3,6 +3,7 @@ title: Abbas
 tags:
   - thoughts
   - photography
+growth: becoming
 ---
 
 # Abbas

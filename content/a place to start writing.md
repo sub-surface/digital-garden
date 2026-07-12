@@ -5,6 +5,7 @@ tags:
   - home
   - Philosophy
 id: blog
+growth: becoming
 ---
 
 # Recent Additions

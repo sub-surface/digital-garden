@@ -22,4 +22,5 @@ photos:
     caption: Common Garden Street
   - file: Eating Plus.jpg
     caption: Eating Plus
+growth: larval
 ---

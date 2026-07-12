@@ -4,6 +4,7 @@ tags:
   - thoughts
   - philosophy
   - language
+growth: becoming
 ---
 
 # Wittgenstein

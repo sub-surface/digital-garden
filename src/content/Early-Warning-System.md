@@ -1,3 +1,7 @@
+---
+growth: becoming
+---
+
 See: [[Emergency Alert System]]
 *From Wikipedia,*
 

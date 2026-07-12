@@ -4,6 +4,7 @@ tags:
   - thoughts
 created: 2026-02-06
 id: blog
+growth: becoming
 ---
 Our [[history]] as existing beings coincides with an endless walk of shame - our toil, fruitful at times, under a grudging sun. May we come to know the world as it is, or merely ever how we want it to be? 
 

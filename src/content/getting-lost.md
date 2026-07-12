@@ -1,3 +1,7 @@
+---
+growth: becoming
+---
+
 > Getting lost is an easy way to find yourself  
 > You should try it some time.
 

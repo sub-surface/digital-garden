@@ -9,6 +9,7 @@ date: 2026-03-07
 published: "true"
 image: /content/media/pepe-wave.gif
 layout: article
+growth: becoming
 ---
 
 

@@ -4,6 +4,7 @@ tags:
   - thoughts
   - philosophy
   - reading
+growth: becoming
 ---
 
 # Walter Benjamin

@@ -1,3 +1,7 @@
+---
+growth: becoming
+---
+
 *From Wikipedia,*
 
 > The **Emergency Alert System** (EAS) is a national warning system in the United States designed to allow authorized officials to broadcast emergency alerts and warning messages to the public via cable, satellite and broadcast television and AM, FM and satellite radio. 

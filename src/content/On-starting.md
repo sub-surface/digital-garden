@@ -4,6 +4,7 @@ tags:
   - Philosophy
   - thoughts
 id: blog
+growth: becoming
 ---
 # On starting
 

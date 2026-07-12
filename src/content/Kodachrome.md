@@ -3,6 +3,7 @@ title: Kodachrome
 tags:
   - thoughts
   - photography
+growth: becoming
 ---
 
 # Kodachrome

@@ -7,6 +7,7 @@ tags:
   - Philosophy
   - internet
   - media
+growth: becoming
 ---
 Writing about Instagram is hard, I keep pausing myself before I consider actually committing to anything. It feels passé to even mention social media in an academic text, never-mind to take such a lowly-considered form of content seriously. But, I know this stuff will be important in the future. I don't know why, I just know it will.
 

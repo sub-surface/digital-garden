@@ -1,3 +1,7 @@
+---
+growth: larval
+---
+
 
 ```dataviewjs
 

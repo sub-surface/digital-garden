@@ -4,6 +4,7 @@ tags:
   - thoughts
   - philosophy
   - power
+growth: becoming
 ---
 
 # Michel Foucault

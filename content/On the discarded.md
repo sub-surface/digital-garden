@@ -4,6 +4,7 @@ tags:
   - thoughts
   - Philosophy
 id: blog
+growth: becoming
 ---
 # On the discarded
 

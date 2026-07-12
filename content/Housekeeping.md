@@ -3,6 +3,7 @@ title: Housekeeping
 description: Information about how to use this site.
 tags:
   - meta
+growth: becoming
 ---
 
 > This [site](https://github.com/sub-surface/digital-garden) was created February 6th, 2026  

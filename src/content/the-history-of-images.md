@@ -4,6 +4,7 @@ tags:
   - thoughts
 created: 2026-02-06
 id: blog
+growth: larval
 ---
 The history of images runs parallel to the history of human beings, and their ever-evolving ways of [[coming to know the world as it is]], as it was, and as it may be.
 

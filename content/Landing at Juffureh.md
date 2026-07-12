@@ -6,6 +6,7 @@ tags:
   - home
 id: blog
 created: 2026-02-07
+growth: becoming
 ---
 ![[Landing at Juffureh.jpg]]
 

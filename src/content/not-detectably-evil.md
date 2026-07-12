@@ -1,3 +1,7 @@
+---
+growth: becoming
+---
+
 How do we know when an [[agent]] has our best interests at heart?
 
 ![[Garth.jpg]]
