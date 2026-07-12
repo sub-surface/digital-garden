@@ -7,6 +7,8 @@ layout: article
 date: 2026-07-10
 growth: larval
 published: "true"
+quote: The soul never thinks without a mental image.
+quote-author: — Aristotle, De Anima
 ---
 
   

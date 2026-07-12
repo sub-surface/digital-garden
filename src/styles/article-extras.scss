@@ -59,13 +59,20 @@ figcaption {
 
 // ── Epigraph ──
 // Opening quotation before the prose. Indented from the right, italic, with a
-// right-aligned attribution. Essays only (opt-in via <Epigraph>).
+// right-aligned attribution — framed by hairlines like a quiet pull-quote.
+// Used two ways: hand-authored in MDX (<Epigraph>, mid-body), or auto-rendered
+// by NoteRenderer from frontmatter `quote`/`quote-author` (in the header,
+// right after the masthead — see .note-header:has(+ .epigraph) below).
 .epigraph {
   margin: 0 0 var(--space-12) auto;
   width: min(80%, 32rem);
   font-style: italic;
   color: var(--color-text-muted);
   line-height: 1.5;
+  text-align: right;
+  border-top: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border-light);
+  padding: var(--space-4) 0;
 
   &__quote p:last-child {
     margin-bottom: var(--space-2);
@@ -78,6 +85,15 @@ figcaption {
     font-family: var(--font-code);
     opacity: 0.7;
   }
+}
+
+// The header's own margin-bottom (space-12) is sized to separate it from the
+// article body/TOC. When a frontmatter epigraph sits between them instead,
+// that much space reads as a gap before the epigraph rather than after it —
+// shrink it there specifically, since the epigraph carries its own
+// space-12 margin-bottom to keep the gap before the body unchanged.
+.note-header:has(+ .epigraph) {
+  margin-bottom: var(--space-4);
 }
 
 // ── Tables ──

@@ -5,6 +5,7 @@ import { NoteLayout } from "./NoteLayout"
 import { NoteFooter } from "./NoteFooter"
 import { NoteBody } from "./NoteBody"
 import { WikiInfobox } from "../wiki/WikiInfobox"
+import { Epigraph } from "@/components/mdx/Epigraph"
 import { resolveSlug } from "@/lib/content-loader"
 import { normalizeSlug } from "@/lib/slug"
 import { useIsWiki } from "@/hooks/useShell"
@@ -85,6 +86,13 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
   const type = (fm.type as string) ?? meta?.type
   const isWiki = useIsWiki()
 
+  // Opt-in opening epigraph, set from frontmatter rather than hand-authored
+  // MDX so it renders in the header (below title/growth/tags, above the
+  // body) regardless of content. Reuses the same <Epigraph> the MDX authors
+  // use inline, for one shared visual language.
+  const quote = (fm as Record<string, any>).quote as string | undefined
+  const quoteAuthor = (fm as Record<string, any>)["quote-author"] as string | undefined
+
   // Show edit button on wiki article pages (not index, about, submit, admin, style-guide)
   const editableWikiSlugs = isWiki && layout === "article" && slug.toLowerCase().startsWith("wiki/")
     && !["wiki", "wiki/about", "wiki/submit", "wiki/style-guide"].includes(slug.toLowerCase())
@@ -120,51 +128,54 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
     : []
 
   const header = (
-    <div className="note-header">
-      {layout === "article" && (
-        <div className="note-header__bar">
-          <div className="note-header__tools">
-            <Suspense fallback={null}>
-              {editableWikiSlugs && <WikiEditButton slug={slug} />}
-              <BookmarkButton slug={slug} title={title} />
-            </Suspense>
+    <>
+      <div className="note-header">
+        {layout === "article" && (
+          <div className="note-header__bar">
+            <div className="note-header__tools">
+              <Suspense fallback={null}>
+                {editableWikiSlugs && <WikiEditButton slug={slug} />}
+                <BookmarkButton slug={slug} title={title} />
+              </Suspense>
+            </div>
+            <div className="note-header__crumbs">
+              {breadcrumbParts.map((part, i) => {
+                // Top-level collection folders have dedicated shelf pages; route
+                // their crumb there instead of /Movies (which has no page).
+                const href =
+                  i === 0 && CRUMB_ALIASES[part.toLowerCase()]
+                    ? CRUMB_ALIASES[part.toLowerCase()]
+                    : "/" + breadcrumbParts.slice(0, i + 1).join("/")
+                return (
+                  <span key={i}>
+                    {i > 0 && <span className="sep">/</span>}
+                    <a href={href}>{part.replace(/-/g, " ")}</a>
+                  </span>
+                )
+              })}
+            </div>
           </div>
-          <div className="note-header__crumbs">
-            {breadcrumbParts.map((part, i) => {
-              // Top-level collection folders have dedicated shelf pages; route
-              // their crumb there instead of /Movies (which has no page).
-              const href =
-                i === 0 && CRUMB_ALIASES[part.toLowerCase()]
-                  ? CRUMB_ALIASES[part.toLowerCase()]
-                  : "/" + breadcrumbParts.slice(0, i + 1).join("/")
-              return (
-                <span key={i}>
-                  {i > 0 && <span className="sep">/</span>}
-                  <a href={href}>{part.replace(/-/g, " ")}</a>
-                </span>
-              )
-            })}
+        )}
+        {growth && (
+          <span className={`growth-badge growth-${growth}`}>{growth}</span>
+        )}
+        <h1 className="note-header__title">{title}</h1>
+        {(date || readingTime) && (
+          <div className="note-date note-header__meta">
+            {date && <span>{new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>}
+            {readingTime && <span>{readingTime} min read</span>}
           </div>
-        </div>
-      )}
-      {growth && (
-        <span className={`growth-badge growth-${growth}`}>{growth}</span>
-      )}
-      <h1 className="note-header__title">{title}</h1>
-      {(date || readingTime) && (
-        <div className="note-date note-header__meta">
-          {date && <span>{new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>}
-          {readingTime && <span>{readingTime} min read</span>}
-        </div>
-      )}
-      {tags.length > 0 && (
-        <div className="tag-list note-header__tags">
-          {tags.map((tag) => (
-            <a key={tag} href={`/tags/${tag}`} className="tag-pill">#{tag}</a>
-          ))}
-        </div>
-      )}
-    </div>
+        )}
+        {tags.length > 0 && (
+          <div className="tag-list note-header__tags">
+            {tags.map((tag) => (
+              <a key={tag} href={`/tags/${tag}`} className="tag-pill">#{tag}</a>
+            ))}
+          </div>
+        )}
+      </div>
+      {quote && <Epigraph cite={quoteAuthor}>{quote}</Epigraph>}
+    </>
   )
 
   // Game layout: bare, wide, centered — no header chrome, TOC, infobox or
