@@ -24,8 +24,8 @@ Welcome to a node in the subsurface network.
 - I'm Leon, 
 	- this is my digital garden, inspired by [gwern](https://www.gwern.net/), and built with [Obsidian](https://obsidian.md/). 
 	- I'm interested in the [[philosophy]] and history of images;
-		- in [[Quasars]],
-		- and in [[the suffering of light]].
+		- in [[Clippings/Quasars|Quasars]],
+		- and in [[Books/the suffering of light|the suffering of light]].
 			- From [[Thales]] to [[the machine-god in the future]],
 			- at the intersections of thought, being, and *[[becoming]]*.
 - I'm From Lancaster,
@@ -54,7 +54,7 @@ You can use `?` to see a list of keyboard shortcuts.
 - *intersection* 
 	- in the [series of tubes;](https://www.youtube.com/watch?v=_cZC67wXUTs)
 	- a growing collection of 
-		- [[tags\thoughts|thoughts]], [[tags\games|games]], [tools](https://avatar.subsurfaces.net),
+		- [[tags/thoughts|thoughts]], [[tags/games|games]], [tools](https://avatar.subsurfaces.net),
 		- and 
 			- [[Vector Playground|experiments]], [meditations](https://lines.subsurfaces.net), [landscapes](https://anabasis.subsurfaces.net) & [[the machine-god in the future|strange artifacts]]
 ```
