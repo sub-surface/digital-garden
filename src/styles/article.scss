@@ -197,13 +197,13 @@
 .article-layout[data-dropcap] .article-body > p:first-of-type::first-letter,
 .dropcap > p:first-of-type::first-letter {
   float: left;
-  font-family: "EB Garamond", "Garamond", "Georgia", serif;
-  font-size: 5.4em;
-  font-weight: 300;
+  font-family: var(--font-dropcap);
+  font-size: 5em;
+  font-weight: 400;
   font-style: normal;
-  line-height: 0.82;
-  margin-right: 0.12em;
-  margin-top: 0.04em;
+  line-height: 0.78;
+  margin-right: 0.1em;
+  margin-top: 0.08em;
   position: relative;
   z-index: 1;
   color: var(--color-primary);
