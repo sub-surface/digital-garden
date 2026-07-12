@@ -181,7 +181,7 @@ Have we seen something yet? Have you been paying attention — and what, all thi
 [^emanation]: Roland Barthes, *Camera Lucida*, trans. Richard Howard (Hill & Wang, 1981), §34.
 [^caaete]: *Camera Lucida* §32: the noeme of photography, "That-has-been."
 [^mask]: *Camera Lucida* §14 — the passage sits with Avedon's portrait of William Casby, "born a slave"; Barthes continues: "the mask is the meaning, insofar as it is absolutely pure." Worth keeping the Casby anchor if you quote at length.
-[^fontcuberta]: Joan Fontcuberta, *El beso de Judas: Fotografía y verdad* (1997): "Every photograph is a fiction with pretensions to truth... photography lies always, lies instinctively, lies because its nature does not allow it to do anything else." The "multiplicity of thises": publisher's description of *Against Barthes: The Eye and the Index* (MACK, 2025) — review note planned once the book arrives.
+[^fontcuberta]: Joan Fontcuberta, *El beso de Judas: Fotografía y verdad* (1997): "Every photograph is a fiction with pretensions to truth... photography lies always, lies instinctively, lies because its nature does not allow it to do anything else." The "multiplicity of thises": publisher's description of *The Eye and the Index: Against Barthes* (MACK, 2025) — review note planned once the book arrives.
 [^sontag]: Susan Sontag, "In Plato's Cave," *On Photography* (FSG, 1977).
 [^payne]: *Camera Lucida* §39, on Alexander Gardner's 1865 portrait of Lewis Payne.
 [^derrida]: Jacques Derrida, "The Deaths of Roland Barthes," in *The Work of Mourning* (Chicago, 2001) — on the punctum's metonymic force and its *composition* (not opposition) with the studium. The ghosts line paraphrases his remarks in Ken McMullen's film *Ghost Dance* (1983): "the future belongs to ghosts."
@@ -210,7 +210,7 @@ Have we seen something yet? Have you been paying attention — and what, all thi
 - Derrida, Jacques. *The Work of Mourning*. Ed. Brault & Naas. Chicago: University of Chicago Press, 2001.
 - Descartes, René. *Optics* [La Dioptrique, 1637]. In *Discourse on Method, Optics, Geometry, and Meteorology*, trans. Olscamp. Indianapolis: Bobbs-Merrill, 1965.
 - Fontcuberta, Joan. *El beso de Judas: Fotografía y verdad*. Barcelona: Gustavo Gili, 1997.
-- Fontcuberta, Joan. *Against Barthes: The Eye and the Index*. London: MACK, 2025.
+- Fontcuberta, Joan. *The Eye and the Index: Against Barthes*. London: MACK, 2025.
 - Husserl, Edmund. *Ideas Pertaining to a Pure Phenomenology, First Book*. Trans. F. Kersten. The Hague: Nijhoff, 1983 [1913].
 - Husserl, Edmund. *Analyses Concerning Passive and Active Synthesis*. Trans. A. Steinbock. Dordrecht: Kluwer, 2001.
 - James, William. *The Principles of Psychology*. New York: Henry Holt, 1890.

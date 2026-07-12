@@ -111,7 +111,7 @@ End the section on the transformer diagram, captioned as a *Camera Lucida* plate
 
 ## Satellites
 
-- [ ] [[Joan Fontcuberta]] review — *[[The Eye and the Index (review)]]* (on arrival); his hoaxes (*Fauna*, *Sputnik*) as prior art for witness-or-performance.
+- [ ] [[Joan Fontcuberta]] review — *[[The Eye and the Index: Against Barthes (review)]]* (on arrival); his hoaxes (*Fauna*, *Sputnik*) as prior art for witness-or-performance.
 - [ ] [[Susan Sontag]] / [[The Predatory Gaze]] — deep-dive note (essay takes one section; the note takes the rest).
 - [ ] The gaze (Lacan/Bataille material, cut from this essay) — if ever, as its own quarantined note.
 - [ ] "Différance is all you need?" — autoregression as deferral; separate note, would destabilise the index-focus here.

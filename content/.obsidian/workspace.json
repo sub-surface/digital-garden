@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Misc/Attention & Difference Workbench.md",
+                "file": "thales.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Attention & Difference Workbench"
+              "title": "thales"
             }
           },
           {
@@ -109,7 +109,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Misc/Attention & Difference Workbench.md",
+                "file": "thales.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -119,7 +119,7 @@
                 "unlinkedCollapsed": false
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for Attention & Difference Workbench"
+              "title": "Backlinks for thales"
             }
           },
           {
@@ -199,6 +199,13 @@
   },
   "active": "13cb50a2931acc29",
   "lastOpenFiles": [
+    "index.md.tmp.2140.d7d40110bef1",
+    "Misc/Attention & Difference Workbench.md.tmp.2140.a1dcc881e185",
+    "Writing/Attention & Difference.md.tmp.2140.8ad907b75fe6",
+    "Writing/Attention & Difference.md.tmp.2140.475847b9e849",
+    "index.md",
+    "thales.md",
+    "Misc/Attention & Difference Workbench.md",
     "index.md.tmp.2140.f800bb72dce5",
     "index.md.tmp.2140.8515c099a0c5",
     "HeXO Theory.md.tmp.2140.91be2be2ba82",
@@ -207,11 +214,6 @@
     "Writing/Attention & Difference.md.tmp.2140.373910f520bb",
     "Writing/Attention & Difference.md.tmp.2140.2a4d2cbb93c2",
     "Writing/Attention & Difference.md",
-    "A&D Colophon.md.tmp.2140.1e8eb153e34f",
-    "Roland Barthes.md.tmp.2140.89e0e2d34415",
-    "Writing/Attention & Difference.md.tmp.2140.33c376fe1dcc",
-    "Writing/Attention & Difference.md.tmp.2140.a0535134de86",
-    "Misc/Attention & Difference Workbench.md",
     "A&D Colophon.md",
     "Media/Husserl-Attention-Nature.png",
     "Media/Neuronpedia_AIAYN.png",
@@ -235,9 +237,7 @@
     "Writing/Writing-Template.md",
     "Roland Barthes.md",
     "Writing/On-Attention.md",
-    "index.md",
     "Pasted image 20260611181432.png",
-    "Arcade.md",
     "Media/ClaudeAvatar.png",
     "Media/myname.png",
     "Media/Wiki/chatters/seinzumtode.png",

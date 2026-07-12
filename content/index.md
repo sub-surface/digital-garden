@@ -77,10 +77,15 @@ A virtual space for [[thinking in public]],
 
 # What's on my mind
 
-Updated: **10th July 2026**
+Updated: **12th July 2026**
 
 
 - I've been thinking about the connection between [[Attention & Difference|philosophy and computation]], and how the two fields can inform each other. I think there's a lot of potential for exploring the philosophical implications of computational systems, and how they can shape our understanding of the world. I plan to write a series of notes on this topic, looking at different aspects of computation and how they relate to philosophical concepts. This would mainly be in the context of analytic approaches but im hoping to look into deleuze's unfinished work on set theory to see if there are any interesting connections to be made. I think this could be a really interesting area of exploration, and I'm excited to see where it leads.
+- I also want to build something you can actually play with rather than just read about — a very lightweight attention-mapping toy, type a sentence and watch the weights light up. Not going to burn compute running a real model for it though — thinking synthetic attention patterns, generated on the fly with a bit of browser-side maths, so it costs nothing on the backend. Probably its own small address, attention.subsurfaces.net, kept deliberately minimal.
+- Joan Fontcuberta has a new book out, *The Eye and the Index: Against Barthes*, going after exactly the ground [[Attention & Difference]] was walking — meaning to get a copy and write it up properly once it lands.
+- [[Attention & Difference]] only gave Sontag one section and she deserves more — want to go back and do a proper deep-dive on the [[predatory gaze]], separate from the essay.
+- There's a whole separate note trying to get out of me about autoregression as deferral — [[Différance is all you need?]] — kept it out of the attention essay on purpose since it would've derailed the whole thing, but it's still rattling around.
+- Also thinking about making the dropcaps more on-brand — right now they're just an oversized letter in the body serif. Want something with actual character, either a proper generated/illuminated set matching the rest of the site's generative apparatus, or some other method — still figuring out which.
 
 ---
 
