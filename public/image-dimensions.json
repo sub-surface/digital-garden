@@ -202,5 +202,17 @@
   "/content/Media/Wiki/chatters/seinzumtode.png": {
     "width": 1024,
     "height": 1536
+  },
+  "/content/Media/Writing/decision-phase-portraits.svg": {
+    "width": 760,
+    "height": 600
+  },
+  "/content/Media/Writing/decision-reentry-cut.svg": {
+    "width": 420,
+    "height": 280
+  },
+  "/content/Media/Writing/decision-three-suns.svg": {
+    "width": 240,
+    "height": 560
   }
 }

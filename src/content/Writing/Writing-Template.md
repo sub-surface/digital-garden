@@ -6,6 +6,8 @@ type: essay
 layout: article
 date: 2026-03-07
 growth: larval
+quote: I am a template and style reference for long-form notes in the Writing folder.
+quote-author: — Glorp 
 ---
 
 # Title Here

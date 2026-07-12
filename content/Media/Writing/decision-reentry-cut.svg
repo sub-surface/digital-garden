@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 280" font-family="ui-monospace, 'IBM Plex Mono', Consolas, monospace">
+  <desc>A Spencer-Brown mark whose boundary re-enters itself: a distinction that contains its own remaking.</desc>
+  <defs>
+    <marker id="reentry-arr" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0.5 L7,4 L0,7.5 z" fill="#b4424c"/>
+    </marker>
+  </defs>
+  <!-- outer mark -->
+  <path d="M70,70 H330 V210" fill="none" stroke="#8a8a92" stroke-width="2"/>
+  <!-- inner mark (the form redrawn inside itself) -->
+  <path d="M150,110 H270 V180" fill="none" stroke="#8a8a92" stroke-width="1.5" opacity="0.8"/>
+  <!-- the boundary re-entering: from the inner form's edge, out through the open side, back in as the outer form's beginning -->
+  <path d="M270,180 C270,232 200,246 130,246 C58,246 40,190 40,130 C40,86 50,70 68,70"
+        fill="none" stroke="#b4424c" stroke-width="1.5" marker-end="url(#reentry-arr)"/>
+  <text x="352" y="256" font-size="9" fill="#9a9aa2" opacity="0.6" text-anchor="end">re-entry</text>
+</svg>

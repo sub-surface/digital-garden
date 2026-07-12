@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 600" font-family="ui-monospace, 'IBM Plex Mono', Consolas, monospace">
+  <desc>Four phase portraits of mind-space: the same plane (capability against goal-space) under four theories of dynamics — Bostrom's orthogonal scatter, Omohundro's instrumental corridors, Land's diagonal attractor, and Sellarsian revision loops.</desc>
+  <defs>
+    <marker id="arr" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0.5 L7,4 L0,7.5 z" fill="#8a8a92"/>
+    </marker>
+    <marker id="arrAccent" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0.5 L7,4 L0,7.5 z" fill="#b4424c"/>
+    </marker>
+  </defs>
+
+  <!-- ===================== PANEL A: ORTHOGONALITY ===================== -->
+  <g transform="translate(20,20)">
+    <text x="30" y="14" font-size="11" letter-spacing="1.5" fill="#9a9aa2">A · ORTHOGONALITY</text>
+    <text x="330" y="14" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="end">Bostrom 2012</text>
+    <text x="30" y="27" font-size="9" fill="#9a9aa2" opacity="0.7">any goal at any capability — no dynamics</text>
+    <line x1="30" y1="40" x2="30" y2="250" stroke="#8a8a92" stroke-width="1" opacity="0.5"/>
+    <line x1="30" y1="250" x2="330" y2="250" stroke="#8a8a92" stroke-width="1" opacity="0.5"/>
+    <text x="330" y="264" font-size="8.5" fill="#9a9aa2" opacity="0.55" text-anchor="end">capability →</text>
+    <text x="12" y="145" font-size="8.5" fill="#9a9aa2" opacity="0.55" text-anchor="middle" transform="rotate(-90 12 145)">goal-space →</text>
+    <g fill="#8a8a92" opacity="0.8">
+      <circle cx="45" cy="70" r="3"/><circle cx="70" cy="180" r="3"/><circle cx="90" cy="120" r="3"/>
+      <circle cx="110" cy="230" r="3"/><circle cx="130" cy="60" r="3"/><circle cx="150" cy="160" r="3"/>
+      <circle cx="60" cy="240" r="3"/><circle cx="170" cy="90" r="3"/><circle cx="185" cy="210" r="3"/>
+      <circle cx="200" cy="140" r="3"/><circle cx="215" cy="55" r="3"/><circle cx="230" cy="190" r="3"/>
+      <circle cx="245" cy="110" r="3"/><circle cx="260" cy="235" r="3"/><circle cx="275" cy="75" r="3"/>
+      <circle cx="290" cy="165" r="3"/><circle cx="305" cy="95" r="3"/><circle cx="315" cy="215" r="3"/>
+      <circle cx="85" cy="200" r="3"/><circle cx="120" cy="100" r="3"/><circle cx="160" cy="45" r="3"/>
+      <circle cx="195" cy="175" r="3"/><circle cx="250" cy="150" r="3"/><circle cx="280" cy="120" r="3"/>
+      <circle cx="310" cy="50" r="3"/><circle cx="55" cy="140" r="3"/><circle cx="140" cy="215" r="3"/>
+      <circle cx="225" cy="85" r="3"/>
+    </g>
+  </g>
+
+  <!-- ===================== PANEL B: CONVERGENT MEANS ===================== -->
+  <g transform="translate(410,20)">
+    <text x="30" y="14" font-size="11" letter-spacing="1.5" fill="#9a9aa2">B · CONVERGENT MEANS</text>
+    <text x="330" y="14" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="end">Omohundro 2008</text>
+    <text x="30" y="27" font-size="9" fill="#9a9aa2" opacity="0.7">convergent means, preserved ends</text>
+    <line x1="30" y1="40" x2="30" y2="250" stroke="#8a8a92" stroke-width="1" opacity="0.5"/>
+    <line x1="30" y1="250" x2="330" y2="250" stroke="#8a8a92" stroke-width="1" opacity="0.5"/>
+    <text x="330" y="264" font-size="8.5" fill="#9a9aa2" opacity="0.55" text-anchor="end">capability →</text>
+    <text x="12" y="145" font-size="8.5" fill="#9a9aa2" opacity="0.55" text-anchor="middle" transform="rotate(-90 12 145)">goal-space →</text>
+    <rect x="100" y="92" width="170" height="14" fill="#b4424c" opacity="0.08"/>
+    <rect x="100" y="181" width="170" height="17" fill="#b4424c" opacity="0.08"/>
+    <text x="185" y="86" font-size="8.5" fill="#b4424c" opacity="0.7" text-anchor="middle">instrumental corridors</text>
+    <g fill="none" stroke="#8a8a92" stroke-width="1.2" opacity="0.85" marker-end="url(#arr)">
+      <path d="M30,55 C90,55 110,97 150,97 L210,97 C250,97 270,62 322,62"/>
+      <path d="M30,85 C90,85 110,100 150,100 L210,100 C250,100 270,88 322,88"/>
+      <path d="M30,115 C90,115 110,103 150,103 L210,103 C250,103 270,113 322,113"/>
+      <path d="M30,145 C90,145 110,186 150,186 L210,186 C250,186 270,150 322,150"/>
+      <path d="M30,175 C90,175 110,189 150,189 L210,189 C250,189 270,177 322,177"/>
+      <path d="M30,205 C90,205 110,192 150,192 L210,192 C250,192 270,203 322,203"/>
+      <path d="M30,235 C90,235 110,195 150,195 L210,195 C250,195 270,231 322,231"/>
+    </g>
+  </g>
+
+  <!-- ===================== PANEL C: THE DIAGONAL ===================== -->
+  <g transform="translate(20,320)">
+    <text x="30" y="14" font-size="11" letter-spacing="1.5" fill="#9a9aa2">C · THE DIAGONAL</text>
+    <text x="330" y="14" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="end">Land 2013</text>
+    <text x="30" y="27" font-size="9" fill="#9a9aa2" opacity="0.7">the diagonal — means consume ends</text>
+    <line x1="30" y1="40" x2="30" y2="250" stroke="#8a8a92" stroke-width="1" opacity="0.5"/>
+    <line x1="30" y1="250" x2="330" y2="250" stroke="#8a8a92" stroke-width="1" opacity="0.5"/>
+    <text x="330" y="264" font-size="8.5" fill="#9a9aa2" opacity="0.55" text-anchor="end">capability →</text>
+    <text x="12" y="145" font-size="8.5" fill="#9a9aa2" opacity="0.55" text-anchor="middle" transform="rotate(-90 12 145)">goal-space →</text>
+    <line x1="30" y1="250" x2="322" y2="45.6" stroke="#b4424c" stroke-width="1.4" marker-end="url(#arrAccent)"/>
+    <text x="196" y="150" font-size="9" fill="#b4424c" opacity="0.85" text-anchor="middle" transform="rotate(-35 196 150)">intelligence optimisation</text>
+    <g fill="none" stroke="#8a8a92" stroke-width="1.2" opacity="0.85" marker-end="url(#arr)">
+      <path d="M30,60 C90,60 120,166 150,166 L175,148.5"/>
+      <path d="M30,100 C90,100 140,152 170,152 L195,134.5"/>
+      <path d="M30,140 C90,140 160,138 190,138 L215,120.5"/>
+      <path d="M30,180 C90,180 180,124 210,124 L235,106.5"/>
+      <path d="M30,220 C90,220 200,110 230,110 L255,92.5"/>
+      <path d="M30,245 C70,245 95,187 120,187 L145,169.5"/>
+    </g>
+  </g>
+
+  <!-- ===================== PANEL D: REVISION ===================== -->
+  <g transform="translate(410,320)">
+    <text x="30" y="14" font-size="11" letter-spacing="1.5" fill="#9a9aa2">D · REVISION</text>
+    <text x="330" y="14" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="end">Sellars · Negarestani</text>
+    <text x="30" y="27" font-size="9" fill="#9a9aa2" opacity="0.7">commitments — revisable but binding</text>
+    <line x1="30" y1="40" x2="30" y2="250" stroke="#8a8a92" stroke-width="1" opacity="0.5"/>
+    <line x1="30" y1="250" x2="330" y2="250" stroke="#8a8a92" stroke-width="1" opacity="0.5"/>
+    <text x="330" y="264" font-size="8.5" fill="#9a9aa2" opacity="0.55" text-anchor="end">capability →</text>
+    <text x="12" y="145" font-size="8.5" fill="#9a9aa2" opacity="0.55" text-anchor="middle" transform="rotate(-90 12 145)">goal-space →</text>
+    <g fill="none" stroke="#8a8a92" stroke-width="1.2" opacity="0.85" marker-end="url(#arr)">
+      <path d="M30,210 L95,206 L95,150 L170,146 L170,175 L245,171 L245,115 L322,111"/>
+      <path d="M30,120 L110,117 L110,70 L200,67 L200,95 L322,91"/>
+      <path d="M30,165 L140,161 L140,195 L220,191 L220,135 L322,130"/>
+    </g>
+    <g fill="none" stroke="#b4424c" stroke-width="1.3">
+      <circle cx="95" cy="206" r="4.5"/><circle cx="170" cy="146" r="4.5"/><circle cx="245" cy="171" r="4.5"/>
+      <circle cx="110" cy="117" r="4.5"/><circle cx="200" cy="67" r="4.5"/>
+      <circle cx="140" cy="161" r="4.5"/><circle cx="220" cy="191" r="4.5"/>
+    </g>
+    <text x="216" y="56" font-size="8.5" fill="#b4424c" opacity="0.85">revision</text>
+  </g>
+</svg>

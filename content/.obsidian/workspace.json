@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Misc/Attention & Difference Workbench.md",
+                "file": "Writing/Decision Was Never Final.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Attention & Difference Workbench"
+              "title": "Decision Was Never Final"
             }
           },
           {
@@ -29,7 +29,7 @@
               "state": {
                 "file": "Writing/Attention & Difference.md",
                 "mode": "source",
-                "source": false
+                "source": true
               },
               "icon": "lucide-file",
               "title": "Attention & Difference"
@@ -199,20 +199,30 @@
   },
   "active": "13cb50a2931acc29",
   "lastOpenFiles": [
+    "Writing/Decision Was Never Final.md.tmp.16140.743530273840",
+    "Media/Writing/decision-reentry-cut.svg",
+    "Media/Writing/decision-reentry-cut.svg.tmp.16140.7018cdbbc232",
+    "Media/Writing/decision-three-suns.svg",
+    "Media/Writing/decision-three-suns.svg.tmp.16140.6f31559ccb52",
+    "Media/Writing/decision-phase-portraits.svg",
+    "Media/Writing/decision-phase-portraits.svg.tmp.16140.83e45642213b",
+    "Media/Writing",
+    "Misc/Decision Was Never Final Workbench.md.tmp.16140.7fe91190350f",
+    "Philosophy.md",
+    "Misc/Decision Was Never Final Workbench.md",
+    "Misc/Decision Was Never Final.md",
+    "Writing/Attention & Difference.md",
+    "Writing/Decision Was Never Final.md",
+    "Writing/Writing-Template.md",
+    "Writing/On-Attention.md",
+    "Misc/Attention & Difference Workbench.md",
     "thales.md",
     "Misc/Attention & Difference Workbench.md.tmp.2140.a1cf4d08f6f4",
     "Writing/Attention & Difference.md.tmp.2140.005afb842e51",
     "index.md.tmp.2140.d7d40110bef1",
     "Misc/Attention & Difference Workbench.md.tmp.2140.a1dcc881e185",
     "Writing/Attention & Difference.md.tmp.2140.8ad907b75fe6",
-    "Writing/Attention & Difference.md.tmp.2140.475847b9e849",
     "index.md",
-    "Misc/Attention & Difference Workbench.md",
-    "index.md.tmp.2140.f800bb72dce5",
-    "index.md.tmp.2140.8515c099a0c5",
-    "HeXO Theory.md.tmp.2140.91be2be2ba82",
-    "A&D Colophon.md.tmp.2140.ef7ca07ea90b",
-    "Writing/Attention & Difference.md",
     "A&D Colophon.md",
     "Media/Husserl-Attention-Nature.png",
     "Media/Neuronpedia_AIAYN.png",
@@ -230,17 +240,10 @@
     "2026-07-11.md",
     "Daily/06-02-26.md",
     "Daily/11-02-26.md",
-    "Clippings/Attention (Stanford Encyclopedia of Philosophy).md",
-    "Clippings/Accelerationism Ray Brassier.md",
-    "Clippings/Mad Black Deleuzianism.md",
-    "Writing/Writing-Template.md",
-    "Roland Barthes.md",
-    "Writing/On-Attention.md",
     "Pasted image 20260611181432.png",
     "Media/ClaudeAvatar.png",
     "Media/myname.png",
     "Media/Wiki/chatters/seinzumtode.png",
-    "Media/GITS-ARM1.gif",
-    "Media/pepe-wave.gif"
+    "Media/GITS-ARM1.gif"
   ]
 }

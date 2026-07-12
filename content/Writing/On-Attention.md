@@ -1,11 +1,14 @@
 ---
 title: On Attention
 description: Atteeeeenn-tion!
-tags: [philosophy, mind, essay]
+tags:
+  - philosophy
+  - mind
+  - essay
 type: essay
 layout: article
 date: 2026-03-07
-published: true
+published: false
 private: true
 growth: actual
 ---

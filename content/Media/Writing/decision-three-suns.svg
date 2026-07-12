@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 560" font-family="ui-monospace, 'IBM Plex Mono', Consolas, monospace">
+  <desc>Three suns: Bataille's spendthrift sun (expenditure without return), Lyotard and Brassier's dying sun (the sentence), and the Kardashev sun (an energy budget to capture).</desc>
+  <defs>
+    <marker id="ray" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M0,0.5 L7,4 L0,7.5 z" fill="#8a8a92"/>
+    </marker>
+  </defs>
+
+  <!-- Sun 1: EXPENDITURE (Bataille) -->
+  <circle cx="120" cy="80" r="36" fill="none" stroke="#8a8a92" stroke-width="1.5"/>
+  <g stroke="#8a8a92" stroke-width="1.2" opacity="0.85" marker-end="url(#ray)">
+    <line x1="164" y1="80" x2="180" y2="80"/>
+    <line x1="151.1" y1="111.1" x2="162.4" y2="122.4"/>
+    <line x1="120" y1="124" x2="120" y2="140"/>
+    <line x1="88.9" y1="111.1" x2="77.6" y2="122.4"/>
+    <line x1="76" y1="80" x2="60" y2="80"/>
+    <line x1="88.9" y1="48.9" x2="77.6" y2="37.6"/>
+    <line x1="120" y1="36" x2="120" y2="20"/>
+    <line x1="151.1" y1="48.9" x2="162.4" y2="37.6"/>
+  </g>
+  <text x="120" y="168" font-size="10" letter-spacing="2" fill="#9a9aa2" text-anchor="middle">EXPENDITURE</text>
+  <text x="120" y="183" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">Bataille · 1949</text>
+
+  <!-- Sun 2: SENTENCE (Lyotard / Brassier) -->
+  <circle cx="120" cy="272" r="20" fill="#8a8a92" opacity="0.5"/>
+  <circle cx="120" cy="272" r="30" fill="none" stroke="#8a8a92" stroke-width="1.25" opacity="0.5"/>
+  <circle cx="120" cy="272" r="40" fill="none" stroke="#8a8a92" stroke-width="1.25" opacity="0.3"/>
+  <circle cx="120" cy="272" r="50" fill="none" stroke="#8a8a92" stroke-width="1.25" opacity="0.15"/>
+  <text x="120" y="352" font-size="10" letter-spacing="2" fill="#9a9aa2" text-anchor="middle">SENTENCE</text>
+  <text x="120" y="367" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">Lyotard · 1987</text>
+
+  <!-- Sun 3: BUDGET (Kardashev) -->
+  <circle cx="120" cy="458" r="32" fill="none" stroke="#8a8a92" stroke-width="1.5"/>
+  <circle cx="120" cy="458" r="52" fill="none" stroke="#8a8a92" stroke-width="1" stroke-dasharray="1 6" opacity="0.35"/>
+  <g fill="#8a8a92">
+    <circle cx="170.2" cy="471.5" r="2.6"/>
+    <circle cx="149.8" cy="500.6" r="2.6"/>
+    <circle cx="115.5" cy="509.8" r="2.6"/>
+    <circle cx="83.2" cy="494.8" r="2.6"/>
+    <circle cx="68.2" cy="462.5" r="2.6"/>
+    <circle cx="77.4" cy="428.2" r="2.6"/>
+    <circle cx="106.5" cy="407.8" r="2.6"/>
+    <circle cx="142" cy="410.9" r="2.6"/>
+    <circle cx="167.1" cy="436" r="2.6"/>
+  </g>
+  <text x="120" y="532" font-size="10" letter-spacing="2" fill="#9a9aa2" text-anchor="middle">BUDGET</text>
+  <text x="120" y="547" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">Kardashev · 1964</text>
+</svg>
