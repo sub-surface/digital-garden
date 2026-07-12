@@ -69,6 +69,12 @@ $article-narrow: 1300px;
   --color-primary: var(--color-accent-base);
   --color-highlight: rgba(255, 255, 255, 0.12);
   --color-link-active: #ffffff;
+  // Base colour for low-alpha "raise this surface" tints (borders, hover
+  // backgrounds) that vary their own opacity per component. Pair with
+  // color-mix(in srgb, var(--color-overlay-tint) N%, transparent) instead of
+  // a literal rgba(255,255,255,N) — same rendered result in dark mode, but
+  // correctly inverts to a dark tint in light mode instead of vanishing.
+  --color-overlay-tint: #fff;
 
   color-scheme: dark;
 }
@@ -86,6 +92,7 @@ $article-narrow: 1300px;
   --color-primary: var(--color-accent-base);
   --color-highlight: rgba(0, 0, 0, 0.08);
   --color-link-active: #000000;
+  --color-overlay-tint: #000;
 
   color-scheme: light;
 }

@@ -384,8 +384,12 @@ export function ProgressionsPage() {
       y0 = Math.max(0, y0); y1 = Math.min(GRID - 1, y1)
 
       // One flat background pass for the visible grid area (cheaper than a faint
-      // fill per empty cell). Stones are drawn over it.
-      ctx.fillStyle = "rgba(255,255,255,0.03)"
+      // fill per empty cell). Stones are drawn over it. Read live so the tint
+      // flips with the theme (white lightens a dark board, black darkens a
+      // light one) instead of vanishing in light mode.
+      const overlayTint = getComputedStyle(document.documentElement).getPropertyValue("--color-overlay-tint").trim() || "#fff"
+      const emptyFill = `color-mix(in srgb, ${overlayTint} 3%, transparent)`
+      ctx.fillStyle = emptyFill
       const RED = "#a23a36", RED_HOT = "#e8584e", BLU = "#3a5fa2", BLU_HOT = "#4e8fe8"
       const half = cell / 2
 
@@ -401,10 +405,10 @@ export function ProgressionsPage() {
             ctx.moveTo(cx + hexPts[0][0], cy + hexPts[0][1])
             for (let i = 1; i < 6; i++) ctx.lineTo(cx + hexPts[i][0], cy + hexPts[i][1])
             ctx.closePath()
-            ctx.fillStyle = o === 0 ? "rgba(255,255,255,0.03)" : o === 1 ? (isHot ? RED_HOT : RED) : (isHot ? BLU_HOT : BLU)
+            ctx.fillStyle = o === 0 ? emptyFill : o === 1 ? (isHot ? RED_HOT : RED) : (isHot ? BLU_HOT : BLU)
             ctx.fill()
           } else {
-            ctx.fillStyle = o === 0 ? "rgba(255,255,255,0.03)" : o === 1 ? (isHot ? RED_HOT : RED) : (isHot ? BLU_HOT : BLU)
+            ctx.fillStyle = o === 0 ? emptyFill : o === 1 ? (isHot ? RED_HOT : RED) : (isHot ? BLU_HOT : BLU)
             ctx.fillRect(px + gap, py + gap, cell - gap * 2, cell - gap * 2)
           }
         }

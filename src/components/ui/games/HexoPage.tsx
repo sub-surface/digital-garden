@@ -123,7 +123,9 @@ function HexoBoard({ state, onPlace, annotations, setAnnotations, wide }: BoardP
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0 && e.button !== 2) return
-    ;(e.target as Element).setPointerCapture?.(e.pointerId)
+    // Capture on the SVG, not e.target (the cell) — works via bubbling today,
+    // but breaks if a child ever calls stopPropagation.
+    svgRef.current?.setPointerCapture?.(e.pointerId)
     gesture.current = {
       button: e.button,
       originX: e.clientX, originY: e.clientY,
