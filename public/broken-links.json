@@ -1,5 +1,5 @@
 {
-  "total": 7,
+  "total": 5,
   "bySlug": {
     "a-place-to-start-writing": [
       "Rabbit-Holes",
@@ -9,12 +9,6 @@
     "index": [
       "predatory-gaze",
       "Différance-is-all-you-need?"
-    ],
-    "On-Diagrams": [
-      "08-11-25"
-    ],
-    "Writing/Attention-&-Difference": [
-      "information"
     ]
   }
 }

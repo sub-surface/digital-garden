@@ -85,7 +85,7 @@ Updated: **12th July 2026**
 - Joan Fontcuberta has a new book out, *The Eye and the Index: Against Barthes*, going after exactly the ground [[Attention & Difference]] was walking — meaning to get a copy and write it up properly once it lands.
 - [[Attention & Difference]] only gave Sontag one section and she deserves more — want to go back and do a proper deep-dive on the [[predatory gaze]], separate from the essay.
 - There's a whole separate note trying to get out of me about autoregression as deferral — [[Différance is all you need?]] — kept it out of the attention essay on purpose since it would've derailed the whole thing, but it's still rattling around.
-- Also thinking about making the dropcaps more on-brand — right now they're just an oversized letter in the body serif. Want something with actual character, either a proper generated/illuminated set matching the rest of the site's generative apparatus, or some other method — still figuring out which.
+- Dropcaps are more on-brand now — swapped the oversized body serif for UnifrakturMaguntia, a genuine blackletter face that fits the site's occult/technomantic register.
 
 ---
 

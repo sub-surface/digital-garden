@@ -6,6 +6,7 @@ type: essay
 layout: article
 date: 2026-03-07
 published: true
+private: true
 growth: actual
 ---
 # On Attention
