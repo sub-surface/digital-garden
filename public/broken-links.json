@@ -1,5 +1,5 @@
 {
-  "total": 4,
+  "total": 5,
   "bySlug": {
     "a-place-to-start-writing": [
       "Rabbit-Holes",
@@ -8,6 +8,9 @@
     ],
     "On-Diagrams": [
       "08-11-25"
+    ],
+    "Writing/Attention-&-Difference": [
+      "information"
     ]
   }
 }

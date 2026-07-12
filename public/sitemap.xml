@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://subsurfaces.net/2048</loc></url>
-  <url><loc>https://subsurfaces.net/2026-03-11</loc></url>
   <url><loc>https://subsurfaces.net/a-place-I'll-always-call-home</loc></url>
   <url><loc>https://subsurfaces.net/a-place-to-start-writing</loc></url>
+  <url><loc>https://subsurfaces.net/A&D-Colophon</loc><lastmod>2026-07-11</lastmod></url>
   <url><loc>https://subsurfaces.net/Abbas</loc></url>
   <url><loc>https://subsurfaces.net/Action-&-Voice</loc><lastmod>2026-03-09</lastmod></url>
   <url><loc>https://subsurfaces.net/agent</loc></url>
@@ -35,6 +35,7 @@
   <url><loc>https://subsurfaces.net/Chess</loc></url>
   <url><loc>https://subsurfaces.net/cli</loc></url>
   <url><loc>https://subsurfaces.net/Clippings/Accelerationism-Ray-Brassier</loc></url>
+  <url><loc>https://subsurfaces.net/Clippings/Attention-(Stanford-Encyclopedia-of-Philosophy)</loc></url>
   <url><loc>https://subsurfaces.net/Clippings/Mad-Black-Deleuzianism</loc></url>
   <url><loc>https://subsurfaces.net/Clippings/Quasars</loc></url>
   <url><loc>https://subsurfaces.net/Clippings/Sloan-DSS-Galaxies</loc></url>
@@ -122,11 +123,14 @@
   <url><loc>https://subsurfaces.net/Philosophy-of-Mind</loc></url>
   <url><loc>https://subsurfaces.net/Photography</loc><lastmod>2026-03-07</lastmod></url>
   <url><loc>https://subsurfaces.net/Photos/lancaster</loc><lastmod>2019-01-01</lastmod></url>
+  <url><loc>https://subsurfaces.net/Roland-Barthes</loc><lastmod>2026-07-11</lastmod></url>
   <url><loc>https://subsurfaces.net/Sandbox</loc></url>
   <url><loc>https://subsurfaces.net/Snake</loc></url>
   <url><loc>https://subsurfaces.net/Tetris</loc></url>
   <url><loc>https://subsurfaces.net/the-history-of-images</loc></url>
+  <url><loc>https://subsurfaces.net/the-image-as-supreme-metaphor-for-knowledge</loc></url>
   <url><loc>https://subsurfaces.net/the-machine-god-in-the-future</loc></url>
+  <url><loc>https://subsurfaces.net/the-noumenon-has-fangs</loc><lastmod>2026-07-10</lastmod></url>
   <url><loc>https://subsurfaces.net/thinking-in-public</loc><lastmod>2026-03-07</lastmod></url>
   <url><loc>https://subsurfaces.net/Thomas-Sauvin</loc></url>
   <url><loc>https://subsurfaces.net/Vector-Playground</loc></url>
@@ -148,6 +152,7 @@
   <url><loc>https://subsurfaces.net/Wiki/Style-Guide</loc></url>
   <url><loc>https://subsurfaces.net/Wiki/Submit</loc></url>
   <url><loc>https://subsurfaces.net/Wittgenstein</loc></url>
+  <url><loc>https://subsurfaces.net/Writing/Attention-&-Difference</loc><lastmod>2026-07-10</lastmod></url>
   <url><loc>https://subsurfaces.net/Writing/Camera-Superstitions</loc><lastmod>2026-03-07</lastmod></url>
   <url><loc>https://subsurfaces.net/Writing/On-Attention</loc><lastmod>2026-03-07</lastmod></url>
   <url><loc>https://subsurfaces.net/Writing/Writing-Template</loc><lastmod>2026-03-07</lastmod></url>
