@@ -69,20 +69,3 @@ This is not an argument for obscurantism. Unnecessary difficulty is just bad wri
 
 ---
 
-## What Is to Be Done
-
-The honest answer is that individual solutions are insufficient. The problem of attention is structural, and structural problems require structural responses. This means platform regulation, design standards, and institutional reform — not just meditation apps and digital detoxes.
-
-But structural change is slow, and the self is at stake now. So a few practical commitments seem worth naming:
-
-- **Protect long blocks of uninterrupted time.** The cognitive science is clear: deep work requires periods of sustained focus that social media use systematically prevents.[^2]
-- **Read books.** Not articles, not threads. Books, which impose a structure of attention — beginning, middle, end — that other media do not.
-- **Resist the demand for immediate response.** The sense of urgency that notifications create is manufactured. Most things can wait.
-
-[^2]: Cal Newport's *Deep Work* (2016) is the obvious citation here, though his account of why deep work matters is more economic than philosophical. The philosophical case is stronger: it is not merely that deep work produces more output, but that it is constitutive of a certain kind of self.
-
-None of these is adequate to the scale of the problem. But they are practices through which the capacity for attention can be maintained against the conditions that erode it. And maintaining that capacity is, for the moment, as much as philosophy can honestly recommend.
-
----
-
-*Further reading: [[Philosophy of Mind]], [[Wiki/Concepts|Concepts Index]]*
