@@ -8,7 +8,7 @@
     "dev": "npm run prebuild && concurrently -n worker,vite,watch -c magenta,cyan,yellow \"wrangler dev --config wrangler.dev.toml --port 8787\" \"vite\" \"nodemon --watch content -e md,mdx,yaml --exec npm run prebuild\"",
     "build": "tsc --noEmit && vite build",
     "typecheck:worker": "tsc -p tsconfig.worker.json",
-    "test": "node scripts/test-slugs.mjs && tsx scripts/test-footnotes.ts && tsx scripts/test-sigil.ts && tsx scripts/test-composer.ts && node scripts/test-package-scripts.mjs",
+    "test": "tsx scripts/test-slugs.ts && tsx scripts/test-footnotes.ts && tsx scripts/test-sigil.ts && tsx scripts/test-composer.ts && node scripts/test-package-scripts.mjs",
     "check": "npm test && npm run typecheck:worker && npm run build",
     "preview": "vite preview",
     "sync:music": "tsx scripts/sync-music.ts",

@@ -14,7 +14,7 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 ### Tier 0: Org review (reviewed 2026-06-09)
 
 - [x] **systemPages registry**: `src/config/system-pages.ts` is now the single source of truth for system-page slug → component + layout, consumed by `NoteRenderer.resolveLayout`/`renderContent`. Adding a system page (e.g. an arcade game) is now one registry line. (2026-06-09)
-- [ ] **Split `src/worker.ts`** (1888 lines, ~55 functions) into `worker/{chat,auth,wiki,stonks,admin,meta}.ts` + a thin dispatcher. Highest manageability win; needs a verification deploy to confirm CF handles a multi-file Worker entry. Deliberately deferred 2026-06-09.
+- [x] **Split `src/worker.ts`** into `worker/{index,lib,meta,auth,wiki,chat,keys,admin,security,types}.ts` + a thin route-table dispatcher — shipped, see ROADMAP §2. (2026-06-24)
 - [x] **Group `src/components/ui/`** — done 2026-07-03: `ui/{chat,wiki,games,shelves,reader,graph,music,overlays}/`, remaining flat files are cross-cutting singles.
 
 ### Tier 1: Shell Isolation (unblocks everything else)
@@ -59,21 +59,21 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 
 - [x] **Chess: homemade three-flavour bot** (drunk/casual/sharp) replaces the unreliable CDN-loaded Stockfish; GIF export now proxied through the Worker (`POST /api/chess/gif`); "Analyse on Lichess" button; accent-aware check/mate board flourish; softened framing. (2026-06-09)
 - [ ] Chess: public leaderboard (deferred — needs a results table)
-- [ ] **Arcade: shared game cabinet shell**: small reusable wrapper for game status, new-game/reset, local bests, keyboard/touch hints, and a consistent route/card treatment. Keep game logic isolated in `src/lib/{game}.ts` where possible.
-- [ ] **Arcade: Snake**: lightweight grid game with keyboard + swipe controls, local best score, palette-aware board, optional "garden serpent" theme where food becomes note/tag tokens and special fruit briefly opens shortcut routes.
-- [ ] **Arcade: Blackjack**: local-only dealer game with clean hand-value logic, soft/hard total helper, tiny table personality, streak/bankroll saved to localStorage, and no gambling/money framing beyond toy chips.
+- [x] **Arcade: shared game cabinet shell** — shipped as `<GameCabinet>`, see ROADMAP §6. (2026-06-20)
+- [x] **Arcade: Snake** — shipped. (2026-06-17)
+- [x] **Arcade: Blackjack** — shipped. (2026-06-17)
 - [ ] **Arcade: Memory Garden**: small concentration game using note titles, tags, book/movie covers, or emotes as pairs. Good fit for the site's archive because it turns discovery into play without backend work.
 - [ ] **Arcade: Link Ladder**: word-ladder / concept-ladder puzzle seeded from existing note titles and tags. Player transforms one concept into another through valid linked notes; can be daily-seeded without a server.
 - [ ] **Arcade: Lights Out / Circuit Shrine**: 5x5 toggle puzzle with theme/accent-driven glow states. Very light implementation, mobile-friendly, and visually distinct from chess/heXO.
 - [ ] **Pre-render SSG**: build-time HTML generation for all notes
 - [ ] **Image optimisation**: sharp WebP variants + `<picture>` srcsets
-- [ ] **Lighthouse CI**: GitHub Actions target 95+ desktop
+- [x] **Lighthouse CI**: shipped, warn-level thresholds — see ROADMAP §0/§5. Tightening to error-level is the open follow-on. (2026-07-03)
 - [ ] **OG gen: SVG image support**: satori cannot load `.svg` images — detect SVG URLs in `og-gen.ts` and skip or rasterise via `sharp`
-- [ ] **OG gen: external image fetch failures**: `covers.openlibrary.org` fetch fails in CF build. Catch per-image and fall back gracefully.
-- [ ] **OG caching not working**: `0 cached` on every build. Investigate cache key logic; CF builds may not persist cache dir.
+- [x] **OG gen: external image fetch failures** — resolved differently than planned: `og-gen.ts` now inlines only local thumbnails as base64 and skips truly-external URLs entirely, so `covers.openlibrary.org` is never fetched at build. (verified 2026-06-24)
+- [~] **OG caching** — actually works locally (156/157 cached on a clean run); moot for deploy since CF never runs `PROCESS_OG` (images ship as committed artifacts). Not tracked in git, so each machine starts cold — low priority.
 - [x] **Prebuild runs twice per CF deploy**: fixed by letting npm's `prebuild` lifecycle run once before `build` instead of also invoking `npm run prebuild` inside the build script. (2026-06-09)
 - [ ] **`glob@11` deprecation warning**: track — update when fix is released upstream
-- [ ] **35 broken wikilinks** (as of 2026-06-09): see [garden.md](garden.md) for cluster breakdown. The remaining warnings are genuine missing-note/editorial-alias work after fixing route mismatches, wiki sample scaffolding links, and section-fragment false positives.
+- [~] **Broken wikilinks** — down to 4 as of 2026-06-16 (was 35); see ROADMAP §7. `public/broken-links.json` now tracks the count automatically.
 - [ ] **Detailed documentation**: comprehensive docs for the codebase
 - [ ] Fix CLS fully: image `width`/`height` attributes (Gallery, sidenotes, link preview, lightbox)
 
@@ -84,23 +84,29 @@ Priority work to improve code quality, performance, and shell isolation. Items a
 - [ ] Contributor dashboard (recent activity, stats)
 - [ ] Watchlist (get notified when bookmarked pages are edited) — needs `watchlist` table
 - [ ] Page metadata editing (description, tags) from wiki editor UI
-- [x] **Supabase RLS audit**: RLS enabled + policies on `bookmarks` (own-row-only), `edit_log` (authenticated insert/select), `page_locks` (admin-only write, authenticated read)
+- [x] **Supabase RLS audit**: RLS enabled + policies on `bookmarks` (own-row-only), `edit_log`
+  (authenticated insert/select), `page_locks` (admin-only write, authenticated read). Confirmed
+  active by Leon 2026-07-12 — resolves the contradiction flagged the same day against `wiki.md`'s
+  Future section (which wrongly said this was still outstanding; corrected there too).
 - [ ] Wiki community features (comments, reactions)
 - [ ] **GitHub App token** for non-expiring wiki submissions — until then, preflight token validity check with clear user-facing error
 
 ---
 
-## Stonks (Phase 2)
+## Stonks (Phase 2) — REMOVED 2026-07
 
-- [x] `stonk_ledger` table, `stonk_balance` view, `stonk_config` table with RLS
-- [x] Reaction-based point events (kek +5, nahh -3 received / -1 given, configurable per-emote)
-- [x] Stonk balance on `MiniProfilePopup` + sparkline on profile pages
-- [x] Admin stonk config UI in ChatSettings (`GET/PUT /api/admin/stonk-config`)
-- [x] `GET /api/chat/users/:username/stonk-history` — 90-day daily cumulative balance
-- [x] React picker with full emote pool (from `/emotes/index.json`)
-- [x] Removed stonk triangle button — all points flow through emote reactions
-- [ ] Easter egg reactions with configurable effects (e.g. confetti via `canvas-confetti`)
-- [ ] Secondary stonks market — deliberately deferred; ledger schema supports it
+Stonks was removed entirely in 2026-07 (never matured past Phase 2) — tables, endpoints, and UI
+all deleted; see `docs/migrations/2026-07-chat-denormalize.sql` for the teardown and ROADMAP §12.
+The items below are historical record only — **do not rebuild from this list without a fresh
+design pass**, and note that `stonk_ledger`/`stonk_balance`/`stonk_config` no longer exist:
+
+- ~~`stonk_ledger` table, `stonk_balance` view, `stonk_config` table with RLS~~ (removed)
+- ~~Reaction-based point events~~ (removed)
+- ~~Stonk balance on `MiniProfilePopup` + sparkline on profile pages~~ (removed)
+- ~~Admin stonk config UI in ChatSettings~~ (removed)
+- ~~`GET /api/chat/users/:username/stonk-history`~~ (removed — route no longer exists)
+- [ ] Easter-egg reactions with configurable effects (e.g. confetti via `canvas-confetti`) — the
+  one idea here that doesn't depend on stonks; still open, see ROADMAP §12.
 
 ## Identity & Avatar (Phase 3 — remaining items)
 

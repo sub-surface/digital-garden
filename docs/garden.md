@@ -71,7 +71,7 @@
 - [x] **Remark plugins** (AST stage): `remark-wikilinks` (wikilinks + embeds), `remark-telescopic` (collapsible text), `remark-callouts` (callout blocks), `remark-sidenotes` (footnote → sidenote conversion, incl. Roman-numeral display numbering)
 - [x] **Rehype plugins** (HTML stage): `rehype-image-paths` (rewrite image paths for CF). Note: `rehype-sidenotes-runtime.ts` is a *separate*, unrelated plugin used only by `markdown.ts`'s standalone runtime processor (LinkPreview/WikiEditPage/BootPage) — not part of this build-time chain.
 - [x] **MDX components registered in `MDXProvider.tsx`**: `BookCard`, `MovieCard`, `Gallery`, `Query`, `WikiSubmitForm`, `AsciiAvatar`, `PhotoAlbums`, custom `<a>` (internal vs external link styling)
-- [x] **Content loading**: `content-loader.ts` resolves MDX imports via `import.meta.glob`; `mdx-loader.ts` handles dynamic component loading
+- [x] **Content loading**: `content-loader.ts` fetches JSON manifests (content-index, graph, music, broken-links) and resolves slugs via `src/lib/slug.ts`; MDX component resolution itself is inline in `NoteBody.tsx` via `import.meta.glob` (the old standalone `mdx-loader.ts` duplicated this and was dead code — removed 2026-07-12)
 
 ---
 

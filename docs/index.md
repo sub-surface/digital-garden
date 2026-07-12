@@ -11,6 +11,7 @@ Custom React 19 + Vite 6 SPA serving four domains: `subsurfaces.net` (garden), `
 | File | Description |
 |---|---|
 | [../ROADMAP.md](../ROADMAP.md) | **Consolidated outstanding work.** Start here for "what's next". |
+| [../CHAT-API.md](../CHAT-API.md) | Public REST API reference for third-party chat clients/bots (split out of README 2026-07-12) |
 | [architecture.md](architecture.md) | Shell system, layering rules, domain routing, build pipeline |
 | [garden.md](garden.md) | Garden (`subsurfaces.net`) — platform, layout, features, content, UX |
 | [wiki.md](wiki.md) | Wiki (`wiki.subsurfaces.net`) — infrastructure, submission, contributor experience |

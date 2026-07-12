@@ -37,6 +37,11 @@
 - [x] `POST /api/profile/avatar` — upload avatar to Supabase Storage
 - [x] `GET/POST/DELETE /api/bookmarks` — bookmark CRUD
 - [x] `POST /api/bookmarks/migrate` — migrate localStorage bookmarks to Supabase
+- [x] `POST /api/chat/claim` / `GET /api/users/:username/claim` / `GET /api/claims/by-slug/:slug` —
+  chatter profile claiming (see Chatter Profile Claiming below)
+- [x] `GET /api/admin/users`, `POST /api/admin/approve`, `POST /api/admin/revoke`,
+  `GET /api/admin/log`, `GET/POST/DELETE /api/admin/lock(s)` — admin panel, `auth: "admin"` gated
+  (see Admin Panel below)
 
 ---
 
@@ -90,6 +95,23 @@
 - [x] Worker endpoints: `GET/POST/DELETE /api/bookmarks`, `POST /api/bookmarks/migrate`
 - [x] Supabase `bookmarks` table with `UNIQUE(user_id, slug)` constraint
 
+### Chatter Profile Claiming
+
+Lets a logged-in user link their account to an existing wiki chatter page (`content/Wiki/…`
+frontmatter with `type: chatter`), so their own avatar/profile surfaces on that page instead of
+the static frontmatter image.
+
+- [x] `chatter_claims` table (`user_id`, `wiki_slug`, `claimed_at`) — one claim per slug, enforced
+  server-side (`POST /api/chat/claim` returns 409 if already claimed by someone else, or
+  `{ ok: true, already_claimed: true }` if re-claimed by the same user)
+- [x] `GET /api/users/:username/claim` — does this user have a claim? (`{ claim: { wiki_slug,
+  claimed_at } | null }`)
+- [x] `GET /api/claims/by-slug/:slug` — who claimed this wiki page? (`{ claim: { username,
+  avatar_url } | null }`)
+- [x] `WikiInfobox` fetches claim-by-slug and overrides the frontmatter `image` with the claimer's
+  `avatar_url` when present
+- [x] "Claim this page" button + claimed-page link on `WikiProfilePage`
+
 ### Auth & Security
 
 - [x] **`signInWithPassword()`** added to `useAuth` — ready for password auth UI
@@ -105,11 +127,30 @@
 - [x] **QuickControls in ChatShell**: `variant="chat"` hides MusicBar, SearchButton, BgModeToggle.
 - [x] **Dev auto-login**: `VITE_DEV_AUTH_EMAIL` + `VITE_DEV_AUTH_PASSWORD` in `.env.local` — `useAuth` silently calls `signInWithPassword` on mount in dev when no session. Fill in credentials in `.env.local`. Never committed.
 
+---
+
+## Admin Panel
+
+- [x] `/admin` route → `WikiAdminPage` — gated on `role === "admin"` (shows a sign-in prompt if
+  logged out, "Access Denied" if logged in without the admin role). Three tabs:
+  - **Users** — list all profiles, filter by role (`all`/`pending`/`editor`/`admin`); role ladder
+    is `pending → editor → admin`, with Approve/Promote/Demote/Revoke actions per row
+    (`POST /api/admin/approve`, `POST /api/admin/revoke`)
+  - **Edit Log** — every wiki edit/submission (`slug`, `email`, PR link, timestamp) from the
+    `edit_log` table (`GET /api/admin/log`)
+  - **Page Locks** — view/add/remove page locks (`slug`, optional `reason`) that block concurrent
+    editing (`GET/POST /api/admin/locks`, `POST`/`DELETE /api/admin/lock`)
+- All admin endpoints live in `src/worker/admin.ts`, routed with `auth: "admin"` in the worker's
+  route table — the dispatcher rejects non-admins before the handler runs.
+
 ### Future
 
 - [ ] Contributor dashboard (recent activity, stats)
 - [ ] Watchlist (get notified when bookmarked pages are edited) — needs Supabase `watchlist` table
 - [ ] Page metadata editing (description, tags) from hidden menu (`#`)
 - [ ] **Bookmarks: move off AppShell** — `AppShell` currently imports Supabase client for bookmarks, violating the "garden has no Supabase dependency" rule. Bookmarks should live entirely on `wiki.subsurfaces.net`; remove Supabase import from `AppShell` and `useBookmarks` hook from the main site
-- [ ] **Supabase RLS audit**: `bookmarks`, `edit_log`, `page_locks` tables have no RLS policies. Acceptable for now (trusted editors only). Before public launch: own-row-only for bookmarks; insert-only for edit_log; admin-only lock management.
+- [x] **Supabase RLS audit**: RLS is active (confirmed by Leon 2026-07-12). This line previously
+  contradicted `docs/future.md`, which already marked it done with specific policies (own-row-only
+  bookmarks, authenticated insert/select edit_log, admin-only page_locks writes) — that was the
+  correct copy.
 - [ ] Wiki community features (comments, reactions)

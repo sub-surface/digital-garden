@@ -6,10 +6,16 @@ export function BgModeToggle() {
 
   const getLabel = () => {
     switch (bgMode) {
+      case "murmuration": return "Murmuration"
       case "graph": return "Graph"
       case "vectors": return "Vectors"
       case "dots": return "Dots"
       case "terminal": return "Terminal"
+      case "chamber": return "Chamber"
+      case "schematic": return "Schematic"
+      case "isometric": return "Isometric"
+      case "orrery": return "Orrery"
+      case "plate-scan": return "Plate Scan"
       default: return bgMode
     }
   }

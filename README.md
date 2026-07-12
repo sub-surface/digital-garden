@@ -1,16 +1,66 @@
 # Sub-Surface Territories
 
-A digital garden and wiki — notes, essays, philosophy, music, photography, and chess.
+A digital garden — notes, essays, philosophy, music, photography, and a growing collection of
+games and generative toys, wired together as one explorable, non-linear site.
 
-**Live:** [subsurfaces.net](https://subsurfaces.net) · **Wiki:** [wiki.subsurfaces.net](https://wiki.subsurfaces.net)
+**Garden:** [subsurfaces.net](https://subsurfaces.net) · **Arcade:** [subsurfaces.net/arcade](https://subsurfaces.net/arcade) · **Wiki:** [wiki.subsurfaces.net](https://wiki.subsurfaces.net) · **Chat:** [chat.subsurfaces.net](https://chat.subsurfaces.net) · **Boot TUI:** [os.subsurfaces.net](https://os.subsurfaces.net)
 
 ---
 
 ## What's here
 
-A non-linear, explorable knowledge base with 120+ interconnected notes. Two reading modes: article (long-form with margin sidenotes) and note (panel stacking for exploration). Animated backgrounds, a music player, an interactive knowledge graph, and a built-in chess board.
+A non-linear, explorable knowledge base with 100+ interconnected notes, essays, and reading
+lists. Two reading modes: article (long-form, margin sidenotes, footnotes) and note (panel
+stacking for exploration). An interactive knowledge graph, a vinyl-style music player, and
+animated backgrounds you can cycle or theme.
 
-The wiki at `wiki.subsurfaces.net` is a community space for the philchat Discord — profiles, philosophical positions, and collaborative articles. Anyone can submit a profile via the form at `/submit`.
+**Games & toys:** a chess board with a homemade bot and an [arcade](https://subsurfaces.net/arcade)
+of a dozen-plus small games (Snake, Tetris, 2048, Blackjack, Hex Mines, Boids/murmuration,
+sandbox, ant farm, and more). Plus two original games with their own research threads:
+
+- **[HeXO](https://subsurfaces.net/hexo)** — a hex-grid combinatorial game with an accompanying
+  theory write-up (transversal-number pressure, forcing sequences); research repo tracks open
+  questions.
+- **[SIGIL](https://subsurfaces.net/sigil)** / **[Collider](https://subsurfaces.net/collider)** —
+  a generative routing puzzle and a bubble-chamber aiming toy, both built on the same procedural
+  "chamber" flow-field engine that also powers an ambient background mode.
+
+**Generative art:** [Apparatus](https://subsurfaces.net/apparatus) is a plate composer — armatures
+× motifs × eras combine into one-off generative compositions, rendered live as SVG.
+
+**`/boot`** (also the whole of `os.subsurfaces.net`) is a self-contained, endlessly-generated
+terminal boot sequence — a TUI easter egg with its own procedural text generators and ambient
+audio.
+
+The wiki at `wiki.subsurfaces.net` is a community space for the philchat Discord — profiles,
+philosophical positions, and collaborative articles, with accounts, moderation, and edit history.
+Anyone can submit a profile via the form at `/submit`. The chat at `chat.subsurfaces.net` is a
+real-time chatroom with a documented REST API — see [`CHAT-API.md`](CHAT-API.md) if you want to
+build a third-party client, bot, or CLI against it.
+
+## Elsewhere in the constellation
+
+Sub-Surface isn't only this repo — a handful of standalone experiments live on their own
+subdomains (and one off it entirely), each its own codebase:
+
+- **[ANABASIS](https://anabasis.subsurfaces.net)** — a real-time PS1/PS2-era topographic
+  apparatus that hallucinates terrain from a photograph's pixel brightness, after Joan
+  Fontcuberta's *Orogenesis*. Three.js.
+- **[Avatar](https://avatar.subsurfaces.net)** — a real-time 3D audio visualiser with a Joy
+  Division–esque aesthetic. WebGL.
+- **[bazar](https://bazar.subsurfaces.net)** — an infinite procedural Persian-carpet walking
+  simulator.
+- **[lines of flight](https://lines.subsurfaces.net)** — a meditative ink-field toy: a dot that
+  stays, a line that leaves.
+- **[p(doom)](https://pdoom.subsurfaces.net)** — a text incremental about an AI lab's funding,
+  compute, talent, and doom problems (`npx p-doom` for the terminal version).
+- **[STARWEFT](https://star.subsurfaces.net)** — a cozy space-logistics strategy game: reweave a
+  shattered galaxy's trade lanes one delivery at a time.
+- **[The Predictor](https://omega.subsurfaces.net)** — a roguelike whose antagonist trains a live
+  model of you (also linked from the garden's own arcade).
+- **[Attention and Difference](https://mrcal17.github.io/attention-and-difference)** — a separate
+  blog on AI ethics and philosophy (fairness, interpretability, governance). A sibling project to
+  this garden's own *Attention & Difference* essay, sharing a name and a theme but not the text.
 
 ## Contributing to the wiki
 
@@ -34,81 +84,8 @@ See `CLAUDE.md` for the full developer reference.
 
 ## Stack
 
-React 19, Vite 6, TanStack Router, MDX, Zustand, SCSS modules. D3 + PixiJS for the knowledge graph. FlexSearch for search. Deployed on Cloudflare Workers.
-
-## Building a third-party chat client
-
-The chat backend (`chat.subsurfaces.net`) exposes a REST API that works independently of the web UI. You can build your own frontend, bot, or CLI client against it.
-
-### Authentication
-
-All write endpoints require authentication. Two methods are accepted:
-
-**Supabase JWT** — include the session access token:
-```
-Authorization: Bearer <supabase_access_token>
-```
-
-**API key** — generate a key at `chat.subsurfaces.net` (Settings → API Keys), then use the `sk_`-prefixed key:
-```
-Authorization: Bearer sk_<your_key>
-```
-
-API keys are SHA-256 hashed at rest and support soft revocation. They never expire unless revoked.
-
-### Key endpoints
-
-```
-GET  /api/chat/rooms                       list all rooms
-GET  /api/chat/messages?room_id=&limit=    fetch messages (newest first)
-POST /api/chat/messages                    send a message
-DELETE /api/chat/messages/:id              delete own message
-POST /api/chat/reactions                   add/remove a reaction
-GET  /api/chat/search?q=&room_id=          full-text search
-GET  /api/chat/pins?room_id=               pinned messages
-GET  /api/chat/users/:username/mini        profile + stonk balance
-GET  /api/chat/users/:username/stonk-history  90-day balance history
-```
-
-**Send a message:**
-```bash
-curl -X POST https://chat.subsurfaces.net/api/chat/messages \
-  -H "Authorization: Bearer sk_your_key" \
-  -H "Content-Type: application/json" \
-  -d '{"room_id": "general", "body": "hello from the API"}'
-```
-
-**Reply to a message:**
-```json
-{ "room_id": "general", "body": "reply text", "reply_to_id": "<message_uuid>" }
-```
-
-**React to a message:**
-```bash
-curl -X POST https://chat.subsurfaces.net/api/chat/reactions \
-  -H "Authorization: Bearer sk_your_key" \
-  -H "Content-Type: application/json" \
-  -d '{"message_id": "<uuid>", "emote": "kek"}'
-```
-Sending the same reaction twice toggles it off.
-
-### Manage API keys
-
-```
-POST   /api/admin/api-keys          generate a new key (returns plaintext key once)
-GET    /api/admin/api-keys          list your keys (hashes only, no plaintext)
-DELETE /api/admin/api-keys/:id      revoke a key
-```
-
-### Realtime
-
-For realtime messages, connect to [Supabase Realtime](https://supabase.com/docs/guides/realtime) and subscribe to the `messages` table filtered by `room_id`. The same Supabase project powers the web UI — you can use the public anon key for read-only subscriptions.
-
-### Notes
-
-- Messages are returned **newest first** — reverse before displaying
-- Emote names and extensions are listed at `/emotes/index.json`
-- Room IDs are slugs (e.g. `general`, `philosophy`) — fetch from `/api/chat/rooms`
+React 19, Vite 6, TanStack Router, MDX, Zustand, SCSS modules. D3 + PixiJS for the knowledge
+graph. FlexSearch for search. Deployed on Cloudflare Workers.
 
 ## License
 

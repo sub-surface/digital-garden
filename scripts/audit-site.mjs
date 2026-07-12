@@ -16,12 +16,24 @@ const BASE = process.argv[2] ?? "https://subsurfaces.net"
 const ROUTES = [
   { name: "home",         url: "/" },
   { name: "chess",        url: "/chess" },
+  { name: "hexo",         url: "/hexo" },
+  { name: "sigil",        url: "/sigil" },
+  { name: "collider",     url: "/collider" },
+  { name: "apparatus",    url: "/apparatus" },
+  { name: "arcade",       url: "/arcade" },
   { name: "graph",        url: "/graph" },
   { name: "photography",  url: "/photography" },
   { name: "bookshelf",    url: "/bookshelf" },
+  { name: "movieshelf",   url: "/movieshelf" },
+  { name: "music-library", url: "/music-library" },
   { name: "tags",         url: "/tags" },
   { name: "folder-root",  url: "/folder" },
+  { name: "recent",       url: "/recent" },
+  { name: "inbox",        url: "/inbox" },
+  { name: "boot",         url: "https://os.subsurfaces.net/boot" },
   { name: "wiki-home",    url: "https://wiki.subsurfaces.net/" },
+  { name: "wiki-submit",  url: "https://wiki.subsurfaces.net/submit" },
+  { name: "chat-home",    url: "https://chat.subsurfaces.net/" },
 ]
 
 async function auditRoute(browser, route) {
