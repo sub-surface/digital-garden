@@ -212,6 +212,24 @@
 }
 
 // Apply dropcap with .dropcap class on the article or frontmatter layout=essay
+//
+// `display: flow-root` on the containing block establishes a new block
+// formatting context scoped to just the dropcap paragraph. Without it, the
+// float:left first-letter shares a formatting context with the TOC/infobox
+// (.body-side-group, float:right) and any pullquote before it in the
+// content. Per the CSS float-placement rules, a later float's top edge may
+// not rise above an earlier float's top edge *regardless of side* — so if
+// an earlier right-floated pullquote gets pushed down by `clear: right`
+// (to clear the TOC), that pushed-down position becomes a floor for this
+// later left float too, orphaning the dropcap letter well below its
+// paragraph. Scoping a fresh BFC here gives the first-letter its own
+// private float list, immune to that outer cascade, while the box itself
+// still narrows correctly beside an active outer float (shrink-to-fit).
+.article-layout[data-dropcap] .article-body > p:first-of-type,
+.dropcap {
+  display: flow-root;
+}
+
 .article-layout[data-dropcap] .article-body > p:first-of-type::first-letter,
 .dropcap > p:first-of-type::first-letter {
   float: left;

@@ -20,9 +20,6 @@ export function ArticleLayout({ children, headings, infobox, header }: Props) {
         </div>
         {children}
       </div>
-      <aside className="article-sidenotes-group">
-        {/* Sidenotes will be injected here by the rehype plugin via portals or CSS positioning */}
-      </aside>
     </div>
   )
 }

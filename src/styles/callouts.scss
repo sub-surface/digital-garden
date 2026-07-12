@@ -4,6 +4,15 @@
   border-radius: 6px;
   border-left: 4px solid var(--color-primary);
   background: color-mix(in srgb, var(--color-primary) 8%, var(--color-bg));
+  // Callouts are full-width normal-flow blocks; a preceding float (pullquote,
+  // sidenote) doesn't reserve vertical space for them, so without this the
+  // callout's tinted background paints straight underneath the float and the
+  // floated text sits awkwardly on top of it. `clear` would fix that too, but
+  // pushes the callout below the *tallest* active float (often a footnote
+  // sidenote taller than the pullquote itself), leaving a big dead gap.
+  // `flow-root` instead shrinks the callout's own box to sit beside an active
+  // float (like the h2 underline rule below) — no overlap, no added gap.
+  display: flow-root;
 
   .callout-title {
     font-family: var(--font-header);

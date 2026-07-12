@@ -11,7 +11,7 @@ published: "true"
 
   
 
-# ⁙ 0
+# ⁙ Zero
 
 <blockquote className="pullquote"> 
 Catastrophe is the past coming apart. <br />
@@ -24,8 +24,8 @@ Anastrophe is the future coming together. <br />
 
 What a strange time it is, to be caught between informational, cultural, political revolutions. Better yet, what awaits the [[rosi-braidotti|convergence]] between a billion micro-revolutions each anastrophising molecular orderings, coalescing into broiling molar [reconfigurations](https://pdoom.subsurfaces.net) at every opportunity. 
 <br />
-<br />
-Have we seen something yet, have you been paying attention?  
+Have we seen something yet?  
+have you been paying attention?  
 </div>  
 
 ---

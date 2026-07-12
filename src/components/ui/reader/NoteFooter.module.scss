@@ -1,6 +1,14 @@
 .footer {
   margin-top: var(--space-16);
   padding-bottom: var(--space-12);
+  // ArticleLayout's grid container has no explicit row/column for this
+  // sibling, so without a placement it lands wherever CSS Grid auto-places
+  // it — historically column 4 (the empty right spacer), stretched to the
+  // full article height by row-1 `align-items: stretch` since it shared a
+  // row with `.article-body`. Pin it to column 2 (same as `.article-body`)
+  // so it can't fit in row 1 and auto-flows to its own full-height-natural
+  // row directly below the prose, aligned to the reading measure.
+  grid-column: 2;
 }
 
 .divider {
