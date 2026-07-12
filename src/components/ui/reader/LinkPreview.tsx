@@ -195,8 +195,9 @@ export function LinkPreview() {
     setStack(prev => [...prev, initial])
     currentSlug.current = slug
 
-    // Fetch body content async and patch state
-    if (!isFootnote) {
+    // Fetch body content async and patch state — synthesized system-page
+    // entries have no content file to fetch (see synthesizeSystemPages).
+    if (!isFootnote && !meta?.system) {
       fetchBody(slug, meta?.contentPath).then(({ plain, html, image }) => {
         setStack(prev => prev.map(p =>
           p.id === id ? { ...p, body: plain, bodyHtml: html, image } : p

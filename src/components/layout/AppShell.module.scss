@@ -95,8 +95,9 @@
 }
 
 // ── Reader mode ──
-// The measure (line length) and font scale are user-adjustable via ReaderControls
-// and persisted; they arrive as `--reader-measure` / `--reader-scale` on the shell
+// The measure (line length) and font scale are user-adjustable via the
+// ThemePanel's Reader tab and persisted; they arrive as `--reader-measure` /
+// `--reader-scale` on the shell
 // (see AppShell.tsx). Drive the pane width and prose size from those vars rather
 // than hardcoded values. The pane is normally a fixed-basis flex item pinned to
 // `--main-width`, so reader mode must relax `flex` / `width` / `min-width` before
@@ -114,6 +115,14 @@
     padding: 2rem;
     font-size: calc(1.125rem * var(--reader-scale, 1));
     line-height: 1.75;
+  }
+
+  // Articles keep their margin-column grid (see reader-mode.scss) so
+  // sidenotes still float — the pane needs room for prose + the margin
+  // track, not just the prose measure (2rem spacer + measure + 4rem+250px
+  // margin track + 2rem spacer, mirroring article.scss's grid-template-columns).
+  &[data-layout="article"] .mainPane {
+    max-width: min(calc(var(--reader-measure, 80ch) + 8rem + 250px), 100%);
   }
 }
 

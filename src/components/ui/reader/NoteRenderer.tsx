@@ -10,6 +10,7 @@ import { resolveSlug } from "@/lib/content-loader"
 import { normalizeSlug } from "@/lib/slug"
 import { useIsWiki } from "@/hooks/useShell"
 import { SYSTEM_PAGES } from "@/config/system-pages"
+import { classifyLayout } from "@/lib/layout"
 import type { NoteMetadata } from "@/types/content"
 
 interface Props {
@@ -32,18 +33,7 @@ function resolveLayout(
   meta: NoteMetadata | undefined,
   slug: string,
 ): "article" | "note" | "game" {
-  if (frontmatter.layout === "article") return "article"
-  if (frontmatter.layout === "note") return "note"
-  if (frontmatter.layout === "game") return "game"
-
-  const type = (frontmatter.type as string) ?? meta?.type
-  if (type && ["book", "movie", "chatter", "philosopher"].includes(type)) return "article"
-  if (slug.toLowerCase() === "wiki" || slug.toLowerCase().startsWith("wiki/")) return "article"
-  if (slug.toLowerCase().startsWith("writing/")) return "article"
-  const sysPage = SYSTEM_PAGES[slug.toLowerCase()]
-  if (sysPage) return sysPage.layout
-
-  return "note"
+  return classifyLayout(slug, { layout: frontmatter.layout, type: (frontmatter.type as string) ?? meta?.type })
 }
 
 export function NoteRenderer({ slug: rawSlug }: Props) {

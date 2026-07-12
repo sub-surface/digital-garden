@@ -3,6 +3,10 @@ export interface NoteMetadata {
   title: string
   tags: string[]
   type?: "book" | "movie" | "music" | string
+  /** Explicit layout override from frontmatter — see src/lib/layout.ts classifyLayout(). */
+  layout?: string
+  /** True only for synthesized system-page entries (games/tools with no content file). */
+  system?: boolean
   date?: string
   description?: string
   growth?: "larval" | "becoming" | "actual"

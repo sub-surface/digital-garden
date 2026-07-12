@@ -97,7 +97,7 @@ const BG_CONTROLS: Record<string, Ctrl[]> = {
 const HEX_RE = /^#[0-9a-fA-F]{6}$/
 
 export function ThemePanel() {
-  const [activeTab, setActiveTab] = useState<"system" | "dev">("system")
+  const [activeTab, setActiveTab] = useState<"system" | "dev" | "reader">("system")
   const [hexInput, setHexInput] = useState("")
   const isOpen = useStore((s) => s.isThemePanelOpen)
   const close = () => useStore.getState().setThemePanel(false)
@@ -119,6 +119,16 @@ export function ThemePanel() {
 
   const isReaderMode = useStore((s) => s.isReaderMode)
   const toggleReaderMode = useStore((s) => s.toggleReaderMode)
+  const readerMeasureCh = useStore((s) => s.readerMeasureCh)
+  const readerScale = useStore((s) => s.readerScale)
+  const cycleReaderMeasure = useStore((s) => s.cycleReaderMeasure)
+  const cycleReaderScale = useStore((s) => s.cycleReaderScale)
+
+  const handleReaderToggle = () => {
+    const turningOn = !isReaderMode
+    toggleReaderMode()
+    if (turningOn) setActiveTab("reader")
+  }
 
   const config = useStore((s) => s.config)
   const updateConfig = useStore((s) => s.updateConfig)
@@ -178,6 +188,9 @@ export function ThemePanel() {
           <button className={styles.tabBtn} data-active={activeTab === "dev"} onClick={() => setActiveTab("dev")}>
             Dev
           </button>
+          <button className={styles.tabBtn} data-active={activeTab === "reader"} onClick={() => setActiveTab("reader")}>
+            Reader
+          </button>
         </div>
         <button className={styles.closeX} onClick={close} aria-label="Close settings">&times;</button>
       </header>
@@ -232,7 +245,7 @@ export function ThemePanel() {
               >
                 {bgStyle === "off" ? "Hidden" : "Visible"}
               </button>
-              <button className={styles.miniOption} data-active={isReaderMode} onClick={toggleReaderMode}>Reader</button>
+              <button className={styles.miniOption} data-active={isReaderMode} onClick={handleReaderToggle}>Reader</button>
             </div>
 
             <div className={styles.sliderGroup}>
@@ -265,6 +278,34 @@ export function ThemePanel() {
               })}
             </div>
           </div>
+        </div>
+      ) : activeTab === "reader" ? (
+        <div className={styles.tabContent}>
+          <div className={styles.section}>
+            <h3>Width</h3>
+            <div className={styles.stepperRow}>
+              <button className={styles.miniBtn} onClick={() => cycleReaderMeasure(-1)} aria-label="Narrower" title="Narrower">−</button>
+              <span className={styles.stepperValue}>{readerMeasureCh}ch</span>
+              <button className={styles.miniBtn} onClick={() => cycleReaderMeasure(1)} aria-label="Wider" title="Wider">+</button>
+            </div>
+          </div>
+
+          <div className={styles.section}>
+            <h3>Text size</h3>
+            <div className={styles.stepperRow}>
+              <button className={styles.miniBtn} onClick={() => cycleReaderScale(-1)} aria-label="Smaller text" title="Smaller">−</button>
+              <span className={styles.stepperValue}>{Math.round(readerScale * 100)}%</span>
+              <button className={styles.miniBtn} onClick={() => cycleReaderScale(1)} aria-label="Larger text" title="Larger">+</button>
+            </div>
+          </div>
+
+          {!isReaderMode && (
+            <p className={styles.emptyNote}>Reader mode is off — toggle it in the System tab to see these apply.</p>
+          )}
+
+          <button className={styles.ghostBtn} onClick={toggleReaderMode}>
+            {isReaderMode ? "Exit reader mode" : "Enter reader mode"}
+          </button>
         </div>
       ) : (
         <div className={styles.tabContent}>

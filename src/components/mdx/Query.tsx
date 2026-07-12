@@ -2,6 +2,23 @@ import { useStore } from "@/store"
 import { useMemo, useRef } from "react"
 import type { NoteMetadata } from "@/types/content"
 import { isLandableNote } from "@/hooks/useRandomNote"
+import { classifyLayout } from "@/lib/layout"
+
+const pillStyle: React.CSSProperties = {
+  display: "inline-block",
+  fontFamily: "var(--font-code)",
+  fontSize: "0.68rem",
+  letterSpacing: "0.04em",
+  textTransform: "uppercase",
+  opacity: 0.55,
+  border: "1px solid var(--color-border)",
+  borderRadius: "10px",
+  padding: "0.05em 0.5em",
+}
+
+function TypePill({ note }: { note: NoteMetadata }) {
+  return <span style={pillStyle}>{classifyLayout(note.slug, note)}</span>
+}
 
 interface QueryProps {
   filter?: string   // e.g. "type=book" or "tag=philosophy" or "folder=Wiki"
@@ -110,6 +127,7 @@ export function Query({ filter, sort = "-date", limit = 10, display = "list", no
         <thead>
           <tr>
             <th>Title</th>
+            <th>Type</th>
             <th>Date</th>
             <th>Tags</th>
           </tr>
@@ -118,6 +136,7 @@ export function Query({ filter, sort = "-date", limit = 10, display = "list", no
           {results.map(n => (
             <tr key={n.slug}>
               <td><a href={`/${n.slug}`} className="internal-link">{n.title}</a></td>
+              <td><TypePill note={n} /></td>
               <td style={{ fontFamily: 'var(--font-code)', fontSize: '0.8rem', opacity: 0.6 }}>{n.date ? formatDate(n.date) : "—"}</td>
               <td style={{ fontSize: '0.8rem' }}>{n.tags.join(", ")}</td>
             </tr>
@@ -133,7 +152,10 @@ export function Query({ filter, sort = "-date", limit = 10, display = "list", no
         {results.map(n => (
           <a key={n.slug} href={`/${n.slug}`} className="internal-link" style={{ display: 'block', padding: 'var(--space-4)', border: '1px solid var(--color-border)', borderRadius: '6px', color: 'inherit' }}>
             <div style={{ fontWeight: 600, marginBottom: 'var(--space-1)' }}>{n.title}</div>
-            {n.date && <div style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.5 }}>{formatDate(n.date)}</div>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginTop: 'var(--space-1)' }}>
+              <TypePill note={n} />
+              {n.date && <span style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.5 }}>{formatDate(n.date)}</span>}
+            </div>
           </a>
         ))}
       </div>
@@ -146,7 +168,10 @@ export function Query({ filter, sort = "-date", limit = 10, display = "list", no
       {results.map(n => (
         <li key={n.slug} style={{ marginBottom: 'var(--space-3)', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 'var(--space-4)' }}>
           <a href={`/${n.slug}`} className="internal-link">{n.title}</a>
-          {n.date && <span style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.4, flexShrink: 0 }}>{formatDate(n.date)}</span>}
+          <span style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-3)', flexShrink: 0 }}>
+            <TypePill note={n} />
+            {n.date && <span style={{ fontFamily: 'var(--font-code)', fontSize: '0.75rem', opacity: 0.4 }}>{formatDate(n.date)}</span>}
+          </span>
         </li>
       ))}
     </ul>

@@ -91,7 +91,7 @@
   padding-right: 8px;
 
   &::-webkit-scrollbar { width: 2px; }
-  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
+  &::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-overlay-tint) 10%, transparent); }
 }
 
 .section {
@@ -116,8 +116,8 @@
 }
 
 .miniOption {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--color-overlay-tint) 3%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-overlay-tint) 5%, transparent);
   color: var(--color-text-muted);
   font-family: var(--font-code);
   font-size: 0.7rem;
@@ -127,7 +127,7 @@
   transition: all 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-overlay-tint) 6%, transparent);
     color: var(--color-text);
   }
 
@@ -171,7 +171,7 @@
   padding-right: 4px;
 
   &::-webkit-scrollbar { width: 2px; }
-  &::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
+  &::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-overlay-tint) 10%, transparent); }
 }
 
 .textLink {
@@ -216,7 +216,7 @@
   width: 100%;
   height: 2px;
   -webkit-appearance: none;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--color-overlay-tint) 5%, transparent);
   outline: none;
   cursor: pointer;
 
@@ -261,14 +261,14 @@
   height: 18px;
   border-radius: 4px;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid color-mix(in srgb, var(--color-overlay-tint) 12%, transparent);
 }
 
 .hexInput {
   flex: 1;
   min-width: 0;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-overlay-tint) 3%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-overlay-tint) 8%, transparent);
   border-radius: 4px;
   color: var(--color-text);
   font-family: var(--font-code);
@@ -282,8 +282,8 @@
 }
 
 .hexApply {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-overlay-tint) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-overlay-tint) 8%, transparent);
   border-radius: 4px;
   color: var(--color-text-muted);
   font-family: var(--font-code);
@@ -318,7 +318,7 @@
   transition: all 0.15s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: color-mix(in srgb, var(--color-overlay-tint) 3%, transparent);
   }
 
   &[data-active="true"] {
@@ -341,6 +341,21 @@
   opacity: 0.7;
 }
 
+// ── Reader tab: measure/scale steppers ──
+.stepperRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.stepperValue {
+  min-width: 3.4em;
+  text-align: center;
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  color: var(--color-text);
+}
+
 // ── Dev tab: contextual editor ──
 .editHead {
   display: flex;
@@ -354,8 +369,8 @@
 }
 
 .miniBtn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-overlay-tint) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-overlay-tint) 8%, transparent);
   border-radius: 4px;
   color: var(--color-text-muted);
   font-family: var(--font-code);
@@ -387,8 +402,8 @@
 }
 
 .modeChip {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--color-overlay-tint) 3%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-overlay-tint) 6%, transparent);
   border-radius: 4px;
   color: var(--color-text-muted);
   font-family: var(--font-code);
@@ -413,7 +428,7 @@
 
 .ghostBtn {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--color-overlay-tint) 10%, transparent);
   color: var(--color-text-muted);
   font-family: var(--font-code);
   font-size: 0.7rem;

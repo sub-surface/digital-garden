@@ -19,6 +19,7 @@ import matter from "gray-matter"
 import { execFileSync } from "child_process"
 import { imageSize } from "image-size"
 import { slugifyPath, buildSlugResolver, normalizeSlug } from "../src/lib/slug"
+import { SYSTEM_PAGE_META } from "../src/config/system-pages-meta"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CONTENT_DIR = path.resolve(__dirname, "../content")
@@ -36,6 +37,8 @@ interface NoteMeta {
   title: string
   tags: string[]
   type?: string
+  layout?: string
+  system?: boolean
   date?: string
   description?: string
   excerpt?: string
@@ -184,6 +187,7 @@ function scan(): Model {
       title: data.title != null ? String(data.title) : (slug.split("/").pop() ?? slug),
       tags: Array.isArray(data.tags) ? data.tags : [],
       type: data.type as string | undefined,
+      layout: data.layout as string | undefined,
       date: data.date ? String(data.date) : undefined,
       description: data.description as string | undefined,
       excerpt: (data.description as string) || extractExcerpt(content),
@@ -231,6 +235,30 @@ function scan(): Model {
   }
 
   return { index, files, linkMap, resolveLink }
+}
+
+// System pages (arcade games, HeXO, SIGIL, Collider, Apparatus, chess, graph…)
+// have no content file — synthesize a lightweight index entry per
+// SYSTEM_PAGE_META so <Query>/RecentPage/sitemap can list them. No date =
+// never sorts into date-ordered lists (safe default for unset `since`).
+function synthesizeSystemPages(model: Model) {
+  const existingLower = new Set(Object.keys(model.index).map((s) => s.toLowerCase()))
+  let count = 0
+  for (const [slug, meta] of Object.entries(SYSTEM_PAGE_META)) {
+    if (existingLower.has(slug.toLowerCase())) continue
+    model.index[slug] = {
+      slug,
+      title: meta.title,
+      tags: [],
+      type: meta.layout === "game" ? "game" : "system",
+      date: meta.since,
+      links: [],
+      backlinks: [],
+      system: true,
+    }
+    count++
+  }
+  console.log(`  ${count} system-page entr${count === 1 ? "y" : "ies"} synthesized into content-index`)
 }
 
 // ─── Emitters ────────────────────────────────────────────────────────────────
@@ -282,9 +310,12 @@ function emitBrokenLinks({ linkMap, resolveLink }: Model) {
 }
 
 function emitGraph({ index }: Model) {
-  const nodes = Object.values(index).map((n) => ({ id: n.slug, title: n.title, tags: n.tags }))
+  // System-page entries (synthesized, no real links) would show up as orphan
+  // stars — exclude them from the Constellation.
+  const graphable = Object.values(index).filter((n) => !n.system)
+  const nodes = graphable.map((n) => ({ id: n.slug, title: n.title, tags: n.tags }))
   const links: { source: string; target: string }[] = []
-  for (const meta of Object.values(index)) {
+  for (const meta of graphable) {
     for (const target of meta.links) links.push({ source: meta.slug, target })
   }
   writeJson("graph.json", { nodes, links })
@@ -571,6 +602,7 @@ function main() {
   }
 
   const model = scan()
+  synthesizeSystemPages(model)
 
   const emitters = [
     emitContentIndex,

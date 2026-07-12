@@ -11,6 +11,14 @@
 // lives deep inside `.workspace > main`. The `> ` combinator keeps us from
 // hiding that real content. (CSS-module class names are hashed, so the marker
 // is still the most robust hook for the chrome itself.)
+//
+// Articles KEEP their `.article-layout` grid in reader mode (decided
+// 2026-07-12) so Tufte sidenotes keep floating into the margin column instead
+// of going off-canvas — only the *contents* of that column (TOC/infobox) are
+// hidden above. Notes have no grid/sidenotes, so they collapse to a plain
+// centred block same as before. See AppShell.module.scss for the matching
+// `.mainPane` width change (must fit prose + margin track, not just prose).
+@use "./tokens" as *;
 
 [data-reader="true"] {
   // Quiet ONLY the ambient background canvas — not game / graph / art canvases,
@@ -37,22 +45,34 @@
     }
   }
 
-  // Collapse the article grid — its TOC / sidenote margin column is hidden above,
-  // but the grid track still reserves space and offsets the prose to the left.
-  // With the grid gone, both article and note bodies centre on their own. Width
-  // and font scale are driven by the measure / scale vars on the pane + content
-  // (see AppShell.module.scss `.mainPane` / `.mainContent`), so they apply
-  // uniformly to articles AND notes — not just `.article-body`.
-  .article-layout {
+  // Notes have no margin column to preserve — collapse to a plain centred
+  // block. Width and font scale are driven by the measure / scale vars on the
+  // pane + content (see AppShell.module.scss `.mainPane` / `.mainContent`).
+  .note-layout {
     display: block;
   }
-  .article-body,
   .note-body {
     grid-column: 1;
     margin-left: auto;
     margin-right: auto;
     line-height: 1.6;
     max-width: 100%;
+  }
+
+  // Articles keep `display: grid` (base rule in article.scss) so sidenotes
+  // still float into the margin column — only the prose track follows
+  // --reader-measure instead of the fixed 80ch. Narrow viewports already
+  // drop the margin column and switch sidenotes to inline toggle cards
+  // independent of reader mode (sidenotes.scss), so this only applies above
+  // that breakpoint — same guard as the base wide-mode article-layout rule.
+  @media (min-width: $article-narrow + 1) {
+    .article-layout {
+      grid-template-columns:
+        minmax(2rem, 1fr)
+        minmax(0, var(--reader-measure, 80ch))
+        calc(4rem + 250px)
+        minmax(2rem, 1fr);
+    }
   }
 
   // Strip link ornament — colour-only, no underlines or external arrows.

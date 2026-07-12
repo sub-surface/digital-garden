@@ -18,7 +18,6 @@ import { GlobalOverlays } from "./GlobalOverlays"
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
 import { SkipToContent } from "@/components/ui/SkipToContent"
 import { LinkPreview } from "@/components/ui/reader/LinkPreview"
-import { ReaderControls } from "@/components/ui/reader/ReaderControls"
 import { MusicPlayer } from "@/components/ui/music/MusicPlayer"
 import { MobileMusicBar } from "@/components/ui/music/MobileMusicBar"
 import { SearchOverlay } from "@/components/ui/overlays/SearchOverlay"
@@ -158,9 +157,6 @@ export function AppShell() {
             </Suspense>
           </ErrorBoundary>
         )}
-
-        {/* Reader-mode typography controls (only mounts in reader mode) */}
-        <ReaderControls />
 
         {/* Corner menu — bottom-right (includes Theme toggle) */}
         <CornerMenu />

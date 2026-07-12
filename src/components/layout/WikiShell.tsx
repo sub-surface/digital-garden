@@ -6,7 +6,6 @@ import { QuickControls } from "./QuickControls"
 import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
 import { LinkPreview } from "@/components/ui/reader/LinkPreview"
-import { ReaderControls } from "@/components/ui/reader/ReaderControls"
 import { SearchOverlay } from "@/components/ui/overlays/SearchOverlay"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
 import { SideChat } from "@/components/ui/chat/SideChat"
@@ -83,7 +82,6 @@ export function WikiShell() {
           <SideChat />
         </div>
         <CornerMenu variant="wiki" />
-        <ReaderControls />
       </div>
     </MDXProvider>
   )
