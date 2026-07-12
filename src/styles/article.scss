@@ -1,4 +1,5 @@
 // Article layout — Tufte-style: body + right margin for sidenotes/TOC
+@use "./tokens" as *;
 
 .article-layout {
   display: grid;
@@ -140,6 +141,23 @@
   grid-column: 3;
 }
 
+// Wraps the infobox + inline TOC, floated beside body text. Was inline-styled
+// with a hardcoded 300px and no responsive handling — on a real phone that's
+// most of the viewport, squeezing prose into an unreadable sliver.
+.body-side-group {
+  float: right;
+  clear: right;
+  margin-left: var(--space-8);
+  margin-bottom: var(--space-6);
+  width: 300px;
+
+  @media (max-width: 900px) {
+    float: none;
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
 // Inline TOC (inside body flow)
 .article-toc-inline, .toc-inline {
   background: var(--glass-bg-heavy);
@@ -226,7 +244,7 @@
   color: var(--color-heading);
   opacity: 1;
 
-  @media (max-width: 1100px) {
+  @media (max-width: $article-narrow) {
     float: none;
     width: 100%;
     margin: var(--space-8) 0;
@@ -236,8 +254,8 @@
 }
 
 // Below the TOC breakpoint the margin column drops away and the prose centres
-// on its own (sidenotes go inline — see sidenotes.scss @min-width 1101px).
-@media (max-width: 1300px) {
+// on its own (sidenotes go inline — see sidenotes.scss, same $article-narrow).
+@media (max-width: $article-narrow) {
   .article-layout {
     grid-template-columns: 1fr minmax(0, 80ch) 1fr;
     padding: 2rem 1.5rem;

@@ -165,7 +165,7 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 4. **`import.meta.glob` is build-time.** New content files need a rebuild. `npm run dev` watches automatically.
 5. **`src/worker.ts` is NOT in the Vite SPA build.** Excluded from `tsconfig.json`; compiled by Wrangler/CF. VS Code errors against it are ignorable — type-check it with `npm run typecheck:worker`.
 6. **`SYSTEM_PAGES` is the source of truth for system pages.** Add new game/tool pages in `src/config/system-pages.ts` (one line). Add new content-driven layout rules in `NoteRenderer.resolveLayout()`.
-7. **Sidenote footnotes:** `rehype-sidenotes` unwraps first `<p>` inside footnotes. Don't wrap sidenote content in block elements.
+7. **Sidenote footnotes — two plugins, two pipelines, never both at once.** `remark-sidenotes.ts` is the one that matters for published notes — wired into `vite.config.ts`'s MDX build. It converts footnote identifiers to sequential Roman numerals for display (the `[^bateson]`-style identifier is just an internal key, never shown to readers), and inserts the checkbox/label/aside triplet as siblings of the nearest *block* ancestor rather than inline — an `<aside>` can't legally nest inside a `<p>`/heading, and letting the HTML parser silently hoist it out breaks the CSS `:checked + label + aside` sibling chain the narrow-viewport toggle depends on. `rehype-sidenotes-runtime.ts` is unrelated to that pipeline — it's only for `markdown.ts`'s standalone runtime `unified()` processor (LinkPreview hover, WikiEditPage live preview, BootPage terminal rendering), which unwraps the first `<p>` inside footnote definitions. Don't wrap sidenote content in block elements there either.
 8. **Case sensitivity:** Routes are case-insensitive at runtime. CF is case-sensitive for static assets — keep media filenames consistent.
 9. **Graph route** exists as both a dedicated route AND a NoteRenderer system page. Dedicated route wins via router specificity.
 10. **MDX content files use JSX syntax for inline HTML.** Use `className` not `class`, `htmlFor` not `for`, etc. in any raw HTML inside `.md`/`.mdx` files — they are compiled as JSX by `@mdx-js/rollup`.
@@ -225,5 +225,9 @@ Key slices: `theme`, `accentBase`, `bgMode`, `panelStack`, `activeGraphSlug`, `a
 
 ## MDX Plugin Order (vite.config.ts)
 
-**Remark:** frontmatter → mdx-frontmatter → gfm → wikilinks → telescopic → callouts
-**Rehype:** slug → raw → imagePaths → sidenotes
+**Remark:** frontmatter → mdx-frontmatter → gfm → wikilinks → telescopic → callouts → sidenotes
+**Rehype:** slug → raw → imagePaths
+
+Sidenotes runs at the remark stage (`remark-sidenotes.ts`) — rehype-level footnote
+sections are never emitted inside MDX, so it builds the sidenote markup itself
+from the mdast footnote nodes. See gotcha #7.

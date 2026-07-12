@@ -35,14 +35,14 @@ Have we seen something yet, have you been paying attention?
 
 ---
 
-## ⁞ A Tension Is All You Need[^1]
+## ⁞ A Tension Is All You Need
 
 <blockquote className="pullquote"> 
 Not much attention is paid to indexes, in other words, the territorial states of things constituting the designatable. Not much attention is paid to icons, that is, operations of reterritorialization constituting the signifiable. Thus the sign has already attained a high degree of relative deterritorialization; it is thought of as a symbol in a constant movement of referral from sign to sign. <br />
 —Deleuze & Guattari, *A Thousand Plateaus*.
 </blockquote>   
 
-The title of Vaswani et al.’s pivotal 2017 paper is an anastrophe of, "All You Need Is Love" by The Beatles - and boy, did it come together. With over 258k citations, AIAYN is one of the most-cited papers in the 21st century. It signals, "insider" to any of your tech-minded friends, and functions as a "eureka!" quip whenever your home-grown gpt-2 discovers rhyming couplets.  
+The title of Vaswani et al.’s pivotal 2017 paper[^1] is an anastrophe of, "All You Need Is Love" by The Beatles - and boy, did it come together. With over 258k citations, AIAYN is one of the most-cited papers in the 21st century. It signals, "insider" to any of your tech-minded friends, and functions as a "eureka!" quip whenever your home-grown gpt-2 discovers rhyming couplets.  
 
 On the [Stanford Encyclopedia](https://plato.stanford.edu/entries/attention/), Attention is described as *"the selective directedness of our mental lives"*, and it's highlighted that scholars differ on the appropriate mode to take when talking about attention - it remains conceptually unstable, naming many things, which motivated me to write this essay. 
 

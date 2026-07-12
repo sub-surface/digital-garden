@@ -14,7 +14,7 @@ export function ArticleLayout({ children, headings, infobox, header }: Props) {
       <ReadingProgress />
       <div className="article-body">
         {header}
-        <div className="body-side-group" style={{ float: 'right', clear: 'right', marginLeft: 'var(--space-8)', marginBottom: 'var(--space-6)', width: '300px' }}>
+        <div className="body-side-group">
           {infobox}
           <TableOfContents headings={headings} className="article-toc-inline" />
         </div>

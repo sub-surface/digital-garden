@@ -10,7 +10,7 @@ private: true
 
 Rough draft + apparatus. Not published (`Misc/` excluded + `private: true`). Provenance: working conversation with Claude (Fable 5), 2026-07-11 — transcript in [[A&D Colophon]].
 
-`[LEON: ...]` marks decisions or voice-seams for you. Footnotes carry citations + technical care (they render as sidenotes via rehype-sidenotes — kept as single paragraphs, no block elements).
+`[LEON: ...]` marks decisions or voice-seams for you. Footnotes carry citations + technical care (they render as sidenotes via remark-sidenotes — kept as single paragraphs, no block elements).
 
 ---
 

@@ -10,7 +10,7 @@ import matter from "gray-matter"
 import { remarkWikilinks } from "./remark-wikilinks"
 import { remarkTelescopic } from "./remark-telescopic"
 import { remarkCallouts } from "./remark-callouts"
-import { rehypeSidenotes } from "./rehype-sidenotes"
+import { rehypeSidenotes } from "./rehype-sidenotes-runtime"
 import { rehypeImagePaths } from "./rehype-image-paths"
 
 const processor = unified()

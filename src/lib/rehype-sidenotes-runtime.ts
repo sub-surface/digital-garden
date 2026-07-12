@@ -1,8 +1,17 @@
 import type { Root, Element, ElementContent } from "hast"
 import { visit, SKIP } from "unist-util-visit"
+import { toRoman } from "./roman-numerals"
 
 /**
  * Rehype plugin that converts GFM footnotes into Tufte-style sidenotes.
+ *
+ * NOT used in the main Vite MDX build pipeline (that's remark-sidenotes.ts,
+ * wired into vite.config.ts). This one is exclusively for markdown.ts's
+ * standalone runtime `unified()` processor — raw markdown fetched and
+ * rendered client-side after build, e.g. LinkPreview's hover preview,
+ * WikiEditPage's live edit preview, and BootPage's terminal note rendering.
+ * The two plugins look like duplicates by name but serve different pipelines
+ * that are never both applied to the same content.
  */
 
 export function rehypeSidenotes() {
@@ -77,11 +86,19 @@ export function rehypeSidenotes() {
 
       const href = refLink.properties?.href as string | undefined
       if (!href) return
-      const num = href.replace("#user-content-fn-", "")
-      const content = footnoteMap.get(num)
+      const key = href.replace("#user-content-fn-", "")
+      const content = footnoteMap.get(key)
       if (!content) return
 
-      const sidenotId = `sn-${num}`
+      // remark-gfm already numbers footnote refs sequentially by order of
+      // appearance (regardless of the source identifier's name) — reuse that
+      // number rather than the (often non-numeric) identifier itself, rendered
+      // as a Roman numeral to match remark-sidenotes.ts's build-time pipeline.
+      const rawNum = Number(extractText(refLink.children).trim())
+      const displayNum = Number.isFinite(rawNum) ? toRoman(rawNum) : key
+      refLink.children = [{ type: "text", value: displayNum }]
+
+      const sidenotId = `sn-${key}`
 
       const checkbox: Element = {
         type: "element",
@@ -94,13 +111,13 @@ export function rehypeSidenotes() {
         type: "element",
         tagName: "label",
         properties: { htmlFor: sidenotId, className: ["sidenote-toggle"] },
-        children: [{ type: "text", value: num }],
+        children: [{ type: "text", value: displayNum }],
       }
 
       const sidenote: Element = {
         type: "element",
         tagName: "aside",
-        properties: { className: ["sidenote"], dataNumber: num },
+        properties: { className: ["sidenote"], dataNumber: displayNum },
         children: content,
       }
 
@@ -143,7 +160,18 @@ export function rehypeSidenotes() {
   }
 }
 
-/** 
+/** Recursively pulls plain text out of a footnote-ref link's children. */
+function extractText(nodes: ElementContent[]): string {
+  return nodes
+    .map((n) => {
+      if (n.type === "text") return n.value
+      if (n.type === "element") return extractText(n.children)
+      return ""
+    })
+    .join("")
+}
+
+/**
  * Unwraps the first <p> in footnote content to avoid invalid nesting
  * (<span><p>...</p></span> inside a <p>).
  */
