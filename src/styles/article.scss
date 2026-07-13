@@ -33,10 +33,14 @@
   }
 
   // Headings read left-aligned (not justified) — justified headings open ugly
-  // word gaps on short lines and fight the centred body's symmetry.
+  // word gaps on short lines and fight the centred body's symmetry. `hyphens:
+  // manual` overrides the body's inherited `hyphens: auto` so a heading never
+  // fragments into "Atten-tion & Dif-fer-ence" when the column narrows — it
+  // wraps whole words instead.
   h1, h2, h3, h4, h5, h6 {
     text-align: left;
     text-wrap: balance;
+    hyphens: manual;
   }
 
   // Hairline under section headings so structure reads at a glance (Gwern/Wiki
@@ -311,7 +315,7 @@
   position: relative; // positioning context for the back-to-arcade button
 
   // mainContent padding is 1.5rem on mobile — cancel exactly that
-  @media (max-width: 800px) {
+  @media (max-width: $bp-phone) {
     margin: -1.5rem;
   }
 }
@@ -326,7 +330,7 @@
   min-height: 100%;
 
   // leave room for the mobile music bar + corner menu at the bottom
-  @media (max-width: 800px) {
+  @media (max-width: $bp-phone) {
     padding: 1.25rem 0.75rem 5rem;
   }
 

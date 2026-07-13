@@ -1,12 +1,21 @@
 // Design tokens — ported from custom.scss
 // All colour variables use CSS custom properties so theming is a single :root swap
 
-// Compile-time breakpoint (CSS custom properties can't be used inside @media
+// Compile-time breakpoints (CSS custom properties can't be used inside @media
 // conditions). The single source of truth for "wide vs narrow article layout" —
 // article.scss (grid/TOC collapse, pullquote reflow) and sidenotes.scss (float
 // vs inline-toggle mode) must all agree on this or sidenotes float into a
-// margin column that's already gone.
+// margin column that's already gone. This is a *content-fit* breakpoint, a
+// different concept from the device-width tokens below — keep it separate.
 $article-narrow: 1300px;
+
+// Device-width breakpoints (ROADMAP §18, mobile coherence). The JS mirror of
+// these lives in `src/config/breakpoints.ts` — a documented mirrored-constant
+// pair, since SCSS can't import TS. New responsive CSS should reference these
+// names, not a bare literal. See breakpoints.ts for the full container-vs-media
+// ownership rule.
+$bp-phone: 800px; // canonical phone/mobile viewport line (mirrors PHONE_BREAKPOINT)
+$bp-panel-narrow: 560px; // canonical "narrow panel" container-query width (mirrors PANEL_NARROW)
 
 :root {
   // ── Fonts ──

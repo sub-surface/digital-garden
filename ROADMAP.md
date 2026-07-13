@@ -38,9 +38,12 @@ reader-mode cluster** (2026-07-12, see those sections) — see `docs/garden.md` 
 article-typography memory for detail; the Attention & Difference essay publish itself is
 content, tracked by Leon, not here. Revised order:
 
-1. **Mobile breakpoints foundation** (§18) — named breakpoint tokens (SCSS + mirrored
-   `src/config/breakpoints.ts`) + the container-vs-media-query ownership rule; unblocks the
-   rest of §18 cleanly instead of another one-off point fix.
+1. ~~**Mobile breakpoints foundation** (§18)~~ — **DONE 2026-07-13.** Named breakpoint tokens
+   (`$bp-phone`/`$bp-panel-narrow` in `tokens.scss`) + mirrored `src/config/breakpoints.ts`
+   (`isPhoneViewport()`/`usePhoneViewport()`) + the container-vs-media-query ownership rule, all
+   JS hardcodes unified. Shipped alongside the article-grid mobile bug, Command Palette touch
+   entry, and LinkPreview hover gate — see §18. Remaining §18: component-module literal migration
+   (over time), touch-gesture parity, full on-device visual sweep.
 2. **heXO → arcade cabinet integration + polish threads** (§6) — reframed from "before any new
    game" (stale premise — a dozen games shipped without it) to whenever heXO gets its next pass.
    The `setPointerCapture` bug is fixed; zen-mode generalization and touch-pinch remain.
@@ -557,7 +560,22 @@ is a recent example) without a systemic pass — issues are hard to track becaus
 place mobile behaviour is defined. Needs a dedicated sweep across look, reflow, and interaction
 model, not another point fix. Preliminary findings from this session (not yet a full audit):
 
-- [ ] **No shared breakpoint source of truth.** Grepped `max-width:\d+px` across `src/styles` +
+**2026-07-13 progress:** the foundation + three of the leads below shipped (breakpoint source of
+truth, container-vs-media ownership rule, Command Palette touch entry, LinkPreview hover gate),
+plus the concrete article-grid mobile bug Leon screenshotted. `npm run build` + `npm test` green.
+Remaining open: touch-gesture parity (§18 5th bullet / §6) and the full on-device visual sweep.
+
+- [x] **Article grid stranded the backlinks footer in an implicit right column on mobile**
+  (2026-07-13, Leon-reported via screenshot — "the right column seems dominant"). `.article-layout`
+  is a 4-col grid; `.article-body` and `NoteFooter`'s `.footer` are both pinned to `grid-column: 2`
+  so the footer flows under the prose on desktop. At ≤900px `article.scss` collapses the grid to a
+  single `1fr` column and moves `.article-body` → `grid-column: 1`, but nothing moved the footer, so
+  it kept `grid-column: 2` → CSS Grid spawned an implicit auto-sized track on the right and dropped
+  the whole backlinks block into it. Long backlink titles then stole width and squeezed the prose
+  column to a sliver (title fragmenting into "Atten-tion & Dif-fer-ence"). Fix: `NoteFooter.module.scss`
+  now moves `.footer` to `grid-column: 1` at the same ≤900px breakpoint `.article-body` uses; also
+  set `hyphens: manual` on article headings so a heading never auto-fragments when narrow.
+- [x] **No shared breakpoint source of truth.** (2026-07-13) Grepped `max-width:\d+px` across `src/styles` +
   every component module: mobile/narrow breakpoints are declared ad hoc at 500, 560, 600, 640,
   700, 760, 768, 800, 900, 920, and 1120px across ~40 files, each component picking its own number
   independently. The only named breakpoint variable, `$article-narrow` (`tokens.scss`, 1300px —
@@ -573,23 +591,42 @@ model, not another point fix. Preliminary findings from this session (not yet a 
   the other (SCSS can't import TS; a documented mirrored-constant pair beats generation machinery
   at this scale). The 800px value is effectively already the site's de-facto "phone" breakpoint —
   name it rather than invent a new number.
-- [ ] **Two responsive mechanisms coexist without a stated rule.** Many game/shelf pages respond
+  **Shipped (2026-07-13):** `tokens.scss` now defines `$bp-phone: 800px` + `$bp-panel-narrow: 560px`
+  (both existing de-facto numbers, named not invented); `src/config/breakpoints.ts` is the JS mirror
+  (`PHONE_BREAKPOINT`/`PANEL_NARROW` + SSR-safe `isPhoneViewport()`), with a header comment on each
+  side pointing at the other. All four JS hardcodes now go through the shared constant/hook: the two
+  with a resize listener (`NoteFooter`, `LocalGraph`) share a new `usePhoneViewport()` hook;
+  `usePanelClick` + `BgCanvas` call `isPhoneViewport()`. Global `src/styles/*` phone `@media`s
+  (article.scss, reader-mode.scss) migrated to `$bp-phone`. **Remaining (deliberate, over time):**
+  component `.module.scss` files still hardcode literals — they don't `@use tokens`, so each needs
+  an import added; migrate opportunistically, don't batch-convert blind (hand-tuned per file). The
+  900px article single-column collapse and 560px `@container` widths are separate concepts — left as
+  literals or their own token, not folded into `$bp-phone`.
+- [x] **Two responsive mechanisms coexist without a stated rule.** (rule stated 2026-07-13; migration
+  ongoing) The container-vs-media-query ownership rule is now written down in `breakpoints.ts` and
+  `tokens.scss`: container query (`$bp-panel-narrow`) when a component reflows on the width of the
+  box it's rendered *in* (panel card vs full page); viewport `@media`/`isPhoneViewport()`
+  (`$bp-phone`) only for device-level concerns. Existing violators (`TetrisPage`, `ConstellationPage`,
+  `BlackjackPage`, …) still need migrating onto the rule — that's the same over-time component-module
+  sweep as the bullet above. Many game/shelf pages respond
   to `@container panel (max-width: 560px)` (their width inside the panel-stack "note" layout) while
   also carrying plain `@media (max-width: Npx)` rules (viewport width) in the same stylesheet —
   e.g. `TetrisPage.module.scss`, `ConstellationPage.module.scss`, `BlackjackPage.module.scss`. A
   component can be narrow-via-container but wide-via-viewport (or vice versa) depending on whether
   it's rendered as a panel card or a full page, and the two rule sets can silently disagree. Needs
   an explicit rule for which mechanism owns which layout context.
-- [ ] **Command Palette has no touch entry point.** It's bound only to `Ctrl/Cmd+P` in
-  `useHotkeys` — no button in `QuickControls` or `CornerMenu` opens it. On a touch device with no
-  keyboard, "jump to notes / run actions / search content" is simply unreachable. (The `?` cheat
-  sheet has the same gap, but is lower-stakes — there's nothing to look up if there's no keyboard
-  in the first place.)
-- [ ] **`LinkPreview` is mouse-hover only** (`document.addEventListener("mouseover"/"mouseout")`,
-  `DELAY = 320`) — no tap/touch path. Probably fine as an intentional desktop-only affordance
-  (hover-to-peek doesn't map cleanly to touch), but it should be a stated decision, not a silent
-  gap — confirm mobile just navigates straight through with no broken half-behaviour from
-  touch-emulated `mouseover` events on first tap (a known mobile Safari/Chrome quirk).
+- [x] **Command Palette has no touch entry point.** (shipped 2026-07-13) Bound only to `Ctrl/Cmd+P`
+  in `useHotkeys` — and on mobile the whole `QuickControls` bar is `display:none` (≤$bp-phone),
+  `CornerMenu` being the only control surface. Added a **"Commands"** item to both `CornerMenu`
+  variants (default + wiki) that calls `toggleCommandPalette()`, so the palette (jump to notes / run
+  actions / search) is now reachable on touch. (The `?` cheat sheet still has the same gap, but is
+  lower-stakes — nothing to look up if there's no keyboard.)
+- [x] **`LinkPreview` is mouse-hover only** — decision made explicit (2026-07-13). Confirmed
+  desktop-only-by-design: the effect now early-returns unless
+  `matchMedia("(hover: hover) and (pointer: fine)")` matches, so the `mouseover`/`mouseout`
+  listeners never attach on touch devices. That both states the decision in code and kills the
+  touch-emulated-`mouseover` first-tap flash (the Safari/Chrome quirk) — mobile just navigates
+  straight through, no half-behaviour.
 - [ ] **Touch-gesture parity on canvas/SVG pages** — heXO's pinch-zoom gap is already tracked
   (ROADMAP §6: "No touch-pinch zoom (wheel only)"). Worth checking whether the same gap exists on
   the other pointer-driven canvas pages (Collider, the graph views, SIGIL routing) rather than

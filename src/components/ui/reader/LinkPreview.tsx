@@ -207,6 +207,16 @@ export function LinkPreview() {
   }, [stack, contentIndex])
 
   useEffect(() => {
+    // Hover-to-peek is a deliberate desktop-only affordance (ROADMAP §18): it
+    // doesn't map to touch, and on touch devices the browser fires a synthetic
+    // `mouseover` on first tap that would flash a preview card open a frame
+    // before the tap navigates away. Gate the listeners on real hover capability
+    // so touch devices simply navigate straight through — no half-behaviour.
+    if (typeof window !== "undefined" &&
+        !window.matchMedia?.("(hover: hover) and (pointer: fine)").matches) {
+      return
+    }
+
     function handleOver(e: MouseEvent) {
       const target = e.target as Element
       const anchor = target.closest("a") as HTMLAnchorElement | null

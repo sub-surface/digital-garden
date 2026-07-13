@@ -9,6 +9,17 @@
   // so it can't fit in row 1 and auto-flows to its own full-height-natural
   // row directly below the prose, aligned to the reading measure.
   grid-column: 2;
+
+  // Below 900px `article.scss` collapses `.article-layout` to a single `1fr`
+  // column and moves `.article-body` to column 1 — but this footer would keep
+  // `grid-column: 2`, which now points past the only track. Grid then spawns an
+  // implicit auto-sized column on the right and drops the whole backlinks block
+  // into it, so the footer's long link titles steal width and squeeze the prose
+  // column to a sliver (the "dominant right column" mobile bug). Track the same
+  // 900px collapse `.article-body` uses so the footer stays under the prose.
+  @media (max-width: 900px) {
+    grid-column: 1;
+  }
 }
 
 .divider {

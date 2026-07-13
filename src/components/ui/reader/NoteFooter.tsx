@@ -1,8 +1,9 @@
 import { useStore } from "@/store"
 import type { NoteMetadata } from "@/types/content"
 import styles from "./NoteFooter.module.scss"
-import { lazy, Suspense, useState, useEffect } from "react"
+import { lazy, Suspense } from "react"
 import { useIsWiki } from "@/hooks/useShell"
+import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 
 // Lazy load the local graph
 const LocalGraph = lazy(() => import("../graph/LocalGraph").then(m => ({ default: m.LocalGraph })))
@@ -15,13 +16,7 @@ interface Props {
 export function NoteFooter({ slug, meta }: Props) {
   const contentIndex = useStore((s) => s.contentIndex)
   const isWiki = useIsWiki()
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 800)
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 800)
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
+  const isMobile = usePhoneViewport()
 
   return (
     <footer className={styles.footer}>

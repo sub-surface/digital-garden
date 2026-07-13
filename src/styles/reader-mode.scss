@@ -39,7 +39,7 @@
   // surface (the QuickControls bar is hidden ≤800px and there's no command
   // palette), so hiding it would trap the user in reader mode with no toggle to
   // leave. It already only renders ≤800px, so this just un-hides it there.
-  @media (max-width: 800px) {
+  @media (max-width: $bp-phone) {
     > [data-corner-menu] {
       display: flex !important;
     }

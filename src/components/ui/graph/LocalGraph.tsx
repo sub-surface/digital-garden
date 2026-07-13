@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { useStore } from "@/store"
+import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 import { loadGraphData } from "@/lib/content-loader"
 import * as PIXI from "pixi.js"
 import * as d3 from "d3"
@@ -30,14 +31,8 @@ export function LocalGraph({ slug }: Props) {
   const appRef = useRef<PIXI.Application | null>(null)
   const pushCard = useStore((s) => s.pushCard)
   const clearStack = useStore((s) => s.clearStack)
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 800)
+  const isMobile = usePhoneViewport()
   const [isMinimised, setIsMinimised] = useState(true)
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 800)
-    window.addEventListener("resize", handleResize)
-    return () => window.removeEventListener("resize", handleResize)
-  }, [])
 
   useEffect(() => {
     if (!containerRef.current || isMinimised) return

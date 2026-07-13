@@ -22,6 +22,7 @@ export function CornerMenu({ variant = "default" }: CornerMenuProps = {}) {
   const toggleThemePanel = useStore((s) => s.toggleThemePanel)
   const toggleMusic = useStore((s) => s.toggleMusic)
   const toggleSearch = useStore((s) => s.toggleSearch)
+  const toggleCommandPalette = useStore((s) => s.toggleCommandPalette)
   const cycleBgMode = useStore((s) => s.cycleBgMode)
   const toggleReaderMode = useStore((s) => s.toggleReaderMode)
   const isReaderMode = useStore((s) => s.isReaderMode)
@@ -36,6 +37,7 @@ export function CornerMenu({ variant = "default" }: CornerMenuProps = {}) {
   const ARC_ITEMS: ArcItem[] = variant === "wiki"
     ? [
         { label: "Search", onClick: () => { toggleSearch(); setOpen(false); } },
+        { label: "Commands", onClick: () => { toggleCommandPalette(); setOpen(false); } },
         { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },
         { label: "Palette", onClick: () => { cycleAccent(); setOpen(false); } },
         { label: "Bg", onClick: () => { cycleBgMode(); setOpen(false); } },
@@ -45,6 +47,7 @@ export function CornerMenu({ variant = "default" }: CornerMenuProps = {}) {
       ]
     : [
         { label: "Search", onClick: () => { toggleSearch(); setOpen(false); } },
+        { label: "Commands", onClick: () => { toggleCommandPalette(); setOpen(false); } },
         { label: "Random", onClick: () => { goRandom(); setOpen(false); } },
         { label: "Music", onClick: () => { toggleMusic(); setOpen(false); } },
         { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },

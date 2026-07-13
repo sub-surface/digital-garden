@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo } from "react"
 import { useStore } from "@/store"
+import { isPhoneViewport } from "@/config/breakpoints"
 
 // ---- Simplex 2D noise (compact) ----
 const F2 = 0.5 * (Math.sqrt(3) - 1)
@@ -79,8 +80,9 @@ const TERMINAL_ANIMATIONS = [
 const GLYPH_POOL = '░▒▓█─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬■□●○◘▄▀▌▐«»¶§±≡≈∞ΩαβπΣφψχρλμνξ♠♣♥♦☺☻♪♫►◄▲▼◇◆◈✦✧⋆∂∆∅∈∝⟨⟩⊕⊗⊙↑↗→↘↓↙←↖⁰¹²³⁴⁵⁶⁷⁸⁹αβγδεζηθ'
 
 export function BgCanvas() {
-  // Skip entirely on mobile — canvas is CSS-hidden at ≤800px, no point running it
-  if (typeof window !== "undefined" && window.innerWidth <= 800) return null
+  // Skip entirely on mobile — canvas is CSS-hidden at the phone breakpoint, no
+  // point running it (isPhoneViewport is SSR-safe: false when there's no window).
+  if (isPhoneViewport()) return null
   return <BgCanvasInner />
 }
 

@@ -4,6 +4,7 @@ import { useStore } from "@/store"
 import { useShell } from "@/hooks/useShell"
 import { slugFromPathname } from "@/lib/slug"
 import { classifyLayout } from "@/lib/layout"
+import { isPhoneViewport } from "@/config/breakpoints"
 
 /**
  * Global capture-phase click interceptor for internal links. Three outcomes:
@@ -65,7 +66,7 @@ export function usePanelClick() {
 
         const al = useStore.getState().activeLayout
         const dest = classifyLayout(slug, contentIndex?.[slug] ?? {})
-        const isMobile = window.innerWidth <= 800
+        const isMobile = isPhoneViewport()
 
         event.preventDefault()
         event.stopPropagation()
