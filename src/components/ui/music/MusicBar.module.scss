@@ -3,7 +3,7 @@
   align-items: center;
   gap: 8px;
   background: none;
-  height: 20px;
+  height: 24px;
   pointer-events: auto;
   font-family: var(--font-code);
   font-size: 0.7rem;
@@ -24,13 +24,16 @@
 
 .controls {
   display: flex;
-  gap: 8px;
+  gap: 0;
   padding-right: 12px;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
 }
 
 .iconBtn {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
   background: none;
   border: none;
   color: inherit;

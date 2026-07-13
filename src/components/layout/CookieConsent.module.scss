@@ -29,11 +29,12 @@
 }
 
 .link {
-  color: var(--color-accent);
-  text-decoration: none;
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 
   &:hover {
-    text-decoration: underline;
+    color: var(--color-accent);
   }
 }
 
@@ -55,9 +56,9 @@
 }
 
 .accept {
-  background: var(--color-accent);
+  background: var(--color-text);
   color: var(--color-bg);
-  border-color: var(--color-accent);
+  border-color: var(--color-text);
 
   &:hover {
     opacity: 0.85;

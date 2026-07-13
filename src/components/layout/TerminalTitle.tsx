@@ -413,6 +413,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
 
   const displayText = (isHovered && booted && !isAnimating) ? settledText : line
   const titleTooltip = isWiki ? "Wiki home" : isChat ? "Chat home" : tooltip
+  const accessibleTitle = `${displayText || settledText}. ${titleTooltip}`
 
   const titleContent = (
     <>
@@ -431,7 +432,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
           href="/"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          aria-label={titleTooltip}
+          aria-label={accessibleTitle}
           title={titleTooltip}
         >
           {titleContent}
@@ -442,8 +443,8 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
           onClick={handleClick}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          aria-label={tooltip}
-          title={tooltip}
+          aria-label={accessibleTitle}
+          title={titleTooltip}
         >
           {titleContent}
         </button>
