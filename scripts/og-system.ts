@@ -23,6 +23,29 @@ const OG_DIR = path.join(PUBLIC_DIR, "og")
 const BG = "#0a0a0a"
 const FG = "#ffffff"
 const DIM = "#888888"
+export const OG_FONT_FAMILY = "EBGaramond"
+const OG_FONT_URLS = {
+  regular: "https://raw.githubusercontent.com/octaviopardo/EBGaramond12/master/fonts/ttf/EBGaramond-Regular.ttf",
+  semibold: "https://raw.githubusercontent.com/octaviopardo/EBGaramond12/master/fonts/ttf/EBGaramond-SemiBold.ttf",
+} as const
+
+export interface OgFontData {
+  regular: ArrayBuffer
+  semibold: ArrayBuffer
+}
+
+export async function loadOgFonts(): Promise<OgFontData> {
+  const load = async (url: string) => {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`Failed to load OG font: ${response.status} ${response.statusText}`)
+    return response.arrayBuffer()
+  }
+  const [regular, semibold] = await Promise.all([
+    load(OG_FONT_URLS.regular),
+    load(OG_FONT_URLS.semibold),
+  ])
+  return { regular, semibold }
+}
 
 // Minimal node-tree helpers so the motif code reads less noisily than raw satori.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -385,7 +408,7 @@ function cardTree(spec: CardSpec): Node {
       backgroundColor: BG,
       backgroundImage: "radial-gradient(circle at 25px 25px, #1a1a1a 2%, transparent 0%)",
       backgroundSize: "50px 50px",
-      fontFamily: "IBMPlexMono",
+      fontFamily: OG_FONT_FAMILY,
       borderLeft: `12px solid ${spec.accent}`,
     },
     [
@@ -406,7 +429,7 @@ function cardTree(spec: CardSpec): Node {
             { fontSize: 24, color: spec.accent, marginBottom: "20px", textTransform: "uppercase", letterSpacing: "4px" },
             spec.kicker,
           ),
-          el("div", { fontSize: 84, fontWeight: 700, color: FG, marginBottom: "24px", lineHeight: 1.05 }, spec.title),
+          el("div", { fontSize: 84, fontWeight: 600, color: FG, marginBottom: "24px", lineHeight: 1.05 }, spec.title),
           el("div", { fontSize: 28, color: DIM, lineHeight: 1.4, maxWidth: "620px" }, spec.subtitle),
         ],
       ),
@@ -426,14 +449,17 @@ function cardTree(spec: CardSpec): Node {
   )
 }
 
-export async function generateSystemCards(fontData: ArrayBuffer): Promise<number> {
+export async function generateSystemCards(fontData: OgFontData): Promise<number> {
   if (!fs.existsSync(OG_DIR)) fs.mkdirSync(OG_DIR, { recursive: true })
 
   for (const spec of CARDS) {
     const svg = await satori(cardTree(spec), {
       width: 1200,
       height: 630,
-      fonts: [{ name: "IBMPlexMono", data: fontData, weight: 500, style: "normal" }],
+      fonts: [
+        { name: OG_FONT_FAMILY, data: fontData.regular, weight: 400, style: "normal" },
+        { name: OG_FONT_FAMILY, data: fontData.semibold, weight: 600, style: "normal" },
+      ],
     })
     const png = new Resvg(svg).render().asPng()
     fs.writeFileSync(path.join(OG_DIR, `${spec.slug}.png`), png)
@@ -445,9 +471,7 @@ export async function generateSystemCards(fontData: ArrayBuffer): Promise<number
 const invokedDirectly =
   process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (invokedDirectly) {
-  const font = await fetch(
-    "https://github.com/google/fonts/raw/main/ofl/ibmplexmono/IBMPlexMono-Medium.ttf",
-  ).then((r) => r.arrayBuffer())
-  const n = await generateSystemCards(font)
+  const fonts = await loadOgFonts()
+  const n = await generateSystemCards(fonts)
   console.log(`Generated ${n} system-page OG card(s) in public/og/`)
 }

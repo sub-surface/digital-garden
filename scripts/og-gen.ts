@@ -4,15 +4,17 @@ import * as crypto from "crypto"
 import { fileURLToPath } from "url"
 import satori from "satori"
 import { Resvg } from "@resvg/resvg-js"
-import { generateSystemCards } from "./og-system"
+import { generateSystemCards, loadOgFonts, OG_FONT_FAMILY } from "./og-system"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PUBLIC_DIR = path.resolve(__dirname, "../public")
 const OG_DIR = path.join(PUBLIC_DIR, "og")
 const CACHE_PATH = path.join(OG_DIR, ".cache.json")
+const OG_RENDER_VERSION = "eb-garamond-v1"
 
 function hashNote(note: Record<string, unknown>): string {
   const relevant = JSON.stringify({
+    renderVersion: OG_RENDER_VERSION,
     title: note.title,
     description: note.description,
     excerpt: note.excerpt,
@@ -62,7 +64,7 @@ async function main() {
   console.log(`  ${slugsToGenerate.length} note image(s) to generate (${Object.keys(index).length - slugsToGenerate.length} cached)`)
 
   // Load font (shared with the system-page cards below)
-  const fontData = await fetch("https://github.com/google/fonts/raw/main/ofl/ibmplexmono/IBMPlexMono-Medium.ttf").then(res => res.arrayBuffer())
+  const fontData = await loadOgFonts()
 
   // System / custom pages (arcade, graph, chess, …) aren't in content-index.json,
   // so they never get a note card — generate their bespoke procedural cards here.
@@ -137,7 +139,7 @@ async function main() {
             backgroundColor: '#0a0a0a',
             backgroundImage: 'radial-gradient(circle at 25px 25px, #1a1a1a 2%, transparent 0%)',
             backgroundSize: '50px 50px',
-            fontFamily: 'IBMPlexMono',
+            fontFamily: OG_FONT_FAMILY,
             borderLeft: '12px solid #427ab4',
           },
           children: [
@@ -164,7 +166,7 @@ async function main() {
                   {
                     type: 'div',
                     props: {
-                      style: { fontSize: thumbnailUrl ? 56 : 72, fontWeight: 700, color: '#ffffff', marginBottom: '24px', lineHeight: 1.1, maxWidth: textMaxWidth },
+                      style: { fontSize: thumbnailUrl ? 56 : 72, fontWeight: 600, color: '#ffffff', marginBottom: '24px', lineHeight: 1.1, maxWidth: textMaxWidth },
                       children: title,
                     },
                   },
@@ -218,9 +220,15 @@ async function main() {
         height: 630,
         fonts: [
           {
-            name: 'IBMPlexMono',
-            data: fontData,
-            weight: 500,
+            name: OG_FONT_FAMILY,
+            data: fontData.regular,
+            weight: 400,
+            style: 'normal',
+          },
+          {
+            name: OG_FONT_FAMILY,
+            data: fontData.semibold,
+            weight: 600,
             style: 'normal',
           },
         ],
