@@ -1,6 +1,6 @@
 import { Env, RouteCtx } from "./types"
 import { corsHeaders, applyApiHeaders, jsonResponse, verifyAuth } from "./lib"
-import { getContentIndex, slugFromPathname, resolveMetaCaseInsensitive, injectMetaTags } from "./meta"
+import { getContentIndex, slugFromPathname, resolveSlugCaseInsensitive, injectMetaTags } from "./meta"
 import { handleAuthMe, handleUpdateProfile, handleAvatarUpload, handleRegister } from "./auth"
 import { handleSubmit, handleEdit, handleNew, handleBookmarks, handleLockStatus, handleUserProfile } from "./wiki"
 import {
@@ -133,11 +133,17 @@ export default {
     }
 
     const html = await response.text()
-    const slug = slugFromPathname(url.pathname)
+    const requestSlug = slugFromPathname(url.pathname)
     const index = await getContentIndex(env.ASSETS)
-    const meta = resolveMetaCaseInsensitive(index, slug)
+    // Meta tags must be built from the CANONICAL slug, not the casing the visitor
+    // happened to use: `/og/<slug>.png` is a static asset and CF serves those
+    // case-sensitively, so `/abbas` would emit og:image=/og/abbas.png → 404 while
+    // `/Abbas` worked. Same for og:url/canonical, which otherwise varied by inbound
+    // link casing and split one page into two canonicals. (ROADMAP §28.16)
+    const canonicalSlug = resolveSlugCaseInsensitive(index, requestSlug) ?? requestSlug
+    const meta = index[canonicalSlug] ?? null
 
-    const injected = injectMetaTags(html, meta ?? {}, slug, url.origin)
+    const injected = injectMetaTags(html, meta ?? {}, canonicalSlug, url.origin)
 
     const headers = new Headers(response.headers)
     addSecurityHeaders(headers)

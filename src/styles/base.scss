@@ -1,4 +1,5 @@
 // Reset + base typography
+@use "./breakpoints" as *;
 
 // Font fallbacks with size-adjust to reduce CLS during web font swap
 @font-face {
@@ -282,7 +283,7 @@ th {
 
 // ── Responsive ──
 
-@media (max-width: 800px) {
+@media (max-width: $bp-phone) {
   body {
     line-height: 1.6;
   }

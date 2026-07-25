@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react"
 import type { ChatMessage, ChatRoom as ChatRoomType, PinnedMessage } from "@/types/chat"
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api"
 import { parseMessageBody } from "@/lib/parseMessageBody"
 import { useAuth } from "@/hooks/useAuth"
 import { useChatMessages } from "@/hooks/useChatMessages"
@@ -130,10 +131,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
 
   // Fetch pinned messages
   useEffect(() => {
-    fetch(`/api/chat/pins?room=${encodeURIComponent(roomId)}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
+    apiGet<{ pins?: PinnedMessage[] }>(`/api/chat/pins?room=${encodeURIComponent(roomId)}`, { token: accessToken })
       .then((data) => { setPinnedMessages(data.pins ?? []); setShowPinTicker(true) })
       .catch(() => setPinnedMessages([]))
   }, [roomId, accessToken])
@@ -155,11 +153,11 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     const msg = messages.find(m => m.id === messageId)
     const isPinned = !!msg?.pinned_at
     try {
-      const res = await fetch(`/api/chat/messages/${messageId}/pin`, {
-        method: isPinned ? "DELETE" : "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-      if (!res.ok) throw new Error()
+      if (isPinned) {
+        await apiDelete(`/api/chat/messages/${messageId}/pin`, undefined, { token: accessToken })
+      } else {
+        await apiPost(`/api/chat/messages/${messageId}/pin`, undefined, { token: accessToken })
+      }
       // Update local message state
       setMessages((prev) =>
         prev.map((m) =>
@@ -169,10 +167,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
         )
       )
       // Refresh pinned messages list
-      fetch(`/api/chat/pins?room=${encodeURIComponent(roomId)}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-        .then((r) => (r.ok ? r.json() : Promise.reject()))
+      apiGet<{ pins?: PinnedMessage[] }>(`/api/chat/pins?room=${encodeURIComponent(roomId)}`, { token: accessToken })
         .then((data) => { setPinnedMessages(data.pins ?? []); setShowPinTicker(true) })
         .catch((e) => console.warn("ChatRoom: pinned-messages refresh failed:", e))
     } catch {
@@ -212,10 +207,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     }
     searchTimerRef.current = setTimeout(() => {
       setSearchLoading(true)
-      fetch(`/api/chat/search?q=${encodeURIComponent(q)}&limit=20`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-        .then((r) => (r.ok ? r.json() : Promise.reject()))
+      apiGet<{ messages?: SearchResult[] }>(`/api/chat/search?q=${encodeURIComponent(q)}&limit=20`, { token: accessToken })
         .then((data) => setSearchResults(data.messages ?? []))
         .catch(() => setSearchResults([]))
         .finally(() => setSearchLoading(false))
@@ -274,11 +266,14 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     }))
 
     try {
-      await fetch("/api/chat/reactions", {
-        method,
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ message_id: messageId, emote }),
-      })
+      // Previously: fetch's response was never checked, so a failed react
+      // request would leave the optimistic update in place forever. apiPost/
+      // apiDelete now throw on failure, so the existing rollback below fires.
+      if (method === "DELETE") {
+        await apiDelete("/api/chat/reactions", { message_id: messageId, emote }, { token: accessToken })
+      } else {
+        await apiPost("/api/chat/reactions", { message_id: messageId, emote }, { token: accessToken })
+      }
     } catch {
       setMessages(prevMessages)
       showToast("Reaction failed")
@@ -287,11 +282,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
 
   async function handleDelete(messageId: string) {
     try {
-      const res = await fetch(`/api/chat/messages/${messageId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-      if (!res.ok) throw new Error()
+      await apiDelete(`/api/chat/messages/${messageId}`, undefined, { token: accessToken })
       setMessages((prev) =>
         prev.map((m) => m.id === messageId ? { ...m, deleted_at: new Date().toISOString() } : m)
       )
@@ -311,15 +302,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       )
     )
     try {
-      const res = await fetch(`/api/chat/messages/${messageId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ body: newBody }),
-      })
-      if (!res.ok) throw new Error()
+      await apiPatch(`/api/chat/messages/${messageId}`, { body: newBody }, { token: accessToken })
     } catch {
       // Rollback
       setMessages((msgs) =>
@@ -333,19 +316,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
 
   async function handleSend(body: string, replyToId?: string) {
     try {
-      const res = await fetch("/api/chat/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          room_id: roomId,
-          body,
-          reply_to: replyToId ?? null,
-        }),
-      })
-      if (!res.ok) throw new Error()
+      await apiPost("/api/chat/messages", { room_id: roomId, body, reply_to: replyToId ?? null }, { token: accessToken })
     } catch {
       showToast("Failed to send message")
     }
@@ -368,12 +339,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     const slug = newRoomSlug.trim()
     if (!name || !slug) return
     try {
-      const res = await fetch("/api/chat/rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ name, slug }),
-      })
-      if (!res.ok) throw new Error()
+      await apiPost("/api/chat/rooms", { name, slug }, { token: accessToken })
       setNewRoomName("")
       setNewRoomSlug("")
       setShowNewRoom(false)
@@ -385,12 +351,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
 
   async function handleArchiveRoom(id: string) {
     try {
-      const res = await fetch(`/api/chat/rooms/${encodeURIComponent(id)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ archived: true }),
-      })
-      if (!res.ok) throw new Error()
+      await apiPatch(`/api/chat/rooms/${encodeURIComponent(id)}`, { archived: true }, { token: accessToken })
       onRefreshRooms?.()
     } catch {
       showToast("Failed to archive room")
@@ -425,12 +386,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
         return
       }
       try {
-        const res = await fetch("/api/auth/profile", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({ name_color: hex }),
-        })
-        if (!res.ok) throw new Error()
+        await apiPatch("/api/auth/profile", { name_color: hex }, { token: accessToken })
         showCommandOutput(`name colour set to ${hex}`)
       } catch {
         showToast("Failed to update colour")
@@ -562,11 +518,10 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       const term = args.join(" ").trim()
       if (!term) { showToast("usage: /search <term>"); return }
       try {
-        const res = await fetch(`/api/chat/search?q=${encodeURIComponent(term)}&limit=10`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        })
-        if (!res.ok) throw new Error()
-        const data = await res.json() as { results?: Array<{ body: string; profiles?: { username?: string }; created_at: string; deleted_at?: string | null }> }
+        const data = await apiGet<{ results?: Array<{ body: string; profiles?: { username?: string }; created_at: string; deleted_at?: string | null }> }>(
+          `/api/chat/search?q=${encodeURIComponent(term)}&limit=10`,
+          { token: accessToken },
+        )
         const results = data.results ?? []
         if (results.length === 0) {
           showCommandOutput(`No results for "${term}"`)
@@ -587,12 +542,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       const reason = args.slice(1).join(" ") || undefined
       if (!username) { showToast("usage: /ban <username> [reason]"); return }
       try {
-        const res = await fetch("/api/chat/ban", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({ username, reason }),
-        })
-        if (!res.ok) throw new Error()
+        await apiPost("/api/chat/ban", { username, reason }, { token: accessToken })
         showCommandOutput(`${username} banned`)
       } catch {
         showToast(`Failed to ban ${username}`)
@@ -606,12 +556,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       const username = args[0]
       if (!username) { showToast("usage: /unban <username>"); return }
       try {
-        const res = await fetch("/api/chat/unban", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({ username }),
-        })
-        if (!res.ok) throw new Error()
+        await apiPost("/api/chat/unban", { username }, { token: accessToken })
         showCommandOutput(`${username} unbanned`)
       } catch {
         showToast(`Failed to unban ${username}`)

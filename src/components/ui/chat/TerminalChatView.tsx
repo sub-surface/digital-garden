@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, KeyboardEvent, type ReactNode } from "react"
 import type { ChatMessage } from "@/types/chat"
+import { apiGet, apiPatch, apiPost } from "@/lib/api"
 import { parseMessageBodyWithFootnotes } from "@/lib/parseMessageBody"
 import { fetchEmoteIndex, getEmoteCache, emoteSrc } from "@/lib/emoteIndex"
 import { useStore } from "@/store"
@@ -539,12 +540,7 @@ export function TerminalChatView({
           return
         }
         try {
-          const res = await fetch("/api/auth/profile", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-            body: JSON.stringify({ name_color: hex }),
-          })
-          if (!res.ok) throw new Error()
+          await apiPatch("/api/auth/profile", { name_color: hex }, { token: accessToken })
           appendLocalLine(`-- name colour set to ${hex} --`)
         } catch {
           appendLocalLine("-- failed to update colour --")
@@ -696,11 +692,10 @@ export function TerminalChatView({
         if (!term) { appendLocalLine("usage: /search <term>"); return }
         appendLocalLine(`-- searching for "${term}"… --`)
         try {
-          const res = await fetch(`/api/chat/search?q=${encodeURIComponent(term)}&limit=10&include_deleted=true`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          })
-          if (!res.ok) throw new Error()
-          const data = await res.json() as { results?: Array<{ id: string; body: string; created_at: string; profiles?: { username?: string }; deleted_at?: string | null }> }
+          const data = await apiGet<{ results?: Array<{ id: string; body: string; created_at: string; profiles?: { username?: string }; deleted_at?: string | null }> }>(
+            `/api/chat/search?q=${encodeURIComponent(term)}&limit=10&include_deleted=true`,
+            { token: accessToken },
+          )
           const results = data.results ?? []
           if (results.length === 0) {
             appendLocalLine(`-- no results for "${term}" --`)
@@ -727,12 +722,7 @@ export function TerminalChatView({
         const reason = parts.slice(2).join(" ") || undefined
         if (!username) { appendLocalLine("usage: /ban <username> [reason]"); return }
         try {
-          const res = await fetch("/api/chat/ban", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-            body: JSON.stringify({ username, reason }),
-          })
-          if (!res.ok) throw new Error()
+          await apiPost("/api/chat/ban", { username, reason }, { token: accessToken })
           appendLocalLine(`-- ${username} banned --`)
         } catch {
           appendLocalLine(`-- failed to ban ${username} --`)
@@ -745,12 +735,7 @@ export function TerminalChatView({
         const username = parts[1]
         if (!username) { appendLocalLine("usage: /unban <username>"); return }
         try {
-          const res = await fetch("/api/chat/unban", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-            body: JSON.stringify({ username }),
-          })
-          if (!res.ok) throw new Error()
+          await apiPost("/api/chat/unban", { username }, { token: accessToken })
           appendLocalLine(`-- ${username} unbanned --`)
         } catch {
           appendLocalLine(`-- failed to unban ${username} --`)

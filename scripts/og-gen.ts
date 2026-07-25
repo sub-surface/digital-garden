@@ -5,6 +5,7 @@ import { fileURLToPath } from "url"
 import satori from "satori"
 import { Resvg } from "@resvg/resvg-js"
 import { generateSystemCards, loadOgFonts, OG_FONT_FAMILY } from "./og-system"
+import { ogCardName } from "../src/lib/slug"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PUBLIC_DIR = path.resolve(__dirname, "../public")
@@ -57,7 +58,7 @@ async function main() {
   // Determine which slugs need (re)generation
   const slugsToGenerate = Object.keys(index).filter((slug) => {
     const hash = hashNote(index[slug])
-    const outPath = path.join(OG_DIR, `${slug.replace(/\//g, "-")}.png`)
+    const outPath = path.join(OG_DIR, ogCardName(slug))
     return cache[slug] !== hash || !fs.existsSync(outPath)
   })
 
@@ -79,7 +80,7 @@ async function main() {
   let generated = 0
   for (const slug of slugsToGenerate) {
     const note = index[slug]
-    const outPath = path.join(OG_DIR, `${slug.replace(/\//g, "-")}.png`)
+    const outPath = path.join(OG_DIR, ogCardName(slug))
 
     // Coerce to strings: a purely-numeric frontmatter title (e.g. "2048") parses
     // as a number, and satori chokes on a non-string text child. Tags likewise.

@@ -58,6 +58,25 @@ export const BG_MODES = [
   "chamber", "schematic", "isometric", "orrery", "plate-scan",
 ] as const
 
+/**
+ * Single source of truth for ambient-mode display names (ROADMAP §28.11).
+ * ThemePanel's System-tab picker and BgModeToggle's tooltip used to carry
+ * separate label lists that drifted (e.g. "Plate Scan" vs "Plate-scan") —
+ * this spelling wins. `desc` is only used by ThemePanel.
+ */
+export const BG_META: Record<string, { label: string; desc: string }> = {
+  murmuration: { label: "Murmuration", desc: "A flock that flees your cursor" },
+  graph: { label: "Graph", desc: "The knowledge graph, drifting" },
+  vectors: { label: "Vectors", desc: "A flow field of little arrows" },
+  dots: { label: "Dots", desc: "A living constellation lattice" },
+  terminal: { label: "Terminal", desc: "Glyph rain and boot pops" },
+  chamber: { label: "Chamber", desc: "Bubble-chamber particle tracks" },
+  schematic: { label: "Schematic", desc: "Blueprint leader lines" },
+  isometric: { label: "Isometric", desc: "Wireframe cubes, cursor parallax" },
+  orrery: { label: "Orrery", desc: "Nested astrolabe rings" },
+  "plate-scan": { label: "Plate-scan", desc: "Dithered still, scanline sweep" },
+}
+
 export const ROYGBIV_ACCENTS = [
   "#b4424c", // Red
   "#b47a42", // Orange

@@ -8,8 +8,9 @@
     "dev": "npm run prebuild && concurrently -n worker,vite,watch -c magenta,cyan,yellow \"wrangler dev --config wrangler.dev.toml --port 8787\" \"vite\" \"nodemon --watch content -e md,mdx,yaml --exec npm run prebuild\"",
     "build": "tsc --noEmit && vite build",
     "typecheck:worker": "tsc -p tsconfig.worker.json",
-    "test": "tsx scripts/test-slugs.ts && tsx scripts/test-footnotes.ts && tsx scripts/test-sigil.ts && tsx scripts/test-composer.ts && tsx scripts/test-layout.ts && node scripts/test-package-scripts.mjs",
-    "check": "npm test && npm run typecheck:worker && npm run build",
+    "lint": "eslint . --max-warnings 25",
+    "test": "tsx scripts/test-slugs.ts && tsx scripts/test-footnotes.ts && tsx scripts/test-sigil.ts && tsx scripts/test-composer.ts && tsx scripts/test-layout.ts && tsx scripts/test-og.ts && node scripts/test-package-scripts.mjs",
+    "check": "npm test && npm run lint && npm run typecheck:worker && npm run build",
     "preview": "vite preview",
     "sync:music": "tsx scripts/sync-music.ts",
     "dash": "node scripts/dash.mjs"
@@ -56,12 +57,15 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "glob": "^11.0.0",
     "image-size": "^2.0.2",
     "nodemon": "^3.1.9",
     "satori": "^0.10.14",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
+    "typescript-eslint": "^8.65.0",
     "vite": "^6.0.0",
     "wrangler": "^4.71.0"
   }

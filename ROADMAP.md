@@ -1169,3 +1169,209 @@ build on infra that already exists rather than needing something foreign to the 
   from a curated set of notes — the `pandoc-export` capability already available makes the
   plumbing plausible. Turns the digital garden into something that can, occasionally, become an
   actual object. Charming rather than urgent.
+
+---
+
+## 28. Desloppification sweep (agent code review, 2026-07-25)
+
+A full-tree review pass (`npm test` green at baseline, 6 suites; no `TODO`/`FIXME` anywhere; every
+empty `catch` annotated and justified — the slop is concentrated, not diffuse). Fifteen items,
+grouped into five phases in **dependency order**: each phase's changes shrink or unblock the next.
+
+Numbering maps 1:1 onto the review's tiers; the dead-code group became its own item (28.10), so
+review items #10-#14 land here as 28.11-28.15.
+
+**2026-07-25 — ALL 16 ITEMS SHIPPED.** `npm run check` green end-to-end: 7 test suites, lint
+(0 errors / 25 warnings under the ratchet), Worker typecheck, full build. Highlights and the two
+places reality differed from the review:
+
+- Phase A: 348 lines of dead code deleted, 181 derived files untracked, the OG landmine closed and
+  locked behind a new `scripts/test-og.ts` guard. Writing that guard surfaced a genuine latent prod
+  bug outside the reviewed set — logged as **28.16** and fixed in the same pass.
+- **28.4 needed a prerequisite the review missed.** The plan was one line of `additionalData` in
+  vite.config.ts, but `tokens.scss` emits ~100 lines of `:root` custom properties, so injecting it
+  into all ~80 CSS modules would have cloned the theme block into every stylesheet. The breakpoint
+  variables were split into an output-free `src/styles/_breakpoints.scss` first; that partial is what
+  gets injected. Verified: `dist/assets/*.css` stayed at 294K and the theme block still appears
+  exactly twice. Second wrinkle: `additionalData` does NOT reach partials loaded transitively via
+  `@use`, so `base.scss`/`article.scss`/`reader-mode.scss`/`sidenotes.scss` import it explicitly.
+- **28.9 was half a false positive.** `stripFrontmatter` was real duplication *and* concealed a bug —
+  the MDX-pipeline copy used an unanchored `/^---[\s\S]*?---
+?/`, which stops at the first `---`
+  anywhere including inside a YAML value, eating the top of the note body. Consolidated on the
+  anchored version in `src/lib/frontmatter.ts`. But the two `formatDate`s are NOT duplicates:
+  `OnThisDay`'s omits the weekday and ignores any time component, `Query`'s includes the weekday and
+  renders time + timezone when the raw string has one. Same name, different formatters — left alone,
+  same call as the two `formatTimestamp`s.
+- **28.3 found more than the 18 suppressions.** With ESLint actually installed there are 25
+  `exhaustive-deps` warnings, so ~10 sites had drifted with no suppression at all — and 3 of the
+  original 18 suppressed *nothing* (dead directives, now deleted; 15 remain). `reportUnusedDisableDirectives`
+  is set to `error` so a lying comment can't recur, and `npm run lint` runs `--max-warnings 25` as a
+  ratchet: existing debt is tolerated, new debt fails. Only the React Hooks rules are enabled — a
+  broad recommended set over 115 never-linted `.tsx` files would produce hundreds of findings and get
+  switched off.
+- **28.12 achieved the actual goal**, not just the `any` removal: `BackgroundsConfig` is a mapped type
+  over `Exclude<BgMode, "chess" | "hexo">` and `site-defaults.ts` now `satisfies` it, so adding a
+  background mode without its config block is a compile error. CLAUDE.md's "adding a mode" checklist
+  is type-enforced instead of prose-enforced. 29 `any`s → 0.
+- **28.15 exposed 4 real silent failures** where `res.ok` was never checked: a stuck-forever optimistic
+  reaction in `ChatRoom`, a chat API key removed from the UI even when the server-side revoke failed,
+  un-rolled-back bookmark toggles, and admin lock add/remove that always refetched regardless. The
+  helper's throw-on-failure contract fixes them by construction. One call site stays raw `fetch` on
+  purpose (`/api/chess/gif` returns a blob, not JSON) and is commented as such; the avatar upload
+  needed `api.ts` taught to pass `Blob`/`File` through, since JSON-stringifying a `File` silently
+  yields `"{}"`.
+
+
+**Phase A — dead code + git hygiene** (shrinks the surface every later phase touches)
+
+- [x] **28.10 Dead code: 248 lines, zero importers.** `src/components/ui/chat/ChatSearch.tsx`
+  (160 lines, never imported — and `TerminalChatView.tsx:699` reimplements `/api/chat/search`
+  inline, so the feature exists twice, once unreachable); `games/BackToArcade.tsx` + its module
+  (62 lines, zero references anywhere); `ui/BgModeToggle.module.scss` (26 lines, orphaned — the
+  component uses the global `quick-icon-btn` class). Decide wire-up-vs-delete on ChatSearch;
+  delete the other two outright.
+- [x] **28.1 `public/og/` is gitignored *and* force-committed — silent-failure landmine.**
+  `.gitignore:15` ignores the directory; 178 cards are tracked past it (`git add -f`, documented as
+  the workaround in `docs/devlog/2026-06-15.yaml:34`). Verified with `git check-ignore --no-index`:
+  a *newly generated* card matches the ignore rule. Failure mode: add a note → `PROCESS_OG=true npm
+  run prebuild` → new PNG → silently never committed → prod ships a missing OG card with no warning.
+  Directly violates §9 / the project's own design law. (Currently latent, not live — 0 untracked
+  cards on disk, so the force-add discipline has held.) Also `docs/infrastructure.md:8` asserts the
+  opposite mechanism ("generated fresh at CF build time via `PROCESS_OG=true`") and is flatly wrong:
+  CF never sets `PROCESS_OG`. Fix: un-ignore, correct the doc, and add a `npm test` guard asserting
+  every non-draft content-index entry has a tracked `public/og/*.png`.
+- [x] **28.13 Generated artifacts are tracked inconsistently → permanent diff churn.**
+  `content-index.json` / `graph.json` / `search-index.json` are ignored, but `folders.json`,
+  `slug-map.json`, `broken-links.json`, `image-dimensions.json`, `albums.json`, `sitemap.xml`,
+  `rss.xml`, `emotes/index.json` are all prebuild-generated *and tracked* — so every dev run dirties
+  the tree. (Baseline `git status` showed `folders.json` + `slug-map.json` modified by nothing but a
+  dev run.) Pick one policy and apply it. `music.json` is the deliberate exception and stays tracked.
+- [x] **28.14 `src/content/` — 167 generated files tracked, and `prebuild.ts:401` `rmSync`s the
+  whole directory on every run.** CLAUDE.md gotcha #1 says never edit them, but tracking them makes
+  them look like source; the stray untracked `src/content/Writing/The-Rock-Is-Not-Choosing.md` in the
+  baseline working tree is that confusion surfacing. Only argument for tracking is that a bare
+  `vite build` (no prebuild) would otherwise ship an empty site — a path CLAUDE.md already forbids
+  and `test-package-scripts.mjs` already guards. The one item here with a real (if small) tradeoff.
+
+**Phase B — breakpoint foundation** (28.4 must land before any literal sweep)
+
+- [x] **28.4 ROADMAP §18's breakpoint tokens are ~8% adopted, because they are not in scope where
+  they are needed.** `max-width: 800px` hardcoded 21x, `$bp-phone` used 3x; `560px` hardcoded 15x,
+  `$bp-panel-narrow` used **0x**. Root cause: `.module.scss` files never `@use` tokens.scss, so the
+  variables are undefined there — the convention `breakpoints.ts`' 23-line header documents is
+  *structurally impossible* to follow in component modules. Fix is one line of
+  `css.preprocessorOptions.scss.additionalData` in `vite.config.ts:104` to inject the token module
+  everywhere, then sweep the 36 literals. Everything else in §18's "component-module literal
+  migration (over time)" bullet is blocked on this.
+- [x] **28.6 `HexLifePage.module.scss:87` mixes the two mechanisms `breakpoints.ts:17` forbids.**
+  Uses `@media (max-width: 560px)` where every sibling game page uses `@container panel (max-width:
+  560px)`. Consequence: the 290px control panel never reflows inside a narrow panel card, and
+  expands to `100vw` (a viewport unit inside a container-scoped box) on a phone even when rendered
+  inside a card. One-word fix.
+- [x] **28.5 Three implementations of the same phone check.** `usePhoneViewport.ts` (resize
+  listener), `AppShell.tsx:34` `useIsMobile` (matchMedia + `useSyncExternalStore`), and
+  `BootPage.tsx:286` `useMediaQuery("(max-width: 800px)")`. AppShell's is strictly best — no
+  re-render per resize pixel. Move that impl into `usePhoneViewport` over `PHONE_BREAKPOINT` and
+  delete the other two.
+
+**Phase C — duplication**
+
+- [x] **28.7 Four HTML escapers with three different coverage sets — a correctness smell, not just
+  repetition.** `remark-callouts.ts:79` (no `"`), `remark-telescopic.ts:17` (+`"`),
+  `remark-wikilinks.ts:83` (+`"` +`>`), `worker/meta.ts:94` (no `>`). All four build raw HTML
+  strings, so the divergence is the actual hazard. One `src/lib/escape.ts` exporting
+  `escapeHtml`/`escapeAttr`, shared SPA-Worker-prebuild exactly the way `src/lib/slug.ts` already is
+  (precedent: CLAUDE.md gotcha #15).
+- [x] **28.8 `hashStr` + `mulberry32` duplicated verbatim** in `lib/sigil.ts:8,17` and
+  `lib/composer/rng.ts:13,22`. The rng header justifies it as staying "dependency-free… must not
+  pull in DOM or sibling modules", but `sigil.ts` is equally pure and equally headless-tested, so the
+  stated rationale doesn't hold. Low priority; both are covered by `test-sigil.ts` / `test-composer.ts`
+  so consolidation is safe.
+- [x] **28.9 Small duplicate helpers.** `formatDate` in both `mdx/OnThisDay.tsx:11` and
+  `mdx/Query.tsx:92`; `stripFrontmatter` in both `WikiMarkdownEditor.tsx:66` and
+  `remark-wikilinks.ts:44`. (The two `formatTimestamp`s are *different* functions — a name collision,
+  not duplication. Leave them.)
+- [x] **28.11 `BgModeToggle.tsx:8-21` is a 5th sync point for adding a background mode.** A 10-case
+  switch that only title-cases the mode slug, duplicating `ThemePanel.tsx:19-28`'s `BG_META` labels —
+  and they already disagree ("Plate Scan" vs "Plate-scan"). CLAUDE.md's "adding a mode = draw fn +
+  `config.backgrounds` block + `BG_CONTROLS` entry + `BG_MODES`/`BgMode`" list doesn't mention it.
+  Note §17 already fixed this switch once (it named only 4 of 10 modes) — fixing the duplication
+  rather than the symptom is what stops a third visit.
+
+**Phase D — structural** (the two large items; each is a standalone pass)
+
+- [x] **28.15 No client-side API helper.** ~40 hand-rolled `fetch` + `Authorization: Bearer` +
+  `Content-Type` blocks across `ChatRoom.tsx` (14 sites), `TerminalChatView.tsx`,
+  `ChatSettings.tsx`, `ChatSearch.tsx`, and the wiki pages. 49 client fetches vs 42 `.ok` checks, so
+  some paths fail silently — again §9's design law. The Worker got a clean declarative dispatcher
+  (§2); the client never got its counterpart. Wants `src/lib/api.ts` with `apiGet`/`apiPost`/
+  `apiDelete` that take the token, set headers, check `res.ok`, and throw a typed error.
+- [x] **28.12 `BgCanvas.tsx`: 1126 lines, 29 `any`s, `state: any, config: any` on all ten `drawX`
+  fns.** A `BgState`/`BgConfig` pair would make CLAUDE.md's "adding a mode" checklist
+  *type-enforced* instead of prose-enforced (the same class of fix as 28.11). Splitting the draw fns
+  into `src/lib/backgrounds/` would additionally make them headlessly testable like `sigil.ts` /
+  `hexo.ts` — but the typing is the win; the split is optional.
+
+**Phase E — make the gates real** (last, so they land on an already-green tree)
+
+- [x] **28.3 18 `// eslint-disable-next-line react-hooks/exhaustive-deps` comments, and no ESLint
+  exists.** No config file, no dependency, no script. The suppressions enforce nothing — and worse,
+  they mark 18 hand-audited dep lists (`useAuth.ts:119`, `TerminalTitle.tsx:378`,
+  `CommandPalette.tsx:101,124`, `useChatScroll.ts:63,72`, …) that no tool can re-verify. The
+  `useFocusTrap` regression already in memory is exactly this bug class. Either install
+  `eslint-plugin-react-hooks` and make the comments mean something, or strip them as cargo cult.
+- [x] **28.2 CI runs neither `npm test` nor `npm run typecheck:worker`.** Only `lighthouse.yml`,
+  which happens to run `npm run build` — so `tsc --noEmit` fires incidentally while the *worker*
+  typecheck, the one thing VS Code structurally cannot see (CLAUDE.md gotcha #5), is entirely
+  ungated. `npm run check` exists and nothing invokes it. Add a workflow that runs it.
+
+**Discovered while implementing Phase A**
+
+- [x] **28.16 OG cards had two competing filename conventions, so social cards 404'd depending on
+  URL casing.** `og-gen.ts` named note cards after the content-index key (`Abbas.png`), while
+  `og-system.ts` named system-page cards after the lowercase system slug (`arcade.png`) — and the
+  Worker built `og:image` from *the casing the visitor happened to use*
+  (`ogSlug = slug.replace(/\//g, "-")` over the raw request path). Routes resolve
+  case-insensitively but CF serves static assets case-SENSITIVELY (CLAUDE.md gotcha #8), so `/Abbas`
+  got a working card and `/abbas` got a 404 — same page, same note metadata, different social image.
+  `og:url`/`canonical` had the same defect, splitting one page into two canonicals by inbound-link
+  casing. Compounding it, og-gen's `!fs.existsSync(outPath)` skip-check *silently agreed with both
+  conventions* on a case-insensitive dev filesystem, so 13 pages that had a lowercase system card but
+  a capitalised index key were never generated under the name actually requested — invisible until
+  the new guard's coverage advisory printed them.
+  Fixed by unifying on lowercase: a single `ogCardName()` in `src/lib/slug.ts` (the module gotcha #15
+  already designates as the one place slug semantics may live), consumed by og-gen, og-system, the
+  Worker, and the guard; 137 committed cards `git mv`'d to lowercase; the Worker now resolves the
+  canonical index key before building meta. Coverage went 165/178 → 178/178 with no image
+  regenerated. No lowercase collisions exist among the 177 index keys, so the mapping is injective.
+
+**Deferred — knowingly not done in this sweep**
+
+Recorded so §28 isn't read as exhaustively finished. None of these block the tree; all are
+low-stakes and were consciously left rather than missed.
+
+- [ ] **The `--max-warnings 25` ratchet is debt, not a target.** 25 `exhaustive-deps` warnings and
+  15 surviving suppression comments. The ratchet's only job is to stop the number growing; nothing
+  drives it down. Working it down means auditing one dep array at a time with the tree green, and
+  lowering the number in `package.json` as each lands — the ratchet is the mechanism, so it has to
+  move or it becomes the new floor.
+- [ ] **`BgCanvas.tsx` is still ~1126 lines.** 28.12 typed it (29 `any`s → 0) but deliberately did
+  not split it; extracting the draw functions into `src/lib/backgrounds/` was declared out of scope
+  so the typing change stayed reviewable. The mapped-type enforcement works either way, so this is
+  now purely a file-size question.
+- [ ] **Three dead branches inside `BgCanvas`, found during 28.12 and reported rather than fixed**
+  (touching them would have mixed behaviour changes into a types-only diff):
+  `drawField`'s `"terminal"` branch is unreachable — the dispatcher only ever passes `vectors` or
+  `dots`; `drawField`'s `style: string` parameter is never read; and `BgState` carries `Ripple` /
+  `Drop` fields nothing writes. Each needs a quick check that no mode is *supposed* to reach it
+  before deleting.
+- [ ] **54 `!important` declarations in SCSS, 21 of them in `global.scss`.** Observed during the
+  review but never made it into a numbered item, so it was never scoped. Each one is a specificity
+  fight that was won with a hammer; unpicking them safely needs the cascade understood first, which
+  is a bigger job than it looks and is why it isn't a §28 item.
+
+Two things that look like residue but are settled, not deferred: the two `formatDate` functions
+stay separate (see the 28.9 note above — different formatters, same name), and the two raw `fetch`
+call sites (`/api/chess/gif` returns a blob; `WikiEditPage`'s raw-markdown fetch isn't JSON and
+sniffs content-type to detect an SPA fallback) are commented exceptions to gotcha #19, not misses.

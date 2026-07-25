@@ -1,4 +1,4 @@
-import { useStore, BG_MODES, type BgMode } from "@/store"
+import { useStore, BG_MODES, BG_META, type BgMode } from "@/store"
 import { SITE_DEFAULTS } from "@/config/site-defaults"
 import styles from "./ThemePanel.module.scss"
 import { useState } from "react"
@@ -13,20 +13,6 @@ const ACCENTS = [
   { name: "Indigo", color: "#424cb4" },
   { name: "Violet", color: "#8a42b4" },
 ]
-
-// One-line description per ambient mode, shown in the System-tab picker.
-const BG_META: Record<string, { label: string; desc: string }> = {
-  murmuration: { label: "Murmuration", desc: "A flock that flees your cursor" },
-  graph: { label: "Graph", desc: "The knowledge graph, drifting" },
-  vectors: { label: "Vectors", desc: "A flow field of little arrows" },
-  dots: { label: "Dots", desc: "A living constellation lattice" },
-  terminal: { label: "Terminal", desc: "Glyph rain and boot pops" },
-  chamber: { label: "Chamber", desc: "Bubble-chamber particle tracks" },
-  schematic: { label: "Schematic", desc: "Blueprint leader lines" },
-  isometric: { label: "Isometric", desc: "Wireframe cubes, cursor parallax" },
-  orrery: { label: "Orrery", desc: "Nested astrolabe rings" },
-  "plate-scan": { label: "Plate-scan", desc: "Dithered still, scanline sweep" },
-}
 
 interface Ctrl { key: string; label: string; min: number; max: number; step: number }
 

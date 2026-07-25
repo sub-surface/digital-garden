@@ -153,6 +153,8 @@ export function ChessPage() {
     setExporting("gif")
     setExportError(false)
     try {
+      // Deliberately raw fetch, not src/lib/api.ts: this endpoint returns an
+      // image/gif blob, and the helper's contract is JSON in / JSON out.
       const res = await fetch("/api/chess/gif", {
         method: "POST",
         headers: { "Content-Type": "application/x-chess-pgn" },

@@ -120,7 +120,6 @@ export function ComposerPage() {
       setPlate(decoded)
       setArchetypeSel(decoded.archetype)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ─── Regeneration (preserves locked elements) ────────────────────────────────

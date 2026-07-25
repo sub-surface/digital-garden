@@ -84,8 +84,8 @@
   backdrop-filter: blur(16px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
 
-  @media (max-width: 560px) {
-    width: calc(100vw - 2rem);
+  @container panel (max-width: $bp-panel-narrow) {
+    width: calc(100cqw - 2rem);
   }
 }
 

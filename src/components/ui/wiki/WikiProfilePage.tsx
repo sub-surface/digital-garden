@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { useBookmarks } from "@/hooks/useBookmarks"
 import { useStore } from "@/store"
+import { apiGet, apiPost, ApiError, apiErrorMessage } from "@/lib/api"
 
 interface ProfileData {
   username: string
@@ -75,9 +76,8 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
   useEffect(() => {
     const uname = viewUsername ?? auth.username
     if (!uname) return
-    fetch(`/api/users/${encodeURIComponent(uname)}/claim`)
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then((data: { claim: { wiki_slug: string } | null }) => {
+    apiGet<{ claim: { wiki_slug: string } | null }>(`/api/users/${encodeURIComponent(uname)}/claim`)
+      .then((data) => {
         setClaimedSlug(data.claim?.wiki_slug ?? null)
       })
       .catch(() => setClaimedSlug(null))
@@ -104,10 +104,14 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
             setLoading(false)
             return
           }
-          const res = await fetch(`/api/user/${encodeURIComponent(username)}`)
-          if (res.ok) {
-            setProfile(await res.json() as ProfileData)
-          } else {
+          try {
+            setProfile(await apiGet<ProfileData>(`/api/user/${encodeURIComponent(username)}`))
+          } catch (e) {
+            // Non-2xx (e.g. profile row not yet provisioned server-side) falls
+            // back to a locally-built profile; a genuine network failure should
+            // still hit the outer catch below, so re-throw anything that isn't
+            // the API's own error response.
+            if (!(e instanceof ApiError)) throw e
             setProfile({
               username,
               role: auth.role || "pending",
@@ -119,9 +123,12 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
             })
           }
         } else {
-          const res = await fetch(`/api/user/${encodeURIComponent(viewUsername)}`)
-          if (!res.ok) { setError("User not found"); setLoading(false); return }
-          setProfile(await res.json() as ProfileData)
+          try {
+            setProfile(await apiGet<ProfileData>(`/api/user/${encodeURIComponent(viewUsername)}`))
+          } catch (e) {
+            if (!(e instanceof ApiError)) throw e
+            setError("User not found")
+          }
         }
       } catch {
         setError("Failed to load profile")
@@ -146,15 +153,8 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
     if (!matchingWikiSlug || !auth.session) return
     setClaiming(true)
     try {
-      const res = await fetch("/api/chat/claim", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${auth.session.access_token}`,
-        },
-        body: JSON.stringify({ wiki_slug: matchingWikiSlug }),
-      })
-      if (res.ok) setClaimedSlug(matchingWikiSlug)
+      await apiPost("/api/chat/claim", { wiki_slug: matchingWikiSlug }, { token: auth.session.access_token })
+      setClaimedSlug(matchingWikiSlug)
     } catch (e) {
       console.error("WikiProfilePage: profile claim failed:", e)
     }
@@ -208,23 +208,24 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
     setAvatarError(null)
     setUploadingAvatar(true)
     try {
-      const res = await fetch("/api/profile/avatar", {
-        method: "POST",
-        headers: {
-          "Content-Type": file.type,
-          Authorization: `Bearer ${auth.session.access_token}`,
-        },
-        body: file,
-      })
-      const data = await res.json() as { ok?: boolean; avatar_url?: string; error?: string }
-      if (!res.ok || !data.ok) {
+      // The raw File is passed through untouched (api.ts treats Blob/File as a raw
+      // body — JSON-stringifying one silently yields "{}"), and Content-Type is the
+      // caller's to set here because only we know the real image type.
+      const data = await apiPost<{ ok?: boolean; avatar_url?: string; error?: string }>(
+        "/api/profile/avatar",
+        file,
+        { token: auth.session.access_token, headers: { "Content-Type": file.type } },
+      )
+      // `ok: false` on a 2xx body is a failure the helper cannot see (it throws only
+      // on a non-2xx status or an `error` field), so this check stays explicit.
+      if (!data.ok) {
         setAvatarError(data.error ?? "Upload failed")
       } else {
         await auth.updateProfile({ avatar_url: data.avatar_url! })
         if (profile) setProfile({ ...profile, avatar_url: data.avatar_url! })
       }
-    } catch {
-      setAvatarError("Upload failed")
+    } catch (e) {
+      setAvatarError(apiErrorMessage(e, "Upload failed"))
     } finally {
       setUploadingAvatar(false)
       if (avatarInputRef.current) avatarInputRef.current.value = ""

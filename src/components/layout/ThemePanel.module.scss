@@ -13,7 +13,7 @@
   animation: fadeIn 0.3s ease;
   // Remove min-height to allow content to dictate length
 
-  @media (max-width: 800px) {
+  @media (max-width: $bp-phone) {
     display: none;
   }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react"
+import { apiGet } from "@/lib/api"
 import { useFocusTrap } from "@/hooks/useFocusTrap"
 import styles from "./EmotePicker.module.scss"
 
@@ -72,9 +73,8 @@ export function EmotePicker({ onSelect, onSelectGif, onClose }: Props) {
     setGifLoading(true)
     setGifError(false)
     const param = q.trim() || "trending"
-    fetch(`/api/chat/gif-search?q=${encodeURIComponent(param)}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data: { results: GifResult[] }) => setGifResults(data.results ?? []))
+    apiGet<{ results: GifResult[] }>(`/api/chat/gif-search?q=${encodeURIComponent(param)}`)
+      .then((data) => setGifResults(data.results ?? []))
       .catch(() => { setGifError(true); setGifResults([]) })
       .finally(() => setGifLoading(false))
   }, [])

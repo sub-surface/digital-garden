@@ -19,7 +19,7 @@
   padding-left: 7.5rem;
   border-bottom: 1px solid var(--color-border);
 
-  @media (max-width: 800px) {
+  @media (max-width: $bp-phone) {
     padding-left: 6rem;
   }
 }

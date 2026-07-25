@@ -18,7 +18,7 @@
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
   font-family: var(--font-code);
 
-  @media (max-width: 800px) {
+  @media (max-width: $bp-phone) {
     top: auto;
     bottom: 60px;
     left: 16px;

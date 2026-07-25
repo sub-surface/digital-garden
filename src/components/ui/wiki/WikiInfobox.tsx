@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { apiGet } from "@/lib/api"
 import styles from "./WikiInfobox.module.scss"
 
 interface ClaimData {
@@ -57,9 +58,8 @@ export function WikiInfobox({ type, data, slug }: Props) {
   // Fetch claim data for chatter pages — use claimer's avatar if available
   useEffect(() => {
     if (type !== "chatter" || !slug) return
-    fetch(`/api/claims/by-slug/${encodeURIComponent(slug)}`)
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then((d: { claim: ClaimData | null }) => setClaim(d.claim))
+    apiGet<{ claim: ClaimData | null }>(`/api/claims/by-slug/${encodeURIComponent(slug)}`)
+      .then((d) => setClaim(d.claim))
       .catch(() => setClaim(null))
   }, [type, slug])
 

@@ -81,3 +81,21 @@ export function buildSlugResolver(
     collisions,
   }
 }
+
+/**
+ * Filename of a note's OG card: `Folder/My Note` → `folder-my-note.png`.
+ *
+ * LOWERCASING IS LOAD-BEARING (ROADMAP §28.16). The card is a *static asset*, and
+ * CF serves those case-sensitively while routes resolve case-insensitively — so
+ * building the path from anything but a single canonical casing means the social
+ * card 404s for some spellings of the same URL and not others. Two conventions
+ * used to coexist: og-gen wrote content-index-key casing (`Abbas.png`) while
+ * og-system wrote lowercase system slugs (`arcade.png`), and og-gen's
+ * `existsSync` skip-check silently agreed with both on a case-insensitive dev
+ * filesystem — so 13 cards were never generated under the name actually requested.
+ * All four consumers (og-gen, og-system, the Worker, scripts/test-og.ts) now
+ * derive the name here.
+ */
+export function ogCardName(slug: string): string {
+  return `${slug.replace(/\//g, "-").toLowerCase()}.png`
+}

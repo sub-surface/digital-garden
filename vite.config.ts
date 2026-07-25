@@ -103,6 +103,26 @@ export default defineConfig(({ command }) => ({
     preprocessorOptions: {
       scss: {
         api: "modern-compiler",
+        // Make the compile-time breakpoint variables available in EVERY .scss
+        // file, including component `.module.scss` files (ROADMAP §28.4). Without
+        // this, `$bp-phone` was only reachable from the handful of stylesheets
+        // pulled into global.scss, so ~36 component-module breakpoints were bare
+        // `800px` / `560px` literals and the named-breakpoint convention in
+        // src/config/breakpoints.ts was unfollowable where it mattered most.
+        //
+        // Injecting is only safe because `_breakpoints.scss` emits no CSS — @use
+        // of a variables-only module is free and idempotent. Never point this at
+        // tokens.scss (it emits ~100 lines of `:root` properties, which would be
+        // cloned into every module) and never add output to the partial.
+        //
+        // Function form so the partial does not @use itself, which would be a
+        // circular import. Absolute POSIX path so the injected @use resolves the
+        // same from any nesting depth.
+        additionalData: (source: string, filename: string) => {
+          if (filename.replace(/\\/g, "/").endsWith("src/styles/_breakpoints.scss")) return source
+          const partial = resolve(__dirname, "src/styles/_breakpoints.scss").replace(/\\/g, "/")
+          return `@use "${partial}" as *;\n${source}`
+        },
       },
     },
   },

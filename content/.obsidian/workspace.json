@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Writing/Decision Was Never Final.md",
+                "file": "cli.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Decision Was Never Final"
+              "title": "cli"
             }
           },
           {
@@ -199,6 +199,9 @@
   },
   "active": "13cb50a2931acc29",
   "lastOpenFiles": [
+    "Abbas.md",
+    "Writing/Decision Was Never Final.md",
+    "Writing/The Rock Is Not Choosing.md",
     "Misc/Decision Was Never Final Workbench.md.tmp.16140.ee5cd491f128",
     "Decision Colophon.md",
     "Decision Colophon.md.tmp.16140.eaadaf7f4caf",
@@ -215,14 +218,12 @@
     "Misc/Decision Was Never Final Workbench.md",
     "Misc/Decision Was Never Final.md",
     "Writing/Attention & Difference.md",
-    "Writing/Decision Was Never Final.md",
     "Writing/Writing-Template.md",
     "Writing/On-Attention.md",
     "Misc/Attention & Difference Workbench.md",
     "thales.md",
     "Misc/Attention & Difference Workbench.md.tmp.2140.a1cf4d08f6f4",
     "Writing/Attention & Difference.md.tmp.2140.005afb842e51",
-    "index.md.tmp.2140.d7d40110bef1",
     "index.md",
     "A&D Colophon.md",
     "Media/Husserl-Attention-Nature.png",
@@ -239,7 +240,6 @@
     "Daily/07-02-26.md",
     "2026-03-11.md",
     "2026-07-11.md",
-    "Daily/06-02-26.md",
     "Pasted image 20260611181432.png",
     "Media/ClaudeAvatar.png",
     "Media/myname.png",

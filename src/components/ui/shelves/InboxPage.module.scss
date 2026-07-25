@@ -23,7 +23,7 @@
     margin: 0;
   }
 
-  @container panel (max-width: 560px) {
+  @container panel (max-width: $bp-panel-narrow) {
     h1 { font-size: 1.8rem; }
   }
 }

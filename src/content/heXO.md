@@ -1,4 +1,0 @@
----
-title: HeXO
-tags: [games]
----

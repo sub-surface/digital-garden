@@ -1,6 +1,16 @@
 import { useEffect, useRef, useMemo } from "react"
 import { useStore } from "@/store"
 import { isPhoneViewport } from "@/config/breakpoints"
+import type { SiteConfig } from "@/config/site-defaults"
+import type {
+  BgState,
+  GraphNode,
+  GraphJsonData,
+  Pop,
+  Track,
+  ChamberConfig,
+  FieldConfig,
+} from "@/types/backgrounds"
 
 // ---- Simplex 2D noise (compact) ----
 const F2 = 0.5 * (Math.sqrt(3) - 1)
@@ -97,26 +107,26 @@ function BgCanvasInner() {
   const config = useStore((s) => s.config)
   const activeSlug = useStore((s) => s.activeGraphSlug)
 
-  const stateRef = useRef({
+  const stateRef = useRef<BgState>({
     mx: -9999,
     my: -9999,
     readerAlpha: 1,
     readerTarget: 1,
-    colorCache: { secondary: "", palette: [] as string[] },
+    colorCache: { secondary: "", palette: [] },
     colorValid: false,
-    nodes: [] as any[],
-    links: [] as any[],
-    nodeMap: new Map<string, any>(),
-    ripples: [] as { x: number; y: number; t: number }[],
-    drops: [] as { x: number; y: number; text: string; speed: number; opacity: number; color: string }[],
-    pops: [] as any[],
-    boids: [] as { x: number; y: number; vx: number; vy: number }[],
-    boidGrid: [] as number[][],
-    emitters: [] as any[],
-    tracks: [] as any[],
-    anchors: [] as any[],       // schematic
-    cubes: [] as any[],         // isometric
-    plate: null as HTMLCanvasElement | null,  // plate-scan offscreen still
+    nodes: [],
+    links: [],
+    nodeMap: new Map(),
+    ripples: [],
+    drops: [],
+    pops: [],
+    boids: [],
+    boidGrid: [],
+    emitters: [],
+    tracks: [],
+    anchors: [],    // schematic
+    cubes: [],      // isometric
+    plate: null,    // plate-scan offscreen still
     plateKey: "",
     lastFrame: 0,
     w: 0,
@@ -219,8 +229,8 @@ function BgCanvasInner() {
     if (bgMode === "graph") {
       fetch("/graph.json")
         .then(res => res.json())
-        .then(data => {
-          const nodes = data.nodes ? data.nodes.map((n: any) => ({
+        .then((data: GraphJsonData) => {
+          const nodes: GraphNode[] = data.nodes ? data.nodes.map((n) => ({
             ...n,
             x: Math.random() * window.innerWidth,
             y: Math.random() * window.innerHeight,
@@ -230,8 +240,8 @@ function BgCanvasInner() {
           stateRef.current.nodes = nodes
           stateRef.current.links = data.links || []
 
-          const map = new Map()
-          nodes.forEach((n: any) => map.set(n.id, n))
+          const map = new Map<string, GraphNode>()
+          nodes.forEach((n) => map.set(n.id, n))
           stateRef.current.nodeMap = map
         })
         .catch((e) => console.warn("BgCanvas: graph data prefetch failed:", e))
@@ -326,13 +336,17 @@ function BgCanvasInner() {
 
 function drawField(
   ctx: CanvasRenderingContext2D,
-  state: any,
-  mode: string,
+  state: BgState,
+  mode: "vectors" | "dots" | "terminal",
   style: string,
-  config: any
+  config: SiteConfig
 ) {
-  // Select correct config based on mode
-  const p = mode === "vectors" ? config.backgrounds.vectors :
+  // Select correct config based on mode. Typed as the shared FieldConfig
+  // (not the mode-specific Vectors/Dots/TerminalConfig) since this fn reads
+  // fields — range/radius/vortex/rx/ry/minSize/maxSize — that only some of
+  // those three configs actually define; the rest fall back via `||` below,
+  // same as the untyped runtime behaviour this replaces.
+  const p: FieldConfig = mode === "vectors" ? config.backgrounds.vectors :
             mode === "dots" ? config.backgrounds.dots :
             config.backgrounds.terminal
 
@@ -376,14 +390,18 @@ function drawField(
       }
 
       const intensity = simplex(nx + 100, ny + 100 + t * 1.2) * 0.5 + 0.5
-      const baseAlpha = mode === "terminal" ? p.opacity : (0.05 + intensity * 0.15)
+      // Read straight off the concrete per-mode config here (not the shared
+      // FieldConfig `p`) — these fields are only optional on p because dots/
+      // terminal don't define them at all; within each mode branch the real
+      // config is guaranteed to have them.
+      const baseAlpha = mode === "terminal" ? config.backgrounds.terminal.opacity : (0.05 + intensity * 0.15)
       const finalAlpha = baseAlpha * state.readerAlpha
       if (finalAlpha < 0.01) continue
 
       ctx.globalAlpha = finalAlpha
 
       if (mode === "vectors") {
-        const rx = p.rx, ry = p.ry
+        const rx = config.backgrounds.vectors.rx, ry = config.backgrounds.vectors.ry
         const minRx = rx * 0.3
         const curRx = minRx + intensity * (rx - minRx)
         ctx.fillStyle = state.colorCache.secondary
@@ -408,7 +426,7 @@ function drawField(
         ctx.fillText(ch, x, vy)
       } else if (mode === "dots") {
         const ci = PM[(Math.floor(x * 7) + PM[Math.floor(docY * 3) & 255]) & 255] % state.colorCache.palette.length
-        const dotR = p.minSize + intensity * (p.maxSize - p.minSize)
+        const dotR = config.backgrounds.dots.minSize + intensity * (config.backgrounds.dots.maxSize - config.backgrounds.dots.minSize)
         // Drift each node off its grid cell along the same field angle `a`, by up
         // to ~40% of a step — enough to break the rigid lattice into something
         // organic without nodes overlapping.
@@ -452,8 +470,8 @@ function drawField(
 
 function drawTerminalPops(
   ctx: CanvasRenderingContext2D,
-  state: any,
-  config: any
+  state: BgState,
+  config: SiteConfig
 ) {
   const p = config.backgrounds.terminal
   const { speed, opacity } = p
@@ -477,7 +495,7 @@ function drawTerminalPops(
   ctx.font = `14px 'IBM Plex Mono', monospace`
   ctx.textAlign = "center"
   
-  state.pops = state.pops.filter((pop: any) => {
+  state.pops = state.pops.filter((pop: Pop) => {
     pop.life -= 0.005 * (speed / 0.08)
     pop.frame = Math.floor((1 - pop.life) * 20) % pop.anim.frames.length
     
@@ -493,7 +511,7 @@ function drawTerminalPops(
   })
 }
 
-function drawChess(ctx: CanvasRenderingContext2D, state: any) {
+function drawChess(ctx: CanvasRenderingContext2D, state: BgState) {
   const cell = Math.max(state.w, state.h) / 8
   const cols = Math.ceil(state.w / cell) + 1
   const rows = Math.ceil(state.h / cell) + 1
@@ -510,7 +528,7 @@ function drawChess(ctx: CanvasRenderingContext2D, state: any) {
   }
 }
 
-function drawHexo(ctx: CanvasRenderingContext2D, state: any) {
+function drawHexo(ctx: CanvasRenderingContext2D, state: BgState) {
   // Faint pointy-top hexagonal grid, mirroring drawChess's proximity glow.
   const size = Math.max(state.w, state.h) / 22 // hex radius
   const hw = Math.sqrt(3) * size                // horizontal spacing
@@ -557,7 +575,7 @@ function drawHexo(ctx: CanvasRenderingContext2D, state: any) {
   }
 }
 
-function drawGraph(ctx: CanvasRenderingContext2D, state: any, config: any) {
+function drawGraph(ctx: CanvasRenderingContext2D, state: BgState, config: SiteConfig) {
   const p = config.backgrounds.graph
   const color = state.colorCache.secondary
   const nodes = state.nodes
@@ -565,7 +583,7 @@ function drawGraph(ctx: CanvasRenderingContext2D, state: any, config: any) {
   const nodeMap = state.nodeMap
 
   // Drift
-  nodes.forEach((n: any) => {
+  nodes.forEach((n) => {
     n.x += n.vx * p.drift
     n.y += n.vy * p.drift
     if (n.x < 0 || n.x > state.w) n.vx *= -1
@@ -577,7 +595,7 @@ function drawGraph(ctx: CanvasRenderingContext2D, state: any, config: any) {
   ctx.strokeStyle = color
   ctx.lineWidth = p.linkWidth
   ctx.beginPath()
-  links.forEach((l: any) => {
+  links.forEach((l) => {
     const s = nodeMap.get(l.source)
     const t = nodeMap.get(l.target)
     if (s && t) {
@@ -588,7 +606,7 @@ function drawGraph(ctx: CanvasRenderingContext2D, state: any, config: any) {
   ctx.stroke()
 
   // Draw Nodes
-  nodes.forEach((n: any) => {
+  nodes.forEach((n) => {
     const dx = n.x - state.mx, dy = n.y - state.my, d = Math.hypot(dx, dy)
     const isHovered = d < 100
     ctx.globalAlpha = (isHovered ? p.nodeHoverOpacity : p.nodeOpacity) * state.readerAlpha
@@ -608,7 +626,7 @@ function drawGraph(ctx: CanvasRenderingContext2D, state: any, config: any) {
 // a small fraction of accent "signal" tracks.
 const CHAMBER_GLYPHS = "⊕⊗⊙∮∇∂≡·°"
 
-function spawnTrack(state: any, p: any, now: number) {
+function spawnTrack(state: BgState, p: ChamberConfig, now: number) {
   const e = state.emitters[(Math.random() * state.emitters.length) | 0]
   const charge = Math.random() < 0.5 ? 1 : -1
   let x = e.x, y = e.y
@@ -635,7 +653,7 @@ function spawnTrack(state: any, p: any, now: number) {
   })
 }
 
-function drawChamber(ctx: CanvasRenderingContext2D, state: any, config: any) {
+function drawChamber(ctx: CanvasRenderingContext2D, state: BgState, config: SiteConfig) {
   const p = config.backgrounds.chamber
   if (!p) return
   const W = state.w, H = state.h
@@ -667,7 +685,7 @@ function drawChamber(ctx: CanvasRenderingContext2D, state: any, config: any) {
   const pal = state.colorCache.palette
   ctx.textAlign = "left"
   ctx.font = "10px 'IBM Plex Mono', monospace"
-  state.tracks = state.tracks.filter((tr: any) => {
+  state.tracks = state.tracks.filter((tr: Track) => {
     tr.life -= p.fade
     if (tr.life <= 0) return false
     const a = Math.min(1, tr.life) * p.opacity * state.readerAlpha
@@ -717,7 +735,7 @@ function drawChamber(ctx: CanvasRenderingContext2D, state: any, config: any) {
 // anchor's phase, so frame 0 is already composed (reduced-motion safe).
 const SCHEMATIC_GLYPHS = "∮∇∂≡⊕⊗·°∆⟁"
 
-function drawSchematic(ctx: CanvasRenderingContext2D, state: any, config: any) {
+function drawSchematic(ctx: CanvasRenderingContext2D, state: BgState, config: SiteConfig) {
   const p = config.backgrounds.schematic
   const W = state.w, H = state.h
   const drift = performance.now() / 1000 * (p?.driftSpeed ?? 1)
@@ -785,7 +803,7 @@ function drawSchematic(ctx: CanvasRenderingContext2D, state: any, config: any) {
 // ── Isometric background ──
 // Faint wireframe cubes rotating slowly about Y, orthographically projected;
 // some carry a glyph column. Cursor parallax: deeper cubes shift less.
-function drawIsometric(ctx: CanvasRenderingContext2D, state: any, config: any) {
+function drawIsometric(ctx: CanvasRenderingContext2D, state: BgState, config: SiteConfig) {
   const p = config.backgrounds.isometric
   const W = state.w, H = state.h
   const now = performance.now() / 1000
@@ -848,7 +866,7 @@ function drawIsometric(ctx: CanvasRenderingContext2D, state: any, config: any) {
 // ── Orrery background ──
 // Nested astrolabe rings centred on the viewport: thin circles, tick radials,
 // and a "body" node per ring, each precessing at its own slow rate.
-function drawOrrery(ctx: CanvasRenderingContext2D, state: any, config: any) {
+function drawOrrery(ctx: CanvasRenderingContext2D, state: BgState, config: SiteConfig) {
   const p = config.backgrounds.orrery
   const W = state.w, H = state.h
   const now = performance.now() / 1000
@@ -907,7 +925,7 @@ function drawOrrery(ctx: CanvasRenderingContext2D, state: any, config: any) {
 // A single Atkinson-dithered generative still (simplex-octave field → 1-bit
 // stipple) rendered ONCE to an offscreen canvas, then slowly panned with a
 // scanline sweep. Near-zero per-frame cost: one drawImage + one gradient bar.
-function buildPlate(state: any, cell: number): HTMLCanvasElement {
+function buildPlate(state: BgState, cell: number): HTMLCanvasElement {
   const W = state.w, H = state.h
   const cellPx = Math.max(2, Math.round(cell))   // stipple resolution
   const gw = Math.ceil(W / cellPx), gh = Math.ceil(H / cellPx)
@@ -940,7 +958,7 @@ function buildPlate(state: any, cell: number): HTMLCanvasElement {
   return off
 }
 
-function drawPlateScan(ctx: CanvasRenderingContext2D, state: any, config: any) {
+function drawPlateScan(ctx: CanvasRenderingContext2D, state: BgState, config: SiteConfig) {
   const p = config.backgrounds["plate-scan"]
   const W = state.w, H = state.h
   const now = performance.now() / 1000
@@ -996,7 +1014,7 @@ const MURM = {
   baseAlpha: 0.34,  // semi-opaque so it's present but calm
 }
 
-function drawMurmuration(ctx: CanvasRenderingContext2D, state: any, config: any) {
+function drawMurmuration(ctx: CanvasRenderingContext2D, state: BgState, config: SiteConfig) {
   const p = config.backgrounds.murmuration
   // Tunable subset from config; the rest of the flock's character stays in MURM.
   const count = Math.round(p?.count ?? MURM.count)

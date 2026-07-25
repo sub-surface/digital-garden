@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useAuth } from "@/hooks/useAuth"
+import { apiGet } from "@/lib/api"
 import { useStore } from "@/store"
 import { ChatRoom } from "./ChatRoom"
 import { WikiAuthModal } from "../wiki/WikiAuthModal"
@@ -25,11 +26,8 @@ export function SideChat() {
 
   useEffect(() => {
     if (!isOpen || !session) return
-    fetch("/api/chat/rooms", {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data: { rooms: ChatRoomType[] }) => {
+    apiGet<{ rooms: ChatRoomType[] }>("/api/chat/rooms", { token: session.access_token })
+      .then((data) => {
         const active = (data.rooms ?? []).filter((r) => !r.archived)
         setRooms(active)
         if (!room && active.length > 0) {

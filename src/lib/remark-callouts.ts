@@ -1,5 +1,6 @@
 import type { Root, Blockquote, Paragraph, Text } from "mdast"
 import { visit, SKIP } from "unist-util-visit"
+import { escapeHtml } from "./escape"
 
 /**
  * Remark plugin that converts Obsidian-style callouts:
@@ -74,11 +75,4 @@ export function remarkCallouts() {
       return SKIP
     })
   }
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
 }

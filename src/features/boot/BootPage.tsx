@@ -42,6 +42,7 @@ import { SYSTEM_PAGES } from "../../config/system-pages"
 import { useMusic } from "@/components/ui/music/MusicContext"
 import { WikiAuthModal } from "../../components/ui/wiki/WikiAuthModal"
 import { useAuth } from "../../hooks/useAuth"
+import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 
 const FOLLOW_THRESHOLD_PX = 32
 const SPEED_STEPS = [0.5, 1, 2, 4] as const
@@ -363,7 +364,7 @@ export function BootPage() {
   const audioRef = useRef<AmbientEngine | null>(null)
   const music = useMusic()
 
-  const isNarrow = useMediaQuery("(max-width: 800px)")
+  const isNarrow = usePhoneViewport()
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)")
 
   useEffect(() => {

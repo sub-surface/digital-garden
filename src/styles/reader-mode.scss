@@ -18,6 +18,7 @@
 // hidden above. Notes have no grid/sidenotes, so they collapse to a plain
 // centred block same as before. See AppShell.module.scss for the matching
 // `.mainPane` width change (must fit prose + margin track, not just prose).
+@use "./breakpoints" as *;
 @use "./tokens" as *;
 
 [data-reader="true"] {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/useAuth"
+import { apiGet } from "@/lib/api"
 import { WikiAuthModal } from "../wiki/WikiAuthModal"
 import { ChatRoom } from "./ChatRoom"
 import type { ChatRoom as ChatRoomType } from "@/types/chat"
@@ -13,11 +14,8 @@ export function ChatPage() {
 
   function fetchRooms() {
     if (!session) return
-    fetch("/api/chat/rooms", {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    })
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((data: { rooms: ChatRoomType[] }) => {
+    apiGet<{ rooms: ChatRoomType[] }>("/api/chat/rooms", { token: session.access_token })
+      .then((data) => {
         const active = (data.rooms ?? []).filter((r) => !r.archived)
         setRooms(active)
         if (active.length > 0 && !activeRoom) {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { apiGet } from "@/lib/api"
 import { createPortal } from "react-dom"
 import styles from "./MiniProfilePopup.module.scss"
 
@@ -45,11 +46,7 @@ export function MiniProfilePopup({ username, anchorEl, onClose }: Props) {
   const left = Math.min(rect.left, window.innerWidth - 268)
 
   useEffect(() => {
-    fetch(`/api/chat/users/${encodeURIComponent(username)}/mini`)
-      .then((r) => {
-        if (!r.ok) throw new Error("not found")
-        return r.json() as Promise<MiniProfile>
-      })
+    apiGet<MiniProfile>(`/api/chat/users/${encodeURIComponent(username)}/mini`)
       .then((data) => {
         setProfile(data)
         setLoading(false)

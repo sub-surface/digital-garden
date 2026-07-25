@@ -1,8 +1,12 @@
 /**
- * Deterministic PRNG for the composer core. Same lineage as `src/lib/sigil.ts`
- * (mulberry32 + FNV-1a hash), re-declared here so the composer core stays
- * self-contained and dependency-free — it is imported by both the React shell
- * and the headless test script, and must not pull in DOM or sibling modules.
+ * Deterministic PRNG (mulberry32 + FNV-1a hash) for the composer core, and
+ * — per ROADMAP §28.8 — the single shared home for both; `src/lib/sigil.ts`
+ * used to carry a verbatim copy under the same "must stay dependency-free"
+ * rationale, but that rationale applies equally here (sigil.ts is just as
+ * pure and just as headless-tested), so it now imports `hashStr` /
+ * `mulberry32` from here instead of re-declaring them. This module is
+ * imported by both the React shell and the headless test scripts, and must
+ * not pull in DOM or sibling modules.
  *
  * One rng instance is threaded through grammar → layout → motifs → connectors →
  * apparatus in a fixed order, so a given `(seed, salt)` fully reproduces a plate.

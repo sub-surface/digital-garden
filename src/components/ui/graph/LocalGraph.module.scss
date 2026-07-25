@@ -106,7 +106,7 @@
   }
 }
 
-@media (max-width: 800px) {
+@media (max-width: $bp-phone) {
   .localGraph {
     margin: var(--space-8) 0;
     height: 240px;

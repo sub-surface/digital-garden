@@ -7,14 +7,37 @@ Thumbs.db
 .env
 .env.local
 .claude
-# Generated at build time
+# ── Generated at build time (ROADMAP §28.13/§28.14) ──────────────────────────
+# ONE policy: anything `scripts/prebuild.ts` deterministically regenerates from
+# committed sources is ignored, because CF regenerates all of it on every deploy
+# (`wrangler.toml [build] command = "npm run build"` → npm's prebuild lifecycle
+# hook). Tracking derived files only bought permanent diff churn — every dev run
+# dirtied the tree. Two deliberate exceptions are called out at the bottom.
 public/content-index.json
 public/graph.json
-public/search-index.json
+public/albums.json
+public/folders.json
+public/slug-map.json
+public/broken-links.json
+public/image-dimensions.json
+public/emotes/index.json
+public/sitemap.xml
+public/rss.xml
+public/wiki-rss.xml
 public/content/
-public/og/
-# NOTE: public/music.json is NOT generated at build time — it is the committed
-# source of truth, written by `npm run sync:music` (SoundCloud → R2). Tracked.
+# src/content/ is wiped (`rmSync`) and re-synced from content/ on every prebuild
+# — see CLAUDE.md gotcha #1. It was tracked, which made 167 derived files look
+# like source and invited edits that the next prebuild silently destroyed.
+src/content/
+#
+# EXCEPTIONS — generated-looking but genuinely committed artifacts:
+#  • public/music.json — NOT build-generated. Committed source of truth, written
+#    by `npm run sync:music` (SoundCloud → R2). Prebuild only seeds `[]` if absent.
+#  • public/og/*.png — MUST be committed. CF never sets PROCESS_OG, so og-gen
+#    does not run on deploy; the cards ship as committed artifacts. This used to
+#    be an ignore rule that 178 cards were force-added past, which meant any NEW
+#    card was silently dropped and shipped as a missing OG image (ROADMAP §28.1).
+#    `scripts/test-og.ts` now fails the build if a card is missing or untracked.
 
 .dev.vars
 .wrangler/

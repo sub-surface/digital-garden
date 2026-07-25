@@ -1,4 +1,5 @@
 // Article layout — Tufte-style: body + right margin for sidenotes/TOC
+@use "./breakpoints" as *;
 @use "./tokens" as *;
 
 .article-layout {

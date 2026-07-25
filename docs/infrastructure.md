@@ -3,9 +3,18 @@
 ## Infrastructure
 
 - [x] OG image generation: satori + @resvg/resvg-js, per-note thumbnail (cover/image/poster), description linting
-- [x] OG meta tag injection in `src/worker.ts` — per-route `og:title`, `og:description`, `og:image`, `twitter:card`
+- [x] OG meta tag injection in `src/worker/meta.ts` — per-route `og:title`, `og:description`, `og:image`, `twitter:card`
 - [x] Wiki subdomain gets "Philchat Wiki" branding in OG/title tags
-- [x] `public/og/` gitignored — generated fresh at CF build time via `PROCESS_OG=true`
+- [x] **`public/og/` is COMMITTED, not generated on deploy.** CF runs `npm run build`, and prebuild
+  invokes og-gen only when `PROCESS_OG=true` — which CF never sets. A card therefore exists in
+  production if and only if it is in git. (This line previously claimed the opposite; it was wrong,
+  and the directory was simultaneously gitignored *and* force-added past that rule, so newly
+  generated cards were silently dropped. Fixed 2026-07-25, ROADMAP §28.1 — `scripts/test-og.ts` now
+  fails `npm test` if the ignore rule returns or a card on disk is untracked.)
+- [x] OG card filenames are **lowercase**, derived by `ogCardName()` in `src/lib/slug.ts` and shared
+  by og-gen, og-system, the Worker, and the guard. Cards are static assets, which CF serves
+  case-sensitively while routes resolve case-insensitively — two competing casings used to mean the
+  social card 404'd for some spellings of a URL and not others (ROADMAP §28.16).
 - [x] DNS: Cloudflare nameservers, Worker custom domains for all subdomains
 - [x] SPA routing: `wrangler.toml` `[assets]` + `not_found_handling = "single-page-application"`
 - [x] Default theme: light mode, blue accent (`#427ab4`)

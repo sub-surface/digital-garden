@@ -50,6 +50,9 @@ subdomains (and one off it entirely), each its own codebase:
   Division–esque aesthetic. WebGL.
 - **[bazar](https://bazar.subsurfaces.net)** — an infinite procedural Persian-carpet walking
   simulator.
+- **[JANKEN](https://rps.subsurfaces.net)** — rock–paper–scissors chess: pieces move like chess
+  but capture only what they beat. Multiplayer, analysis, and a tablebase for the 3×3 variants
+  (also linked from the garden's own arcade).
 - **[lines of flight](https://lines.subsurfaces.net)** — a meditative ink-field toy: a dot that
   stays, a line that leaves.
 - **[p(doom)](https://pdoom.subsurfaces.net)** — a text incremental about an AI lab's funding,

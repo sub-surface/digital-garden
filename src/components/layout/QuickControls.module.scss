@@ -196,7 +196,7 @@
   }
 }
 
-@media (max-width: 800px) {
+@media (max-width: $bp-phone) {
   .quickControls {
     top: 0.75rem;
     right: 0.75rem;

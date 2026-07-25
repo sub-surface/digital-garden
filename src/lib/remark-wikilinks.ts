@@ -1,5 +1,6 @@
 import type { Root, Text } from "mdast"
 import { visit } from "unist-util-visit"
+import { stripFrontmatter } from "./frontmatter"
 import * as fs from "fs"
 import * as path from "path"
 import { fromMarkdown } from "mdast-util-from-markdown"
@@ -7,6 +8,7 @@ import { gfmFromMarkdown } from "mdast-util-gfm"
 import { gfm } from "micromark-extension-gfm"
 import { toHast } from "mdast-util-to-hast"
 import { toHtml } from "hast-util-to-html"
+import { escapeAttr } from "./escape"
 
 let slugMap: Record<string, string> | null = null
 
@@ -38,11 +40,6 @@ function readNoteSource(slug: string): string | null {
     if (fs.existsSync(p)) return fs.readFileSync(p, "utf-8")
   }
   return null
-}
-
-/** Strip YAML frontmatter from markdown source. */
-function stripFrontmatter(src: string): string {
-  return src.replace(/^---[\s\S]*?---\n?/, "")
 }
 
 /**
@@ -77,11 +74,6 @@ function extractSection(src: string, heading: string): string | null {
   }
 
   return started ? result.join("\n") : null
-}
-
-/** Escape HTML special chars for safe injection into attribute values. */
-function escAttr(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
 /**
@@ -121,7 +113,7 @@ export function remarkWikilinks(opts: { embedDepth?: number } = {}) {
             const src = rawTarget.startsWith("http") ? rawTarget : `/content/Media/${rawTarget}`
             newNodes.push({
               type: "html",
-              value: `<img src="${src}" alt="${escAttr(alias || rawTarget)}" class="note-image" />`,
+              value: `<img src="${src}" alt="${escapeAttr(alias || rawTarget)}" class="note-image" />`,
             })
           } else if (rawTarget.includes("youtube.com") || rawTarget.includes("youtu.be")) {
             const videoId = rawTarget.includes("v=")
@@ -174,20 +166,20 @@ export function remarkWikilinks(opts: { embedDepth?: number } = {}) {
                 const hast = toHast(mdast)
                 const renderedHtml = hast ? toHtml(hast as any) : safeContent.trim().slice(0, 2000)
 
-                embedHtml = `<aside class="note-embed" data-slug="${escAttr(resolvedSlug)}">
+                embedHtml = `<aside class="note-embed" data-slug="${escapeAttr(resolvedSlug)}">
   <div class="note-embed__header">
     <span class="note-embed__label">embedded</span>
-    <a class="note-embed__title internal-link" href="${escAttr(href)}">${escAttr(displayTitle)}</a>
+    <a class="note-embed__title internal-link" href="${escapeAttr(href)}">${escapeAttr(displayTitle)}</a>
   </div>
   <div class="note-embed__body">${renderedHtml}</div>
-  <a class="note-embed__source internal-link" href="${escAttr(href)}">↗ open note</a>
+  <a class="note-embed__source internal-link" href="${escapeAttr(href)}">↗ open note</a>
 </aside>`
               } else {
                 // Target not found — broken embed
                 console.warn(`[remark-wikilinks] broken embed: ![[${rawTarget}]] → could not resolve "${resolvedSlug}"`)
-                embedHtml = `<aside class="note-embed note-embed--broken" data-slug="${escAttr(resolvedSlug)}">
+                embedHtml = `<aside class="note-embed note-embed--broken" data-slug="${escapeAttr(resolvedSlug)}">
   <span class="note-embed__label">embed not found</span>
-  <a class="internal-link" href="${escAttr(href)}">${escAttr(displayTitle)}</a>
+  <a class="internal-link" href="${escapeAttr(href)}">${escapeAttr(displayTitle)}</a>
 </aside>`
               }
 

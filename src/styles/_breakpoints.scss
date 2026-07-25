@@ -1,0 +1,31 @@
+// Compile-time breakpoint variables — THE ONLY OUTPUT-FREE STYLE PARTIAL.
+//
+// This file must never emit a single byte of CSS. It is auto-injected into every
+// .scss file in the project via `css.preprocessorOptions.scss.additionalData` in
+// vite.config.ts, so anything that produces output here would be duplicated into
+// all ~80 CSS modules. Variables and @function/@mixin definitions only.
+//
+// WHY IT EXISTS (ROADMAP §28.4): these three lived in tokens.scss, which emits
+// ~100 lines of `:root` custom properties. That made them unreachable from
+// component `.module.scss` files — importing tokens to get `$bp-phone` would have
+// cloned the whole theme block into that module's stylesheet. So every component
+// module hardcoded `800px` / `560px` instead, and the named-breakpoint convention
+// documented at length in src/config/breakpoints.ts sat at ~8% adoption with
+// `$bp-panel-narrow` used exactly zero times. Splitting the pure variables out is
+// what makes the convention actually followable.
+//
+// The JS mirror of the device widths is `src/config/breakpoints.ts`
+// (PHONE_BREAKPOINT / PANEL_NARROW) — a documented mirrored-constant pair, since
+// SCSS cannot import TS. Change a number here, change it there too. That file's
+// header also holds the container-query-vs-viewport-@media ownership rule.
+
+// Content-fit breakpoint: where the article grid's margin column (TOC +
+// sidenotes) collapses. article.scss (grid/TOC collapse, pullquote reflow) and
+// sidenotes.scss (float vs inline-toggle mode) must agree on this or sidenotes
+// float into a margin column that is already gone. Deliberately NOT a device
+// width — it is about how much room the prose measure needs.
+$article-narrow: 1300px;
+
+// Device-width breakpoints (ROADMAP §18, mobile coherence).
+$bp-phone: 800px; // canonical phone/mobile viewport line (mirrors PHONE_BREAKPOINT)
+$bp-panel-narrow: 560px; // canonical "narrow panel" container-query width (mirrors PANEL_NARROW)

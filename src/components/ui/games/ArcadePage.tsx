@@ -46,6 +46,14 @@ const GAMES: GameCard[] = [
     section: "featured",
     external: true,
   },
+  {
+    href: "https://rps.subsurfaces.net",
+    name: "JANKEN",
+    blurb: "Rock–paper–scissors chess: pieces move like chess but may take only what they beat, so identity is as much a wall as a weapon. Multiplayer, analysis board, and a solved tablebase for the 3×3 variants.",
+    live: true,
+    section: "featured",
+    external: true,
+  },
   { href: "hexo", name: "HeXO", blurb: "Connect six on an endless hex field, against a handmade opponent.", live: true, section: "featured" },
   {
     href: "https://omega.subsurfaces.net",

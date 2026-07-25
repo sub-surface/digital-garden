@@ -1,7 +1,11 @@
+import type { BackgroundsConfig } from "@/types/backgrounds"
+
 export const SITE_DEFAULTS = {
   "initialTheme": "light",
   "initialPalette": "complimentary",
   "initialAccent": "#427ab4",
+  // satisfies (not a type annotation) checks every BgMode has a config block
+  // here without widening the literal types SiteConfig infers below.
   "backgrounds": {
     "vectors": {
       "step": 54,
@@ -82,7 +86,7 @@ export const SITE_DEFAULTS = {
       "cell": 4,
       "opacity": 1
     }
-  }
+  } satisfies BackgroundsConfig
 }
 
 export type SiteConfig = typeof SITE_DEFAULTS

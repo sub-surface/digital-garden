@@ -1,4 +1,0 @@
----
-title: Chess
-tags: [games]
----

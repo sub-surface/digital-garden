@@ -1,4 +1,5 @@
 import { useRef, useState, lazy, Suspense } from "react"
+import { stripFrontmatter } from "@/lib/frontmatter"
 
 const Markdown = lazy(() => import("react-markdown"))
 
@@ -60,12 +61,6 @@ function applyAction(
     textarea.focus()
     textarea.setSelectionRange(cursorStart, cursorEnd)
   })
-}
-
-/** Strip frontmatter (--- ... ---) from content for preview */
-function stripFrontmatter(text: string): string {
-  const match = text.match(/^---\n[\s\S]*?\n---\n?/)
-  return match ? text.slice(match[0].length) : text
 }
 
 /** Convert wikilinks [[Page Name]] and [[Page|Display]] to markdown links */

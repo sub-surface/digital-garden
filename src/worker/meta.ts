@@ -1,5 +1,6 @@
 import { NoteMeta } from "./types"
-import { buildSlugResolver, slugFromPathname as sharedSlugFromPathname, type SlugResolver } from "../lib/slug"
+import { buildSlugResolver, ogCardName, slugFromPathname as sharedSlugFromPathname, type SlugResolver } from "../lib/slug"
+import { escapeAttr, escapeHtml } from "../lib/escape"
 
 // In-memory cache — survives for the lifetime of the Worker instance.
 // The resolver (lowercase + basename maps) is built once alongside it so
@@ -37,16 +38,25 @@ export function chatterImageForUsername(index: Record<string, NoteMeta>, usernam
 
 export const slugFromPathname = sharedSlugFromPathname
 
-export function resolveMetaCaseInsensitive(index: Record<string, NoteMeta>, slug: string): NoteMeta | null {
-  if (index[slug]) return index[slug]
+/**
+ * Resolve a request slug to its *canonical* index key (the casing prebuild wrote),
+ * or null. Callers need the key itself — not just the metadata — because static
+ * asset paths derived from it (OG cards) are case-SENSITIVE on CF even though
+ * routes are case-insensitive at runtime. See ROADMAP §28.16 / CLAUDE.md gotcha #8.
+ */
+export function resolveSlugCaseInsensitive(index: Record<string, NoteMeta>, slug: string): string | null {
+  if (index[slug]) return slug
   // Fast path via the cached resolver; fall back to a scan when the index was
   // passed in without going through getContentIndex (tests, cold errors).
   if (resolverCache && index === contentIndexCache) {
-    const key = resolverCache.resolve(slug)
-    return key ? index[key] : null
+    return resolverCache.resolve(slug)
   }
   const lower = slug.toLowerCase()
-  const key = Object.keys(index).find(k => k.toLowerCase() === lower)
+  return Object.keys(index).find(k => k.toLowerCase() === lower) ?? null
+}
+
+export function resolveMetaCaseInsensitive(index: Record<string, NoteMeta>, slug: string): NoteMeta | null {
+  const key = resolveSlugCaseInsensitive(index, slug)
   return key ? index[key] : null
 }
 
@@ -64,25 +74,25 @@ export function injectMetaTags(html: string, meta: NoteMeta, slug: string, origi
     .replace(/[*_`~]+/g, "")
     .replace(/\s+/g, " ")
     .trim()
-  const ogSlug = slug.replace(/\//g, "-")
+  const ogCard = ogCardName(slug)
   const thumbnail = meta.image || meta.cover || meta.poster
   const ogImage = thumbnail
     ? (thumbnail.startsWith("http") ? thumbnail : `${origin}${thumbnail}`)
-    : `${origin}/og/${ogSlug}.png`
+    : `${origin}/og/${ogCard}`
   const canonical = `${origin}/${slug === "index" ? "" : slug}`
 
   const tags = [
-    `<meta name="description" content="${escAttr(description)}" />`,
-    `<meta property="og:title" content="${escAttr(title)}" />`,
-    `<meta property="og:description" content="${escAttr(description)}" />`,
-    `<meta property="og:image" content="${escAttr(ogImage)}" />`,
-    `<meta property="og:url" content="${escAttr(canonical)}" />`,
+    `<meta name="description" content="${escapeAttr(description)}" />`,
+    `<meta property="og:title" content="${escapeAttr(title)}" />`,
+    `<meta property="og:description" content="${escapeAttr(description)}" />`,
+    `<meta property="og:image" content="${escapeAttr(ogImage)}" />`,
+    `<meta property="og:url" content="${escapeAttr(canonical)}" />`,
     `<meta property="og:type" content="website" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
-    `<meta name="twitter:title" content="${escAttr(title)}" />`,
-    `<meta name="twitter:description" content="${escAttr(description)}" />`,
-    `<meta name="twitter:image" content="${escAttr(ogImage)}" />`,
-    `<title>${escText(title)}</title>`,
+    `<meta name="twitter:title" content="${escapeAttr(title)}" />`,
+    `<meta name="twitter:description" content="${escapeAttr(description)}" />`,
+    `<meta name="twitter:image" content="${escapeAttr(ogImage)}" />`,
+    `<title>${escapeHtml(title)}</title>`,
   ].join("\n    ")
 
   // Replace the static <title> and inject before </head>
@@ -90,6 +100,3 @@ export function injectMetaTags(html: string, meta: NoteMeta, slug: string, origi
     .replace(/<title>[^<]*<\/title>/, "")
     .replace("</head>", `    ${tags}\n  </head>`)
 }
-
-export function escAttr(s: string) { return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;") }
-export function escText(s: string) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;") }

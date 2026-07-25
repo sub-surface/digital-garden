@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, type RefObject } from "react"
 import { createPortal } from "react-dom"
+import { apiGet, apiPost, apiDelete } from "@/lib/api"
 import { useStore } from "@/store"
 import styles from "./ChatSettings.module.scss"
 
@@ -82,9 +83,8 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, accessT
   useEffect(() => {
     if (tab !== "keys" || !accessToken) return
     setKeysLoading(true)
-    fetch(API_KEYS_ENDPOINT, { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then((data: ApiKey[]) => setApiKeys(data.filter(k => !k.revoked_at)))
+    apiGet<ApiKey[]>(API_KEYS_ENDPOINT, { token: accessToken })
+      .then((data) => setApiKeys(data.filter(k => !k.revoked_at)))
       .catch((e) => console.warn("ChatSettings: API keys load failed:", e))
       .finally(() => setKeysLoading(false))
   }, [tab, accessToken])
@@ -100,30 +100,31 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, accessT
   async function handleGenerateKey() {
     if (!accessToken) return
     const name = newKeyName.trim() || "API Key"
-    const res = await fetch(API_KEYS_ENDPOINT, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    })
-    if (!res.ok) return
-    const data = await res.json() as { key: string; name: string }
-    setGeneratedKey(data.key)
-    setNewKeyName("")
-    setKeyCopied(false)
-    // Refresh list
-    fetch(API_KEYS_ENDPOINT, { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then((d: ApiKey[]) => setApiKeys(d.filter(k => !k.revoked_at)))
-      .catch((e) => console.warn("ChatSettings: API keys refresh failed:", e))
+    try {
+      const data = await apiPost<{ key: string; name: string }>(API_KEYS_ENDPOINT, { name }, { token: accessToken })
+      setGeneratedKey(data.key)
+      setNewKeyName("")
+      setKeyCopied(false)
+      // Refresh list
+      apiGet<ApiKey[]>(API_KEYS_ENDPOINT, { token: accessToken })
+        .then((d) => setApiKeys(d.filter(k => !k.revoked_at)))
+        .catch((e) => console.warn("ChatSettings: API keys refresh failed:", e))
+    } catch {
+      // Previously: `if (!res.ok) return` — failure was silently swallowed with
+      // no state change. Preserve that (no catch existed for network errors either).
+    }
   }
 
   async function handleRevokeKey(id: string) {
     if (!accessToken) return
-    await fetch(`${API_KEYS_ENDPOINT}/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-    setApiKeys(prev => prev.filter(k => k.id !== id))
+    try {
+      await apiDelete(`${API_KEYS_ENDPOINT}/${id}`, undefined, { token: accessToken })
+      setApiKeys(prev => prev.filter(k => k.id !== id))
+    } catch {
+      // Previously: the response was never checked, so the key was removed from
+      // local state even when the server-side revoke failed. apiDelete now throws
+      // on failure — leave state unchanged instead of reproducing that bug.
+    }
   }
 
   const tabs: { id: Tab; label: string }[] = [

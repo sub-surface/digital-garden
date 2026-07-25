@@ -1,0 +1,48 @@
+name: Check
+
+# The verification gate (ROADMAP §28.2). Before this existed, CI ran only
+# lighthouse.yml — which happens to run `npm run build`, so `tsc --noEmit` fired
+# incidentally, while `npm test` and the Worker typecheck were never run by CI at
+# all. `npm run check` existed and nothing invoked it.
+#
+# The Worker typecheck is the load-bearing part: `src/worker/` is excluded from the
+# main tsconfig (CLAUDE.md gotcha #5), so neither VS Code nor `npm run build` can
+# see a type error in it. Cloudflare compiles the Worker at deploy time, which
+# means before this workflow a broken Worker type reached production unchallenged.
+#
+# Steps are split rather than a single `npm run check` so a failure names itself in
+# the GitHub UI without opening the log. Note `npm run check` also runs the build,
+# so keep the ordering here consistent with it if you change one.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Runs before prebuild, so scripts/test-og.ts sees the committed state of
+      # public/og — which is the point: it asserts the cards are in git, not on disk.
+      - name: Test
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck Worker
+        run: npm run typecheck:worker
+
+      - name: Build (prebuild runs via npm lifecycle)
+        run: npm run build

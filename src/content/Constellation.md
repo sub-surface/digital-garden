@@ -1,4 +1,0 @@
----
-title: Constellation
-tags: [meta]
----

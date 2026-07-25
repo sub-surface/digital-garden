@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
+import { apiGet, apiPost, apiDelete } from "@/lib/api"
 
 const STORAGE_KEY = "wiki_bookmarks"
 
@@ -29,16 +30,9 @@ function localClear() {
 
 // ── API helpers ──
 
-async function apiFetch(path: string, method = "GET", body?: unknown): Promise<Response> {
+async function getToken(): Promise<string | null> {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
-  return fetch(path, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  })
+  return session?.access_token ?? null
 }
 
 export function useBookmarks() {
@@ -109,16 +103,15 @@ export function useBookmarks() {
 
   async function loadFromServer() {
     try {
-      const res = await apiFetch("/api/bookmarks")
-      // Guard the body type: when the Worker isn't in front of the assets
-      // (e.g. a `vite preview` build, or a misroute), `/api/bookmarks` resolves
-      // to the SPA fallback HTML with a 200 — calling res.json() on that throws
-      // a noisy "Unexpected token '<'". Only parse when it's actually JSON.
-      const isJson = res.headers.get("content-type")?.includes("application/json")
-      if (res.ok && isJson) {
-        const data = await res.json() as { slug: string; title: string; added_at: string }[]
-        setBookmarks(data.map((b) => ({ slug: b.slug, title: b.title, addedAt: b.added_at })))
-      }
+      const token = await getToken()
+      // apiGet throws on a non-2xx status AND on a non-JSON body — the latter
+      // covers what the old content-type guard was for: when the Worker isn't
+      // in front of the assets (e.g. a `vite preview` build, or a misroute),
+      // `/api/bookmarks` resolves to the SPA fallback HTML with a 200, and
+      // apiGet's JSON.parse failure surfaces that as a thrown ApiError instead
+      // of a raw "Unexpected token '<'". Either way lands in the catch below.
+      const data = await apiGet<{ slug: string; title: string; added_at: string }[]>("/api/bookmarks", { token })
+      setBookmarks(data.map((b) => ({ slug: b.slug, title: b.title, addedAt: b.added_at })))
     } catch (e) {
       console.warn("useBookmarks: server load failed:", e)
     }
@@ -126,7 +119,8 @@ export function useBookmarks() {
 
   async function migrateLocal(local: Bookmark[]) {
     try {
-      await apiFetch("/api/bookmarks/migrate", "POST", { bookmarks: local })
+      const token = await getToken()
+      await apiPost("/api/bookmarks/migrate", { bookmarks: local }, { token })
       await loadFromServer()
     } catch (e) {
       console.warn("useBookmarks: local migration failed:", e)
@@ -140,15 +134,26 @@ export function useBookmarks() {
     const exists = bookmarks.some((b) => b.slug === slug)
 
     if (loggedIn) {
+      const token = await getToken()
       if (exists) {
         // Optimistic remove
         setBookmarks((prev) => prev.filter((b) => b.slug !== slug))
-        await apiFetch(`/api/bookmarks/${encodeURIComponent(slug)}`, "DELETE")
+        try {
+          await apiDelete(`/api/bookmarks/${encodeURIComponent(slug)}`, undefined, { token })
+        } catch (e) {
+          // Previously fire-and-forget (response was never checked) — preserve
+          // that behaviour: keep the optimistic update, just log the failure.
+          console.warn("useBookmarks: remove failed:", e)
+        }
       } else {
         // Optimistic add
         const newBm: Bookmark = { slug, title, addedAt: new Date().toISOString() }
         setBookmarks((prev) => [newBm, ...prev])
-        await apiFetch("/api/bookmarks", "POST", { slug, title })
+        try {
+          await apiPost("/api/bookmarks", { slug, title }, { token })
+        } catch (e) {
+          console.warn("useBookmarks: add failed:", e)
+        }
       }
     } else {
       setBookmarks((prev) => {
@@ -164,7 +169,14 @@ export function useBookmarks() {
   const removeBookmark = useCallback(async (slug: string) => {
     if (loggedIn) {
       setBookmarks((prev) => prev.filter((b) => b.slug !== slug))
-      await apiFetch(`/api/bookmarks/${encodeURIComponent(slug)}`, "DELETE")
+      try {
+        const token = await getToken()
+        await apiDelete(`/api/bookmarks/${encodeURIComponent(slug)}`, undefined, { token })
+      } catch (e) {
+        // Previously fire-and-forget — preserve that: keep the optimistic
+        // removal, just log the failure.
+        console.warn("useBookmarks: remove failed:", e)
+      }
     } else {
       setBookmarks((prev) => {
         const next = prev.filter((b) => b.slug !== slug)

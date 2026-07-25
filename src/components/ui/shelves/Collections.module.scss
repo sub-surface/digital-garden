@@ -5,7 +5,7 @@
   padding: var(--space-12) var(--space-4);
 
   // When embedded in a panel card, drop the generous padding
-  @container panel (max-width: 560px) {
+  @container panel (max-width: $bp-panel-narrow) {
     padding: var(--space-4) 0;
   }
 }
@@ -27,7 +27,7 @@
     font-size: 1.1rem;
   }
 
-  @container panel (max-width: 560px) {
+  @container panel (max-width: $bp-panel-narrow) {
     margin-bottom: var(--space-6);
     h1 { font-size: 1.6rem; }
     p { font-size: 0.9rem; }
@@ -346,7 +346,7 @@
   column-count: 3;
   column-gap: var(--space-4);
 
-  @media (max-width: 800px) {
+  @media (max-width: $bp-phone) {
     column-count: 2;
   }
   @media (max-width: 500px) {

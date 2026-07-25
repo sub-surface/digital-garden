@@ -863,7 +863,7 @@
   }
 }
 
-@media (max-width: 800px) {
+@media (max-width: $bp-phone) {
   .page {
     --tui-row: 1.55rem;
     font-size: 11px;

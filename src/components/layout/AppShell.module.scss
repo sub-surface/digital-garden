@@ -127,7 +127,7 @@
 }
 
 // ── Mobile ──
-@media (max-width: 800px) {
+@media (max-width: $bp-phone) {
   .mainPane {
     flex: 1;
     min-width: 100%;

@@ -1,11 +1,12 @@
 import { Outlet, useLocation } from "@tanstack/react-router"
-import { useEffect, useSyncExternalStore, Suspense, lazy } from "react"
+import { useEffect, Suspense, lazy } from "react"
 import { useStore } from "@/store"
 import { PanelStack } from "@/components/panel/PanelStack"
 import { usePanelClick } from "@/components/panel/usePanelClick"
 import { useHotkeys } from "@/hooks/useHotkeys"
 import { useShell } from "@/hooks/useShell"
 import { useDynamicFavicon } from "@/hooks/useDynamicFavicon"
+import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 const WikiShell = lazy(() => import("./WikiShell").then(m => ({ default: m.WikiShell })))
 const ChatShell = lazy(() => import("./ChatShell").then(m => ({ default: m.ChatShell })))
 const OSShell = lazy(() => import("@/features/boot/BootPage").then(m => ({ default: m.BootPage })))
@@ -28,20 +29,6 @@ import styles from "./AppShell.module.scss"
 
 // Lazy-load LocalGraph — pulls in D3 + PixiJS (~570KB), only needed on desktop
 const LocalGraph = lazy(() => import("@/components/ui/graph/LocalGraph").then(m => ({ default: m.LocalGraph })))
-
-// Reactive mobile check — a plain window.innerWidth read only ran at mount, so
-// resizing/rotating never re-evaluated the floating graph.
-const mobileQuery = typeof window !== "undefined" ? window.matchMedia("(max-width: 800px)") : null
-function useIsMobile(): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
-      mobileQuery?.addEventListener("change", onChange)
-      return () => mobileQuery?.removeEventListener("change", onChange)
-    },
-    () => mobileQuery?.matches ?? false,
-    () => false,
-  )
-}
 
 export function AppShell() {
   const shell = useShell()
@@ -99,7 +86,7 @@ export function AppShell() {
   usePanelClick()
   useHotkeys()
   useDynamicFavicon()
-  const isMobile = useIsMobile() // hooks before shell branch (React rules)
+  const isMobile = usePhoneViewport() // hooks before shell branch (React rules)
 
   if (shell === "wiki") return <Suspense fallback={null}><WikiShell /><GlobalOverlays /><CookieConsent /></Suspense>
   if (shell === "chat") return <Suspense fallback={null}><ChatShell /><GlobalOverlays /><CookieConsent /></Suspense>

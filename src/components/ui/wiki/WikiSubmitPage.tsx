@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { apiPost, apiErrorMessage } from "@/lib/api"
 
 // VITE_TURNSTILE_SITE_KEY — set in .env.local for dev (use 1x00000000000000000000AA test key)
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
@@ -496,19 +497,10 @@ export function WikiSubmitForm() {
         imageUrl: formData.imageBase64 ? "" : formData.imageUrl,
         turnstileToken,
       }
-      const res = await fetch("/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json() as { prUrl?: string; error?: string }
-      if (!res.ok || data.error) {
-        setError(data.error ?? "Submission failed. Please try again.")
-      } else if (data.prUrl) {
-        setResult({ prUrl: data.prUrl })
-      }
-    } catch {
-      setError("Network error. Please check your connection and try again.")
+      const data = await apiPost<{ prUrl?: string }>("/api/submit", payload)
+      if (data.prUrl) setResult({ prUrl: data.prUrl })
+    } catch (e) {
+      setError(apiErrorMessage(e, "Submission failed. Please try again."))
     } finally {
       setSubmitting(false)
     }

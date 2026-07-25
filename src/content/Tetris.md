@@ -1,4 +1,0 @@
----
-title: Tetris
-tags: [games]
----

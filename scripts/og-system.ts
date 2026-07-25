@@ -13,6 +13,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "url"
+import { ogCardName } from "../src/lib/slug"
 import satori from "satori"
 import { Resvg } from "@resvg/resvg-js"
 
@@ -462,7 +463,7 @@ export async function generateSystemCards(fontData: OgFontData): Promise<number>
       ],
     })
     const png = new Resvg(svg).render().asPng()
-    fs.writeFileSync(path.join(OG_DIR, `${spec.slug}.png`), png)
+    fs.writeFileSync(path.join(OG_DIR, ogCardName(spec.slug)), png)
   }
   return CARDS.length
 }

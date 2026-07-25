@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { apiGet } from "@/lib/api"
 import type { ChatMessage } from "@/types/chat"
 
 interface UseChatMessagesOpts {
@@ -29,15 +30,14 @@ export function useChatMessages({
   const fetchMessages = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/chat/messages?room=${roomId}&limit=50`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-      if (!res.ok) return
-      const data = await res.json() as { messages: ChatMessage[]; has_more: boolean }
+      const data = await apiGet<{ messages: ChatMessage[]; has_more: boolean }>(
+        `/api/chat/messages?room=${roomId}&limit=50`,
+        { token: accessToken },
+      )
       setMessages((data.messages ?? []).reverse())
       setHasMore(data.has_more ?? false)
     } catch {
-      // Leave empty state
+      // Leave empty state (also covers a previously-unchecked non-2xx response)
     } finally {
       setLoading(false)
     }
@@ -50,16 +50,14 @@ export function useChatMessages({
     prevScrollHeightRef.current = listRef?.current?.scrollHeight ?? 0
     setLoadingMore(true)
     try {
-      const res = await fetch(
+      const data = await apiGet<{ messages: ChatMessage[]; has_more: boolean }>(
         `/api/chat/messages?room=${roomId}&limit=50&before=${encodeURIComponent(oldest)}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { token: accessToken },
       )
-      if (!res.ok) return
-      const data = await res.json() as { messages: ChatMessage[]; has_more: boolean }
       setMessages((prev) => [...(data.messages ?? []).reverse(), ...prev])
       setHasMore(data.has_more ?? false)
     } catch {
-      // Silently ignore load-more failure
+      // Silently ignore load-more failure (also covers a previously-unchecked non-2xx response)
     } finally {
       setLoadingMore(false)
       loadingMoreRef.current = false
@@ -100,15 +98,8 @@ export function useChatMessages({
           } else {
             // Pre-migration row: fetch just this message (not the whole list).
             try {
-              const res = await fetch(`/api/chat/messages/${newMsg.id}`, {
-                headers: { Authorization: `Bearer ${accessToken}` },
-              })
-              if (res.ok) {
-                const data = await res.json() as { message: ChatMessage }
-                enriched = data.message ?? { ...newMsg, profiles: null, reactions: [] }
-              } else {
-                enriched = { ...newMsg, profiles: null, reactions: [] }
-              }
+              const data = await apiGet<{ message: ChatMessage }>(`/api/chat/messages/${newMsg.id}`, { token: accessToken })
+              enriched = data.message ?? { ...newMsg, profiles: null, reactions: [] }
             } catch {
               enriched = { ...newMsg, profiles: null, reactions: [] }
             }

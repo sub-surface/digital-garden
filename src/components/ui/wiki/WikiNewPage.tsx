@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { WikiMarkdownEditor } from "../WikiMarkdownEditor"
 import { WikiAuthModal } from "./WikiAuthModal"
+import { apiPost, apiErrorMessage } from "@/lib/api"
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
 
@@ -142,29 +143,17 @@ export function WikiNewPage() {
       const config = TYPE_CONFIG[articleType]
       const filePath = `${config.folder}/${fileSlug}.md`
 
-      const res = await fetch("/api/new", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          title: title.trim(),
-          filePath,
-          content,
-          articleType,
-          turnstileToken,
-          editSummary: editSummary.trim(),
-        }),
-      })
-      const data = await res.json() as { prUrl?: string; error?: string }
-      if (!res.ok || data.error) {
-        setError(data.error ?? "Submission failed.")
-      } else if (data.prUrl) {
-        setResult({ prUrl: data.prUrl })
-      }
-    } catch {
-      setError("Network error. Please try again.")
+      const data = await apiPost<{ prUrl?: string }>("/api/new", {
+        title: title.trim(),
+        filePath,
+        content,
+        articleType,
+        turnstileToken,
+        editSummary: editSummary.trim(),
+      }, { token: session.access_token })
+      if (data.prUrl) setResult({ prUrl: data.prUrl })
+    } catch (e) {
+      setError(apiErrorMessage(e, "Submission failed."))
     } finally {
       setSubmitting(false)
     }

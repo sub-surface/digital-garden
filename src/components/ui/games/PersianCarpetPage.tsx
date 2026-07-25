@@ -686,7 +686,6 @@ export function PersianCarpetPage() {
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── actions ──

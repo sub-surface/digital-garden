@@ -1,4 +1,5 @@
 // Tufte-style sidenotes — wide viewport: margin float, narrow: inline toggle
+@use "./breakpoints" as *;
 @use "./tokens" as *;
 
 .sidenote-checkbox {

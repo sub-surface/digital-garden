@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { WikiAuthModal } from "./WikiAuthModal"
 import { useNavigate } from "@tanstack/react-router"
+import { apiGet, apiPost, apiDelete } from "@/lib/api"
 
 interface Profile {
   id: string
@@ -66,7 +67,7 @@ export function WikiAdminPage() {
     )
   }
 
-  const authHeader = { Authorization: `Bearer ${session!.access_token}` }
+  const token = session!.access_token
 
   return (
     <div className="wiki-form-page" style={{ maxWidth: '900px' }}>
@@ -84,31 +85,27 @@ export function WikiAdminPage() {
         ))}
       </div>
 
-      {tab === "users" && <UsersTab authHeader={authHeader} />}
-      {tab === "log" && <EditLogTab authHeader={authHeader} />}
-      {tab === "locks" && <LocksTab authHeader={authHeader} />}
+      {tab === "users" && <UsersTab token={token} />}
+      {tab === "log" && <EditLogTab token={token} />}
+      {tab === "locks" && <LocksTab token={token} />}
     </div>
   )
 }
 
 // ── Users Tab ──
 
-function UsersTab({ authHeader }: { authHeader: Record<string, string> }) {
+function UsersTab({ token }: { token: string }) {
   const [users, setUsers] = useState<Profile[]>([])
   const [filter, setFilter] = useState<string>("all")
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/users", { headers: authHeader })
-      if (res.ok) {
-        const data = await res.json() as Profile[]
-        setUsers(data)
-      }
+      setUsers(await apiGet<Profile[]>("/api/admin/users", { token }))
     } catch (e) {
       console.warn("WikiAdminPage: user list fetch failed:", e)
     }
-  }, [])
+  }, [token])
 
   useEffect(() => { fetchUsers() }, [fetchUsers])
 
@@ -118,12 +115,8 @@ function UsersTab({ authHeader }: { authHeader: Record<string, string> }) {
       const endpoint = newRole === "none"
         ? "/api/admin/revoke"
         : "/api/admin/approve"
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { ...authHeader, "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, role: newRole }),
-      })
-      if (res.ok) await fetchUsers()
+      await apiPost(endpoint, { userId, role: newRole }, { token })
+      await fetchUsers()
     } catch (e) {
       console.error("WikiAdminPage: role update failed:", e)
     }
@@ -227,15 +220,14 @@ function UsersTab({ authHeader }: { authHeader: Record<string, string> }) {
 
 // ── Edit Log Tab ──
 
-function EditLogTab({ authHeader }: { authHeader: Record<string, string> }) {
+function EditLogTab({ token }: { token: string }) {
   const [entries, setEntries] = useState<EditLogEntry[]>([])
 
   useEffect(() => {
-    fetch("/api/admin/log", { headers: authHeader })
-      .then((r) => r.ok ? r.json() as Promise<EditLogEntry[]> : [])
+    apiGet<EditLogEntry[]>("/api/admin/log", { token })
       .then(setEntries)
-      .catch((e) => console.warn("WikiAdminPage: edit log load failed:", e))
-  }, [])
+      .catch((e) => { console.warn("WikiAdminPage: edit log load failed:", e); setEntries([]) })
+  }, [token])
 
   return (
     <div className="wiki-admin-table-wrap">
@@ -274,40 +266,40 @@ function EditLogTab({ authHeader }: { authHeader: Record<string, string> }) {
 
 // ── Page Locks Tab ──
 
-function LocksTab({ authHeader }: { authHeader: Record<string, string> }) {
+function LocksTab({ token }: { token: string }) {
   const [locks, setLocks] = useState<PageLock[]>([])
   const [newSlug, setNewSlug] = useState("")
   const [newReason, setNewReason] = useState("")
 
   const fetchLocks = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/locks", { headers: authHeader })
-      if (res.ok) setLocks(await res.json() as PageLock[])
+      setLocks(await apiGet<PageLock[]>("/api/admin/locks", { token }))
     } catch (e) {
       console.warn("WikiAdminPage: locks load failed:", e)
     }
-  }, [])
+  }, [token])
 
   useEffect(() => { fetchLocks() }, [fetchLocks])
 
   const addLock = async () => {
     if (!newSlug.trim()) return
-    await fetch("/api/admin/lock", {
-      method: "POST",
-      headers: { ...authHeader, "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: newSlug.trim(), reason: newReason.trim() || null }),
-    })
+    try {
+      await apiPost("/api/admin/lock", { slug: newSlug.trim(), reason: newReason.trim() || null }, { token })
+    } catch (e) {
+      // Previously unchecked (fire-and-forget) — preserve that: log only, still refresh.
+      console.warn("WikiAdminPage: add lock failed:", e)
+    }
     setNewSlug("")
     setNewReason("")
     fetchLocks()
   }
 
   const removeLock = async (slug: string) => {
-    await fetch("/api/admin/lock", {
-      method: "DELETE",
-      headers: { ...authHeader, "Content-Type": "application/json" },
-      body: JSON.stringify({ slug }),
-    })
+    try {
+      await apiDelete("/api/admin/lock", { slug }, { token })
+    } catch (e) {
+      console.warn("WikiAdminPage: remove lock failed:", e)
+    }
     fetchLocks()
   }
 

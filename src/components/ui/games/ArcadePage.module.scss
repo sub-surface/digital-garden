@@ -14,7 +14,7 @@
   p { opacity: 0.5; font-size: 0.9rem; letter-spacing: 1px; }
 
   // Tighter header when embedded in a narrow panel card
-  @container panel (max-width: 560px) {
+  @container panel (max-width: $bp-panel-narrow) {
     margin-bottom: var(--space-6);
     h1 { font-size: 1.8rem; }
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import type { Session } from "@supabase/supabase-js"
+import { apiGet, apiPost, apiPut, apiErrorMessage } from "@/lib/api"
 
 export type UserRole = "pending" | "editor" | "admin" | null
 
@@ -116,48 +117,38 @@ export function useAuth(): AuthState & {
         // Silently fail — dev convenience only
       })
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function fetchProfile(accessToken: string) {
     try {
-      const res = await fetch("/api/auth/me", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-      if (res.ok) {
-        const data = await res.json() as {
-          role: string
-          username: string | null
-          bio: string | null
-          avatar_url: string | null
-          created_at: string | null
-          name_color: string | null
-          claimed_slug?: string | null
-        }
-        setRole(data.role as UserRole)
-        setUsername(data.username)
-        setBio(data.bio)
-        setAvatarUrl(data.avatar_url)
-        setCreatedAt(data.created_at)
-        setNameColor(data.name_color)
-        setClaimedSlug(data.claimed_slug ?? null)
+      const data = await apiGet<{
+        role: string
+        username: string | null
+        bio: string | null
+        avatar_url: string | null
+        created_at: string | null
+        name_color: string | null
+        claimed_slug?: string | null
+      }>("/api/auth/me", { token: accessToken })
+      setRole(data.role as UserRole)
+      setUsername(data.username)
+      setBio(data.bio)
+      setAvatarUrl(data.avatar_url)
+      setCreatedAt(data.created_at)
+      setNameColor(data.name_color)
+      setClaimedSlug(data.claimed_slug ?? null)
 
-        // If we have a pending username from signup, set it now
-        const pendingUsername = localStorage.getItem("wiki_pending_username")
-        if (pendingUsername && !data.username) {
-          localStorage.removeItem("wiki_pending_username")
-          const updateRes = await fetch("/api/auth/profile", {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({ username: pendingUsername }),
-          })
-          if (updateRes.ok) setUsername(pendingUsername)
+      // If we have a pending username from signup, set it now
+      const pendingUsername = localStorage.getItem("wiki_pending_username")
+      if (pendingUsername && !data.username) {
+        localStorage.removeItem("wiki_pending_username")
+        try {
+          await apiPut("/api/auth/profile", { username: pendingUsername }, { token: accessToken })
+          setUsername(pendingUsername)
+        } catch {
+          // Previously: `if (updateRes.ok) setUsername(...)` with no error
+          // handling on failure — preserve that silent skip.
         }
-      } else {
-        setRole("pending")
       }
     } catch {
       setRole("pending")
@@ -185,14 +176,10 @@ export function useAuth(): AuthState & {
     if (!supabase) return { error: "Auth not configured" }
 
     // Validate & check uniqueness server-side
-    const regRes = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, username: usernameVal }),
-    })
-    if (!regRes.ok) {
-      const data = await regRes.json() as { error?: string }
-      return { error: data.error ?? "Registration failed" }
+    try {
+      await apiPost("/api/auth/register", { email, username: usernameVal })
+    } catch (e) {
+      return { error: apiErrorMessage(e, "Registration failed") }
     }
 
     // Store username for post-signup profile setup
@@ -236,17 +223,10 @@ export function useAuth(): AuthState & {
 
   const updateProfile = useCallback(async (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url" | "name_color">>) => {
     if (!session) return { error: "Not authenticated" }
-    const res = await fetch("/api/auth/profile", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(data),
-    })
-    if (!res.ok) {
-      const body = await res.json() as { error?: string }
-      return { error: body.error ?? "Update failed" }
+    try {
+      await apiPut("/api/auth/profile", data, { token: session.access_token })
+    } catch (e) {
+      return { error: apiErrorMessage(e, "Update failed") }
     }
     // Update local state
     if (data.username !== undefined) setUsername(data.username)

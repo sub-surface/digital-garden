@@ -5,24 +5,11 @@
  * so every plate is solvable by construction (and fillable in fill mode).
  */
 
-export function hashStr(s: string): number {
-  let h = 2166136261
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return h >>> 0
-}
-
-export function mulberry32(seed: number) {
-  let a = seed >>> 0
-  return () => {
-    a |= 0; a = (a + 0x6d2b79f5) | 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
+// hashStr/mulberry32 live in composer/rng.ts (ROADMAP §28.8 — one PRNG, not
+// two verbatim copies). Re-exported here since ColliderPage/SigilPage import
+// them from this module.
+import { hashStr, mulberry32 } from "./composer/rng"
+export { hashStr, mulberry32 }
 
 export type Cell = { x: number; y: number }
 export interface Pair { id: number; pen: number; glyph: string; a: Cell; b: Cell }

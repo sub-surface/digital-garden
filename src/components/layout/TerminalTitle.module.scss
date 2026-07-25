@@ -111,7 +111,7 @@
 }
 
 // ── Mobile ──
-@media (max-width: 800px) {
+@media (max-width: $bp-phone) {
   .container {
     // The full QuickControls bar is hidden on mobile (its actions move to the
     // bottom-right CornerMenu), so the title can use nearly the full width —

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { apiGet } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
 import { WikiAuthModal } from "./wiki/WikiAuthModal"
 import { useNavigate } from "@tanstack/react-router"
@@ -14,9 +15,11 @@ export function WikiEditButton({ slug }: Props) {
   const navigate = useNavigate()
 
   useEffect(() => {
-    fetch(`/api/lock-status?slug=${encodeURIComponent(slug)}`)
-      .then((r) => r.ok ? r.json() as Promise<{ locked: boolean; reason?: string }> : { locked: false })
+    apiGet<{ locked: boolean; reason?: string }>(`/api/lock-status?slug=${encodeURIComponent(slug)}`)
       .then(setLocked)
+      // A failed lock check must not block editing — fall back to unlocked, same
+      // as the non-ok branch this replaces.
+      .catch(() => setLocked({ locked: false }))
       .catch((e) => console.warn("WikiEditButton: lock-status check failed:", e))
   }, [slug])
 
