@@ -22,3 +22,37 @@
     - "The render-resolution cap and transferable two-buffer backpressure were retained. Fullscreen changes CSS geometry, not the simulation's memory and frame-budget safeguards."
     - "No live browser visual pass was possible because the browser-control surface was unavailable in the session; the production Sass/Vite build is verified, but final visual QA remains the next boundary."
   next: "Open the deployed /filament for a desktop and phone visual pass; follow up only if the live rendering reveals a layout issue."
+
+- date: 2026-07-27
+  area: filament
+  title: "Periodic large-scale simulation overhaul"
+  status: done
+  files:
+    - src/features/filament/particle-mesh.ts
+    - src/features/filament/quality.ts
+    - src/features/filament/presets.ts
+    - src/features/filament/universe.ts
+    - src/features/filament/sim.worker.ts
+    - src/features/filament/protocol.ts
+    - src/features/filament/FilamentPage.tsx
+    - src/features/filament/FilamentPage.module.scss
+    - src/components/layout/QuickControls.module.scss
+    - src/components/ui/games/ArcadePage.tsx
+    - scripts/test-fmm.ts
+  changes:
+    - "Rebuilt Cosmos around a periodic particle-mesh gravity solver with CIC deposition and interpolation, a radix-2 FFT Poisson solve, periodic drift, and hundreds of seeded Fourier modes. Both displayed particle populations now gravitate; the FMM remains the higher-precision solver for isolated disc, collision, and collapse worlds."
+    - "Replaced separate scale, multipole-order, and solver-facing choices with three coordinated Fidelity profiles. Auto, Deep, and Vast jointly select particle count, mesh resolution, FMM order, and adaptive render-pixel bounds; the default Cosmos now advances roughly five times faster than the previous desktop default while simulating three times as many gravitating particles."
+    - "Added render-budget feedback across the Worker draw and main-thread canvas upload, a solver-independent density/event interface, resolution-limit diagnostics, explicit non-finite checks, and a visible recoverable fault state so numerical failures can no longer remain silent."
+    - "Kept quasars and starbursts strictly observational. Event discovery now samples solver density at 10 Hz and normalises flash probability by physical mass, preventing mesh resolution from changing event rates or allowing a visual quasar to masquerade as a force source."
+    - "Simplified the options into one borderless, transparent control surface aligned with the garden's existing typography. World, Fidelity, Events, Trails, Brightness, seed, view reset, and optional diagnostics remain; tabs, panel strokes, filled controls, and low-level scale/order inputs were removed."
+    - "Expanded numerical coverage with FFT round-trip, uniform periodic equilibrium, growth, momentum, long-horizon concentration, and exact 6000-step shipping-timestep regressions while retaining the direct N-squared FMM convergence suite."
+  decisions:
+    - "Periodic particle mesh is the correct large-scale model for Cosmos: it removes the artificial open-patch edge and mean-background correction, amortises global gravity on a fixed grid, and naturally supports much larger all-gravitating populations."
+    - "FMM and particle mesh are complementary scenario backends behind one Universe interface, not competing user presets. Fidelity describes the visible quality/performance tradeoff; implementation choices stay in diagnostics."
+    - "A densest-cell mass fraction is exposed as a simulation-health signal. Quasars are read-only annotations of that density, so a future concentration regression is reported directly instead of failing silently."
+  verification:
+    - "npx tsx scripts/test-fmm.ts passed, including a 6000-step recombination-to-present run with 2.44 percent peak-cell concentration."
+    - "npx tsc --noEmit passed."
+    - "npm run lint passed with 0 errors and the repository's 25 pre-existing warnings."
+    - "npm run build passed; git diff --check passed. The combined npm run check reached the production build after every preceding stage passed, then exceeded the 60-second command timeout; that build was run and passed separately."
+  next: "Perform the existing desktop and phone visual-QA boundary on /filament; tune only presentation defaults unless the new health diagnostic reports a genuine numerical limit."

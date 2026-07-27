@@ -1,21 +1,25 @@
 /**
- * FILAMENT's Fast Multipole solver, checked against the O(N²) direct sum.
+ * FILAMENT's force solvers and cosmology, checked headlessly.
  *
  * FMM is not a heuristic — unlike Barnes-Hut there is no opening angle to tune,
  * only a truncation order p, and the error must fall geometrically as p grows.
  * That is precisely what this asserts, so a broken M2M/M2L/L2L shift shows up
  * as a convergence failure rather than as a subtly wrong-looking galaxy.
  *
- * Checks, over clustered and uniform distributions:
+ * FMM checks, over clustered and uniform distributions:
  *   - relative L2 error vs. the direct sum is below a per-order budget
  *   - the error genuinely decreases with expansion order
  *   - depth (leaf occupancy) does not change the answer, only the cost
  *   - a shallower tree and a deeper tree agree with each other
+ *
+ * Particle-mesh checks cover FFT round trips, periodic equilibrium, momentum,
+ * structure growth, concentration, and both coarse and shipping timesteps.
  */
 import { Fmm, applyPerm, directAccel, chooseDepth } from "../src/features/filament/fmm"
 import { Universe } from "../src/features/filament/universe"
 import { PATCH_SOURCE } from "../src/features/filament/presets"
 import { A_REC, ageOf, growthTable, sampleGrowth, HUBBLE_TIME_GYR } from "../src/features/filament/cosmology"
+import { fft2, ParticleMesh } from "../src/features/filament/particle-mesh"
 import { mulberry32 } from "../src/lib/composer/rng"
 
 let failures = 0
@@ -210,6 +214,62 @@ for (const cloud of clouds) {
 }
 
 // ---------------------------------------------------------------------------
+// Periodic particle mesh: FFT, equilibrium, and momentum
+// ---------------------------------------------------------------------------
+
+{
+  const n = 16
+  const re = new Float64Array(n * n)
+  const im = new Float64Array(n * n)
+  const rnd = mulberry32(20260727)
+  const original = new Float64Array(re.length)
+  for (let i = 0; i < re.length; i++) original[i] = re[i] = rnd() * 2 - 1
+  fft2(re, im, n, false)
+  fft2(re, im, n, true)
+  let maxError = 0
+  for (let i = 0; i < re.length; i++) {
+    maxError = Math.max(maxError, Math.abs(re[i] - original[i]), Math.abs(im[i]))
+  }
+  if (!(maxError < 1e-10)) fail(`periodic FFT round trip error ${maxError.toExponential(2)}`)
+  console.log(`  periodic  FFT round trip: ${maxError.toExponential(2)}`)
+}
+
+{
+  const side = 32
+  const n = side * side
+  const masses = {
+    x: new Float32Array(n),
+    y: new Float32Array(n),
+    vx: new Float32Array(n),
+    vy: new Float32Array(n),
+    m: new Float32Array(n),
+  }
+  for (let y = 0; y < side; y++) {
+    for (let x = 0; x < side; x++) {
+      const i = y * side + x
+      masses.x[i] = -1 + ((x + 0.5) * 2) / side
+      masses.y[i] = -1 + ((y + 0.5) * 2) / side
+      masses.m[i] = 1 / n
+    }
+  }
+  const empty = {
+    x: new Float32Array(0),
+    y: new Float32Array(0),
+    vx: new Float32Array(0),
+    vy: new Float32Array(0),
+    m: new Float32Array(0),
+  }
+  const ax = new Float32Array(n)
+  const ay = new Float32Array(n)
+  const pm = new ParticleMesh(side, PATCH_SOURCE)
+  pm.solve(masses, n, empty, 0, ax, ay, new Float32Array(0), new Float32Array(0))
+  let peakAccel = 0
+  for (let i = 0; i < n; i++) peakAccel = Math.max(peakAccel, Math.hypot(ax[i], ay[i]))
+  if (!(peakAccel < 1e-6)) fail(`uniform periodic mesh accelerated by ${peakAccel.toExponential(2)}`)
+  console.log(`  periodic  uniform equilibrium: max |a|=${peakAccel.toExponential(2)}`)
+}
+
+// ---------------------------------------------------------------------------
 // Cosmology: the background expansion, and the growth of what sits on it
 // ---------------------------------------------------------------------------
 
@@ -288,19 +348,7 @@ for (const preset of ["cosmos", "disc", "collision", "collapse"] as const) {
 
 /** Peak leaf-cell mass over the mean occupied one — a blunt clustering measure. */
 function clustering(u: Universe): number {
-  const cells = 1 << (2 * u.stats.depth)
-  const com = { x: 0, y: 0 }
-  let peak = 0
-  let sum = 0
-  let occupied = 0
-  for (let c = 0; c < cells; c++) {
-    const m = u.fmm.leafCom(c, com)
-    if (m <= 0) continue
-    occupied++
-    sum += m
-    if (m > peak) peak = m
-  }
-  return occupied > 0 ? peak / (sum / occupied) : 0
+  return u.stats.peakCellMass * u.stats.occupiedCells
 }
 
 {
@@ -337,26 +385,61 @@ function clustering(u: Universe): number {
   if (!(after > before * 3)) {
     fail(`no structure formed: peak/mean leaf mass went ${before.toFixed(2)} → ${after.toFixed(2)}`)
   }
+  if (!(u.stats.peakCellMass < 0.04)) {
+    fail(`periodic cosmos over-collapsed: one cell holds ${(u.stats.peakCellMass * 100).toFixed(1)}% of mass`)
+  }
   console.log(
     `  recombination → today in ${steps} coarse steps: clock ${walked.toFixed(2)} Gyr ` +
-      `(exact ${exact.toFixed(2)}), clustering ${before.toFixed(2)} → ${after.toFixed(2)}`,
+      `(exact ${exact.toFixed(2)}), clustering ${before.toFixed(2)} → ${after.toFixed(2)}, ` +
+      `peak cell ${(u.stats.peakCellMass * 100).toFixed(2)}%`,
   )
 
-  // Comoving momentum conservation: with the mean field subtracted, the patch
-  // as a whole has nothing to push against, so its centre of mass must stay
-  // put. Drift here means the background correction is wrong — the one bug that
-  // would still look entirely plausible on screen.
-  let cx = 0
-  let cy = 0
+  // Comoving momentum conservation: matching CIC deposit/interpolation leaves
+  // the periodic patch with nothing external to push against.
+  let vx = 0
+  let vy = 0
   for (let i = 0; i < u.nMass; i++) {
-    cx += u.masses.x[i]
-    cy += u.masses.y[i]
+    vx += u.masses.vx[i]
+    vy += u.masses.vy[i]
   }
-  const drift = Math.hypot(cx / u.nMass, cy / u.nMass)
+  for (let i = 0; i < u.nTracer; i++) {
+    vx += u.tracers.vx[i]
+    vy += u.tracers.vy[i]
+  }
+  const drift = Math.hypot(vx, vy) / (u.nMass + u.nTracer)
   if (!(drift < 0.05)) {
-    fail(`comoving centre of mass drifted ${drift.toExponential(2)} — background subtraction is off`)
+    fail(`periodic mean momentum drifted ${drift.toExponential(2)}`)
   }
-  console.log(`  centre-of-mass drift across all of cosmic history: ${drift.toExponential(2)}`)
+  console.log(`  mean momentum drift across all of cosmic history: ${drift.toExponential(2)}`)
+}
+
+// Shipping timestep, reduced particle/mesh census. The coarse-history test
+// above is intentionally abusive; this one guards the exact 6000-step path that
+// once looked healthy numerically while draining the universe into one quasar
+// cell.
+{
+  const u = new Universe({
+    preset: "cosmos",
+    seed: 91,
+    nMass: 800,
+    nTracer: 2400,
+    meshSize: 32,
+    order: 4,
+    softening: 1,
+  })
+  let steps = 0
+  while (!u.done && steps < 6100) {
+    u.step()
+    steps++
+  }
+  if (!u.done || steps !== 6000) fail(`shipping cosmology ended after ${steps} steps`)
+  if (!(u.stats.peakCellMass < 0.05)) {
+    fail(`shipping cosmology concentrated ${(u.stats.peakCellMass * 100).toFixed(1)}% in one cell`)
+  }
+  console.log(
+    `  shipping   recombination → today in ${steps} steps · peak cell ` +
+      `${(u.stats.peakCellMass * 100).toFixed(2)}%`,
+  )
 }
 
 if (failures > 0) {
@@ -365,5 +448,5 @@ if (failures > 0) {
 }
 console.log(
   `FMM: ${clouds.length} distributions × 4 orders vs direct N² — converges as expected, depth-independent.\n` +
-    `Cosmology: ΛCDM clock, growing mode, and four stable integrator runs.`,
+    `Cosmology: periodic particle mesh, ΛCDM growing mode, and stable recombination-to-present runs.`,
 )

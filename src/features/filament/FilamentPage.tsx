@@ -2,54 +2,29 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 import { PRESETS, type PresetName } from "./presets"
 import { formatAge } from "./cosmology"
+import {
+  FIDELITY_ORDER,
+  fidelityProfile,
+  type FidelityName,
+  type FidelityProfile,
+} from "./quality"
 import type { FromWorker, SimParams, SimStats, ToWorker, ViewParams } from "./protocol"
 import styles from "./FilamentPage.module.scss"
 
 /**
- * FILAMENT — structure formation under the Fast Multipole Method.
+ * FILAMENT — periodic structure formation and isolated N-body worlds.
  *
  * This component owns nothing but chrome. All of the simulation and all of the
  * rasterisation happen in `sim.worker.ts`; the page hands over parameters and
  * blits finished pixel buffers, so however heavy the sim gets it cannot stall
- * the site's main thread. See `fmm.ts` for the algorithm and `cosmology.ts` for
- * the expansion history.
+ * the site's main thread. Cosmos uses the periodic solver in `particle-mesh.ts`;
+ * isolated worlds use `fmm.ts`; `cosmology.ts` owns the expansion history.
  */
-
-/** Cap on the render buffer, so a fullscreen 2× display cannot blow the budget. */
-const MAX_PIXELS = 1_200_000
-
-/**
- * Two species, because they cost wildly different amounts. A massive particle
- * pays for a multipole and a near-field sum; a tracer only reads the local
- * expansion its leaf already computed, for roughly a tenth of the price. So the
- * mass count sets the dynamics and the tracer count sets how much of the
- * structure you can actually see.
- */
-const SCALES = [
-  { key: "s", label: "6k · 30k", nMass: 6_000, nTracer: 30_000 },
-  { key: "m", label: "20k · 100k", nMass: 20_000, nTracer: 100_000 },
-  { key: "l", label: "45k · 250k", nMass: 45_000, nTracer: 250_000 },
-  { key: "xl", label: "100k · 600k", nMass: 100_000, nTracer: 600_000 },
-]
-
-const ORDERS = [
-  { p: 3, label: "fast" },
-  { p: 5, label: "balanced" },
-  { p: 8, label: "exact" },
-]
 
 const SPEEDS = [
   { n: 0, label: "❙❙", title: "Pause" },
   { n: 1, label: "▶", title: "Run" },
   { n: 3, label: "▶▶", title: "Run fast — three integration steps per frame" },
-]
-
-type ControlTab = "world" | "view" | "solver"
-
-const CONTROL_TABS: { id: ControlTab; label: string }[] = [
-  { id: "world", label: "World" },
-  { id: "view", label: "View" },
-  { id: "solver", label: "Solver" },
 ]
 
 /** Resolve any CSS colour (hex, rgb(), oklch(), …) to 0–1 RGB. */
@@ -84,19 +59,18 @@ export function FilamentPage() {
   const workerRef = useRef<Worker | null>(null)
 
   const [preset, setPreset] = useState<PresetName>("cosmos")
-  const [scaleKey, setScaleKey] = useState(() => (isPhone ? "s" : "m"))
-  const [order, setOrder] = useState(5)
+  const [fidelity, setFidelity] = useState<FidelityName>("auto")
   const [speed, setSpeed] = useState(1)
   const [trails, setTrails] = useState(true)
   const [events, setEvents] = useState(true)
-  const [follow, setFollow] = useState(true)
   const [exposure, setExposure] = useState(1)
   const [seed, setSeed] = useState(() => (Math.random() * 0xffffffff) >>> 0)
   const [stats, setStats] = useState<SimStats | null>(null)
+  const [fault, setFault] = useState<string | null>(null)
   const [controlsOpen, setControlsOpen] = useState(false)
-  const [controlTab, setControlTab] = useState<ControlTab>("world")
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
 
-  const scale = useMemo(() => SCALES.find((s) => s.key === scaleKey) ?? SCALES[1], [scaleKey])
+  const profile = useMemo(() => fidelityProfile(fidelity, isPhone), [fidelity, isPhone])
   const info = useMemo(() => PRESETS.find((p) => p.name === preset) ?? PRESETS[0], [preset])
 
   // The worker is driven from refs, not props: it must not be torn down and
@@ -105,21 +79,26 @@ export function FilamentPage() {
   const pendingRef = useRef<{ buf: ArrayBuffer; w: number; h: number } | null>(null)
   const statsRef = useRef<SimStats | null>(null)
   const geomRef = useRef({ w: 0, h: 0 })
+  const profileRef = useRef<FidelityProfile>(profile)
+  const pixelBudgetRef = useRef(profile.maxPixels)
+  const paintMsRef = useRef(0)
+  profileRef.current = profile
 
   const params: SimParams = useMemo(
     () => ({
       preset,
       seed,
-      nMass: scale.nMass,
-      nTracer: scale.nTracer,
-      order,
+      nMass: profile.nMass,
+      nTracer: profile.nTracer,
+      order: profile.order,
+      meshSize: profile.meshSize,
       substeps: speed,
       softening: 1,
       exposure,
       trails: trails ? 0.82 : 0,
       events,
     }),
-    [preset, seed, scale, order, speed, exposure, trails, events],
+    [preset, seed, profile, speed, exposure, trails, events],
   )
   const paramsRef = useRef(params)
   paramsRef.current = params
@@ -143,7 +122,7 @@ export function FilamentPage() {
     const dpr = window.devicePixelRatio || 1
     let w = Math.round(cssW * dpr)
     let h = Math.round(cssH * dpr)
-    const over = (w * h) / MAX_PIXELS
+    const over = (w * h) / pixelBudgetRef.current
     if (over > 1) {
       const k = 1 / Math.sqrt(over)
       w = Math.max(2, Math.round(w * k))
@@ -165,13 +144,27 @@ export function FilamentPage() {
     return () => ro.disconnect()
   }, [measure])
 
+  useEffect(() => {
+    pixelBudgetRef.current = profile.maxPixels
+    geomRef.current = { w: 0, h: 0 }
+    measure()
+  }, [measure, profile])
+
   // --- worker lifecycle ----------------------------------------------------
   useEffect(() => {
     const worker = new Worker(new URL("./sim.worker.ts", import.meta.url), { type: "module" })
     workerRef.current = worker
-    worker.onerror = (e) => console.error("[filament] simulation worker failed:", e.message || e)
+    worker.onerror = (e) => {
+      const message = e.message || "The simulation worker stopped unexpectedly."
+      console.error("[filament] simulation worker failed:", message)
+      setFault(message)
+    }
     worker.onmessage = (e: MessageEvent<FromWorker>) => {
       const msg = e.data
+      if (msg.t === "fault") {
+        setFault(msg.message)
+        return
+      }
       if (msg.t !== "frame") return
       // Drop a frame rather than queue it: if the page is behind, the newest
       // state is the only one worth painting.
@@ -205,9 +198,8 @@ export function FilamentPage() {
   }, [params, post])
 
   useEffect(() => {
-    viewRef.current = { ...viewRef.current, autoFit: follow }
-    post({ t: "view", view: viewRef.current })
-  }, [follow, post])
+    setFault(null)
+  }, [preset, seed, profile])
 
   // --- paint loop -----------------------------------------------------------
   useEffect(() => {
@@ -222,7 +214,10 @@ export function FilamentPage() {
       if (!frame) return
       pendingRef.current = null
       if (frame.w === canvas.width && frame.h === canvas.height) {
+        const started = performance.now()
         g.putImageData(new ImageData(new Uint8ClampedArray(frame.buf), frame.w, frame.h), 0, 0)
+        const elapsed = performance.now() - started
+        paintMsRef.current += (elapsed - paintMsRef.current) * 0.12
       }
       post({ t: "recycle", buf: frame.buf }, [frame.buf])
     }
@@ -236,6 +231,27 @@ export function FilamentPage() {
     const id = setInterval(() => setStats(statsRef.current), 200)
     return () => clearInterval(id)
   }, [])
+
+  // Rendering resolution is presentation, not physics. Tune it independently
+  // from the particle/mesh profile so a high-DPI screen gets every pixel it can
+  // afford without turning an expensive display into a slow simulation.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const current = statsRef.current
+      if (!current) return
+      const p = profileRef.current
+      const cost = current.drawMs + paintMsRef.current
+      let next = pixelBudgetRef.current
+      if (cost > p.targetDrawMs * 1.18) next *= 0.82
+      else if (cost < p.targetDrawMs * 0.62) next *= 1.12
+      next = Math.max(p.minPixels, Math.min(p.maxPixels, Math.round(next)))
+      if (Math.abs(next / pixelBudgetRef.current - 1) < 0.06) return
+      pixelBudgetRef.current = next
+      geomRef.current = { w: 0, h: 0 }
+      measure()
+    }, 1200)
+    return () => clearInterval(id)
+  }, [measure])
 
   // Stop integrating while the tab is hidden.
   useEffect(() => {
@@ -275,24 +291,6 @@ export function FilamentPage() {
     }
   }, [controlsOpen])
 
-  const onControlTabKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLButtonElement>, current: ControlTab) => {
-      const index = CONTROL_TABS.findIndex((tab) => tab.id === current)
-      let next = index
-      if (e.key === "ArrowRight") next = (index + 1) % CONTROL_TABS.length
-      else if (e.key === "ArrowLeft") next = (index - 1 + CONTROL_TABS.length) % CONTROL_TABS.length
-      else if (e.key === "Home") next = 0
-      else if (e.key === "End") next = CONTROL_TABS.length - 1
-      else return
-
-      e.preventDefault()
-      const nextTab = CONTROL_TABS[next].id
-      setControlTab(nextTab)
-      requestAnimationFrame(() => document.getElementById(`filament-tab-${nextTab}`)?.focus())
-    },
-    [],
-  )
-
   // --- pan / zoom -----------------------------------------------------------
   const dragRef = useRef<{ x: number; y: number } | null>(null)
   const pointersRef = useRef(new Map<number, { x: number; y: number }>())
@@ -317,6 +315,7 @@ export function FilamentPage() {
     const rect = canvas.getBoundingClientRect()
     const px = canvas.width / rect.width
     const v = viewRef.current
+    v.autoFit = false
     v.panX -= (dx * px) / s.scale
     v.panY += (dy * px) / s.scale
     return true
@@ -327,6 +326,7 @@ export function FilamentPage() {
       const s = statsRef.current
       if (!s) return false
       const v = viewRef.current
+      v.autoFit = false
       const next = Math.max(0.05, Math.min(400, v.zoom * factor))
       const applied = next / v.zoom
       if (Math.abs(applied - 1) < 1e-6) return false
@@ -419,7 +419,7 @@ export function FilamentPage() {
   }, [])
 
   const resetView = useCallback(() => {
-    viewRef.current = { ...viewRef.current, zoom: 1, panX: 0, panY: 0 }
+    viewRef.current = { zoom: 1, panX: 0, panY: 0, autoFit: true }
     pushView()
   }, [pushView])
 
@@ -477,15 +477,39 @@ export function FilamentPage() {
       clock.push(`t = ${stats.time.toFixed(2)}`)
     }
     if (stats.quasars > 0) clock.push(`${stats.quasars} quasar${stats.quasars > 1 ? "s" : ""}`)
+    if (stats.health === "resolution-limit") clock.push("resolution limit")
   }
 
   const machine = stats
     ? [
-        `depth ${stats.depth} · ${fmt(stats.cells)} cells`,
+        `${stats.solver === "pm" ? "periodic mesh" : "fast multipole"} · ${fmt(stats.particles)} particles`,
+        `${fmt(stats.cells)} force cells · level ${stats.depth}`,
         `${stats.stepMs.toFixed(1)} ms sim · ${stats.drawMs.toFixed(1)} ms draw`,
         `${fmt(stats.speedup)}× fewer interactions than direct`,
+        `${(stats.peakCellMass * 100).toFixed(2)}% in densest cell`,
       ]
     : ["warming up…"]
+
+  const replay = () => {
+    setFault(null)
+    post({ t: "replay" })
+  }
+
+  const chooseWorld = (name: PresetName) => {
+    setFault(null)
+    setPreset(name)
+    resetView()
+  }
+
+  const chooseFidelity = (name: FidelityName) => {
+    setFault(null)
+    setFidelity(name)
+  }
+
+  const newSeed = () => {
+    setFault(null)
+    setSeed((Math.random() * 0xffffffff) >>> 0)
+  }
 
   return (
     <div className={styles.simulation} data-fullbleed>
@@ -531,7 +555,7 @@ export function FilamentPage() {
             ))}
             <button
               type="button"
-              onClick={() => post({ t: "replay" })}
+              onClick={replay}
               title={info.cosmological ? "Back to recombination" : "Restart from the initial conditions"}
               aria-label={info.cosmological ? "Replay from recombination" : "Replay initial conditions"}
             >
@@ -542,149 +566,100 @@ export function FilamentPage() {
 
         {controlsOpen && (
           <section id="filament-options" className={styles.optionsPanel} aria-label="FILAMENT options">
-            <div className={styles.tabs} role="tablist" aria-label="Option groups">
-              {CONTROL_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  id={`filament-tab-${tab.id}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={controlTab === tab.id}
-                  aria-controls={`filament-panel-${tab.id}`}
-                  tabIndex={controlTab === tab.id ? 0 : -1}
-                  data-active={controlTab === tab.id || undefined}
-                  onClick={() => setControlTab(tab.id)}
-                  onKeyDown={(e) => onControlTabKeyDown(e, tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div
-              id={`filament-panel-${controlTab}`}
-              className={styles.tabPanel}
-              role="tabpanel"
-              aria-labelledby={`filament-tab-${controlTab}`}
-            >
-              {controlTab === "world" && (
-                <>
-                  <div className={styles.field}>
-                    <span className={styles.fieldLabel}>Scenario</span>
-                    <div className={styles.segmented} role="group" aria-label="Scenario">
-                      {PRESETS.map((p) => (
-                        <button
-                          key={p.name}
-                          type="button"
-                          onClick={() => setPreset(p.name)}
-                          data-active={p.name === preset || undefined}
-                          aria-pressed={p.name === preset}
-                        >
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <p className={styles.presetBlurb}>{info.blurb}</p>
-                  <div className={styles.actions}>
-                    <button type="button" onClick={() => post({ t: "replay" })}>Replay this world</button>
-                    <button type="button" onClick={() => setSeed((Math.random() * 0xffffffff) >>> 0)}>
-                      New seed
+            <div className={styles.controlGrid}>
+              <div className={styles.field}>
+                <span className={styles.fieldLabel}>World</span>
+                <div className={styles.segmented} role="group" aria-label="World">
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p.name}
+                      type="button"
+                      onClick={() => chooseWorld(p.name)}
+                      data-active={p.name === preset || undefined}
+                      aria-pressed={p.name === preset}
+                    >
+                      {p.label}
                     </button>
-                  </div>
-                </>
-              )}
+                  ))}
+                </div>
+              </div>
 
-              {controlTab === "view" && (
-                <>
-                  <div className={styles.field}>
-                    <span className={styles.fieldLabel}>Layers</span>
-                    <div className={styles.segmented} role="group" aria-label="Visible layers">
+              <div className={styles.field}>
+                <span className={styles.fieldLabel}>Fidelity</span>
+                <div className={styles.segmented} role="group" aria-label="Fidelity">
+                  {FIDELITY_ORDER.map((name) => {
+                    const option = fidelityProfile(name, isPhone)
+                    return (
                       <button
+                        key={name}
                         type="button"
-                        onClick={() => setEvents((v) => !v)}
-                        data-active={events || undefined}
-                        aria-pressed={events}
-                        title="Quasars, starbursts, and the recombination afterglow"
+                        onClick={() => chooseFidelity(name)}
+                        data-active={name === fidelity || undefined}
+                        aria-pressed={name === fidelity}
+                        title={option.description}
                       >
-                        Luminous
+                        {option.label}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setTrails((t) => !t)}
-                        data-active={trails || undefined}
-                        aria-pressed={trails}
-                      >
-                        Trails
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFollow((f) => !f)}
-                        data-active={follow || undefined}
-                        aria-pressed={follow}
-                      >
-                        Follow
-                      </button>
-                    </div>
-                  </div>
-                  <label className={styles.rangeField}>
-                    <span className={styles.fieldLabel}>Exposure</span>
-                    <input
-                      type="range"
-                      min="0.25"
-                      max="4"
-                      step="0.05"
-                      value={exposure}
-                      onChange={(e) => setExposure(Number(e.currentTarget.value))}
-                    />
-                    <output>{exposure.toFixed(2)}</output>
-                  </label>
-                  <div className={styles.actions}>
-                    <button type="button" onClick={resetView}>Reset view</button>
-                  </div>
-                </>
-              )}
+                    )
+                  })}
+                </div>
+              </div>
 
-              {controlTab === "solver" && (
-                <>
-                  <div className={styles.field}>
-                    <span className={styles.fieldLabel}>Massive · tracers</span>
-                    <div className={styles.segmented} role="group" aria-label="Particle count">
-                      {SCALES.map((s) => (
-                        <button
-                          key={s.key}
-                          type="button"
-                          onClick={() => setScaleKey(s.key)}
-                          data-active={s.key === scaleKey || undefined}
-                          aria-pressed={s.key === scaleKey}
-                          title={`${s.nMass.toLocaleString()} massive particles and ${s.nTracer.toLocaleString()} tracers`}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className={styles.field}>
-                    <span className={styles.fieldLabel}>Multipole accuracy</span>
-                    <div className={styles.segmented} role="group" aria-label="Expansion order">
-                      {ORDERS.map((o) => (
-                        <button
-                          key={o.p}
-                          type="button"
-                          onClick={() => setOrder(o.p)}
-                          data-active={o.p === order || undefined}
-                          aria-pressed={o.p === order}
-                          title={`Expansion order p = ${o.p}; error falls geometrically as order rises`}
-                        >
-                          {o.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className={styles.machineStats} aria-live="polite">
-                    {machine.map((r) => <span key={r}>{r}</span>)}
-                  </div>
-                </>
+              <p className={styles.presetBlurb}>{info.blurb}</p>
+              <p className={styles.profileNote}>{profile.description}</p>
+
+              <div className={styles.field}>
+                <span className={styles.fieldLabel}>Light</span>
+                <div className={styles.segmented} role="group" aria-label="Light and accumulation">
+                  <button
+                    type="button"
+                    onClick={() => setEvents((v) => !v)}
+                    data-active={events || undefined}
+                    aria-pressed={events}
+                    title="Quasars, starbursts, and the recombination afterglow"
+                  >
+                    Events
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrails((t) => !t)}
+                    data-active={trails || undefined}
+                    aria-pressed={trails}
+                  >
+                    Trails
+                  </button>
+                </div>
+              </div>
+
+              <label className={styles.rangeField}>
+                <span className={styles.fieldLabel}>Brightness</span>
+                <input
+                  type="range"
+                  min="0.25"
+                  max="4"
+                  step="0.05"
+                  value={exposure}
+                  onChange={(e) => setExposure(Number(e.currentTarget.value))}
+                />
+                <output>{exposure.toFixed(2)}</output>
+              </label>
+
+              <div className={styles.actions}>
+                <button type="button" onClick={newSeed}>New seed</button>
+                <button type="button" onClick={resetView}>Reset view</button>
+                <button
+                  type="button"
+                  onClick={() => setDiagnosticsOpen((open) => !open)}
+                  aria-expanded={diagnosticsOpen}
+                >
+                  {diagnosticsOpen ? "Hide diagnostics" : "Diagnostics"}
+                </button>
+              </div>
+
+              {diagnosticsOpen && (
+                <div className={styles.machineStats} aria-live="polite">
+                  {machine.map((r) => <span key={r}>{r}</span>)}
+                </div>
               )}
             </div>
           </section>
@@ -698,6 +673,13 @@ export function FilamentPage() {
       <div className={styles.gestureHint} aria-hidden="true">
         drag to pan · scroll or pinch to zoom · double-click to reset
       </div>
+
+      {fault && (
+        <div className={styles.faultHud} role="alert">
+          <span>{fault}</span>
+          <button type="button" onClick={replay}>Restart</button>
+        </div>
+      )}
     </div>
   )
 }

@@ -7,12 +7,13 @@
  *
  * Per frame:
  *   1. advance the {@link Universe} by `substeps`
- *   2. scan leaf multipoles for halos; light quasars, fire starbursts
+ *   2. scan solver-independent density cells; light quasars, fire starbursts
  *   3. splat both species into a density buffer, tone-map it, draw the events
  */
 
 import { Universe } from "./universe"
 import { cmbGlow, type Afterglow } from "./cosmology"
+import { wrapPeriodic } from "./particle-mesh"
 import type { FromWorker, SimParams, SimStats, ToWorker, ViewParams } from "./protocol"
 
 /** Brightness of a massive particle relative to a tracer. */
@@ -42,16 +43,19 @@ let rw = 0, rh = 0
 const pool: ArrayBuffer[] = []
 let scheduled = false
 let running = false
+let faulted = false
 /** A paused simulation renders only when a parameter, view, or size changes. */
 let renderRequested = false
 /** Monotonic wall clock in seconds, so event fades are framerate-independent. */
 let clock = 0
 let lastTick = 0
+let lastEventScan = 0
 
 const stats: SimStats = {
   stepMs: 0, drawMs: 0, cells: 0, depth: 0, nearPairs: 0, translations: 0,
   speedup: 1, scale: 1, cosmological: false, a: 1, z: 0, time: 0,
-  epoch: "", done: false, quasars: 0, bursts: 0,
+  epoch: "", done: false, quasars: 0, bursts: 0, solver: "fmm",
+  particles: 0, peakCellMass: 0, occupiedCells: 0, health: "stable",
 }
 
 /** xorshift32 — the worker's own stream, for presentation only. */
@@ -69,10 +73,9 @@ function rand(): number {
 /**
  * Quasars and starbursts are not dynamics — they carry no mass and exert no
  * force. They are a *reading* of the dynamics: both are triggered by the mass
- * and compactness of the halo they sit in, which the FMM has already measured
- * for free in every leaf cell's monopole and dipole (see `Fmm.leafCom` — M₀ is
- * the cell's mass, M₁/M₀ its centre of mass). Halo finding therefore costs one
- * pass over cells and no extra physics at all.
+ * and compactness of the halo they sit in, which either force solver has already
+ * measured on its cells. Halo finding therefore costs one read-only pass over
+ * density and no extra physics at all.
  */
 interface Quasar {
   x: number
@@ -120,17 +123,12 @@ function scanEvents(dtSec: number): void {
     return
   }
 
-  const { fmm } = u
-  const cells = 1 << (2 * fmm.depth)
-  const com = { x: 0, y: 0 }
-
   // One pass for the scale of the biggest halo, so every threshold below is
   // relative and works at any particle count and any epoch.
   let peak = 0
-  for (let c = 0; c < cells; c++) {
-    const m = fmm.leafCom(c, com)
-    if (m > peak) peak = m
-  }
+  u.forEachDensityCell((mass) => {
+    if (mass > peak) peak = mass
+  })
   if (peak <= 0) return
 
   const z = u.z
@@ -138,41 +136,48 @@ function scanEvents(dtSec: number): void {
   const noon = u.cosmological ? Math.exp(-Math.pow(Math.log((1 + z) / 3) / 0.62, 2)) : 1
   const quasarThreshold = peak * 0.45
   const burstThreshold = peak * 0.05
-  const burstRate = 26 * dtSec * (u.cosmological ? 0.3 + noon : 1)
-  const h = (2 * fmm.boxHalf) / (1 << fmm.depth)
+  // Global expected flashes per second, distributed by physical cell mass.
+  // Normalising by total mass rather than by the peak keeps a 256² mesh from
+  // producing 16× more events than a 64² mesh merely because it has more cells.
+  const burstRate = 8 * dtSec * (u.cosmological ? 0.3 + noon : 1)
 
-  for (let c = 0; c < cells; c++) {
-    const m = fmm.leafCom(c, com)
-    if (m < burstThreshold) continue
+  u.forEachDensityCell((m, cellX, cellY, h) => {
+    if (m < burstThreshold) return
 
-    if (rand() < (burstRate * m) / peak) {
-      bursts.push({ x: com.x + (rand() - 0.5) * h, y: com.y + (rand() - 0.5) * h, born: clock })
+    if (rand() < burstRate * m) {
+      bursts.push({ x: cellX + (rand() - 0.5) * h, y: cellY + (rand() - 0.5) * h, born: clock })
       burstTotal++
     }
 
-    if (m < quasarThreshold) continue
+    if (m < quasarThreshold) return
     // One quasar per halo: if there is already one nearby, let it drift with
     // its halo rather than igniting a second. The "nearby" radius is a fraction
     // of the *system*, not of a cell — cells shrink as the tree deepens, and
     // keying off them lets a single wandering nucleus re-ignite every time the
     // depth feedback subdivides underneath it.
-    const near = Math.max(h * 2.5, fmm.boxHalf * 0.05)
+    const near = Math.max(h * 2.5, u.boxHalf * 0.05)
     let occupied = false
     for (const q of quasars) {
-      if (Math.abs(q.x - com.x) < near && Math.abs(q.y - com.y) < near) {
-        q.x += (com.x - q.x) * 0.25
-        q.y += (com.y - q.y) * 0.25
+      const dx = u.cosmological ? wrapPeriodic(cellX - q.x, u.boxHalf) : cellX - q.x
+      const dy = u.cosmological ? wrapPeriodic(cellY - q.y, u.boxHalf) : cellY - q.y
+      if (Math.abs(dx) < near && Math.abs(dy) < near) {
+        q.x += dx * 0.25
+        q.y += dy * 0.25
+        if (u.cosmological) {
+          q.x = wrapPeriodic(q.x, u.boxHalf)
+          q.y = wrapPeriodic(q.y, u.boxHalf)
+        }
         occupied = true
         break
       }
     }
     // A whole cosmological patch can host a dozen at cosmic noon; a single
     // galaxy or a merging pair hosts one, occasionally two.
-    if (occupied || quasars.length >= (u.cosmological ? 12 : 2)) continue
+    if (occupied || quasars.length >= (u.cosmological ? 12 : 2)) return
     if (rand() < (u.cosmological ? 0.05 * noon : 0.012)) {
       quasars.push({
-        x: com.x,
-        y: com.y,
+        x: cellX,
+        y: cellY,
         mass: m / peak,
         born: clock,
         // Quasar lifetimes are ~10⁷–10⁸ yr, a blink of cosmic time; on screen
@@ -181,7 +186,7 @@ function scanEvents(dtSec: number): void {
         phase: rand() * Math.PI * 2,
       })
     }
-  }
+  })
 
   quasars = quasars.filter((q) => clock - q.born < q.life)
   bursts = bursts.filter((b) => clock - b.born < BURST_LIFE)
@@ -281,6 +286,7 @@ function reset(): void {
     nMass: p.nMass,
     nTracer: p.nTracer,
     order: p.order,
+    meshSize: p.meshSize,
     softening: p.softening,
   })
   frameCx = 0
@@ -290,6 +296,7 @@ function reset(): void {
   bursts = []
   burstTotal = 0
   clock = 0
+  lastEventScan = 0
   glowKey = -1
   autoGain = 0
   rng = (p.seed | 1) >>> 0
@@ -357,9 +364,9 @@ function render(buf: ArrayBuffer): void {
   // and contract, and want to be followed.
   if (view.autoFit && !u.cosmological) {
     const k = 0.05
-    frameCx += (u.fmm.boxCx - frameCx) * k
-    frameCy += (u.fmm.boxCy - frameCy) * k
-    frameHalf += (u.fmm.boxHalf * 1.08 - frameHalf) * k
+    frameCx += (u.boxCx - frameCx) * k
+    frameCy += (u.boxCy - frameCy) * k
+    frameHalf += (u.boxHalf * 1.08 - frameHalf) * k
   }
   const scale = (Math.min(rw, rh) * 0.5 * view.zoom) / Math.max(1e-6, frameHalf)
   const ox = rw * 0.5 - (frameCx + view.panX) * scale
@@ -368,9 +375,13 @@ function render(buf: ArrayBuffer): void {
 
   const splat = (cx: Float32Array, cy: Float32Array, n: number, w: number) => {
     for (let i = 0; i < n; i++) {
-      const sx = cx[i] * scale + ox
+      const sx = u.cosmological
+        ? wrapPeriodic(cx[i] - frameCx - view.panX, u.boxHalf) * scale + rw * 0.5
+        : cx[i] * scale + ox
       if (sx < 0 || sx >= rw) continue
-      const sy = oy - cy[i] * scale
+      const sy = u.cosmological
+        ? rh * 0.5 - wrapPeriodic(cy[i] - frameCy - view.panY, u.boxHalf) * scale
+        : oy - cy[i] * scale
       if (sy < 0 || sy >= rh) continue
       accum[(sy | 0) * rw + (sx | 0)] += w
     }
@@ -420,8 +431,12 @@ function render(buf: ArrayBuffer): void {
   for (const b of bursts) {
     const age = (clock - b.born) / BURST_LIFE
     const f = (1 - age) * (1 - age)
-    const sx = b.x * scale + ox
-    const sy = oy - b.y * scale
+    const sx = u.cosmological
+      ? wrapPeriodic(b.x - frameCx - view.panX, u.boxHalf) * scale + rw * 0.5
+      : b.x * scale + ox
+    const sy = u.cosmological
+      ? rh * 0.5 - wrapPeriodic(b.y - frameCy - view.panY, u.boxHalf) * scale
+      : oy - b.y * scale
     if (sx < -8 || sy < -8 || sx > rw + 8 || sy > rh + 8) continue
     sprite(out, sx, sy, 2 + 5 * (1 - f), 255 * f, 240 * f, 200 * f)
   }
@@ -434,8 +449,12 @@ function render(buf: ArrayBuffer): void {
     const flicker = 0.78 + 0.22 * Math.sin(clock * 5.5 + q.phase)
     const f = envelope * flicker * (0.55 + q.mass)
     if (f <= 0.02) continue
-    const sx = q.x * scale + ox
-    const sy = oy - q.y * scale
+    const sx = u.cosmological
+      ? wrapPeriodic(q.x - frameCx - view.panX, u.boxHalf) * scale + rw * 0.5
+      : q.x * scale + ox
+    const sy = u.cosmological
+      ? rh * 0.5 - wrapPeriodic(q.y - frameCy - view.panY, u.boxHalf) * scale
+      : oy - q.y * scale
     if (sx < -40 || sy < -40 || sx > rw + 40 || sy > rh + 40) continue
     spikes(out, sx, sy, 9 + 26 * f, 150 * f, 190 * f, 255 * f)
     sprite(out, sx, sy, 2.5 + 4 * f, 255 * f, 250 * f, 255 * f)
@@ -446,7 +465,22 @@ function render(buf: ArrayBuffer): void {
 // Loop
 // ---------------------------------------------------------------------------
 
+function reportFault(error: unknown): void {
+  faulted = true
+  scheduled = false
+  const message = error instanceof Error ? error.message : String(error)
+  ctx.postMessage({ t: "fault", message: `Simulation paused: ${message}` })
+}
+
 function tick(): void {
+  try {
+    runTick()
+  } catch (error) {
+    reportFault(error)
+  }
+}
+
+function runTick(): void {
   scheduled = false
   if (!running || !params || !uni || pool.length === 0) return
 
@@ -462,7 +496,10 @@ function tick(): void {
   const t1 = performance.now()
 
   syncGlow()
-  if (advancing) scanEvents(dtSec)
+  if (advancing && clock - lastEventScan >= 0.1) {
+    scanEvents(clock - lastEventScan)
+    lastEventScan = clock
+  }
 
   const buf = pool.pop()!
   render(buf)
@@ -483,6 +520,14 @@ function tick(): void {
   stats.done = uni.done
   stats.quasars = quasars.length
   stats.bursts = burstTotal
+  stats.solver = uni.stats.solver
+  stats.particles = uni.nMass + uni.nTracer
+  stats.peakCellMass = uni.stats.peakCellMass
+  stats.occupiedCells = uni.stats.occupiedCells
+  stats.health =
+    uni.cosmological && uni.a > 0.15 && uni.stats.peakCellMass > 0.04
+      ? "resolution-limit"
+      : "stable"
 
   ctx.postMessage({ t: "frame", buf, w: rw, h: rh, stats: { ...stats } }, [buf])
   kick()
@@ -493,6 +538,7 @@ function kick(force = false): void {
   if (
     scheduled ||
     !running ||
+    faulted ||
     pool.length === 0 ||
     rw === 0 ||
     (params?.substeps === 0 && !renderRequested)
@@ -516,71 +562,81 @@ function resize(w: number, h: number): void {
 
 ctx.addEventListener("message", (e: MessageEvent<ToWorker>) => {
   const msg = e.data
-  switch (msg.t) {
-    case "start":
-      params = { ...msg.params }
-      view = { ...msg.view }
-      accent = msg.accent
-      reset()
-      running = true
-      ctx.postMessage({ t: "ready" })
-      kick(true)
-      break
-
-    case "params": {
-      if (!params || !uni) return
-      const prev = params
-      params = { ...params, ...msg.params }
-      const structural =
-        msg.reseed ||
-        params.preset !== prev.preset ||
-        params.seed !== prev.seed ||
-        params.nMass !== prev.nMass ||
-        params.nTracer !== prev.nTracer
-      if (structural) {
+  try {
+    switch (msg.t) {
+      case "start":
+        params = { ...msg.params }
+        view = { ...msg.view }
+        accent = msg.accent
+        faulted = false
         reset()
-      } else {
-        if (params.order !== prev.order) uni.setOrder(params.order)
-        if (params.softening !== prev.softening) uni.setSoftening(params.softening)
-        if (params.events !== prev.events) {
-          glowKey = -1
-          syncGlow()
+        running = true
+        ctx.postMessage({ t: "ready" })
+        kick(true)
+        break
+
+      case "params": {
+        if (!params || !uni) return
+        const prev = params
+        params = { ...params, ...msg.params }
+        const structural =
+          msg.reseed ||
+          params.preset !== prev.preset ||
+          params.seed !== prev.seed ||
+          params.nMass !== prev.nMass ||
+          params.nTracer !== prev.nTracer ||
+          params.meshSize !== prev.meshSize
+        if (structural) {
+          faulted = false
+          reset()
+        } else {
+          if (params.order !== prev.order) uni.setOrder(params.order)
+          if (params.softening !== prev.softening) uni.setSoftening(params.softening)
+          if (params.events !== prev.events) {
+            glowKey = -1
+            syncGlow()
+          }
         }
+        kick(true)
+        break
       }
-      kick(true)
-      break
+
+      case "replay":
+        if (params) {
+          faulted = false
+          reset()
+        }
+        kick(true)
+        break
+
+      case "view":
+        view = { ...msg.view }
+        kick(true)
+        break
+
+      case "accent":
+        accent = msg.accent
+        glowKey = -1
+        syncGlow()
+        kick(true)
+        break
+
+      case "resize":
+        if (msg.w > 0 && msg.h > 0 && (msg.w !== rw || msg.h !== rh)) resize(msg.w, msg.h)
+        break
+
+      case "recycle":
+        // Only keep buffers that still match the current geometry; a resize
+        // orphans the old pair mid-flight.
+        if (msg.buf.byteLength === rw * rh * 4) pool.push(msg.buf)
+        kick()
+        break
+
+      case "stop":
+        running = false
+        break
     }
-
-    case "replay":
-      if (params) reset()
-      kick(true)
-      break
-
-    case "view":
-      view = { ...msg.view }
-      kick(true)
-      break
-
-    case "accent":
-      accent = msg.accent
-      glowKey = -1
-      syncGlow()
-      kick(true)
-      break
-
-    case "resize":
-      if (msg.w > 0 && msg.h > 0 && (msg.w !== rw || msg.h !== rh)) resize(msg.w, msg.h)
-      break
-
-    case "recycle":
-      // Only keep buffers that still match the current geometry; a resize
-      // orphans the old pair mid-flight.
-      if (msg.buf.byteLength === rw * rh * 4) pool.push(msg.buf)
-      kick()
-      break
-
-    case "stop":
-      running = false
-      break
+  } catch (error) {
+    reportFault(error)
   }
 })

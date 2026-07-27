@@ -1,7 +1,7 @@
 /**
  * The FILAMENT page/worker contract.
  *
- * Everything expensive — integration, tree build, halo finding, splatting —
+ * Everything expensive — integration, force solve, halo finding, splatting —
  * happens in the worker. The main thread only ever hands over parameters and
  * blits a finished pixel buffer, so a 40 ms simulation step never touches the
  * site's frame budget, its scroll, or its other canvases.
@@ -20,6 +20,8 @@ export interface SimParams {
   seed: number
   nMass: number
   nTracer: number
+  /** Width of the periodic force mesh used by cosmological worlds. */
+  meshSize: number
   /** Expansion order p — the accuracy dial. Higher is slower and truer. */
   order: number
   /** Physics substeps per rendered frame; 0 pauses. */
@@ -59,18 +61,25 @@ export interface SimStats {
   stepMs: number
   /** Wall-clock milliseconds for the last splat + tone map. */
   drawMs: number
-  /** Leaf cells in the current tree. */
+  /** Force cells in the active tree or periodic mesh. */
   cells: number
   depth: number
-  /** Direct pair interactions summed in the near field. */
+  /** Direct pairs summed by FMM; zero for the particle mesh. */
   nearPairs: number
-  /** Cell-to-cell M2L translations performed. */
+  /** FMM translations or the particle mesh's estimated FFT butterflies. */
   translations: number
   /**
    * How many times more pairwise work the naive O(N²) sum would have been,
    * counting an M2L translation as its p² complex multiply-adds.
    */
   speedup: number
+  solver: "fmm" | "pm"
+  /** Total integrated particle count. */
+  particles: number
+  /** Fraction of total mass in the densest force cell. */
+  peakCellMass: number
+  occupiedCells: number
+  health: "stable" | "resolution-limit"
   /** World units per pixel⁻¹ — lets the page turn drag pixels into world pan. */
   scale: number
 
@@ -93,3 +102,4 @@ export interface SimStats {
 export type FromWorker =
   | { t: "frame"; buf: ArrayBuffer; w: number; h: number; stats: SimStats }
   | { t: "ready" }
+  | { t: "fault"; message: string }

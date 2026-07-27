@@ -4,7 +4,7 @@
  * Kept separate from `sim.worker.ts` so the physics is headlessly testable
  * (`scripts/test-fmm.ts`), the same way `src/lib/sigil.ts` is separate from the
  * page that draws it. The worker owns pixels, events and the camera; this owns
- * particles, the tree, and time.
+ * particles, force solvers, and time.
  *
  * Two integrators live here, chosen by the scenario:
  *
@@ -18,8 +18,9 @@
  */
 
 import { Fmm, applyPerm, chooseDepth, MAX_DEPTH } from "./fmm"
-import { makeInitialState, type Cloud, type PresetName } from "./presets"
+import { makeInitialState, PATCH_SOURCE, type Cloud, type PresetName } from "./presets"
 import { ageOf, hubble } from "./cosmology"
+import { ParticleMesh, wrapPeriodic } from "./particle-mesh"
 
 /** Scale factor at which a cosmological run stops: the present day. */
 export const A_TODAY = 1
@@ -30,23 +31,30 @@ export interface UniverseOptions {
   nMass: number
   nTracer: number
   order: number
+  /** Periodic force-mesh width for the cosmological scenario. */
+  meshSize?: number
   /** Multiplier on the preset's softening length. */
   softening: number
 }
 
 export interface UniverseStats {
+  solver: "fmm" | "pm"
   cells: number
   depth: number
   nearPairs: number
   translations: number
   /** Direct-sum pair count divided by the work actually done. */
   speedup: number
+  /** Fraction of total mass in the densest force cell. */
+  peakCellMass: number
+  occupiedCells: number
 }
 
 export class Universe {
   masses!: Cloud
   tracers!: Cloud
   fmm!: Fmm
+  readonly pm: ParticleMesh | null
 
   readonly nMass: number
   readonly nTracer: number
@@ -74,7 +82,16 @@ export class Universe {
   /** Half-width the view should frame initially. */
   extent = 1
 
-  readonly stats: UniverseStats = { cells: 0, depth: 0, nearPairs: 0, translations: 0, speedup: 1 }
+  readonly stats: UniverseStats = {
+    solver: "fmm",
+    cells: 0,
+    depth: 0,
+    nearPairs: 0,
+    translations: 0,
+    speedup: 1,
+    peakCellMass: 0,
+    occupiedCells: 0,
+  }
 
   constructor(opts: UniverseOptions) {
     this.nMass = opts.nMass
@@ -98,6 +115,9 @@ export class Universe {
     this.tay = new Float32Array(opts.nTracer)
     this.scratch = new Float32Array(Math.max(opts.nMass, 1))
     this.fmm = new Fmm(opts.order)
+    this.pm = init.cosmological
+      ? new ParticleMesh(opts.meshSize ?? 128, PATCH_SOURCE)
+      : null
 
     // Prime the accelerations so the first half-kick is not a free fall.
     this.solve()
@@ -105,6 +125,7 @@ export class Universe {
 
   /** Swap the expansion order; the tree is rebuilt from scratch. */
   setOrder(order: number): void {
+    if (this.pm) return
     this.fmm = new Fmm(order)
     this.solve()
   }
@@ -162,6 +183,9 @@ export class Universe {
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
     for (let i = 0; i < n; i++) {
       const xi = x[i], yi = y[i]
+      if (!Number.isFinite(xi) || !Number.isFinite(yi)) {
+        throw new Error(`non-finite massive particle ${i}`)
+      }
       sx += xi; sy += yi
       sxx += xi * xi; syy += yi * yi
       if (xi < minX) minX = xi
@@ -186,6 +210,32 @@ export class Universe {
   solve(): void {
     const n = this.nMass
     const { fmm, masses, tracers } = this
+
+    if (this.pm) {
+      this.pm.solve(
+        masses,
+        this.nMass,
+        tracers,
+        this.nTracer,
+        this.ax,
+        this.ay,
+        this.tax,
+        this.tay,
+      )
+      const p = this.pm.stats
+      const total = this.nMass + this.nTracer
+      const work = total * 10 + p.fftOps
+      this.stats.solver = "pm"
+      this.stats.cells = p.cells
+      this.stats.depth = Math.log2(this.pm.size)
+      this.stats.nearPairs = 0
+      this.stats.translations = p.fftOps
+      this.stats.speedup = (total * Math.max(0, total - 1)) / Math.max(1, work)
+      this.stats.peakCellMass = p.peakCellMass
+      this.stats.occupiedCells = p.occupied
+      return
+    }
+
     this.boundBox()
 
     const depth = Math.max(
@@ -205,41 +255,25 @@ export class Universe {
       fmm.evalTracers(tracers.x, tracers.y, this.nTracer, this.tax, this.tay, 1)
     }
 
-    // In comoving coordinates the source of the peculiar field is (Σ - Σ̄), not
-    // Σ: without subtracting the mean, the entire patch simply collapses on
-    // itself, expansion or no expansion. For a uniform disc of unit mass and
-    // unit comoving radius the mean field is exactly -x, so the correction is
-    // +x — one line, and exact for the unperturbed state, which is the state
-    // whose equilibrium actually needs preserving.
-    if (this.cosmological) {
-      // Inside the patch the uniform-disc field is exactly -x, so the
-      // correction is +x. Outside it, the shell theorem takes over and the mean
-      // field falls as M/r — so the correction has to fall too. Continuing the
-      // linear interior form past the rim would push anything that strayed
-      // outside ever harder outwards, steadily eroding the boundary; this is
-      // the exact mean field at every radius, which leaves the rim in genuine
-      // equilibrium rather than approximate equilibrium.
-      const bg = (x: number, y: number) => {
-        const r2 = x * x + y * y
-        return r2 <= 1 ? 1 : 1 / r2
-      }
-      for (let i = 0; i < n; i++) {
-        const k = bg(masses.x[i], masses.y[i])
-        this.ax[i] += masses.x[i] * k
-        this.ay[i] += masses.y[i] * k
-      }
-      for (let i = 0; i < this.nTracer; i++) {
-        const k = bg(tracers.x[i], tracers.y[i])
-        this.tax[i] += tracers.x[i] * k
-        this.tay[i] += tracers.y[i] * k
-      }
-    }
-
     const s = this.stats
+    s.solver = "fmm"
     s.cells = fmm.stats.cells
     s.depth = fmm.depth
     s.nearPairs = fmm.stats.nearPairs
     s.translations = fmm.stats.translations
+
+    const com = { x: 0, y: 0 }
+    const cells = 1 << (2 * fmm.depth)
+    let peak = 0
+    let occupied = 0
+    for (let c = 0; c < cells; c++) {
+      const mass = fmm.leafCom(c, com)
+      if (mass <= 0) continue
+      occupied++
+      if (mass > peak) peak = mass
+    }
+    s.peakCellMass = peak
+    s.occupiedCells = occupied
 
     // An M2L translation is p² complex multiply-adds; a near-field pair is one.
     // Counting them in the same currency gives an honest ratio against the
@@ -278,6 +312,13 @@ export class Universe {
     }
   }
 
+  private wrap(c: Cloud, n: number): void {
+    for (let i = 0; i < n; i++) {
+      c.x[i] = wrapPeriodic(c.x[i])
+      c.y[i] = wrapPeriodic(c.y[i])
+    }
+  }
+
   /** Kick-drift-kick in physical time. */
   private stepStatic(): void {
     const h = this.dt * 0.5
@@ -312,6 +353,8 @@ export class Universe {
     const driftF = this.dlnA / (aMid * aMid * hubble(aMid))
     this.drift(this.masses, this.nMass, driftF)
     this.drift(this.tracers, this.nTracer, driftF)
+    this.wrap(this.masses, this.nMass)
+    this.wrap(this.tracers, this.nTracer)
 
     this.a = Math.exp(lnA0 + this.dlnA)
     // dt = d(ln a)/H — the cosmic clock falls straight out of the integrator.
@@ -335,6 +378,41 @@ export class Universe {
       if (!this.done) this.stepCosmo()
     } else {
       this.stepStatic()
+    }
+  }
+
+  /** Camera bounds without exposing which force solver owns them. */
+  get boxCx(): number {
+    return this.pm ? 0 : this.fmm.boxCx
+  }
+
+  get boxCy(): number {
+    return this.pm ? 0 : this.fmm.boxCy
+  }
+
+  get boxHalf(): number {
+    return this.pm ? this.pm.half : this.fmm.boxHalf
+  }
+
+  /**
+   * Solver-independent density cells for luminous-event detection.
+   *
+   * The callback is observational: it receives numbers only and cannot mutate
+   * particle state, keeping quasars and starbursts provably outside dynamics.
+   */
+  forEachDensityCell(cb: (mass: number, x: number, y: number, size: number) => void): void {
+    if (this.pm) {
+      this.pm.forEachCell(cb)
+      return
+    }
+
+    const side = 1 << this.fmm.depth
+    const cells = side * side
+    const h = (2 * this.fmm.boxHalf) / side
+    const com = { x: 0, y: 0 }
+    for (let c = 0; c < cells; c++) {
+      const mass = this.fmm.leafCom(c, com)
+      if (mass > 0) cb(mass, com.x, com.y, h)
     }
   }
 

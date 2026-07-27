@@ -16,10 +16,10 @@
  *
  * A NOTE ON TWO-DIMENSIONAL GRAVITY
  * The force law throughout is the genuine 2D one — force ∝ 1/r, the field of
- * the logarithmic potential — not a 3D simulation flattened into a plane. That
- * is what makes the complex multipole expansion exact rather than approximate,
- * and it has a lovely consequence: Gauss's law in 2D gives |a| = G·M(<r)/r for
- * anything circularly symmetric, so the circular speed is
+ * the logarithmic potential — not a 3D simulation flattened into a plane. The
+ * isolated worlds evaluate it with an exact complex multipole expansion; Cosmos
+ * solves the same Poisson law on a periodic mesh. Gauss's law in 2D gives
+ * |a| = G·M(<r)/r for anything circularly symmetric, so the circular speed is
  *
  *     v_c = √(G · M(<r))
  *
@@ -31,37 +31,38 @@
 
 import { mulberry32 } from "@/lib/composer/rng"
 import { A_REC, growthTable, hubble, sampleGrowth } from "./cosmology"
+import { fft2, wrapPeriodic } from "./particle-mesh"
 
 export type PresetName = "cosmos" | "disc" | "collision" | "collapse"
 
 /**
  * The 2D analogue of 4πGρ̄ — the constant relating a density contrast to the
- * divergence of the peculiar field, C = 2πGΣ̄. With the patch normalised to
- * G = 1, total mass 1 and comoving radius 1, Σ̄ = 1/π and C falls out as
- * exactly 2, with no free parameter to fudge.
+ * divergence of the peculiar field, C = 2πGΣ̄. The periodic box has side two,
+ * total mass one and therefore Σ̄ = 1/4, giving C = π/2 with no free parameter
+ * to fudge.
  *
  * It is worth knowing what that buys: from z = 6 to z = 0 — the era in which
- * the web actually assembles — this system's linear growth factor rises 5.9×,
+ * the web actually assembles — this system's linear growth factor rises 4.5×,
  * against ΛCDM's ≈7×. The late universe therefore evolves at very nearly the
  * right rate. The early universe does not: a 2D source term falls off as a⁻²
  * against a matter-dominated a⁻³ Hubble friction, so perturbations essentially
  * coast until a ≈ Ω_m/C. The dark ages really are quiet here — rather more
  * quiet than they should be.
  */
-export const PATCH_SOURCE = 2
+export const PATCH_SOURCE = Math.PI / 2
 
 /**
  * Linear density contrast the seed field would reach today if it kept growing
  * linearly. Caustics — the first sheets and filaments — appear when this
- * crosses 1, so a value of 7 puts first structure at z ≈ 7.5 and leaves a
- * well-developed, thoroughly nonlinear web by the present day.
+ * crosses 1, so a value of 5 puts first structure around cosmic dawn and leaves
+ * a well-developed, thoroughly nonlinear web by the present day.
  *
  * The honest caveat: real perturbations at recombination are of order 10⁻⁵,
  * and this field starts about 10⁴ times louder than that. Nothing else would
  * be visible on a screen, and every visualisation of the early universe makes
  * the same trade.
  */
-const LINEAR_DELTA_TODAY = 7
+const LINEAR_DELTA_TODAY = 5
 
 export interface PresetInfo {
   name: PresetName
@@ -106,7 +107,7 @@ export interface Cloud {
   y: Float32Array
   vx: Float32Array
   vy: Float32Array
-  /** Present only for the massive species; tracers are massless. */
+  /** Used by isolated FMM worlds; Cosmos treats both arrays as equal-mass. */
   m: Float32Array
 }
 
@@ -119,33 +120,23 @@ function gauss(rnd: Rng): number {
 }
 
 /**
- * Sunflower packing: r ∝ √(i/n) at successive golden angles.
+ * Low-discrepancy periodic "glass".
  *
- * Exactly uniform in area, with no lattice directions for caustics to align
- * with and no clumping from independent random draws — which matters, because
- * shot noise in the initial sampling competes directly with the seeded modes we
- * actually want to watch grow.
+ * A rank-two irrational sequence covers the square evenly without rows,
+ * spokes, or an incomplete final lattice row. Tiny local jitter destroys its
+ * remaining quasiperiodicity while staying far quieter than random sampling.
  */
-const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
-function sunflower(
-  i: number,
-  n: number,
-  radius: number,
-  phase: number,
-  rnd: Rng,
-  jitter: number,
-): [number, number] {
-  const r = radius * Math.sqrt((i + 0.5) / n)
-  const a = i * GOLDEN_ANGLE + phase
-  // Jitter by a fraction of the mean interparticle spacing. Undisplaced, the
-  // bare spiral is regular enough to alias against the pixel grid into visible
-  // arcs; a "glass" configuration — quasi-uniform, locally disordered — keeps
-  // the low shot noise that matters for the seed field while destroying the
-  // long-range order that shows up as moiré.
-  const spacing = radius * Math.sqrt(Math.PI / n) * jitter
+const PLASTIC = 1.324717957244746
+const R2_X = 1 / PLASTIC
+const R2_Y = 1 / (PLASTIC * PLASTIC)
+const fract = (x: number) => x - Math.floor(x)
+
+function periodicGlass(i: number, n: number, phase: number, rnd: Rng): [number, number] {
+  const spacing = 2 / Math.sqrt(Math.max(1, n))
+  const jitter = spacing * 0.32
   return [
-    Math.cos(a) * r + (rnd() - 0.5) * spacing,
-    Math.sin(a) * r + (rnd() - 0.5) * spacing,
+    wrapPeriodic(2 * fract(0.5 + phase + (i + 1) * R2_X) - 1 + (rnd() - 0.5) * jitter),
+    wrapPeriodic(2 * fract(0.5 + phase * 1.73 + (i + 1) * R2_Y) - 1 + (rnd() - 0.5) * jitter),
   ]
 }
 
@@ -192,63 +183,102 @@ function layDisc(
 }
 
 /**
- * A Zel'dovich displacement field, as a small sum of random Fourier modes.
+ * A periodic Zel'dovich displacement field sampled from a spectral mesh.
  *
- * Cosmological initial conditions are made by displacing particles off a
- * uniform distribution by the gradient of a random Gaussian potential, and
- * giving them a velocity along that displacement — the growing mode. Where
- * neighbouring trajectories cross, matter piles up in a caustic: sheets first,
- * then the filaments where sheets intersect, then knots where filaments do.
- * Sampling the potential as a few dozen analytic sinusoids rather than an FFT
- * keeps this exact and dependency-free, and the power-law amplitude (A ∝ |k|⁻²)
- * is what makes large scales dominate and the web look like a web.
+ * The former implementation evaluated 28 sinusoids separately for every
+ * particle. This one fills a Gaussian Fourier field once, resolves hundreds of
+ * modes, inverse-transforms it onto a compact atlas, then samples that atlas
+ * bilinearly. High-count worlds therefore start faster and inherit far more
+ * small-scale structure. Integer wave vectors make the field exactly periodic,
+ * matching the particle-mesh force that evolves it.
  */
-function zeldovich(rnd: Rng, modes = 28) {
-  const kx = new Float64Array(modes)
-  const ky = new Float64Array(modes)
-  const amp = new Float64Array(modes)
-  const phase = new Float64Array(modes)
-  for (let i = 0; i < modes; i++) {
-    const a = rnd() * Math.PI * 2
-    const k = Math.PI * (1 + rnd() * 7) // one to eight waves across the patch
-    kx[i] = Math.cos(a) * k
-    ky[i] = Math.sin(a) * k
-    amp[i] = Math.pow(k, -2) * (0.6 + rnd() * 0.8)
-    phase[i] = rnd() * Math.PI * 2
+function zeldovich(rnd: Rng, size = 128) {
+  const cells = size * size
+  const dxR = new Float64Array(cells)
+  const dxI = new Float64Array(cells)
+  const dyR = new Float64Array(cells)
+  const dyI = new Float64Array(cells)
+  const divR = new Float64Array(cells)
+  const divI = new Float64Array(cells)
+  const kMax = Math.min(28, size / 2 - 2)
+
+  const at = (x: number, y: number) =>
+    ((y % size + size) % size) * size + ((x % size + size) % size)
+  const setPair = (
+    re: Float64Array,
+    im: Float64Array,
+    kx: number,
+    ky: number,
+    vr: number,
+    vi: number,
+  ) => {
+    const a = at(kx, ky)
+    const b = at(-kx, -ky)
+    re[a] = vr
+    im[a] = vi
+    re[b] = vr
+    im[b] = -vi
   }
 
-  // ψ = -∇φ with φ = Σ A sin(k·q + ψ₀).
-  const displace = (qx: number, qy: number, out: { x: number; y: number }) => {
-    let dx = 0
-    let dy = 0
-    for (let i = 0; i < modes; i++) {
-      const c = Math.cos(kx[i] * qx + ky[i] * qy + phase[i]) * amp[i]
-      dx -= kx[i] * c
-      dy -= ky[i] * c
+  // A compact CDM-like spectrum: near scale-invariant on large scales, turning
+  // over and damping toward the mesh Nyquist limit. It is intentionally a 2D
+  // visual analogue, not a claim to reproduce a 3D transfer function exactly.
+  for (let ky = -kMax; ky <= kMax; ky++) {
+    for (let kx = -kMax; kx <= kMax; kx++) {
+      if (ky < 0 || (ky === 0 && kx <= 0)) continue
+      const k = Math.hypot(kx, ky)
+      if (k < 1 || k > kMax) continue
+      const transfer = 1 / (1 + Math.pow(k / 7, 2))
+      const cutoff = Math.exp(-Math.pow(k / kMax, 6))
+      const sqrtPower = Math.pow(k, 0.48) * transfer * cutoff
+      const physicalK2 = Math.PI * Math.PI * k * k
+      const scale = sqrtPower / physicalK2
+      const pr = gauss(rnd) * scale
+      const pi = gauss(rnd) * scale
+      const px = Math.PI * kx
+      const py = Math.PI * ky
+
+      // ψ = -∇φ, so ψ_k = -i k φ_k. Its divergence is k²φ_k.
+      setPair(dxR, dxI, kx, ky, px * pi, -px * pr)
+      setPair(dyR, dyI, kx, ky, py * pi, -py * pr)
+      setPair(divR, divI, kx, ky, physicalK2 * pr, physicalK2 * pi)
     }
-    out.x = dx
-    out.y = dy
   }
 
-  // RMS of ∇·ψ over the patch. Normalising by the *divergence* rather than by
-  // the displacement makes the amplitude mean something physical — it is the
-  // linear density contrast — and keeps every random seed equally evolved.
+  fft2(dxR, dxI, size, true)
+  fft2(dyR, dyI, size, true)
+  fft2(divR, divI, size, true)
+
   let sum = 0
-  const samples = 4096
-  const srnd = mulberry32(0x5eed)
-  for (let s = 0; s < samples; s++) {
-    const r = Math.sqrt(srnd())
-    const a = srnd() * Math.PI * 2
-    const qx = Math.cos(a) * r
-    const qy = Math.sin(a) * r
-    let div = 0
-    for (let i = 0; i < modes; i++) {
-      const c = Math.sin(kx[i] * qx + ky[i] * qy + phase[i]) * amp[i]
-      div += (kx[i] * kx[i] + ky[i] * ky[i]) * c
-    }
-    sum += div * div
+  for (let i = 0; i < cells; i++) sum += divR[i] * divR[i]
+  const rmsDiv = Math.sqrt(sum / cells)
+
+  const sample = (field: Float64Array, x: number, y: number) => {
+    const gx = ((wrapPeriodic(x) + 1) * 0.5) * size
+    const gy = ((wrapPeriodic(y) + 1) * 0.5) * size
+    const ix = Math.floor(gx)
+    const iy = Math.floor(gy)
+    const tx = gx - ix
+    const ty = gy - iy
+    const x0 = (ix % size + size) % size
+    const y0 = (iy % size + size) % size
+    const x1 = x0 + 1 === size ? 0 : x0 + 1
+    const y1 = y0 + 1 === size ? 0 : y0 + 1
+    return (
+      field[y0 * size + x0] * (1 - tx) * (1 - ty) +
+      field[y0 * size + x1] * tx * (1 - ty) +
+      field[y1 * size + x0] * (1 - tx) * ty +
+      field[y1 * size + x1] * tx * ty
+    )
   }
-  return { displace, rmsDiv: Math.sqrt(sum / samples) }
+
+  return {
+    displace(qx: number, qy: number, out: { x: number; y: number }) {
+      out.x = sample(dxR, qx, qy)
+      out.y = sample(dyR, qx, qy)
+    },
+    rmsDiv,
+  }
 }
 
 function allocate(n: number, withMass: boolean): Cloud {
@@ -317,12 +347,12 @@ export function makeInitialState(
     switch (preset) {
       case "cosmos": {
         const out = { x: 0, y: 0 }
-        const phase = salt * 1.7
+        const phase = fract(salt * 0.271828 + seed * 0.000000119)
         for (let i = 0; i < n; i++) {
-          const [qx, qy] = sunflower(i, n, 1, phase, rnd, 0.9)
+          const [qx, qy] = periodicGlass(i, n, phase, rnd)
           zel!.displace(qx, qy, out)
-          c.x[i] = qx + out.x * growthAmp
-          c.y[i] = qy + out.y * growthAmp
+          c.x[i] = wrapPeriodic(qx + out.x * growthAmp)
+          c.y[i] = wrapPeriodic(qy + out.y * growthAmp)
           c.vx[i] = out.x * growthVel
           c.vy[i] = out.y * growthVel
         }
@@ -365,20 +395,14 @@ export function makeInitialState(
   fill(masses, nMass, 1)
   if (nTracer > 0) fill(tracers, nTracer, 2)
 
-  // Softening tracks the mean interparticle spacing: fine enough not to smear
-  // real structure, coarse enough that a chance close pair cannot fling a
-  // particle out of the simulation. The cosmological patch needs a floor as
-  // well, because comoving halos become very much denser than the mean.
-  const extent = cosmological ? 1.06 : preset === "collapse" ? 0.95 : 1.0
-  // Softening tracks the mean interparticle spacing, √(π/N) for a unit disc.
-  // The cosmological patch wants a *fraction* of that: comoving halos grow far
-  // denser than the mean, and a softening as coarse as the mean spacing forces
-  // the tree to stop subdividing (see `Universe.maxUsefulDepth`) exactly where
-  // the structure needs resolving most. The isolated scenarios are not
-  // hierarchical in the same way and can afford the gentler value.
+  // The periodic mesh supplies Cosmos with its force-resolution scale. The
+  // explicit softening below belongs to isolated FMM worlds, where it tracks
+  // the mean interparticle spacing: fine enough not to smear real structure,
+  // coarse enough that a chance close pair cannot fling a particle away.
+  const extent = cosmological ? 1.02 : preset === "collapse" ? 0.95 : 1.0
   const spacing = extent * Math.sqrt(Math.PI / Math.max(1, nMass))
   const softening = cosmological
-    ? Math.max(0.0015, spacing * 0.5)
+    ? spacing
     : Math.max(0.0012, spacing * 0.9)
 
   // The timestep has to resolve the shortest orbit the simulation can represent,

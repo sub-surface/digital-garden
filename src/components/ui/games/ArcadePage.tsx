@@ -82,7 +82,7 @@ const GAMES: GameCard[] = [
     href: "filament",
     name: "FILAMENT",
     blurb:
-      "A universe from recombination to now, on a real ΛCDM clock. Half a million particles under the Fast Multipole Method — exact 2D gravity in linear time, not Barnes-Hut. Watch the CMB fade, the dark ages pass, and matter drain out of the voids into filaments and the knots where they cross. Quasars light at cosmic noon.",
+      "A periodic universe from recombination to now, on a real ΛCDM clock. Up to a quarter-million fully gravitating particles form a multiscale cosmic web under a fast particle-mesh solver; isolated galaxies retain exact 2D Fast Multipole gravity. Watch the CMB fade, the dark ages pass, and quasars light at cosmic noon.",
     live: true,
     section: "featured",
   },
