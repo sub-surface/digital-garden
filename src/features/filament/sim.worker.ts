@@ -14,6 +14,7 @@
 import { Universe } from "./universe"
 import { cmbGlow, type Afterglow } from "./cosmology"
 import { wrapPeriodic } from "./particle-mesh"
+import { depositCic, resampleConservative, timedDecay } from "./density-raster"
 import type { FromWorker, SimParams, SimStats, ToWorker, ViewParams } from "./protocol"
 
 /** Brightness of a massive particle relative to a tracer. */
@@ -40,6 +41,14 @@ let glowKey = -1
 /** Metered exposure; 0 means "not yet measured", so the first frame snaps. */
 let autoGain = 0
 let rw = 0, rh = 0
+let sampleX0 = new Int32Array(0)
+let sampleX1 = new Int32Array(0)
+let sampleXF = new Float32Array(0)
+let sampleXInside = new Uint8Array(0)
+let sampleY0 = new Int32Array(0)
+let sampleY1 = new Int32Array(0)
+let sampleYF = new Float32Array(0)
+let sampleYInside = new Uint8Array(0)
 const pool: ArrayBuffer[] = []
 let scheduled = false
 let running = false
@@ -296,9 +305,11 @@ function reset(): void {
   bursts = []
   burstTotal = 0
   clock = 0
+  lastTick = 0
   lastEventScan = 0
   glowKey = -1
   autoGain = 0
+  accum.fill(0)
   rng = (p.seed | 1) >>> 0
   syncGlow()
 }
@@ -353,7 +364,91 @@ function spikes(out: Uint32Array, cx: number, cy: number, len: number, cr: numbe
   }
 }
 
-function render(buf: ArrayBuffer): void {
+/** Continuous CIC particle raster for isolated FMM scenarios. */
+function splatParticles(u: Universe, scale: number, ox: number, oy: number): void {
+  const splat = (cx: Float32Array, cy: Float32Array, n: number, weight: number) => {
+    for (let i = 0; i < n; i++) {
+      const sx = cx[i] * scale + ox
+      const sy = oy - cy[i] * scale
+      if (sx < -1 || sx >= rw || sy < -1 || sy >= rh) continue
+      depositCic(accum, rw, rh, sx, sy, weight)
+    }
+  }
+  splat(u.tracers.x, u.tracers.y, u.nTracer, 1)
+  splat(u.masses.x, u.masses.y, u.nMass, MASS_WEIGHT)
+}
+
+/**
+ * Reconstruct the cosmological density directly from the force mesh.
+ *
+ * The mesh is the simulation's actual resolved mass field. Showing individual
+ * nearest-pixel particles below that scale adds sampling noise, not physical
+ * detail. Bilinear reconstruction gives continuous motion, costs no particle
+ * splat pass, and makes visual and force resolution agree.
+ */
+function splatPeriodicDensity(u: Universe, scale: number): void {
+  const pm = u.pm!
+  const n = pm.size
+  const half = pm.half
+  const invCell = 1 / pm.cellSize
+  const cameraX = frameCx + view.panX
+  const cameraY = frameCy + view.panY
+
+  for (let x = 0; x < rw; x++) {
+    const local = (x + 0.5 - rw * 0.5) / scale
+    if (Math.abs(local) >= half) {
+      sampleXInside[x] = 0
+      continue
+    }
+    sampleXInside[x] = 1
+    const world = wrapPeriodic(local + cameraX, half)
+    const gx = (world + half) * invCell - 0.5
+    const base = Math.floor(gx)
+    const x0 = base < 0 ? n - 1 : base
+    sampleX0[x] = x0
+    sampleX1[x] = x0 + 1 === n ? 0 : x0 + 1
+    sampleXF[x] = gx - base
+  }
+
+  for (let y = 0; y < rh; y++) {
+    const local = (rh * 0.5 - y - 0.5) / scale
+    if (Math.abs(local) >= half) {
+      sampleYInside[y] = 0
+      continue
+    }
+    sampleYInside[y] = 1
+    const world = wrapPeriodic(local + cameraY, half)
+    const gy = (world + half) * invCell - 0.5
+    const base = Math.floor(gy)
+    const y0 = base < 0 ? n - 1 : base
+    sampleY0[y] = y0
+    sampleY1[y] = y0 + 1 === n ? 0 : y0 + 1
+    sampleYF[y] = gy - base
+  }
+
+  const rho = pm.cellMass
+  const patchPixels = Math.max(1, Math.pow(2 * half * scale, 2))
+  const densityScale = ((u.nMass + u.nTracer) * n * n) / patchPixels
+  for (let y = 0; y < rh; y++) {
+    if (!sampleYInside[y]) continue
+    const y0 = sampleY0[y] * n
+    const y1 = sampleY1[y] * n
+    const ty = sampleYF[y]
+    const wy0 = 1 - ty
+    const row = y * rw
+    for (let x = 0; x < rw; x++) {
+      if (!sampleXInside[x]) continue
+      const x0 = sampleX0[x]
+      const x1 = sampleX1[x]
+      const tx = sampleXF[x]
+      const a = rho[y0 + x0] * (1 - tx) + rho[y0 + x1] * tx
+      const b = rho[y1 + x0] * (1 - tx) + rho[y1 + x1] * tx
+      accum[row + x] += (a * wy0 + b * ty) * densityScale
+    }
+  }
+}
+
+function render(buf: ArrayBuffer, elapsedSeconds: number, advancing: boolean): void {
   const p = params!
   const u = uni!
   const out = new Uint32Array(buf)
@@ -373,25 +468,27 @@ function render(buf: ArrayBuffer): void {
   const oy = rh * 0.5 + (frameCy + view.panY) * scale
   stats.scale = scale
 
-  const splat = (cx: Float32Array, cy: Float32Array, n: number, w: number) => {
-    for (let i = 0; i < n; i++) {
-      const sx = u.cosmological
-        ? wrapPeriodic(cx[i] - frameCx - view.panX, u.boxHalf) * scale + rw * 0.5
-        : cx[i] * scale + ox
-      if (sx < 0 || sx >= rw) continue
-      const sy = u.cosmological
-        ? rh * 0.5 - wrapPeriodic(cy[i] - frameCy - view.panY, u.boxHalf) * scale
-        : oy - cy[i] * scale
-      if (sy < 0 || sy >= rh) continue
-      accum[(sy | 0) * rw + (sx | 0)] += w
-    }
-  }
-  splat(u.tracers.x, u.tracers.y, u.nTracer, 1)
-  splat(u.masses.x, u.masses.y, u.nMass, MASS_WEIGHT)
+  if (u.pm) splatPeriodicDensity(u, scale)
+  else splatParticles(u, scale, ox, oy)
 
-  const decay = p.trails
-  const gain = autoGain * p.exposure
+  // Paused redraws are fresh static reconstructions. They must not brighten
+  // merely because a view or palette message requested the same state again.
+  const decay = advancing ? timedDecay(p.trails, elapsedSeconds) : 0
   const empty = palette[0]
+
+  // Meter once before the first tone map so a reset does not emit a blank
+  // calibration frame. Subsequent frames meter inside the normal decay pass.
+  if (autoGain === 0) {
+    let initialSum = 0
+    let initialOccupied = 0
+    for (let i = 0; i < px; i++) {
+      if (accum[i] <= 0) continue
+      initialSum += accum[i]
+      initialOccupied++
+    }
+    if (initialOccupied > 0) autoGain = (TARGET_LEVEL * initialOccupied) / initialSum
+  }
+  const gain = autoGain * p.exposure
 
   // Tone map and decay in one pass. `decay === 0` clears the buffer, so trails
   // off costs exactly the same as trails on. The same pass measures the frame
@@ -422,7 +519,10 @@ function render(buf: ArrayBuffer): void {
   // otherwise cause. Slow enough not to pump on a passing supernova.
   if (occupied > 0) {
     const want = (TARGET_LEVEL * occupied) / sum
-    autoGain += (want - autoGain) * (autoGain > 0 ? 0.06 : 1)
+    const ease = autoGain > 0
+      ? 1 - Math.exp(-Math.max(1 / 240, elapsedSeconds) / 0.75)
+      : 1
+    autoGain += (want - autoGain) * ease
   }
 
   if (!p.events) return
@@ -441,13 +541,15 @@ function render(buf: ArrayBuffer): void {
     sprite(out, sx, sy, 2 + 5 * (1 - f), 255 * f, 240 * f, 200 * f)
   }
 
-  // Quasars: a hard blue-white core with diffraction spikes, flickering, and
-  // fading in and out across the halo's active lifetime.
+  // Quasars: a hard blue-white core with diffraction spikes, fading in and out
+  // across the halo's active lifetime. Their intrinsic variability is kept
+  // deliberately slow and subtle; a fast 22% pulse looked exactly like a
+  // dropped-frame or adaptive-resolution fault.
   for (const q of quasars) {
     const age = (clock - q.born) / q.life
     const envelope = Math.sin(Math.PI * Math.min(1, Math.max(0, age)))
-    const flicker = 0.78 + 0.22 * Math.sin(clock * 5.5 + q.phase)
-    const f = envelope * flicker * (0.55 + q.mass)
+    const variability = 0.97 + 0.03 * Math.sin(clock * 1.4 + q.phase)
+    const f = envelope * variability * (0.55 + q.mass)
     if (f <= 0.02) continue
     const sx = u.cosmological
       ? wrapPeriodic(q.x - frameCx - view.panX, u.boxHalf) * scale + rw * 0.5
@@ -502,7 +604,7 @@ function runTick(): void {
   }
 
   const buf = pool.pop()!
-  render(buf)
+  render(buf, dtSec, advancing)
   const t2 = performance.now()
 
   stats.stepMs = t1 - t0
@@ -548,9 +650,18 @@ function kick(force = false): void {
 }
 
 function resize(w: number, h: number): void {
+  const nextAccum = resampleConservative(accum, rw, rh, w, h)
   rw = w
   rh = h
-  accum = new Float32Array(w * h)
+  accum = nextAccum
+  sampleX0 = new Int32Array(w)
+  sampleX1 = new Int32Array(w)
+  sampleXF = new Float32Array(w)
+  sampleXInside = new Uint8Array(w)
+  sampleY0 = new Int32Array(h)
+  sampleY1 = new Int32Array(h)
+  sampleYF = new Float32Array(h)
+  sampleYInside = new Uint8Array(h)
   pool.length = 0
   pool.push(new ArrayBuffer(w * h * 4), new ArrayBuffer(w * h * 4))
   kick(true)
@@ -611,6 +722,9 @@ ctx.addEventListener("message", (e: MessageEvent<ToWorker>) => {
 
       case "view":
         view = { ...msg.view }
+        // Trails live in screen space; retaining them through a camera
+        // transform would ghost the old coordinate system over the new one.
+        accum.fill(0)
         kick(true)
         break
 

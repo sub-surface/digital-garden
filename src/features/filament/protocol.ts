@@ -30,7 +30,7 @@ export interface SimParams {
   softening: number
   /** Brightness multiplier for the density tone map. */
   exposure: number
-  /** Per-frame decay of the accumulation buffer; 0 clears (no trails). */
+  /** Trail persistence authored at 60 Hz; the worker converts it to wall time. */
   trails: number
   /** Draw quasars, starbursts and the recombination afterglow. */
   events: boolean

@@ -4,7 +4,11 @@
  * Particle count, force resolution, FMM order, and raster resolution used to
  * be independent controls, which made it easy to choose an expensive
  * combination that bought little accuracy. Profiles keep those dimensions in a
- * sensible relationship while the renderer tunes its pixel budget live.
+ * sensible relationship while the renderer tunes its internal density raster
+ * live. The raster is deliberately smaller than the display surface: it
+ * supersamples the force mesh, then the browser performs the final continuous
+ * reconstruction. Spending millions of pixels on point noise below the force
+ * resolution is slower and less faithful.
  */
 
 export type FidelityName = "auto" | "deep" | "vast"
@@ -31,9 +35,9 @@ const DESKTOP: Record<FidelityName, FidelityProfile> = {
     nTracer: 50_000,
     order: 5,
     meshSize: 128,
-    minPixels: 700_000,
-    maxPixels: 2_400_000,
-    targetDrawMs: 18,
+    minPixels: 300_000,
+    maxPixels: 700_000,
+    targetDrawMs: 10,
   },
   deep: {
     name: "deep",
@@ -43,9 +47,9 @@ const DESKTOP: Record<FidelityName, FidelityProfile> = {
     nTracer: 120_000,
     order: 6,
     meshSize: 256,
-    minPixels: 900_000,
-    maxPixels: 3_000_000,
-    targetDrawMs: 24,
+    minPixels: 700_000,
+    maxPixels: 1_500_000,
+    targetDrawMs: 16,
   },
   vast: {
     name: "vast",
@@ -55,9 +59,9 @@ const DESKTOP: Record<FidelityName, FidelityProfile> = {
     nTracer: 240_000,
     order: 5,
     meshSize: 128,
-    minPixels: 650_000,
-    maxPixels: 1_800_000,
-    targetDrawMs: 24,
+    minPixels: 320_000,
+    maxPixels: 800_000,
+    targetDrawMs: 14,
   },
 }
 
@@ -67,27 +71,27 @@ const PHONE: Record<FidelityName, FidelityProfile> = {
     nMass: 4_000,
     nTracer: 20_000,
     meshSize: 64,
-    minPixels: 320_000,
-    maxPixels: 900_000,
-    targetDrawMs: 18,
+    minPixels: 160_000,
+    maxPixels: 420_000,
+    targetDrawMs: 10,
   },
   deep: {
     ...DESKTOP.deep,
     nMass: 8_000,
     nTracer: 48_000,
     meshSize: 128,
-    minPixels: 420_000,
-    maxPixels: 1_200_000,
-    targetDrawMs: 22,
+    minPixels: 280_000,
+    maxPixels: 700_000,
+    targetDrawMs: 14,
   },
   vast: {
     ...DESKTOP.vast,
     nMass: 10_000,
     nTracer: 90_000,
     meshSize: 64,
-    minPixels: 320_000,
-    maxPixels: 900_000,
-    targetDrawMs: 22,
+    minPixels: 180_000,
+    maxPixels: 500_000,
+    targetDrawMs: 12,
   },
 }
 

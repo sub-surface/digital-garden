@@ -20,6 +20,11 @@ import { Universe } from "../src/features/filament/universe"
 import { PATCH_SOURCE } from "../src/features/filament/presets"
 import { A_REC, ageOf, growthTable, sampleGrowth, HUBBLE_TIME_GYR } from "../src/features/filament/cosmology"
 import { fft2, ParticleMesh } from "../src/features/filament/particle-mesh"
+import {
+  depositCic,
+  resampleConservative,
+  timedDecay,
+} from "../src/features/filament/density-raster"
 import { mulberry32 } from "../src/lib/composer/rng"
 
 let failures = 0
@@ -267,6 +272,44 @@ for (const cloud of clouds) {
   for (let i = 0; i < n; i++) peakAccel = Math.max(peakAccel, Math.hypot(ax[i], ay[i]))
   if (!(peakAccel < 1e-6)) fail(`uniform periodic mesh accelerated by ${peakAccel.toExponential(2)}`)
   console.log(`  periodic  uniform equilibrium: max |a|=${peakAccel.toExponential(2)}`)
+}
+
+// Presentation continuity is a numerical property. Density must be conserved
+// through sub-pixel motion and adaptive resizes, and trail time must not change
+// when a machine presents fewer frames.
+{
+  const a = new Float32Array(16 * 16)
+  const b = new Float32Array(16 * 16)
+  depositCic(a, 16, 16, 5.49, 7.25, 2)
+  depositCic(b, 16, 16, 5.51, 7.25, 2)
+  const sum = (v: Float32Array) => {
+    let total = 0
+    for (const x of v) total += x
+    return total
+  }
+  const deposited = sum(a)
+  let motion = 0
+  for (let i = 0; i < a.length; i++) motion += Math.abs(a[i] - b[i])
+  if (!(Math.abs(deposited - 2) < 1e-6)) fail(`CIC raster lost density: ${deposited}`)
+  if (!(motion < 0.1)) fail(`sub-pixel CIC motion jumped by ${motion}`)
+
+  const smooth = new Float32Array(12 * 10)
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 12; x++) {
+      smooth[y * 12 + x] = 1 + 0.2 * Math.sin(x * 0.4) * Math.cos(y * 0.3)
+    }
+  }
+  const resized = resampleConservative(smooth, 12, 10, 19, 17)
+  const energyError = Math.abs(sum(resized) / sum(smooth) - 1)
+  if (!(energyError < 0.01)) fail(`adaptive raster resize changed energy by ${energyError}`)
+
+  const at30Hz = Math.pow(timedDecay(0.9, 1 / 30), 30)
+  const at60Hz = Math.pow(timedDecay(0.9, 1 / 60), 60)
+  if (!(Math.abs(at30Hz - at60Hz) < 1e-12)) fail("trail half-life depends on frame rate")
+  console.log(
+    `  raster    CIC conserved ${deposited.toFixed(2)} · resize error ` +
+      `${energyError.toExponential(2)} · frame-rate invariant`,
+  )
 }
 
 // ---------------------------------------------------------------------------

@@ -56,3 +56,32 @@
     - "npm run lint passed with 0 errors and the repository's 25 pre-existing warnings."
     - "npm run build passed; git diff --check passed. The combined npm run check reached the production build after every preceding stage passed, then exceeded the 60-second command timeout; that build was run and passed separately."
   next: "Perform the existing desktop and phone visual-QA boundary on /filament; tune only presentation defaults unless the new health diagnostic reports a genuine numerical limit."
+
+- date: 2026-07-27
+  area: filament
+  title: "Continuous density rendering and stable adaptive fidelity"
+  status: done
+  files:
+    - src/features/filament/density-raster.ts
+    - src/features/filament/FilamentPage.tsx
+    - src/features/filament/sim.worker.ts
+    - src/features/filament/particle-mesh.ts
+    - src/features/filament/universe.ts
+    - src/features/filament/quality.ts
+    - src/features/filament/protocol.ts
+    - scripts/test-fmm.ts
+  changes:
+    - "Removed both sources of visible flicker. The adaptive controller now changes only an internal density raster while a fixed high-resolution display canvas retains the last complete frame, and Cosmos reconstructs the continuous force-mesh density instead of snapping individual particles to their nearest display pixel."
+    - "Added conservative CIC splatting for isolated scenarios, high-quality final reconstruction, time-based trail decay, slower wall-time exposure adaptation, a non-blank first exposure frame, conservative trail-history resampling across internal resolution changes, and replaced the misleading 22 percent quasar pulse with subtle slow variability."
+    - "Replaced the 1.2-second reactive scaler with an EMA, asymmetric thresholds, sustained-sample requirements, and a 4.5-second dwell. Short expensive frames can no longer make quality hunt up and down."
+    - "Precomputed FFT stage rotations, the discrete Poisson Green function, and periodic neighbour indices; replaced hot-loop modulo operations with bounded branches; and fused the first cosmological kick, drift, and wrap into one memory pass."
+    - "Added density-raster diagnostics and regression coverage for CIC mass conservation, continuous sub-pixel motion, energy-preserving resizes, and frame-rate-independent trail persistence."
+  decisions:
+    - "Particle positions below the particle-mesh cell scale are Monte Carlo samples, not additional resolved structure. Rendering the solver's continuous density is both more physically faithful and substantially cheaper than presenting that sampling noise as high-frequency detail."
+    - "Adaptive resolution is an internal implementation detail. The displayed canvas should change dimensions only with the viewport; quality changes are composited atomically behind the retained previous frame."
+    - "Presentation persistence is measured in wall time, not frames, so a slower device sees the same trail length and exposure behaviour as a faster device."
+  verification:
+    - "A live Chrome comparison on the same Auto scene reduced representative Worker timings from about 26.3 ms simulation plus 20.5 ms drawing to 12.8 ms simulation plus 7.2 ms drawing, while replacing point shimmer with a continuous cosmic-web field."
+    - "The headless 60k-particle Auto benchmark averaged 9.23 ms per particle-mesh step after warm-up."
+    - "The full npm run check pipeline passed: repository and numerical tests, lint, SPA and Worker typechecks, prebuild, and production build. Lint retained the repository's existing 25 warnings and introduced no Filament warning; the five known broken wikilinks and missing filament OG card warning were unchanged."
+  next: "Keep the solver-native density path as the Cosmos renderer; reserve future GPU work for substantially larger three-dimensional or multi-layer fields rather than reintroducing sub-grid particle noise."

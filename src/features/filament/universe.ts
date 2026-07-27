@@ -312,10 +312,22 @@ export class Universe {
     }
   }
 
-  private wrap(c: Cloud, n: number): void {
+  /** First cosmological kick, drift, and periodic wrap in one memory pass. */
+  private kickDriftPeriodic(
+    c: Cloud,
+    ax: Float32Array,
+    ay: Float32Array,
+    n: number,
+    kickFactor: number,
+    driftFactor: number,
+  ): void {
     for (let i = 0; i < n; i++) {
-      c.x[i] = wrapPeriodic(c.x[i])
-      c.y[i] = wrapPeriodic(c.y[i])
+      const vx = c.vx[i] + ax[i] * kickFactor
+      const vy = c.vy[i] + ay[i] * kickFactor
+      c.vx[i] = vx
+      c.vy[i] = vy
+      c.x[i] = wrapPeriodic(c.x[i] + vx * driftFactor)
+      c.y[i] = wrapPeriodic(c.y[i] + vy * driftFactor)
     }
   }
 
@@ -345,16 +357,11 @@ export class Universe {
     const half = this.dlnA * 0.5
     const lnA0 = Math.log(this.a)
 
-    const k0 = half / hubble(this.a)
-    this.kick(this.masses, this.ax, this.ay, this.nMass, k0)
-    this.kick(this.tracers, this.tax, this.tay, this.nTracer, k0)
-
     const aMid = Math.exp(lnA0 + half)
     const driftF = this.dlnA / (aMid * aMid * hubble(aMid))
-    this.drift(this.masses, this.nMass, driftF)
-    this.drift(this.tracers, this.nTracer, driftF)
-    this.wrap(this.masses, this.nMass)
-    this.wrap(this.tracers, this.nTracer)
+    const k0 = half / hubble(this.a)
+    this.kickDriftPeriodic(this.masses, this.ax, this.ay, this.nMass, k0, driftF)
+    this.kickDriftPeriodic(this.tracers, this.tax, this.tay, this.nTracer, k0, driftF)
 
     this.a = Math.exp(lnA0 + this.dlnA)
     // dt = d(ln a)/H — the cosmic clock falls straight out of the integrator.

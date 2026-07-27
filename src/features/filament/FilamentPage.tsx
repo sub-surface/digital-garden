@@ -78,10 +78,16 @@ export function FilamentPage() {
   const viewRef = useRef<ViewParams>({ zoom: 1, panX: 0, panY: 0, autoFit: true })
   const pendingRef = useRef<{ buf: ArrayBuffer; w: number; h: number } | null>(null)
   const statsRef = useRef<SimStats | null>(null)
+  /** Internal worker raster; independent from the visible canvas backing store. */
   const geomRef = useRef({ w: 0, h: 0 })
+  const displayGeomRef = useRef({ w: 0, h: 0 })
   const profileRef = useRef<FidelityProfile>(profile)
   const pixelBudgetRef = useRef(profile.maxPixels)
   const paintMsRef = useRef(0)
+  const costEmaRef = useRef(0)
+  const slowSamplesRef = useRef(0)
+  const fastSamplesRef = useRef(0)
+  const lastScaleAtRef = useRef(0)
   profileRef.current = profile
 
   const params: SimParams = useMemo(
@@ -95,7 +101,7 @@ export function FilamentPage() {
       substeps: speed,
       softening: 1,
       exposure,
-      trails: trails ? 0.82 : 0,
+      trails: trails ? 0.9 : 0,
       events,
     }),
     [preset, seed, profile, speed, exposure, trails, events],
@@ -120,8 +126,26 @@ export function FilamentPage() {
     const cssH = canvas.clientHeight
     if (!cssW || !cssH) return
     const dpr = window.devicePixelRatio || 1
-    let w = Math.round(cssW * dpr)
-    let h = Math.round(cssH * dpr)
+    let displayW = Math.max(2, Math.round(cssW * dpr))
+    let displayH = Math.max(2, Math.round(cssH * dpr))
+    const displayCap = isPhone ? 1_200_000 : 3_000_000
+    const displayOver = (displayW * displayH) / displayCap
+    if (displayOver > 1) {
+      const k = 1 / Math.sqrt(displayOver)
+      displayW = Math.max(2, Math.round(displayW * k))
+      displayH = Math.max(2, Math.round(displayH * k))
+    }
+    if (displayW !== displayGeomRef.current.w || displayH !== displayGeomRef.current.h) {
+      displayGeomRef.current = { w: displayW, h: displayH }
+      canvas.width = displayW
+      canvas.height = displayH
+    }
+
+    // The visible canvas stays at display resolution. Only the worker's
+    // internal density raster adapts, so changing quality never clears the
+    // frame the user is currently looking at.
+    let w = displayW
+    let h = displayH
     const over = (w * h) / pixelBudgetRef.current
     if (over > 1) {
       const k = 1 / Math.sqrt(over)
@@ -130,10 +154,8 @@ export function FilamentPage() {
     }
     if (w === geomRef.current.w && h === geomRef.current.h) return
     geomRef.current = { w, h }
-    canvas.width = w
-    canvas.height = h
     post({ t: "resize", w, h })
-  }, [post])
+  }, [isPhone, post])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -146,6 +168,10 @@ export function FilamentPage() {
 
   useEffect(() => {
     pixelBudgetRef.current = profile.maxPixels
+    costEmaRef.current = 0
+    slowSamplesRef.current = 0
+    fastSamplesRef.current = 0
+    lastScaleAtRef.current = performance.now()
     geomRef.current = { w: 0, h: 0 }
     measure()
   }, [measure, profile])
@@ -207,15 +233,32 @@ export function FilamentPage() {
     if (!canvas) return
     const g = canvas.getContext("2d")
     if (!g) return
+    const scratch = document.createElement("canvas")
+    const sg = scratch.getContext("2d")
+    if (!sg) return
+    g.imageSmoothingEnabled = true
+    g.imageSmoothingQuality = "high"
     let raf = 0
     const loop = () => {
       raf = requestAnimationFrame(loop)
       const frame = pendingRef.current
       if (!frame) return
       pendingRef.current = null
-      if (frame.w === canvas.width && frame.h === canvas.height) {
+      const current = geomRef.current
+      if (frame.w === current.w && frame.h === current.h) {
         const started = performance.now()
-        g.putImageData(new ImageData(new Uint8ClampedArray(frame.buf), frame.w, frame.h), 0, 0)
+        if (scratch.width !== frame.w || scratch.height !== frame.h) {
+          scratch.width = frame.w
+          scratch.height = frame.h
+        }
+        sg.putImageData(new ImageData(new Uint8ClampedArray(frame.buf), frame.w, frame.h), 0, 0)
+        // `copy` replaces transparent pixels too. The old visible frame remains
+        // intact until this complete new frame is ready, including across an
+        // internal resolution change.
+        g.imageSmoothingEnabled = true
+        g.imageSmoothingQuality = "high"
+        g.globalCompositeOperation = "copy"
+        g.drawImage(scratch, 0, 0, canvas.width, canvas.height)
         const elapsed = performance.now() - started
         paintMsRef.current += (elapsed - paintMsRef.current) * 0.12
       }
@@ -232,24 +275,44 @@ export function FilamentPage() {
     return () => clearInterval(id)
   }, [])
 
-  // Rendering resolution is presentation, not physics. Tune it independently
-  // from the particle/mesh profile so a high-DPI screen gets every pixel it can
-  // afford without turning an expensive display into a slow simulation.
+  // Rendering resolution is presentation, not physics. Tune the internal
+  // density raster with long hysteresis: a momentary expensive frame should not
+  // make resolution oscillate, and the visible canvas never changes size.
   useEffect(() => {
     const id = setInterval(() => {
       const current = statsRef.current
       if (!current) return
       const p = profileRef.current
       const cost = current.drawMs + paintMsRef.current
+      costEmaRef.current += (cost - costEmaRef.current) * (costEmaRef.current > 0 ? 0.3 : 1)
+      const smoothCost = costEmaRef.current
       let next = pixelBudgetRef.current
-      if (cost > p.targetDrawMs * 1.18) next *= 0.82
-      else if (cost < p.targetDrawMs * 0.62) next *= 1.12
+      const now = performance.now()
+
+      if (smoothCost > p.targetDrawMs * 1.15) {
+        slowSamplesRef.current++
+        fastSamplesRef.current = 0
+      } else if (smoothCost < p.targetDrawMs * 0.62) {
+        fastSamplesRef.current++
+        slowSamplesRef.current = 0
+      } else {
+        slowSamplesRef.current = 0
+        fastSamplesRef.current = 0
+      }
+
+      const canScale = now - lastScaleAtRef.current > 4_500
+      if (canScale && slowSamplesRef.current >= 3) next *= 0.82
+      else if (canScale && fastSamplesRef.current >= 5) next *= 1.1
+      else return
+
       next = Math.max(p.minPixels, Math.min(p.maxPixels, Math.round(next)))
+      slowSamplesRef.current = 0
+      fastSamplesRef.current = 0
       if (Math.abs(next / pixelBudgetRef.current - 1) < 0.06) return
       pixelBudgetRef.current = next
-      geomRef.current = { w: 0, h: 0 }
+      lastScaleAtRef.current = now
       measure()
-    }, 1200)
+    }, 1_500)
     return () => clearInterval(id)
   }, [measure])
 
@@ -301,10 +364,10 @@ export function FilamentPage() {
     const canvas = canvasRef.current!
     const rect = canvas.getBoundingClientRect()
     return {
-      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
-      w: canvas.width,
-      h: canvas.height,
+      x: ((e.clientX - rect.left) / rect.width) * geomRef.current.w,
+      y: ((e.clientY - rect.top) / rect.height) * geomRef.current.h,
+      w: geomRef.current.w,
+      h: geomRef.current.h,
     }
   }, [])
 
@@ -313,7 +376,7 @@ export function FilamentPage() {
     const s = statsRef.current
     if (!canvas || !s) return false
     const rect = canvas.getBoundingClientRect()
-    const px = canvas.width / rect.width
+    const px = geomRef.current.w / rect.width
     const v = viewRef.current
     v.autoFit = false
     v.panX -= (dx * px) / s.scale
@@ -484,6 +547,8 @@ export function FilamentPage() {
     ? [
         `${stats.solver === "pm" ? "periodic mesh" : "fast multipole"} · ${fmt(stats.particles)} particles`,
         `${fmt(stats.cells)} force cells · level ${stats.depth}`,
+        `${geomRef.current.w}×${geomRef.current.h} density raster → ` +
+          `${displayGeomRef.current.w}×${displayGeomRef.current.h} display`,
         `${stats.stepMs.toFixed(1)} ms sim · ${stats.drawMs.toFixed(1)} ms draw`,
         `${fmt(stats.speedup)}× fewer interactions than direct`,
         `${(stats.peakCellMass * 100).toFixed(2)}% in densest cell`,

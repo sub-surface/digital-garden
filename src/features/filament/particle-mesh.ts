@@ -19,6 +19,9 @@ import type { Cloud } from "./presets"
 interface FftPlan {
   n: number
   reverse: Uint32Array
+  /** One twiddle rotation per radix-2 stage, shared by every transform. */
+  stepR: Float64Array
+  stepI: Float64Array
 }
 
 const FFT_PLANS = new Map<number, FftPlan>()
@@ -41,7 +44,14 @@ function fftPlan(n: number): FftPlan {
     }
     reverse[i] = y
   }
-  const plan = { n, reverse }
+  const stepR = new Float64Array(bits + 1)
+  const stepI = new Float64Array(bits + 1)
+  for (let level = 1, len = 2; level <= bits; level++, len <<= 1) {
+    const angle = (2 * Math.PI) / len
+    stepR[level] = Math.cos(angle)
+    stepI[level] = Math.sin(angle)
+  }
+  const plan = { n, reverse, stepR, stepI }
   FFT_PLANS.set(n, plan)
   return plan
 }
@@ -54,7 +64,7 @@ function fft1d(
   inverse: boolean,
   plan: FftPlan,
 ): void {
-  const { n, reverse } = plan
+  const { n, reverse, stepR, stepI } = plan
 
   for (let i = 0; i < n; i++) {
     const j = reverse[i]
@@ -69,10 +79,9 @@ function fft1d(
     im[b] = t
   }
 
-  for (let len = 2; len <= n; len <<= 1) {
-    const angle = (inverse ? 2 : -2) * Math.PI / len
-    const stepR = Math.cos(angle)
-    const stepI = Math.sin(angle)
+  for (let len = 2, level = 1; len <= n; len <<= 1, level++) {
+    const wrStep = stepR[level]
+    const wiStep = stepI[level] * (inverse ? 1 : -1)
     const half = len >> 1
     for (let base = 0; base < n; base += len) {
       let wr = 1
@@ -88,8 +97,8 @@ function fft1d(
         im[even] = ei + oi
         re[odd] = er - or
         im[odd] = ei - oi
-        const nextR = wr * stepR - wi * stepI
-        wi = wr * stepI + wi * stepR
+        const nextR = wr * wrStep - wi * wiStep
+        wi = wr * wiStep + wi * wrStep
         wr = nextR
       }
     }
@@ -140,8 +149,11 @@ export class ParticleMesh {
 
   private readonly spectralR: Float64Array
   private readonly spectralI: Float64Array
+  private readonly poissonScale: Float64Array
+  private readonly previous: Uint16Array
+  private readonly next: Uint16Array
 
-  constructor(size: number, private readonly source: number, half = 1) {
+  constructor(size: number, source: number, half = 1) {
     fftPlan(size)
     this.size = size
     this.half = half
@@ -152,6 +164,30 @@ export class ParticleMesh {
     this.fieldY = new Float32Array(cells)
     this.spectralR = new Float64Array(cells)
     this.spectralI = new Float64Array(cells)
+    this.poissonScale = new Float64Array(cells)
+    this.previous = new Uint16Array(size)
+    this.next = new Uint16Array(size)
+    for (let i = 0; i < size; i++) {
+      this.previous[i] = i === 0 ? size - 1 : i - 1
+      this.next[i] = i + 1 === size ? 0 : i + 1
+    }
+
+    // The discrete Green function depends only on mesh geometry. Cache it once
+    // instead of evaluating thousands of trigonometric functions per step.
+    const invDx = 1 / this.cellSize
+    const wave = new Float64Array(size)
+    for (let i = 0; i < size; i++) {
+      const k = i <= size / 2 ? i : i - size
+      wave[i] = 2 * Math.sin(Math.PI * k / size) * invDx
+    }
+    for (let y = 0; y < size; y++) {
+      const sy = wave[y]
+      for (let x = 0; x < size; x++) {
+        const sx = wave[x]
+        const k2 = sx * sx + sy * sy
+        this.poissonScale[y * size + x] = k2 === 0 ? 0 : -source / k2
+      }
+    }
     this.stats = {
       cells,
       occupied: 0,
@@ -177,8 +213,10 @@ export class ParticleMesh {
       const gy = (y + half) * invCell - 0.5
       const fx0 = Math.floor(gx)
       const fy0 = Math.floor(gy)
-      const x0 = (fx0 % n + n) % n
-      const y0 = (fy0 % n + n) % n
+      // Positions are already periodic, so these floors are only -1..n-1.
+      // Branches avoid four general modulo operations in this hottest loop.
+      const x0 = fx0 < 0 ? n - 1 : fx0
+      const y0 = fy0 < 0 ? n - 1 : fy0
       const x1 = x0 + 1 === n ? 0 : x0 + 1
       const y1 = y0 + 1 === n ? 0 : y0 + 1
       const tx = gx - fx0
@@ -208,8 +246,8 @@ export class ParticleMesh {
       const gy = (c.y[i] + half) * invCell - 0.5
       const fx0 = Math.floor(gx)
       const fy0 = Math.floor(gy)
-      const x0 = (fx0 % n + n) % n
-      const y0 = (fy0 % n + n) % n
+      const x0 = fx0 < 0 ? n - 1 : fx0
+      const y0 = fy0 < 0 ? n - 1 : fy0
       const x1 = x0 + 1 === n ? 0 : x0 + 1
       const y1 = y0 + 1 === n ? 0 : y0 + 1
       const tx = gx - fx0
@@ -278,40 +316,28 @@ export class ParticleMesh {
 
     fft2(re, im, n, false)
 
-    // Discrete periodic Laplacian. Using the mesh operator rather than a
-    // continuum k² keeps the Poisson solve and the centred-difference force in
-    // agreement all the way to the grid scale.
-    const invDx = 1 / this.cellSize
-    for (let y = 0; y < n; y++) {
-      const ky = y <= n / 2 ? y : y - n
-      const sy = 2 * Math.sin(Math.PI * ky / n) * invDx
-      for (let x = 0; x < n; x++) {
-        const i = y * n + x
-        const kx = x <= n / 2 ? x : x - n
-        const sx = 2 * Math.sin(Math.PI * kx / n) * invDx
-        const k2 = sx * sx + sy * sy
-        if (k2 === 0) {
-          re[i] = 0
-          im[i] = 0
-          continue
-        }
-        const scale = -this.source / k2
-        re[i] *= scale
-        im[i] *= scale
-      }
+    // Cached discrete periodic Laplacian: the mesh operator and centred force
+    // remain consistent at the grid scale without recomputing any sines.
+    const poisson = this.poissonScale
+    for (let i = 0; i < cells; i++) {
+      re[i] *= poisson[i]
+      im[i] *= poisson[i]
     }
 
     fft2(re, im, n, true)
 
     const gx = this.fieldX
     const gy = this.fieldY
+    const invDx = 1 / this.cellSize
     const derivative = 0.5 * invDx
+    const previous = this.previous
+    const next = this.next
     for (let y = 0; y < n; y++) {
-      const ym = (y + n - 1) % n
-      const yp = (y + 1) % n
+      const ym = previous[y]
+      const yp = next[y]
       for (let x = 0; x < n; x++) {
-        const xm = (x + n - 1) % n
-        const xp = (x + 1) % n
+        const xm = previous[x]
+        const xp = next[x]
         const i = y * n + x
         gx[i] = -(re[y * n + xp] - re[y * n + xm]) * derivative
         gy[i] = -(re[yp * n + x] - re[ym * n + x]) * derivative
