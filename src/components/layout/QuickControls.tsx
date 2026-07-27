@@ -80,6 +80,8 @@ function formatDateTime(): string {
 
 interface QuickControlsProps {
   variant?: "full" | "chat"
+  /** Route-owned immersive mode can be known before the layout store settles. */
+  immersive?: boolean
 }
 
 function TerminalToggle() {
@@ -123,7 +125,7 @@ function SideChatToggle() {
   )
 }
 
-export function QuickControls({ variant = "full" }: QuickControlsProps) {
+export function QuickControls({ variant = "full", immersive }: QuickControlsProps) {
   const [time, setTime] = useState(() => formatDateTime())
   const theme = useStore((s) => s.theme)
   const accentBase = useStore((s) => s.accentBase)
@@ -132,6 +134,10 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
   const shell = useShell()
   const isSideChatOpen = useStore((s) => s.isSideChatOpen)
   const sideChatWidth = useStore((s) => s.sideChatWidth)
+  const activeLayout = useStore((s) => s.activeLayout)
+  const activeSlug = useStore((s) => s.activeGraphSlug)
+  const isImmersive =
+    immersive ?? (activeLayout === "game" && activeSlug.toLowerCase() === "filament")
 
   useEffect(() => {
     const id = setInterval(() => setTime(formatDateTime()), 1000)
@@ -145,6 +151,7 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
     <div
       className={styles.quickControls}
       data-variant={variant}
+      data-immersive={isImmersive || undefined}
       data-panel-ignore
       style={rightOffset ? { right: `${rightOffset}px` } : undefined}
     >
@@ -175,10 +182,10 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
         aria-label="Cycle accent color"
       />
 
-      <BgModeToggle />
+      {!isImmersive && <BgModeToggle />}
 
       {/* Reader Mode Toggle */}
-      {variant === "full" && <ReaderToggle />}
+      {variant === "full" && !isImmersive && <ReaderToggle />}
 
       {/* Side Chat Toggle (wiki only) */}
       <SideChatToggle />

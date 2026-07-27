@@ -7,6 +7,7 @@ import { useHotkeys } from "@/hooks/useHotkeys"
 import { useShell } from "@/hooks/useShell"
 import { useDynamicFavicon } from "@/hooks/useDynamicFavicon"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
+import { slugFromPathname } from "@/lib/slug"
 const WikiShell = lazy(() => import("./WikiShell").then(m => ({ default: m.WikiShell })))
 const ChatShell = lazy(() => import("./ChatShell").then(m => ({ default: m.ChatShell })))
 const OSShell = lazy(() => import("@/features/boot/BootPage").then(m => ({ default: m.BootPage })))
@@ -93,6 +94,10 @@ export function AppShell() {
   if (shell === "os") return <Suspense fallback={null}><OSShell /><GlobalOverlays /><CookieConsent /></Suspense>
 
   const showFloatingGraph = !isMobile
+  // Derive this from the route, not the layout store: store effects settle after
+  // the first render, which would briefly mount the title and heavy LocalGraph
+  // chunk on a direct /filament visit.
+  const isImmersive = slugFromPathname(location.pathname).toLowerCase() === "filament"
 
   return (
     <MDXProvider>
@@ -100,6 +105,7 @@ export function AppShell() {
         className={styles.shell}
         data-reader={isReaderMode ? "true" : undefined}
         data-layout={activeLayout}
+        data-immersive={isImmersive || undefined}
         data-testid="app-shell"
         style={
           isReaderMode
@@ -115,14 +121,14 @@ export function AppShell() {
         <ThemePanel />
         <LinkPreview />
         <MusicPlayer />
-        <MobileMusicBar />
-        <QuickControls />
+        {!isImmersive && <MobileMusicBar />}
+        <QuickControls immersive={isImmersive} />
         <SearchOverlay />
         <GraphOverlay />
         <GlobalOverlays />
         
         {/* Terminal title — top-left */}
-        <TerminalTitle />
+        {!isImmersive && <TerminalTitle />}
 
         {/* Horizontal workspace: main pane + panel cards */}
         <div className={styles.workspace} data-testid="workspace">
@@ -137,7 +143,7 @@ export function AppShell() {
         </div>
 
         {/* Floating Local Graph (Desktop Only) */}
-        {showFloatingGraph && (
+        {showFloatingGraph && !isImmersive && (
           <ErrorBoundary label="graph" fallback={() => null}>
             <Suspense fallback={null}>
               <LocalGraph slug={activeSlug} />
@@ -146,7 +152,7 @@ export function AppShell() {
         )}
 
         {/* Corner menu — bottom-right (includes Theme toggle) */}
-        <CornerMenu />
+        {!isImmersive && <CornerMenu />}
         <CookieConsent />
       </div>
     </MDXProvider>

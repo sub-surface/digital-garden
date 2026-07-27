@@ -206,8 +206,20 @@
   // The full-variant bar (garden/wiki) is replaced by the bottom-right
   // CornerMenu on mobile, which mirrors these actions. The chat variant has no
   // CornerMenu, so it must stay visible.
-  .quickControls[data-variant="full"] {
+  .quickControls[data-variant="full"]:not([data-immersive]) {
     display: none;
+  }
+
+  // FILAMENT has no bottom CornerMenu: its compact global controls remain in
+  // the top-right while the simulation's transport occupies the top-left.
+  .quickControls[data-immersive] {
+    gap: var(--space-2);
+    padding: 0.2rem 0.35rem;
+    background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+    border-radius: 6px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
 
   .clockGroup {

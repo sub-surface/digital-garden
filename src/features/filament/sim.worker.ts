@@ -42,6 +42,8 @@ let rw = 0, rh = 0
 const pool: ArrayBuffer[] = []
 let scheduled = false
 let running = false
+/** A paused simulation renders only when a parameter, view, or size changes. */
+let renderRequested = false
 /** Monotonic wall clock in seconds, so event fades are framerate-independent. */
 let clock = 0
 let lastTick = 0
@@ -449,16 +451,18 @@ function tick(): void {
   if (!running || !params || !uni || pool.length === 0) return
 
   const now = performance.now()
-  const dtSec = lastTick ? Math.min(0.25, (now - lastTick) / 1000) : 1 / 60
-  lastTick = now
-  clock += dtSec
+  const advancing = params.substeps > 0
+  const dtSec = advancing ? (lastTick ? Math.min(0.25, (now - lastTick) / 1000) : 1 / 60) : 0
+  lastTick = advancing ? now : 0
+  if (advancing) clock += dtSec
+  renderRequested = false
 
   const t0 = performance.now()
   for (let s = 0; s < params.substeps; s++) uni.step()
   const t1 = performance.now()
 
   syncGlow()
-  if (params.substeps > 0) scanEvents(dtSec)
+  if (advancing) scanEvents(dtSec)
 
   const buf = pool.pop()!
   render(buf)
@@ -484,8 +488,15 @@ function tick(): void {
   kick()
 }
 
-function kick(): void {
-  if (scheduled || !running || pool.length === 0 || rw === 0) return
+function kick(force = false): void {
+  if (force) renderRequested = true
+  if (
+    scheduled ||
+    !running ||
+    pool.length === 0 ||
+    rw === 0 ||
+    (params?.substeps === 0 && !renderRequested)
+  ) return
   scheduled = true
   setTimeout(tick, 0)
 }
@@ -496,7 +507,7 @@ function resize(w: number, h: number): void {
   accum = new Float32Array(w * h)
   pool.length = 0
   pool.push(new ArrayBuffer(w * h * 4), new ArrayBuffer(w * h * 4))
-  kick()
+  kick(true)
 }
 
 // ---------------------------------------------------------------------------
@@ -513,7 +524,7 @@ ctx.addEventListener("message", (e: MessageEvent<ToWorker>) => {
       reset()
       running = true
       ctx.postMessage({ t: "ready" })
-      kick()
+      kick(true)
       break
 
     case "params": {
@@ -536,25 +547,25 @@ ctx.addEventListener("message", (e: MessageEvent<ToWorker>) => {
           syncGlow()
         }
       }
-      kick()
+      kick(true)
       break
     }
 
     case "replay":
       if (params) reset()
-      kick()
+      kick(true)
       break
 
     case "view":
       view = { ...msg.view }
-      kick()
+      kick(true)
       break
 
     case "accent":
       accent = msg.accent
       glowKey = -1
       syncGlow()
-      kick()
+      kick(true)
       break
 
     case "resize":

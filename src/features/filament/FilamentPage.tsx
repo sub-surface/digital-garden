@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { GameCabinet } from "@/components/ui/games/GameCabinet"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 import { PRESETS, type PresetName } from "./presets"
 import { formatAge } from "./cosmology"
@@ -45,6 +44,14 @@ const SPEEDS = [
   { n: 3, label: "▶▶", title: "Run fast — three integration steps per frame" },
 ]
 
+type ControlTab = "world" | "view" | "solver"
+
+const CONTROL_TABS: { id: ControlTab; label: string }[] = [
+  { id: "world", label: "World" },
+  { id: "view", label: "View" },
+  { id: "solver", label: "Solver" },
+]
+
 /** Resolve any CSS colour (hex, rgb(), oklch(), …) to 0–1 RGB. */
 function readAccent(): [number, number, number] {
   const fallback: [number, number, number] = [0.71, 0.26, 0.3]
@@ -86,6 +93,8 @@ export function FilamentPage() {
   const [exposure, setExposure] = useState(1)
   const [seed, setSeed] = useState(() => (Math.random() * 0xffffffff) >>> 0)
   const [stats, setStats] = useState<SimStats | null>(null)
+  const [controlsOpen, setControlsOpen] = useState(false)
+  const [controlTab, setControlTab] = useState<ControlTab>("world")
 
   const scale = useMemo(() => SCALES.find((s) => s.key === scaleKey) ?? SCALES[1], [scaleKey])
   const info = useMemo(() => PRESETS.find((p) => p.name === preset) ?? PRESETS[0], [preset])
@@ -247,8 +256,47 @@ export function FilamentPage() {
     return () => obs.disconnect()
   }, [post])
 
+  // The control surface is deliberately non-modal: the universe remains
+  // draggable behind it. Escape and a click back on the sky collapse it.
+  const controlsRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!controlsOpen) return
+    const onPointerDown = (e: PointerEvent) => {
+      if (!controlsRef.current?.contains(e.target as Node)) setControlsOpen(false)
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setControlsOpen(false)
+    }
+    document.addEventListener("pointerdown", onPointerDown, true)
+    document.addEventListener("keydown", onKeyDown)
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true)
+      document.removeEventListener("keydown", onKeyDown)
+    }
+  }, [controlsOpen])
+
+  const onControlTabKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>, current: ControlTab) => {
+      const index = CONTROL_TABS.findIndex((tab) => tab.id === current)
+      let next = index
+      if (e.key === "ArrowRight") next = (index + 1) % CONTROL_TABS.length
+      else if (e.key === "ArrowLeft") next = (index - 1 + CONTROL_TABS.length) % CONTROL_TABS.length
+      else if (e.key === "Home") next = 0
+      else if (e.key === "End") next = CONTROL_TABS.length - 1
+      else return
+
+      e.preventDefault()
+      const nextTab = CONTROL_TABS[next].id
+      setControlTab(nextTab)
+      requestAnimationFrame(() => document.getElementById(`filament-tab-${nextTab}`)?.focus())
+    },
+    [],
+  )
+
   // --- pan / zoom -----------------------------------------------------------
   const dragRef = useRef<{ x: number; y: number } | null>(null)
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>())
+  const pinchRef = useRef<{ distance: number; x: number; y: number } | null>(null)
   const pushView = useCallback(() => post({ t: "view", view: viewRef.current }), [post])
 
   const bufferPixels = useCallback((e: { clientX: number; clientY: number }) => {
@@ -259,9 +307,38 @@ export function FilamentPage() {
       y: ((e.clientY - rect.top) / rect.height) * canvas.height,
       w: canvas.width,
       h: canvas.height,
-      px: canvas.width / rect.width,
     }
   }, [])
+
+  const panByClientPixels = useCallback((dx: number, dy: number) => {
+    const canvas = canvasRef.current
+    const s = statsRef.current
+    if (!canvas || !s) return false
+    const rect = canvas.getBoundingClientRect()
+    const px = canvas.width / rect.width
+    const v = viewRef.current
+    v.panX -= (dx * px) / s.scale
+    v.panY += (dy * px) / s.scale
+    return true
+  }, [])
+
+  const zoomAt = useCallback(
+    (clientX: number, clientY: number, factor: number) => {
+      const s = statsRef.current
+      if (!s) return false
+      const v = viewRef.current
+      const next = Math.max(0.05, Math.min(400, v.zoom * factor))
+      const applied = next / v.zoom
+      if (Math.abs(applied - 1) < 1e-6) return false
+      const b = bufferPixels({ clientX, clientY })
+      // Hold the world point beneath the gesture fixed while the scale changes.
+      v.panX += ((b.x - b.w / 2) / s.scale) * (1 - 1 / applied)
+      v.panY -= ((b.y - b.h / 2) / s.scale) * (1 - 1 / applied)
+      v.zoom = next
+      return true
+    },
+    [bufferPixels],
+  )
 
   // Wheel is bound natively rather than through React: React attaches wheel
   // listeners at the root as passive, so `preventDefault` there is a no-op and
@@ -273,48 +350,121 @@ export function FilamentPage() {
       const s = statsRef.current
       if (!s) return
       e.preventDefault()
-      const v = viewRef.current
-      const next = Math.max(0.05, Math.min(400, v.zoom * Math.exp(-e.deltaY * 0.0016)))
-      const applied = next / v.zoom
-      // Anchor the zoom on the cursor: hold the world point under it fixed.
-      const b = bufferPixels(e)
-      v.panX += ((b.x - b.w / 2) / s.scale) * (1 - 1 / applied)
-      v.panY -= ((b.y - b.h / 2) / s.scale) * (1 - 1 / applied)
-      v.zoom = next
-      pushView()
+      if (zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0016))) pushView()
     }
     canvas.addEventListener("wheel", onWheel, { passive: false })
     return () => canvas.removeEventListener("wheel", onWheel)
-  }, [bufferPixels, pushView])
+  }, [pushView, zoomAt])
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     ;(e.target as Element).setPointerCapture?.(e.pointerId)
-    dragRef.current = { x: e.clientX, y: e.clientY }
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pointersRef.current.size === 1) {
+      dragRef.current = { x: e.clientX, y: e.clientY }
+      pinchRef.current = null
+      return
+    }
+    const points = [...pointersRef.current.values()]
+    const a = points[0]
+    const b = points[1]
+    pinchRef.current = {
+      distance: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2,
+    }
+    dragRef.current = null
   }, [])
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
+      if (!pointersRef.current.has(e.pointerId)) return
+      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+
+      if (pointersRef.current.size >= 2) {
+        const points = [...pointersRef.current.values()]
+        const a = points[0]
+        const b = points[1]
+        const next = {
+          distance: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
+          x: (a.x + b.x) / 2,
+          y: (a.y + b.y) / 2,
+        }
+        const prev = pinchRef.current
+        if (prev) {
+          const panned = panByClientPixels(next.x - prev.x, next.y - prev.y)
+          const zoomed = zoomAt(next.x, next.y, next.distance / prev.distance)
+          if (panned || zoomed) pushView()
+        }
+        pinchRef.current = next
+        dragRef.current = null
+        return
+      }
+
       const d = dragRef.current
-      const s = statsRef.current
-      if (!d || !s) return
-      const b = bufferPixels(e)
-      const v = viewRef.current
-      v.panX -= ((e.clientX - d.x) * b.px) / s.scale
-      v.panY += ((e.clientY - d.y) * b.px) / s.scale
+      if (!d) {
+        dragRef.current = { x: e.clientX, y: e.clientY }
+        return
+      }
+      if (panByClientPixels(e.clientX - d.x, e.clientY - d.y)) pushView()
       dragRef.current = { x: e.clientX, y: e.clientY }
-      pushView()
     },
-    [bufferPixels, pushView],
+    [panByClientPixels, pushView, zoomAt],
   )
 
-  const endDrag = useCallback(() => {
-    dragRef.current = null
+  const endDrag = useCallback((e: React.PointerEvent) => {
+    pointersRef.current.delete(e.pointerId)
+    pinchRef.current = null
+    const remaining = [...pointersRef.current.values()]
+    dragRef.current = remaining.length === 1 ? remaining[0] : null
   }, [])
 
   const resetView = useCallback(() => {
     viewRef.current = { ...viewRef.current, zoom: 1, panX: 0, panY: 0 }
     pushView()
   }, [pushView])
+
+  const onCanvasKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLCanvasElement>) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      let changed = false
+      switch (e.key) {
+        case "ArrowLeft":
+          changed = panByClientPixels(36, 0)
+          break
+        case "ArrowRight":
+          changed = panByClientPixels(-36, 0)
+          break
+        case "ArrowUp":
+          changed = panByClientPixels(0, 36)
+          break
+        case "ArrowDown":
+          changed = panByClientPixels(0, -36)
+          break
+        case "+":
+        case "=": {
+          const r = canvas.getBoundingClientRect()
+          changed = zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.2)
+          break
+        }
+        case "-": {
+          const r = canvas.getBoundingClientRect()
+          changed = zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.2)
+          break
+        }
+        case "0":
+        case "Home":
+          resetView()
+          e.preventDefault()
+          return
+        default:
+          return
+      }
+      if (changed) pushView()
+      e.preventDefault()
+    },
+    [panByClientPixels, pushView, resetView, zoomAt],
+  )
 
   // --- readout --------------------------------------------------------------
   const clock: string[] = []
@@ -338,136 +488,216 @@ export function FilamentPage() {
     : ["warming up…"]
 
   return (
-    <GameCabinet
-      title="FILAMENT"
-      blurb="Structure formation under the Fast Multipole Method — exact 2D gravity, in linear time."
-      status="playing"
-      zen
-      hint="drag to pan · scroll to zoom · ⤢ for fullscreen"
-      controls={
-        <div className={styles.controls}>
-          <div className={styles.group} role="group" aria-label="Scenario">
-            {PRESETS.map((p) => (
-              <button
-                key={p.name}
-                onClick={() => setPreset(p.name)}
-                data-active={p.name === preset || undefined}
-                title={p.blurb}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.group} role="group" aria-label="Particle count">
-            {SCALES.map((s) => (
-              <button
-                key={s.key}
-                onClick={() => setScaleKey(s.key)}
-                data-active={s.key === scaleKey || undefined}
-                title={`${s.nMass.toLocaleString()} massive particles + ${s.nTracer.toLocaleString()} massless tracers`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.group} role="group" aria-label="Expansion order">
-            {ORDERS.map((o) => (
-              <button
-                key={o.p}
-                onClick={() => setOrder(o.p)}
-                data-active={o.p === order || undefined}
-                title={`Multipole expansion order p = ${o.p}. Unlike Barnes-Hut's opening angle this is a pure accuracy dial — the error falls geometrically with it.`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.group} role="group" aria-label="Speed">
-            {SPEEDS.map((s) => (
-              <button
-                key={s.n}
-                onClick={() => setSpeed(s.n)}
-                data-active={s.n === speed || undefined}
-                title={s.title}
-              >
-                {s.label}
-              </button>
-            ))}
-            <button
-              onClick={() => post({ t: "replay" })}
-              title={info.cosmological ? "Back to recombination" : "Restart from the initial conditions"}
-            >
-              ↺
-            </button>
-          </div>
-
-          <div className={styles.group}>
-            <button
-              onClick={() => setEvents((v) => !v)}
-              data-active={events || undefined}
-              title="Quasars in the deepest halos, starbursts where gas is densest, and the afterglow of recombination fading out of the visible"
-            >
-              luminous
-            </button>
-            <button
-              onClick={() => setTrails((t) => !t)}
-              data-active={trails || undefined}
-              title="Let the density buffer decay instead of clearing — particles leave streaks along their tracks"
-            >
-              trails
-            </button>
-            <button
-              onClick={() => setFollow((f) => !f)}
-              data-active={follow || undefined}
-              title="Keep the camera framed on the mass distribution (the cosmological patch is comoving, so it is already fixed)"
-            >
-              follow
-            </button>
-            <button
-              onClick={() => setExposure((x) => (x >= 4 ? 0.35 : x * 1.6))}
-              title="Brightness of the density tone map"
-            >
-              exposure {exposure.toFixed(2)}
-            </button>
-            <button
-              onClick={() => setSeed((Math.random() * 0xffffffff) >>> 0)}
-              title="New random initial conditions"
-            >
-              reseed
-            </button>
-            <button onClick={resetView} title="Back to the framed view">
-              reset view
-            </button>
-          </div>
-
-          <p className={styles.presetBlurb}>{info.blurb}</p>
-          {clock.length > 0 && (
-            <div className={styles.clock}>
-              {clock.map((c) => (
-                <span key={c}>{c}</span>
-              ))}
-            </div>
-          )}
-          <div className={styles.readout}>
-            {machine.map((r) => (
-              <span key={r}>{r}</span>
-            ))}
-          </div>
-        </div>
-      }
-    >
+    <div className={styles.simulation} data-fullbleed>
       <canvas
         ref={canvasRef}
         className={styles.stage}
+        tabIndex={0}
+        aria-label="Interactive two-dimensional gravity simulation. Drag or use arrow keys to pan; scroll, pinch, or use plus and minus to zoom."
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onKeyDown={onCanvasKeyDown}
         onDoubleClick={resetView}
       />
-    </GameCabinet>
+
+      <div ref={controlsRef} className={styles.controlSurface} data-panel-ignore>
+        <div className={styles.toolbar}>
+          <button
+            className={styles.optionsTrigger}
+            type="button"
+            onClick={() => setControlsOpen((open) => !open)}
+            aria-expanded={controlsOpen}
+            aria-controls="filament-options"
+          >
+            <span>FILAMENT</span>
+            <span className={styles.triggerMark} aria-hidden="true">{controlsOpen ? "−" : "+"}</span>
+          </button>
+
+          <div className={styles.transport} role="group" aria-label="Simulation playback">
+            {SPEEDS.map((s) => (
+              <button
+                key={s.n}
+                type="button"
+                onClick={() => setSpeed(s.n)}
+                data-active={s.n === speed || undefined}
+                title={s.title}
+                aria-label={s.title}
+                aria-pressed={s.n === speed}
+              >
+                {s.label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => post({ t: "replay" })}
+              title={info.cosmological ? "Back to recombination" : "Restart from the initial conditions"}
+              aria-label={info.cosmological ? "Replay from recombination" : "Replay initial conditions"}
+            >
+              ↺
+            </button>
+          </div>
+        </div>
+
+        {controlsOpen && (
+          <section id="filament-options" className={styles.optionsPanel} aria-label="FILAMENT options">
+            <div className={styles.tabs} role="tablist" aria-label="Option groups">
+              {CONTROL_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  id={`filament-tab-${tab.id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={controlTab === tab.id}
+                  aria-controls={`filament-panel-${tab.id}`}
+                  tabIndex={controlTab === tab.id ? 0 : -1}
+                  data-active={controlTab === tab.id || undefined}
+                  onClick={() => setControlTab(tab.id)}
+                  onKeyDown={(e) => onControlTabKeyDown(e, tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div
+              id={`filament-panel-${controlTab}`}
+              className={styles.tabPanel}
+              role="tabpanel"
+              aria-labelledby={`filament-tab-${controlTab}`}
+            >
+              {controlTab === "world" && (
+                <>
+                  <div className={styles.field}>
+                    <span className={styles.fieldLabel}>Scenario</span>
+                    <div className={styles.segmented} role="group" aria-label="Scenario">
+                      {PRESETS.map((p) => (
+                        <button
+                          key={p.name}
+                          type="button"
+                          onClick={() => setPreset(p.name)}
+                          data-active={p.name === preset || undefined}
+                          aria-pressed={p.name === preset}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className={styles.presetBlurb}>{info.blurb}</p>
+                  <div className={styles.actions}>
+                    <button type="button" onClick={() => post({ t: "replay" })}>Replay this world</button>
+                    <button type="button" onClick={() => setSeed((Math.random() * 0xffffffff) >>> 0)}>
+                      New seed
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {controlTab === "view" && (
+                <>
+                  <div className={styles.field}>
+                    <span className={styles.fieldLabel}>Layers</span>
+                    <div className={styles.segmented} role="group" aria-label="Visible layers">
+                      <button
+                        type="button"
+                        onClick={() => setEvents((v) => !v)}
+                        data-active={events || undefined}
+                        aria-pressed={events}
+                        title="Quasars, starbursts, and the recombination afterglow"
+                      >
+                        Luminous
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTrails((t) => !t)}
+                        data-active={trails || undefined}
+                        aria-pressed={trails}
+                      >
+                        Trails
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFollow((f) => !f)}
+                        data-active={follow || undefined}
+                        aria-pressed={follow}
+                      >
+                        Follow
+                      </button>
+                    </div>
+                  </div>
+                  <label className={styles.rangeField}>
+                    <span className={styles.fieldLabel}>Exposure</span>
+                    <input
+                      type="range"
+                      min="0.25"
+                      max="4"
+                      step="0.05"
+                      value={exposure}
+                      onChange={(e) => setExposure(Number(e.currentTarget.value))}
+                    />
+                    <output>{exposure.toFixed(2)}</output>
+                  </label>
+                  <div className={styles.actions}>
+                    <button type="button" onClick={resetView}>Reset view</button>
+                  </div>
+                </>
+              )}
+
+              {controlTab === "solver" && (
+                <>
+                  <div className={styles.field}>
+                    <span className={styles.fieldLabel}>Massive · tracers</span>
+                    <div className={styles.segmented} role="group" aria-label="Particle count">
+                      {SCALES.map((s) => (
+                        <button
+                          key={s.key}
+                          type="button"
+                          onClick={() => setScaleKey(s.key)}
+                          data-active={s.key === scaleKey || undefined}
+                          aria-pressed={s.key === scaleKey}
+                          title={`${s.nMass.toLocaleString()} massive particles and ${s.nTracer.toLocaleString()} tracers`}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className={styles.field}>
+                    <span className={styles.fieldLabel}>Multipole accuracy</span>
+                    <div className={styles.segmented} role="group" aria-label="Expansion order">
+                      {ORDERS.map((o) => (
+                        <button
+                          key={o.p}
+                          type="button"
+                          onClick={() => setOrder(o.p)}
+                          data-active={o.p === order || undefined}
+                          aria-pressed={o.p === order}
+                          title={`Expansion order p = ${o.p}; error falls geometrically as order rises`}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className={styles.machineStats} aria-live="polite">
+                    {machine.map((r) => <span key={r}>{r}</span>)}
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+        )}
+      </div>
+
+      <div className={styles.clockHud} aria-live="polite">
+        {(clock.length > 0 ? clock : ["seeding the early universe…"]).map((c) => <span key={c}>{c}</span>)}
+      </div>
+
+      <div className={styles.gestureHint} aria-hidden="true">
+        drag to pan · scroll or pinch to zoom · double-click to reset
+      </div>
+    </div>
   )
 }

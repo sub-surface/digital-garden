@@ -1,0 +1,24 @@
+- date: 2026-07-27
+  area: garden
+  title: "FILAMENT fullscreen simulation interface"
+  status: done
+  files:
+    - src/features/filament/FilamentPage.tsx
+    - src/features/filament/FilamentPage.module.scss
+    - src/features/filament/sim.worker.ts
+    - src/components/layout/AppShell.tsx
+    - src/components/layout/QuickControls.tsx
+  changes:
+    - "Replaced FILAMENT's 600px GameCabinet presentation with a native 100vw x 100dvh simulation surface. The density canvas now owns the complete viewport with no article padding, border, header, local graph, mobile music bar, or bottom corner menu."
+    - "Added a minimal floating interface: persistent playback and replay controls, a cosmic clock HUD, and a collapsible options panel organised into World (scenario and seed), View (luminous events, trails, follow, exposure, camera reset), and Solver (particle scale, multipole order, and live performance readout) tabs."
+    - "Kept the garden QuickControls floating at the top-right, including the Arcade return action. On FILAMENT, irrelevant background and reader controls are omitted; the compact bar remains available on phones in place of the hidden CornerMenu."
+    - "Completed the viewport interaction model with cursor-anchored wheel zoom, two-finger pinch zoom and pan, pointer capture, double-click reset, arrow-key panning, plus/minus zoom, Home/0 reset, labelled canvas instructions, pressed states, and keyboard-operable ARIA tabs."
+    - "Made pause a real pause. A zero-substep worker no longer continuously renders or advances luminous-event time; view, palette, parameter, and resize changes request a single fresh frame, with deferred requests preserved until a recycled buffer is available."
+    - "Verified the final source with the full npm run check pipeline (numerical FMM/cosmology tests, repository tests, lint, SPA and Worker typechecks, and production build), followed by a second production build, targeted lint, and git diff --check. Existing lint warnings and five known broken wikilinks were unchanged."
+  decisions:
+    - "FILAMENT is an immersive scientific instrument rather than a conventional arcade cabinet. Its page owns its interface directly; GameCabinet remains unchanged for smaller score-and-board games."
+    - "Immersive mode is derived from the canonical route slug in AppShell instead of waiting for the active-layout store effect. This prevents a direct /filament visit from briefly mounting the animated site title or loading the heavy LocalGraph chunk."
+    - "The parameter taxonomy follows user intent rather than implementation detail: World changes initial conditions, View changes presentation and camera behaviour, and Solver changes computational resolution or exposes diagnostics. Playback remains outside the tabs because it is always relevant."
+    - "The render-resolution cap and transferable two-buffer backpressure were retained. Fullscreen changes CSS geometry, not the simulation's memory and frame-budget safeguards."
+    - "No live browser visual pass was possible because the browser-control surface was unavailable in the session; the production Sass/Vite build is verified, but final visual QA remains the next boundary."
+  next: "Open the deployed /filament for a desktop and phone visual pass; follow up only if the live rendering reveals a layout issue."

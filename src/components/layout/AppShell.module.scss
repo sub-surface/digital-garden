@@ -94,6 +94,44 @@
   padding: 2rem 3rem;
 }
 
+// Immersive simulations own the viewport. Keep global overlays and
+// QuickControls, but remove every scrolling and padding constraint between the
+// route and the screen so the simulation canvas is the page, not a large card.
+.shell[data-immersive] {
+  .workspace,
+  .mainPane,
+  .mainContent {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .mainPane {
+    min-width: 100%;
+  }
+
+  .mainContent {
+    padding: 0;
+  }
+
+  :global(.game-layout) {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+  }
+
+  :global(.game-stage) {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+    align-items: stretch;
+  }
+}
+
 // ── Reader mode ──
 // The measure (line length) and font scale are user-adjustable via the
 // ThemePanel's Reader tab and persisted; they arrive as `--reader-measure` /
