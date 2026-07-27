@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 520" font-family="ui-monospace, 'IBM Plex Mono', Consolas, monospace">
+  <title>Linear and curved utility over resources</title>
+  <desc>A straight risk-neutral utility line and a concave risk-averse curve. The utility of 40 certain resources is above the expected utility of a half chance of 100 or zero.</desc>
+  <defs>
+    <marker id="axis-arrow" viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0.5 L7,4 L0,7.5 z" fill="#8a8a92"/>
+    </marker>
+  </defs>
+
+  <text x="70" y="42" font-size="12" letter-spacing="2" fill="#9a9aa2">THE BEND</text>
+  <text x="850" y="42" font-size="10" fill="#9a9aa2" opacity="0.7" text-anchor="end">same resources, different value</text>
+
+  <line x1="110" y1="420" x2="850" y2="420" stroke="#8a8a92" stroke-width="1.25" opacity="0.65" marker-end="url(#axis-arrow)"/>
+  <line x1="110" y1="420" x2="110" y2="65" stroke="#8a8a92" stroke-width="1.25" opacity="0.65" marker-end="url(#axis-arrow)"/>
+  <text x="850" y="469" font-size="11" fill="#9a9aa2" text-anchor="end">resources r</text>
+  <text x="82" y="70" font-size="11" fill="#9a9aa2" text-anchor="end">utility</text>
+
+  <g fill="#9a9aa2" font-size="10" opacity="0.75">
+    <text x="110" y="443" text-anchor="middle">0</text>
+    <text x="295" y="443" text-anchor="middle">25</text>
+    <text x="406" y="443" text-anchor="middle">40</text>
+    <text x="480" y="443" text-anchor="middle">50</text>
+    <text x="850" y="443" text-anchor="middle">100</text>
+  </g>
+
+  <g stroke="#8a8a92" stroke-width="1" opacity="0.28">
+    <line x1="295" y1="420" x2="295" y2="242"/>
+    <line x1="406" y1="420" x2="406" y2="195"/>
+    <line x1="850" y1="420" x2="850" y2="72"/>
+    <line x1="110" y1="242" x2="295" y2="242"/>
+    <line x1="110" y1="195" x2="406" y2="195"/>
+  </g>
+
+  <line x1="110" y1="420" x2="850" y2="72" stroke="#8a8a92" stroke-width="2" opacity="0.75"/>
+  <text x="600" y="250" font-size="11" fill="#8a8a92" transform="rotate(-25 600 250)">risk-neutral: u(r) = r / 10</text>
+
+  <path d="M110,420
+           C137,355 162,324 184,310
+           C225,282 260,258 295,242
+           C334,223 370,207 406,195
+           C480,169 554,145 628,126
+           C702,107 776,89 850,72"
+        fill="none" stroke="#b4424c" stroke-width="3"/>
+  <text x="575" y="82" font-size="11" fill="#b4424c">risk-averse: u(r) = sqrt(r)</text>
+
+  <circle cx="295" cy="242" r="5.5" fill="#8a8a92"/>
+  <text x="295" y="221" font-size="10" fill="#8a8a92" text-anchor="middle">EU 5.0</text>
+
+  <circle cx="406" cy="195" r="6" fill="#b4424c"/>
+  <text x="406" y="174" font-size="10" fill="#b4424c" text-anchor="middle">u 6.3</text>
+
+  <path d="M305,242 C338,242 365,231 395,202" fill="none" stroke="#b4424c" stroke-width="1.25" stroke-dasharray="4 5"/>
+
+  <text x="110" y="505" font-size="10.5" fill="#9a9aa2">The first units count most. The curve makes a secure floor valuable.</text>
+</svg>

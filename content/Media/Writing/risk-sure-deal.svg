@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" font-family="ui-monospace, 'IBM Plex Mono', Consolas, monospace">
+  <title>A risky gamble and a smaller sure deal</title>
+  <desc>A risk-averse agent chooses between a half chance of 100 or zero resources and 40 resources for sure. The deal has fewer expected resources but greater expected utility.</desc>
+  <defs>
+    <marker id="deal-arrow" viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0.5 L7,4 L0,7.5 z" fill="#8a8a92"/>
+    </marker>
+    <marker id="deal-arrow-accent" viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0.5 L7,4 L0,7.5 z" fill="#b4424c"/>
+    </marker>
+  </defs>
+
+  <text x="70" y="42" font-size="12" letter-spacing="2" fill="#9a9aa2">ONE AGENT, TWO CHOICES</text>
+  <text x="850" y="42" font-size="10" fill="#9a9aa2" opacity="0.7" text-anchor="end">u(r) = sqrt(r)</text>
+
+  <circle cx="118" cy="245" r="38" fill="none" stroke="#8a8a92" stroke-width="1.5"/>
+  <text x="118" y="241" font-size="11" fill="#8a8a92" text-anchor="middle">AGENT</text>
+  <text x="118" y="258" font-size="9" fill="#9a9aa2" text-anchor="middle">choose</text>
+
+  <path d="M156,226 C220,226 226,140 292,140" fill="none" stroke="#8a8a92" stroke-width="1.5" marker-end="url(#deal-arrow)"/>
+  <path d="M156,264 C220,264 226,360 292,360" fill="none" stroke="#b4424c" stroke-width="2" marker-end="url(#deal-arrow-accent)"/>
+  <text x="214" y="168" font-size="10" fill="#9a9aa2" text-anchor="middle">take gamble</text>
+  <text x="214" y="337" font-size="10" fill="#b4424c" text-anchor="middle">take deal</text>
+
+  <rect x="310" y="82" width="455" height="154" rx="8" fill="none" stroke="#8a8a92" stroke-width="1.25"/>
+  <line x1="535" y1="82" x2="535" y2="236" stroke="#8a8a92" stroke-width="1" opacity="0.35"/>
+  <text x="422" y="111" font-size="10" letter-spacing="1.5" fill="#9a9aa2" text-anchor="middle">WIN - 50%</text>
+  <text x="650" y="111" font-size="10" letter-spacing="1.5" fill="#9a9aa2" text-anchor="middle">LOSE - 50%</text>
+  <text x="422" y="156" font-size="28" fill="#8a8a92" text-anchor="middle">100</text>
+  <text x="650" y="156" font-size="28" fill="#8a8a92" text-anchor="middle">0</text>
+  <text x="422" y="181" font-size="10" fill="#9a9aa2" text-anchor="middle">utility 10</text>
+  <text x="650" y="181" font-size="10" fill="#9a9aa2" text-anchor="middle">utility 0</text>
+  <text x="537" y="216" font-size="11" fill="#8a8a92" text-anchor="middle">average resources 50 / expected utility 5.0</text>
+
+  <rect x="310" y="285" width="455" height="150" rx="8" fill="#b4424c" fill-opacity="0.04" stroke="#b4424c" stroke-width="1.75"/>
+  <text x="537" y="317" font-size="10" letter-spacing="1.5" fill="#b4424c" text-anchor="middle">SURE OFFER - 100%</text>
+  <text x="537" y="367" font-size="32" fill="#b4424c" text-anchor="middle">40</text>
+  <text x="537" y="394" font-size="11" fill="#b4424c" text-anchor="middle">resources 40 / utility 6.3</text>
+  <text x="537" y="419" font-size="10" fill="#b4424c" opacity="0.85" text-anchor="middle">less resource, more utility</text>
+
+  <path d="M790,160 V347" fill="none" stroke="#b4424c" stroke-width="1.25" stroke-dasharray="4 5" marker-end="url(#deal-arrow-accent)"/>
+  <text x="809" y="256" font-size="9.5" fill="#b4424c" transform="rotate(90 809 256)" text-anchor="middle">the curve reverses the choice</text>
+
+  <text x="70" y="474" font-size="10.5" fill="#9a9aa2">A smaller credible payment can beat a larger uncertain prize.</text>
+</svg>
