@@ -36,4 +36,5 @@ export const SYSTEM_PAGE_META: Record<string, SystemPageMeta> = {
   sigil:           { layout: "game",    title: "SIGIL", loading: "Preparing the plate...", since: "2026-07-03" },
   collider:        { layout: "game",    title: "Collider", loading: "Charging the field...", since: "2026-07-03" },
   apparatus:       { layout: "game",    title: "Apparatus", loading: "Warming the plate...", since: "2026-07-05" },
+  filament:        { layout: "game",    title: "FILAMENT", loading: "Seeding the early universe...", since: "2026-07-27" },
 }

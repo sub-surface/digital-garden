@@ -1,0 +1,96 @@
+.stage {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  touch-action: none; // pan/zoom gestures belong to the simulation
+  cursor: grab;
+  background: transparent;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+
+  button {
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition:
+      color var(--duration-fast) var(--ease-default),
+      border-color var(--duration-fast) var(--ease-default);
+
+    &:hover {
+      color: var(--color-text);
+      border-color: var(--color-accent);
+    }
+
+    &[data-active] {
+      color: var(--color-accent);
+      border-color: var(--color-accent);
+    }
+  }
+}
+
+.presetBlurb {
+  max-width: 58ch;
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--color-text-muted);
+  opacity: 0.75;
+}
+
+// The cosmic clock reads louder than the machine stats — it is the thing the
+// simulation is actually about.
+.clock {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  font-family: var(--font-code);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+
+  span:first-child {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.readout {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  font-family: var(--font-code);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+
+  span::before {
+    content: "▸ ";
+    opacity: 0.5;
+  }
+}

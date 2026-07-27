@@ -32,6 +32,7 @@ const SYSTEM_PAGE_COMPONENTS: Record<string, LazyExoticComponent<ComponentType>>
   sigil:           lazy(() => import("@/components/ui/games/SigilPage").then(m => ({ default: m.SigilPage }))),
   collider:        lazy(() => import("@/components/ui/games/ColliderPage").then(m => ({ default: m.ColliderPage }))),
   apparatus:       lazy(() => import("@/components/ui/composer/ComposerPage").then(m => ({ default: m.ComposerPage }))),
+  filament:        lazy(() => import("@/features/filament/FilamentPage").then(m => ({ default: m.FilamentPage }))),
 }
 
 if (import.meta.env?.DEV) {

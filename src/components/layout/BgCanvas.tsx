@@ -89,10 +89,22 @@ const TERMINAL_ANIMATIONS = [
 
 const GLYPH_POOL = '░▒▓█─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬■□●○◘▄▀▌▐«»¶§±≡≈∞ΩαβπΣφψχρλμνξ♠♣♥♦☺☻♪♫►◄▲▼◇◆◈✦✧⋆∂∆∅∈∝⟨⟩⊕⊗⊙↑↗→↘↓↙←↖⁰¹²³⁴⁵⁶⁷⁸⁹αβγδεζηθ'
 
+/**
+ * Pages that draw their own full-bleed sky and must not have a second ambient
+ * canvas showing through them. Unlike the themed `chess`/`hexo`/`chamber`
+ * switches below — which swap the background to match the page — these want no
+ * background at all: FILAMENT renders a transparent starfield over the whole
+ * board, so ambient boids read as debris in its voids, and it needs the main
+ * thread for blitting rather than for a second animation loop.
+ */
+const BG_SUPPRESSED = new Set(["filament"])
+
 export function BgCanvas() {
+  const activeSlug = useStore((s) => s.activeGraphSlug)
   // Skip entirely on mobile — canvas is CSS-hidden at the phone breakpoint, no
   // point running it (isPhoneViewport is SSR-safe: false when there's no window).
   if (isPhoneViewport()) return null
+  if (BG_SUPPRESSED.has(activeSlug.toLowerCase())) return null
   return <BgCanvasInner />
 }
 
