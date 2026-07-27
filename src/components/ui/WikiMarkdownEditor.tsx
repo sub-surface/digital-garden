@@ -81,19 +81,29 @@ export function WikiMarkdownEditor({ value, onChange, placeholder, minHeight = 4
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [showGuide, setShowGuide] = useState(false)
   const [mode, setMode] = useState<"edit" | "preview">("edit")
-  const [remarkPlugins, setRemarkPlugins] = useState<any[] | null>(null)
+  const [previewPlugins, setPreviewPlugins] = useState<{
+    remark: any[]
+    rehype: any[]
+  } | null>(null)
 
   const wordCount = value ? value.split(/\s+/).filter(Boolean).length : 0
 
-  // Lazy-load remark-gfm on first preview
+  // Keep editor dependencies out of the main bundle until preview is requested.
   const handlePreviewToggle = async () => {
     if (mode === "edit") {
-      if (!remarkPlugins) {
+      if (!previewPlugins) {
         try {
-          const gfm = await import("remark-gfm")
-          setRemarkPlugins([gfm.default])
+          const [gfm, math, katex] = await Promise.all([
+            import("remark-gfm"),
+            import("remark-math"),
+            import("rehype-katex"),
+          ])
+          setPreviewPlugins({
+            remark: [gfm.default, math.default],
+            rehype: [katex.default],
+          })
         } catch {
-          setRemarkPlugins([])
+          setPreviewPlugins({ remark: [], rehype: [] })
         }
       }
       setMode("preview")
@@ -169,6 +179,8 @@ export function WikiMarkdownEditor({ value, onChange, placeholder, minHeight = 4
                 <tr><td><code>1. item</code></td><td>Numbered list</td></tr>
                 <tr><td><code>---</code></td><td>Horizontal rule</td></tr>
                 <tr><td><code>![alt](url)</code></td><td>Image</td></tr>
+                <tr><td><code>$E = mc^2$</code></td><td>Inline math</td></tr>
+                <tr><td><code>$$...$$</code></td><td>Display math</td></tr>
               </tbody>
             </table>
             <p>
@@ -194,8 +206,13 @@ export function WikiMarkdownEditor({ value, onChange, placeholder, minHeight = 4
           <div className="wiki-preview-banner">Preview — final rendering may differ slightly</div>
           <div className="wiki-preview-content">
             <Suspense fallback={<p>Loading preview...</p>}>
-              {remarkPlugins !== null && (
-                <Markdown remarkPlugins={remarkPlugins}>{previewContent}</Markdown>
+              {previewPlugins !== null && (
+                <Markdown
+                  remarkPlugins={previewPlugins.remark}
+                  rehypePlugins={previewPlugins.rehype}
+                >
+                  {previewContent}
+                </Markdown>
               )}
             </Suspense>
           </div>

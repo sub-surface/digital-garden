@@ -184,6 +184,7 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 19. **Client API calls go through `src/lib/api.ts` — do not hand-roll `fetch`.** `apiGet`/`apiPost`/`apiPut`/`apiPatch`/`apiDelete` set `Authorization: Bearer <token>` and `Content-Type`, and **throw `ApiError` on a non-2xx status OR a 2xx body containing `error`** — matching the `if (!res.ok || data.error)` check ~40 call sites used to write by hand (7 of which forgot it, so failures flowed onward as data). Catch with `apiErrorMessage(e, fallback)` to surface the server's own message. `FormData`/`Blob`/`File` bodies are passed through untouched and get no automatic `Content-Type` — JSON-stringifying a `File` silently yields `"{}"`. Two deliberate raw-`fetch` exceptions, both commented: `/api/chess/gif` (returns a blob) and `WikiEditPage`'s raw-markdown fetch (not JSON, and it sniffs content-type to detect an SPA fallback). (ROADMAP §28.15)
 20. **OG cards are COMMITTED artifacts, lowercase, and guarded.** CF never sets `PROCESS_OG`, so a card exists in production if and only if it is in git. `public/og/` was once gitignored *and* force-added past that rule, so every newly generated card was silently dropped. `scripts/test-og.ts` (in `npm test`) now fails if the ignore rule returns or a card on disk is untracked, and warns if a published note has no card. Filenames come from `ogCardName()` — always lowercase. (ROADMAP §28.1 / §28.16)
 21. **HTML-escaping and frontmatter-stripping have one home each.** `src/lib/escape.ts` (`escapeHtml` for text, `escapeAttr` for attribute values) replaced four near-identical escapers with three different coverage sets across the remark plugins and the Worker. `src/lib/frontmatter.ts` (`stripFrontmatter`) replaced two copies, one of which used an unanchored regex that stopped at the first `---` *anywhere* — including inside a YAML value, eating the top of the note body. Both modules must stay dependency-free: prebuild, the Worker, and the browser all import them. (ROADMAP §28.7/§28.9)
+22. **Math is statically rendered with KaTeX.** Use `$...$` for inline math and `$$...$$` for display math. `remark-math` and `rehype-katex` are wired into both the MDX build and the standalone runtime renderer; the wiki editor lazy-loads the same pair for preview. `src/styles/math.scss` compiles KaTeX's base styles with WOFF2 fonts only and then applies the site's layout rules. KaTeX supports mathematical LaTeX, not arbitrary document commands; malformed or unsupported expressions emit a build message and remain as a visible red error fallback instead of disappearing. Escape a literal currency sign as `\$` when another dollar sign appears later in the same paragraph, so the pair cannot be read as inline math. `scripts/test-math.ts` guards inline, display, accessible MathML, visible errors, and unmatched-currency behavior.
 
 ---
 
@@ -232,8 +233,8 @@ Key slices: `theme`, `accentBase`, `bgMode`, `panelStack`, `activeGraphSlug`, `a
 
 ## MDX Plugin Order (vite.config.ts)
 
-**Remark:** frontmatter → mdx-frontmatter → gfm → wikilinks → telescopic → callouts → sidenotes
-**Rehype:** slug → raw → imagePaths
+**Remark:** frontmatter → mdx-frontmatter → gfm → math → wikilinks → telescopic → callouts → sidenotes
+**Rehype:** slug → raw → KaTeX → imagePaths
 
 Sidenotes runs at the remark stage (`remark-sidenotes.ts`) — rehype-level footnote
 sections are never emitted inside MDX, so it builds the sidenote markup itself

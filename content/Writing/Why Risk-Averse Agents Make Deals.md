@@ -25,14 +25,16 @@ This bend in value has three effects. It makes a secure stock worth more than a 
 
 Here, *risk aversion* does not mean fear. It means that each added unit of a resource gives the agent a smaller gain than the unit before it.
 
-Economists express this with a utility function: a score for how well an outcome serves the agent's aims. A risk-neutral agent might use `u(r) = r`. Double its resources and you double its score. A risk-averse agent might use `u(r) = sqrt(r)`. Double its resources and its score rises by less than double.[^scale]
+Economists express this with a utility function: a score for how well an outcome serves the agent's aims. A risk-neutral agent might use $u(r) = r$. Double its resources and you double its score. A risk-averse agent might use $u(r) = \sqrt{r}$. Double its resources and its score rises by less than double.[^scale]
 
 <figure data-fullwidth="">
-  <img src="media/Writing/risk-utility-curve.svg" alt="A straight risk-neutral utility line beside a curved risk-averse utility line, with a sure allocation of 40 resources valued above a half chance of 100 or zero." />
-  <figcaption><span className="fig-label">Figure 1</span>The curve puts more weight on the first units of a resource. The gamble has the same value as 25 units for sure; the offer gives 40. The straight line uses a scaled score so both curves meet at 100.</figcaption>
+
+![A straight risk-neutral utility line beside a curved risk-averse utility line, with a sure allocation of 40 resources valued above a half chance of 100 or zero.](media/Writing/risk-utility-curve.svg)
+
+<figcaption><span className="fig-label">Figure 1</span>The curve puts more weight on the first units of a resource. The gamble has the same value as 25 units for sure; the offer gives 40. The straight line uses a scaled score so both curves meet at 100.</figcaption>
 </figure>
 
-For the gamble, the risk-averse agent gets an average utility of `(sqrt(100) + sqrt(0)) / 2 = 5`. The sure offer gives it `sqrt(40) = 6.3`. The agent gives up ten units of average resources and still comes out ahead. The gamble's *certainty equivalent* is only 25: the sure amount that gives the same utility.[^jensen]
+For the gamble, the risk-averse agent gets an average utility of $(\sqrt{100} + \sqrt{0}) / 2 = 5$. The sure offer gives it $\sqrt{40} \approx 6.3$. The agent gives up ten units of average resources and still comes out ahead. The gamble's *certainty equivalent* is only 25: the sure amount that gives the same utility.[^jensen]
 
 Daniel Bernoulli gave the first clear account of this point in 1738. He wrote that “the utility resulting from any small increase in wealth will be inversely proportionate to the quantity of goods previously possessed.”[^bernoulli] His claim was not that wealth stops helping. It was that the next unit helps less.
 
@@ -56,13 +58,15 @@ This mechanism has no moral sense. Marine insurance helped fund trade, but it al
 
 Risk aversion does more than restrain one agent. It can make trade useful between agents.
 
-Take two agents, A and B, and two states that are just as likely. In the first state, A gets 100 units and B gets 25. In the second, A gets 25 and B gets 100. Both use `u(r) = sqrt(r)`.
+Take two agents, A and B, and two states that are just as likely. In the first state, A gets 100 units and B gets 25. In the second, A gets 25 and B gets 100. Both use $u(r) = \sqrt{r}$.
 
-Without a deal, each has expected resources of 62.5 and expected utility of `7.5`. They can instead agree to split their combined resources in both states. Each then gets 62.5 for sure. Their expected resources stay at 62.5, but their utility rises to `sqrt(62.5) = 7.91`.
+Without a deal, each has expected resources of 62.5 and expected utility of $7.5$. They can instead agree to split their combined resources in both states. Each then gets 62.5 for sure. Their expected resources stay at 62.5, but their utility rises to $\sqrt{62.5} \approx 7.91$.
 
 <figure data-fullwidth="">
-  <img src="media/Writing/risk-sharing-deal.svg" alt="Two agents have opposite resource outcomes of 100 and 25 before a deal, then each receives 62.5 in either state after sharing risk." />
-  <figcaption><span className="fig-label">Figure 2</span>Risk sharing changes who holds resources in each state, not the total. Both agents move from expected utility 7.50 to 7.91.</figcaption>
+
+![Two agents have opposite resource outcomes of 100 and 25 before a deal, then each receives 62.5 in either state after sharing risk.](media/Writing/risk-sharing-deal.svg)
+
+<figcaption><span className="fig-label">Figure 2</span>Risk sharing changes who holds resources in each state, not the total. Both agents move from expected utility 7.50 to 7.91.</figcaption>
 </figure>
 
 Neither agent needs to fool the other about the odds. Neither needs to care about the other. Their risks need only differ enough for a contract to smooth them. This is mutual insurance.
@@ -75,7 +79,7 @@ The result has sharp bounds. If the risks move together, there may be little to 
 
 The agents must make the deal before they learn which one will win. Once A knows it will get 100 and B will get 25, A has less reason to share. As the result grows clear, the range of deals both sides accept can shrink.
 
-Fin Moorhouse gives a stark case. Two powers each face a half chance of holding 10,000 units and a half chance of holding one. With `u(r) = log(r)`, each values that gamble like 100 units for sure: the geometric mean of 10,000 and one.[^early-deals] There are many secure splits of the 10,001 units that both would prefer. But if the odds move close to one side, the likely winner's claim gains value and the likely loser's claim loses it. Much of the gain from a deal has gone.
+Fin Moorhouse gives a stark case. Two powers each face a half chance of holding 10,000 units and a half chance of holding one. With $u(r) = \log r$, each values that gamble like 100 units for sure: the geometric mean of 10,000 and one.[^early-deals] There are many secure splits of the 10,001 units that both would prefer. But if the odds move close to one side, the likely winner's claim gains value and the likely loser's claim loses it. Much of the gain from a deal has gone.
 
 This is not a case for blind haste. A later deal may use better facts, cover more states, or face less doubt about who can keep a promise. The narrower claim is that learning has a price. It can reveal which side has less need to bargain.
 
@@ -84,8 +88,10 @@ This is not a case for blind haste. A later deal may use better facts, cover mor
 Elliott Thornley and William MacAskill apply the same point to advanced AI.[^risk-averse-ai] A risk-neutral AI that thinks rebellion has an even chance of winning the future may demand half of all future resources before it agrees to cooperate. Give the same AI diminishing returns to resources and a much smaller sure payment may beat the gamble.
 
 <figure data-fullwidth="">
-  <img src="media/Writing/risk-sure-deal.svg" alt="A choice diagram comparing a gamble with average resources of 50 and expected utility of 5 against a sure deal of 40 resources and utility of 6.3." />
-  <figcaption><span className="fig-label">Figure 3</span>The risk-averse agent accepts less on average because the sure offer has more utility. Curvature changes the deal it will accept; it does not change its final aim.</figcaption>
+
+![A choice diagram comparing a gamble with average resources of 50 and expected utility of 5 against a sure deal of 40 resources and utility of 6.3.](media/Writing/risk-sure-deal.svg)
+
+<figcaption><span className="fig-label">Figure 3</span>The risk-averse agent accepts less on average because the sure offer has more utility. Curvature changes the deal it will accept; it does not change its final aim.</figcaption>
 </figure>
 
 This does not make the AI good. It may still want an outcome we hate. The curve changes how much risk it will take to reach that outcome. Payment, contracts, and continued access to resources then give it stronger reasons to settle.
@@ -121,15 +127,15 @@ The sound claim is modest. Curved utility does not make agents kind, and it does
 - Yun Shen et al., [“Risk-Sensitive Reinforcement Learning”](https://arxiv.org/abs/1311.2097) (2014). One way to make learned policies respond to risk, not just mean return.
 - Elliott Thornley and William MacAskill, [“Risk-Averse AIs”](https://newsletter.forethought.org/p/risk-averse-ais) (2026), and Fin Moorhouse, [“Should We Lock in Post-AGI Agreements Under Uncertainty?”](https://www.forethought.org/research/should-we-lock-in-post-agi-agreements-under-uncertainty) (2026). The direct prompts for the AI case and the early-deal claim.
 
-[^scale]: Figure 1 plots the straight line as `u(r) = r / 10` so that both curves meet at `(100, 10)`. This changes no choice. Expected-utility scores remain the same for choice under any positive shift and scaling: replace `u` with `a + bu`, where `b > 0`, and every ranking stays put.
+[^scale]: Figure 1 plots the straight line as $u(r) = r / 10$ so that both curves meet at $(100, 10)$. This changes no choice. Expected-utility scores remain the same for choice under any positive shift and scaling: replace $u$ with $a + bu$, where $b > 0$, and every ranking stays put.
 
-[^jensen]: For a strictly concave function, Jensen's inequality gives `u(E[R]) > E[u(R)]` whenever `R` has real spread. The gap can be stated in resource units. If `u(c) = E[u(R)]`, then `c` is the certainty equivalent; `E[R] - c` is the most the agent would pay to remove the risk.
+[^jensen]: For a strictly concave function, Jensen's inequality gives $u(\mathbb{E}[R]) > \mathbb{E}[u(R)]$ whenever $R$ has real spread. The gap can be stated in resource units. If $u(c) = \mathbb{E}[u(R)]$, then $c$ is the certainty equivalent; $\mathbb{E}[R] - c$ is the most the agent would pay to remove the risk.
 
 [^bernoulli]: Daniel Bernoulli, “Specimen Theoriae Novae de Mensura Sortis,” *Commentarii Academiae Scientiarum Imperialis Petropolitanae* 5 (1738), 175–192; trans. Louise Sommer as [“Exposition of a New Theory on the Measurement of Risk”](https://www.jstor.org/stable/1909829), *Econometrica* 22.1 (1954), 23–36. Bernoulli's logarithmic rule was not meant as a law for every person. His merchant case makes the sounder point: the same gamble can have a different value at a different level of wealth.
 
 [^vnm]: John von Neumann and Oskar Morgenstern, [*Theory of Games and Economic Behavior*](https://assets.press.princeton.edu/about_pup/PUP100/book/2cNeumann.pdf), 3rd ed. (Princeton, 1953), pp. 15–31 and 617–632. Their theorem gives an expected-utility form when preferences meet strict rules such as completeness, continuity, and independence. It does not prove that people meet them.
 
-[^arrow-pratt]: John W. Pratt, [“Risk Aversion in the Small and in the Large”](https://www.jstor.org/stable/1913738), *Econometrica* 32.1/2 (1964), 122–136; Kenneth Arrow, *Essays in the Theory of Risk-Bearing* (1971). Absolute risk aversion is `A(r) = -u''(r) / u'(r)`. For `u(r) = sqrt(r)`, it is `1 / 2r`: the same fixed risk matters less as resources rise. Relative risk aversion, `rA(r)`, stays at `1/2`.
+[^arrow-pratt]: John W. Pratt, [“Risk Aversion in the Small and in the Large”](https://www.jstor.org/stable/1913738), *Econometrica* 32.1/2 (1964), 122–136; Kenneth Arrow, *Essays in the Theory of Risk-Bearing* (1971). Absolute risk aversion is $A(r) = -u''(r) / u'(r)$. For $u(r) = \sqrt{r}$, it is $\frac{1}{2r}$: the same fixed risk matters less as resources rise. Relative risk aversion, $rA(r)$, stays at $\frac{1}{2}$.
 
 [^prospect]: Daniel Kahneman and Amos Tversky, [“Prospect Theory: An Analysis of Decision under Risk”](https://www.jstor.org/stable/1914185), *Econometrica* 47.2 (1979), 263–291. Their value function bends around a point of reference and is steeper for losses. An agent can show loss aversion without concave utility over final wealth, or concave utility without loss aversion.
 

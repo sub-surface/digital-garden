@@ -1,0 +1,33 @@
+// KaTeX is rendered during the MDX build, so the browser only needs its CSS and
+// fonts. Compile the upstream stylesheet with modern WOFF2 fonts only: importing
+// katex.min.css would make Vite emit redundant WOFF and TTF copies as well.
+@use "katex/src/styles/katex" with (
+  $font-folder: "../../node_modules/katex/dist/fonts",
+  $use-woff2: true,
+  $use-woff: false,
+  $use-ttf: false
+);
+
+// Site-level layout and colour adjustments.
+.katex {
+  color: inherit;
+}
+
+.katex-display {
+  margin: 1.5em 0;
+  padding: 0.2em 0 0.35em;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.katex-display > .katex {
+  min-width: max-content;
+  text-align: center;
+}
+
+@media print {
+  .katex-display {
+    overflow: visible;
+  }
+}

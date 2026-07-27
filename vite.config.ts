@@ -46,8 +46,10 @@ function resolveCommitSha(): string {
 const COMMIT_SHA = resolveCommitSha()
 
 import remarkGfm from "remark-gfm"
+import remarkMath from "remark-math"
 import remarkFrontmatter from "remark-frontmatter"
 import remarkMdxFrontmatter from "remark-mdx-frontmatter"
+import rehypeKatex from "rehype-katex"
 import rehypeSlug from "rehype-slug"
 import rehypeRaw from "rehype-raw"
 
@@ -78,6 +80,7 @@ export default defineConfig(({ command }) => ({
           remarkFrontmatter,
           remarkMdxFrontmatter,
           remarkGfm,
+          remarkMath,
           remarkWikilinks,
           remarkTelescopic,
           remarkCallouts,
@@ -86,6 +89,7 @@ export default defineConfig(({ command }) => ({
         rehypePlugins: [
           rehypeSlug,
           [rehypeRaw, { passThrough: ['mdxjsEsm', 'mdxJsxFlowElement', 'mdxJsxTextElement'] }],
+          rehypeKatex,
           rehypeImagePaths,
         ],
         providerImportSource: "@mdx-js/react",
