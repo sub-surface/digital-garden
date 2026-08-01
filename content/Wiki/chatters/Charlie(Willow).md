@@ -20,7 +20,9 @@ draft: true
 
 Charlie(Willow), also known as **seinzumtode** or simply **Charlie**, is a philosophy community member since 2019 and the self-described second-in-command Deleuzian to the all-holy Willow. Charlie is Willow. Well, Willow is really Willow, but Charlie is Willow. Willow is ineffable.
 
-Based in the United States, Charlie holds a B.S. in Philosophy and is looking to pursue an advanced degree.
+Based in the United States, Charlie holds a B.S. in Philosophy.
+
+The only formally qualified philosopher in the channel and the one least willing to act like it. Settles questions in metaphysics with "skill issue", announced he would begin every message "objectively speaking…" and never did so again, and reports that he no longer reads because he is a stupid chud addicted to RuneScape.
 
 ## Philosophical Profile
 
@@ -48,6 +50,7 @@ Charlie regularly defends Deleuzian critiques of identitarian philosophy — the
 
 - Sudoku & Crosswords
 - Chess
+- Old School RuneScape (*HegelBot*)
 - Mathematics
 - Literature
 - Snowboarding

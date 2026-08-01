@@ -17,6 +17,8 @@ influences: "Susan Haack, David Lewis, Howard Sankey, G.E. Moore, John McDowell,
 more educated and smarter than most Phil chat individuals, despite being the youngest*"  
 **—Pearl.**
 
+**Ape** is the youngest person here and argues like the oldest. He wants a worked example, and will keep asking for one long after the room has moved on. He is dogmatically ambivalent about gun control, will correct you on what the word "clearly" signals, and when accused of being autistic replied "what gives you that impression?" Epistemology and philosophy of science, mostly.
+
 ## Metaphysics & Epistemology
 * **A priori knowledge:** Yes
 * **Epistemic justification:** Externalism (Reliabilism and nonreliabilist foundationalism)
