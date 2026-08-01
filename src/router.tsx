@@ -2,6 +2,7 @@ import {
   createRouter,
   createRoute,
   createRootRoute,
+  redirect,
 } from "@tanstack/react-router"
 import { AppShell } from "@/components/layout/AppShell"
 import { NoteRenderer } from "@/components/ui/reader/NoteRenderer"
@@ -23,7 +24,7 @@ const ChatPage = lazy(() => import("@/components/ui/chat/ChatPage").then(m => ({
 
 // Lazy load heavy components
 const ConstellationPage = lazy(() => import("@/components/ui/graph/ConstellationPage").then(m => ({ default: m.ConstellationPage })))
-const BootPage = lazy(() => import("@/features/boot/BootPage").then(m => ({ default: m.BootPage })))
+const TerminalPage = lazy(() => import("@/features/terminal/TerminalPage").then(m => ({ default: m.TerminalPage })))
 
 // Root layout
 const rootRoute = createRootRoute({
@@ -165,13 +166,13 @@ const editRoute = createRoute({
   },
 })
 
-// Boot sequence route — must be before catch-all note route
-const bootRoute = createRoute({
+// Terminal route — must be before the catch-all note route.
+const terminalRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/boot",
-  component: function BootRouteComponent() {
-    // BootPage portals to document.body and renders a fullscreen layer of its
-    // own, so it deliberately does NOT use the game-layout/game-stage shell.
+  path: "/terminal",
+  component: function TerminalRouteComponent() {
+    // Terminal renders its own fixed fullscreen layer, so it deliberately does
+    // NOT use the game-layout/game-stage shell.
     return (
       <Suspense
         fallback={
@@ -180,9 +181,19 @@ const bootRoute = createRoute({
           </div>
         }
       >
-        <BootPage />
+        <TerminalPage />
       </Suspense>
     )
+  },
+})
+
+// /boot was the endless procedural TUI. It is now the attract sequence at the
+// head of /terminal, so the old URL keeps working rather than 404ing.
+const bootRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/boot",
+  beforeLoad: () => {
+    throw redirect({ to: "/terminal", replace: true })
   },
 })
 
@@ -230,6 +241,7 @@ const routeTree = rootRoute.addChildren([
   userRoute,
   privacyRoute,
   editRoute,
+  terminalRoute,
   bootRoute,
   noteRoute,
 ])

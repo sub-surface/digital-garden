@@ -7,10 +7,12 @@
  * mount. See docs/os-95-spec.md §6.
  */
 
-import { useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { NoteBody } from "@/components/ui/reader/NoteBody"
+import { Terminal } from "@/features/terminal/Terminal"
 import { useStore, BG_MODES, BG_META, type BgMode } from "@/store"
 import { SYSTEM_PAGE_META } from "@/config/system-pages-meta"
+import { PROGRAMS } from "@/features/terminal/commands"
 import { classifyLayout } from "@/lib/layout"
 import type { NoteMetadata } from "@/types/content"
 import { useOS } from "./osStore"
@@ -96,6 +98,207 @@ function ProgramApp({ args }: AppProps) {
   return (
     <div className="os-doc os-doc--full">
       <NoteBody slug={args.slug} />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// MS-DOS Prompt — the same terminal module the main site mounts at /terminal.
+// The only difference is what `open` does: here it spawns a window instead of
+// navigating. That substitution IS the bridge; no command knows about it.
+// ---------------------------------------------------------------------------
+
+function PromptApp() {
+  const openWindow = useOS((s) => s.openWindow)
+  const contentIndex = useStore((s) => s.contentIndex)
+  const openNote = useOpenNote()
+
+  const onOpen = useCallback(
+    (slug: string, title?: string) => {
+      const note = contentIndex?.[slug]
+      if (note) {
+        openNote(note)
+        return
+      }
+      // System pages (games, the graph) have no content-index entry of their
+      // own unless prebuild synthesized one — open them as programs regardless.
+      openWindow({ appId: "program", args: { slug }, title: title ?? slug, w: 860, h: 640 })
+    },
+    [contentIndex, openNote, openWindow],
+  )
+
+  return <Terminal surface="window" onOpen={onOpen} />
+}
+
+// ---------------------------------------------------------------------------
+// Run — resolves against the SAME PROGRAMS map the terminal's launchers use,
+// plus every app id and every note slug. One name space, three entry points.
+// ---------------------------------------------------------------------------
+
+function RunApp() {
+  const [value, setValue] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const openWindow = useOS((s) => s.openWindow)
+  const closeWindow = useOS((s) => s.closeWindow)
+  const windows = useOS((s) => s.windows)
+  const contentIndex = useStore((s) => s.contentIndex)
+  const openNote = useOpenNote()
+
+  const dismiss = () => {
+    const self = windows.find((w) => w.appId === "run")
+    if (self) closeWindow(self.id)
+  }
+
+  const submit = () => {
+    const raw = value.trim().toLowerCase().replace(/\.exe$/, "")
+    if (!raw) return
+
+    const app = APPS[raw]
+    if (app) {
+      openWindow({
+        appId: raw,
+        args: {},
+        title: raw.toUpperCase(),
+        w: app.defaultSize?.w,
+        h: app.defaultSize?.h,
+        multiInstance: app.multiInstance,
+      })
+      return dismiss()
+    }
+
+    const program = PROGRAMS[raw]
+    if (program) {
+      openWindow({ appId: "program", args: { slug: program.slug }, title: program.title, w: 860, h: 640 })
+      return dismiss()
+    }
+
+    const note =
+      contentIndex?.[raw] ??
+      (contentIndex
+        ? Object.values(contentIndex).find((n) => n.slug.toLowerCase().endsWith(`/${raw}`))
+        : undefined)
+    if (note) {
+      openNote(note)
+      return dismiss()
+    }
+
+    // Failure is visible and names the thing that failed.
+    setError(`Cannot find '${value.trim()}'. Check the name and try again.`)
+  }
+
+  return (
+    <div className={styles.run}>
+      <p style={{ margin: 0 }}>
+        Type the name of a program, document, or folder, and Windows will open it for you.
+      </p>
+
+      <div className={styles.runRow}>
+        <span>Open:</span>
+        <input
+          className={styles.runInput}
+          value={value}
+          autoFocus
+          spellCheck={false}
+          onChange={(e) => {
+            setValue(e.target.value)
+            setError(null)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submit()
+            if (e.key === "Escape") dismiss()
+          }}
+          aria-label="Program or document to open"
+        />
+      </div>
+
+      {error ? (
+        <span className={styles.runHint} style={{ color: "#c05a63" }}>
+          {error}
+        </span>
+      ) : (
+        <span className={styles.runHint}>
+          try: {Object.keys(PROGRAMS).slice(0, 6).join(", ")}, prompt, explorer
+        </span>
+      )}
+
+      <div className={styles.runActions}>
+        <button className={styles.runBtn} onClick={submit}>
+          OK
+        </button>
+        <button className={styles.runBtn} onClick={dismiss}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Shut Down — the most recognisable dialog of the decade, and a genuine UX fix:
+// the Start item used to navigate off-site with no confirmation at all.
+// ---------------------------------------------------------------------------
+
+type ShutdownChoice = "off" | "restart" | "dos"
+
+function ShutDownApp() {
+  const [choice, setChoice] = useState<ShutdownChoice>("off")
+  const closeWindow = useOS((s) => s.closeWindow)
+  const windows = useOS((s) => s.windows)
+
+  const dismiss = () => {
+    const self = windows.find((w) => w.appId === "shutdown")
+    if (self) closeWindow(self.id)
+  }
+
+  const confirm = () => {
+    if (choice === "off") {
+      window.location.href = "https://subsurfaces.net"
+      return
+    }
+    if (choice === "dos") {
+      dismiss()
+      window.dispatchEvent(new CustomEvent("os:dos-mode"))
+      return
+    }
+    // Restart: clear the once-per-tab flag so the POST actually plays again.
+    try {
+      sessionStorage.removeItem("subsurfaces95:booted")
+    } catch {
+      /* storage disabled — the reload still works, it just skips the POST */
+    }
+    window.location.reload()
+  }
+
+  const OPTIONS: { id: ShutdownChoice; label: string }[] = [
+    { id: "off", label: "Shut down the computer?" },
+    { id: "restart", label: "Restart the computer?" },
+    { id: "dos", label: "Restart the computer in MS-DOS mode?" },
+  ]
+
+  return (
+    <div className={explorer.props}>
+      <p style={{ margin: 0 }}>Are you sure you want to:</p>
+
+      {OPTIONS.map((opt) => (
+        <label key={opt.id} className={explorer.radioRow}>
+          <input
+            type="radio"
+            name="shutdown"
+            checked={choice === opt.id}
+            onChange={() => setChoice(opt.id)}
+          />
+          {opt.label}
+        </label>
+      ))}
+
+      <div className={styles.runActions}>
+        <button className={styles.runBtn} onClick={confirm}>
+          Yes
+        </button>
+        <button className={styles.runBtn} onClick={dismiss}>
+          No
+        </button>
+      </div>
     </div>
   )
 }
@@ -430,6 +633,14 @@ export const APPS: Record<string, OSApp> = {
     menus: ["File", "Edit", "View", "Help"],
     Component: ComputerApp,
   },
+  prompt: {
+    icon: "terminal",
+    defaultSize: { w: 680, h: 420 },
+    multiInstance: true,
+    Component: PromptApp,
+  },
+  run: { icon: "app", defaultSize: { w: 420, h: 210 }, Component: RunApp },
+  shutdown: { icon: "computer", defaultSize: { w: 400, h: 250 }, Component: ShutDownApp },
   floppy: { icon: "doc", defaultSize: { w: 420, h: 220 }, Component: FloppyApp },
   bin: {
     icon: "bin",

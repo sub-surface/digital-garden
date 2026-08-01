@@ -6,6 +6,8 @@ import { APPS, useOpenNote } from "./apps"
 import { WindowFrame } from "./WindowFrame"
 import { Taskbar, TASKBAR_H, type MenuTarget } from "./Taskbar"
 import { OSIcon, type IconName } from "./OSIcon"
+import { ContextMenu } from "./ContextMenu"
+import { useOSLinks } from "./useOSLinks"
 import styles from "./OS.module.scss"
 
 /**
@@ -23,6 +25,7 @@ const SHORTCUTS: Shortcut[] = [
   { id: "garden", label: "C:\\GARDEN", icon: "folder", kind: "app", target: "explorer", title: "C:\\GARDEN" },
   { id: "readme", label: "README.TXT", icon: "doc", kind: "note", target: "i-didnt-read" },
   { id: "readme1st", label: "README.1ST", icon: "doc", kind: "note", target: "readme-1st" },
+  { id: "prompt", label: "MS-DOS Prompt", icon: "terminal", kind: "app", target: "prompt", title: "MS-DOS Prompt" },
   { id: "bin", label: "Recycle Bin", icon: "bin", kind: "app", target: "bin", title: "Recycle Bin" },
   { id: "constellation", label: "CONSTELLATION", icon: "graph", kind: "note", target: "graph" },
   { id: "display", label: "Display", icon: "display", kind: "app", target: "display", title: "Display Properties" },
@@ -51,6 +54,7 @@ export function Desktop() {
   const openNote = useOpenNote()
   const viewport = useViewport()
   const [selected, setSelected] = useState<string | null>(null)
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
 
   const bounds = useMemo(
     () => ({ width: viewport.width, height: viewport.height, bottomInset: TASKBAR_H }),
@@ -91,6 +95,30 @@ export function Desktop() {
     [contentIndex, openNote, openWindow],
   )
 
+  // Links inside rendered notes open as windows instead of navigating away and
+  // remounting the whole desktop.
+  const openSlug = useCallback(
+    (slug: string, title?: string) => {
+      const note = contentIndex?.[slug] as NoteMetadata | undefined
+      if (note) {
+        openNote(note)
+        return
+      }
+      // Not in the index (a system page, or a link to something unpublished) —
+      // open it as a program rather than silently doing nothing.
+      openWindow({
+        appId: "program",
+        args: { slug },
+        title: title ?? slug,
+        w: 860,
+        h: 640,
+      })
+    },
+    [contentIndex, openNote, openWindow],
+  )
+
+  useOSLinks(openSlug)
+
   // Alt+Tab cycles, Alt+F4 closes, Ctrl+Esc opens Start.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -123,8 +151,33 @@ export function Desktop() {
 
   return (
     <>
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={() => setMenu(null)}
+          entries={[
+            { label: "Arrange Icons", disabled: true },
+            { label: "Line up Icons", disabled: true, separatorAfter: true },
+            { label: "Refresh", onClick: () => window.location.reload(), separatorAfter: true },
+            { label: "New", disabled: true, separatorAfter: true },
+            {
+              label: "Properties",
+              onClick: () =>
+                openWindow({ appId: "display", args: {}, title: "Display Properties", w: 420, h: 480 }),
+            },
+          ]}
+        />
+      )}
+
       <div
         className={styles.desktop}
+        onContextMenu={(e) => {
+          if (e.target !== e.currentTarget) return
+          e.preventDefault()
+          setStartOpen(false)
+          setMenu({ x: e.clientX, y: e.clientY })
+        }}
         onPointerDown={(e) => {
           // A press on the desktop itself clears selection and dismisses Start.
           if (e.target === e.currentTarget) {

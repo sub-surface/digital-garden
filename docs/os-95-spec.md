@@ -367,27 +367,72 @@ the existing `.subsurfaces.net` cookie domain, read by the main shell.
 The spec called for a `mode` prop on `BootPage`. On reading it — 1,143 lines, an
 endless generator plus a command prompt, telemetry panes, zoom panes and an auth
 modal — that would have dragged the whole application into the OS boot for no
-gain. **`OSBoot.tsx` is a separate bounded component instead.** `BootPage` is
-untouched, so `/boot` carries zero regression risk, and it returns in full via
-Start → Restart in MS-DOS mode.
+gain. **`OSBoot.tsx` is a separate bounded component instead**, and BootPage was
+subsequently retired altogether — see §12.
 
 ### Still open
 
-- **MS-DOS Prompt as a window.** `BOOT_COMMANDS` needs a `BootCommandContext`
-  with a large surface; wiring a windowed shell is its own piece of work.
-  Currently the endless TUI is fullscreen-only via the Start menu.
-- **Media Player, Messenger, `CONSTELLATION.SCR` idle screensaver.** The graph
-  opens as a normal program window today.
-- **Right-click desktop → Properties.** Display Properties is reachable from its
-  desktop icon and Start → Settings; there is no context menu yet.
-- **Start → Run...**, and marquee select on the desktop.
-- **Disks 1 and 3** (`draft: true`) are not written, so the Recycle Bin is empty
-  until they exist. The app handles the empty case.
-- **Cross-shell restore flag** (§8.4) is unbuilt.
-- **Not visually verified.** The build, typecheck, lint and test gates are green,
-  but the desktop has not been run in a browser — the animated background canvas
+- **Messenger (`ChatRoom` in a window).** Not the thin wrapper the other apps
+  are: it needs `roomId`, `accessToken`, `currentUserId`, a rooms fetch and a
+  logged-out state. Its own piece of work.
+- **Marquee select** on the desktop, and icon drag-to-rearrange.
+- **Cross-shell restore flag** (§8.4) — restoring from the Recycle Bin does not
+  yet unhide anything on the main site.
+- **Not visually verified.** Build, typecheck, lint and test gates are green, but
+  the desktop has not been run in a browser — the animated background canvas
   makes preview servers expensive here. First run should check drag feel, window
   focus order, and MDX inside a 620px document canvas.
+
+---
+
+## 12. The terminal (2026-08-01)
+
+`BootPage.tsx` is gone. In its place, `src/features/terminal/` — **one module,
+three surfaces**.
+
+### Why
+
+BootPage was 1,143 lines carrying an endless generator, a command prompt,
+telemetry gauges, zoom panes, a scroll-follow control, speed and palette
+pickers, a help overlay and an auth modal. The commands were good; the chrome
+around them was four features wearing one coat.
+
+### Shape
+
+- **Attract → prompt.** The procedural sequence still plays, then collapses into
+  a prompt on the first keypress. `useBootPlayback` already owned both the
+  generated stream *and* `injectLine`, so attract mode and the prompt share one
+  line buffer and the transition is just pausing the generator. The boot art
+  becomes scrollback rather than being discarded.
+- **Three frames, one module.** `/terminal` fullscreen on the main site; the
+  MS-DOS Prompt window in the OS; fullscreen again under Start → Restart in
+  MS-DOS mode. `/boot` redirects to `/terminal`.
+- **The bridge is one function.** `ctx.open(slug)` navigates on the main site and
+  opens a *window* in the OS. No command branches on surface; the substitution
+  happens once, at the mount site.
+- **Toys split by nature.** Anything spatial (a board, a flock, a grid) already
+  exists as a system page, so its command became a launcher via the `PROGRAMS`
+  map — which Start → Run... also resolves against, giving one namespace across
+  terminal, Run dialog and Start menu. Text-native toys stayed as commands.
+
+### Removed
+
+`BootPage.tsx` (1,143), `bootCommands.ts` (1,820), `bootTelemetry.ts` (482),
+`bootAudio.ts` (377), `chatbot.ts` (709) — 4,531 lines. The last two were
+features rather than chrome and had no caller left once the commands were
+curated; they are recoverable from git if wanted back as terminal commands.
+
+**Kept and still live:** `bootGenerators`, `useBootPlayback`, `bootSeed`,
+`bootRng`, `bootTypes`, `bootMarkdown` (the last via a dynamic import in `cat`).
+
+Chunk size: 139 kB → 53 kB (49 → 19 kB gzip).
+
+### Also shipped in this pass
+
+Right-click desktop → Properties; Start → Run...; `CONSTELLATION.SCR` idle
+screensaver at 90s; a **system tray** translating the main site's QuickControls
+into Win95 idiom (search, random note, theme, volume popup, Display Properties,
+clock); Disks 1–3 completing the Recycle Bin ARG.
 
 ---
 

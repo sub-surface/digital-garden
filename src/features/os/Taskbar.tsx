@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useStore } from "@/store"
+import { useMusic } from "@/components/ui/music/MusicContext"
 import { useOS, focusedWindowId } from "./osStore"
 import { APPS, PROGRAM_MENU } from "./apps"
 import { OSIcon } from "./OSIcon"
@@ -95,9 +96,145 @@ export function Taskbar({ onOpenShortcut }: Props) {
           })}
         </div>
 
-        <div className={styles.tray}>{clock}</div>
+        <SystemTray clock={clock} onOpenShortcut={onOpenShortcut} />
       </div>
     </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// System tray — the main site's QuickControls, translated.
+//
+// Not a reuse of those components (they carry main-site chrome), but the same
+// affordances in the idiom of a Win95 tray: a sunken well of 16px toggles beside
+// the clock, each with a tooltip, and a volume popup that behaves like the real
+// one. Search, random note, theme and background all reach the same store the
+// main site does.
+// ---------------------------------------------------------------------------
+
+function SystemTray({
+  clock,
+  onOpenShortcut,
+}: {
+  clock: string
+  onOpenShortcut: (t: MenuTarget) => void
+}) {
+  const openWindow = useOS((s) => s.openWindow)
+  const setSearchOpen = useStore((s) => s.setSearchOpen)
+  const toggleTheme = useStore((s) => s.toggleTheme)
+  const theme = useStore((s) => s.theme)
+  const contentIndex = useStore((s) => s.contentIndex)
+  const music = useMusic()
+  const [volumeOpen, setVolumeOpen] = useState(false)
+
+  const random = () => {
+    if (!contentIndex) return
+    const notes = Object.values(contentIndex).filter((n) => !n.draft)
+    if (!notes.length) return
+    const note = notes[Math.floor(Math.random() * notes.length)]
+    onOpenShortcut({ kind: "note", target: note.slug, label: note.title })
+  }
+
+  return (
+    <div className={styles.tray}>
+      {volumeOpen && (
+        <VolumePopup
+          volume={music.volume}
+          isPlaying={music.isPlaying}
+          onVolume={music.setVolume}
+          onToggle={music.togglePlay}
+          onClose={() => setVolumeOpen(false)}
+        />
+      )}
+
+      <button className={styles.trayBtn} title="Find a note (Ctrl+K)" onClick={() => setSearchOpen(true)}>
+        <OSIcon name="folder" size={16} />
+      </button>
+
+      <button className={styles.trayBtn} title="Open a note at random" onClick={random}>
+        <OSIcon name="doc" size={16} />
+      </button>
+
+      <button
+        className={styles.trayBtn}
+        title={`Colour scheme: ${theme} — click to switch`}
+        onClick={toggleTheme}
+      >
+        <OSIcon name="display" size={16} />
+      </button>
+
+      <button
+        className={styles.trayBtn}
+        title={`Volume: ${Math.round(music.volume * 100)}%${music.isPlaying ? " (playing)" : ""}`}
+        data-active={music.isPlaying}
+        onClick={() => setVolumeOpen((v) => !v)}
+      >
+        <OSIcon name="music" size={16} />
+      </button>
+
+      <button
+        className={styles.trayBtn}
+        title="Display Properties"
+        onClick={() =>
+          openWindow({ appId: "display", args: {}, title: "Display Properties", w: 420, h: 480 })
+        }
+      >
+        <OSIcon name="app" size={16} />
+      </button>
+
+      <span className={styles.trayClock} title={new Date().toDateString()}>
+        {clock}
+      </span>
+    </div>
+  )
+}
+
+function VolumePopup({
+  volume,
+  isPlaying,
+  onVolume,
+  onToggle,
+  onClose,
+}: {
+  volume: number
+  isPlaying: boolean
+  onVolume: (v: number) => void
+  onToggle: () => void
+  onClose: () => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) onClose()
+    }
+    // Deferred: the click that opened this popup is still propagating, and
+    // binding immediately would close it in the same gesture.
+    const id = setTimeout(() => window.addEventListener("pointerdown", onDown), 0)
+    return () => {
+      clearTimeout(id)
+      window.removeEventListener("pointerdown", onDown)
+    }
+  }, [onClose])
+
+  return (
+    <div className={styles.volumePopup} ref={ref}>
+      <span className={styles.volumeLabel}>Volume</span>
+      <input
+        className={styles.volumeSlider}
+        type="range"
+        min={0}
+        max={100}
+        value={Math.round(volume * 100)}
+        onChange={(e) => onVolume(Number(e.target.value) / 100)}
+        aria-label="Volume"
+        // Vertical, as the real one was.
+        style={{ writingMode: "vertical-lr", direction: "rtl" }}
+      />
+      <button className={styles.volumeBtn} onClick={onToggle}>
+        {isPlaying ? "Pause" : "Play"}
+      </button>
+    </div>
   )
 }
 
@@ -186,6 +323,20 @@ function StartMenu({ onOpenShortcut }: Props) {
         />
 
         <MenuRow
+          label="Run..."
+          icon="app"
+          onEnter={() => setFlyout(null)}
+          onClick={() => openApp("run", "Run")}
+        />
+
+        <MenuRow
+          label="MS-DOS Prompt"
+          icon="terminal"
+          onEnter={() => setFlyout(null)}
+          onClick={() => openApp("prompt", "MS-DOS Prompt")}
+        />
+
+        <MenuRow
           label="Settings"
           icon="display"
           onEnter={() => setFlyout(null)}
@@ -238,9 +389,7 @@ function StartMenu({ onOpenShortcut }: Props) {
           label="Shut Down..."
           icon="computer"
           onEnter={() => setFlyout(null)}
-          onClick={() => {
-            window.location.href = "https://subsurfaces.net"
-          }}
+          onClick={() => openApp("shutdown", "Shut Down Windows")}
         />
       </div>
     </div>
