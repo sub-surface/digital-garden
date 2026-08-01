@@ -219,3 +219,41 @@
     accent-color: var(--color-accent-base);
   }
 }
+
+.runRowInline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aboutHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--os-bevel-dark);
+
+  strong {
+    font-size: 14px;
+  }
+}
+
+.aboutTable {
+  width: 100%;
+  border-collapse: collapse;
+
+  td {
+    padding: 2px 0;
+    vertical-align: top;
+  }
+
+  td:first-child {
+    width: 45%;
+    color: var(--os-text-dim);
+  }
+
+  td:last-child {
+    font-family: var(--font-code);
+    font-size: 11px;
+  }
+}

@@ -8,6 +8,59 @@
  */
 
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
+
+// ---------------------------------------------------------------------------
+// Settings — persisted, unlike window state.
+//
+// A separate store with its own zustand/persist key rather than entries in the
+// garden's PERSISTED_KEYS: these are settings for a different machine, and the
+// main site should not carry them. Still zustand/persist, not hand-rolled
+// localStorage calls (CLAUDE.md gotcha #16).
+// ---------------------------------------------------------------------------
+
+export type BootSequence = "off" | "post" | "full"
+
+interface OSSettings {
+  /** off = straight to desktop; post = the BIOS check; full = the procedural TUI. */
+  bootSequence: BootSequence
+  setBootSequence: (b: BootSequence) => void
+
+  showHotkeys: boolean
+  setShowHotkeys: (v: boolean) => void
+  toggleHotkeys: () => void
+
+  saverEnabled: boolean
+  setSaverEnabled: (v: boolean) => void
+  /** Idle seconds before CONSTELLATION.SCR takes over. */
+  saverDelay: number
+  setSaverDelay: (v: number) => void
+
+  doubleClickToOpen: boolean
+  setDoubleClickToOpen: (v: boolean) => void
+}
+
+export const useOSSettings = create<OSSettings>()(
+  persist(
+    (set) => ({
+      bootSequence: "post",
+      setBootSequence: (bootSequence) => set({ bootSequence }),
+
+      showHotkeys: true,
+      setShowHotkeys: (showHotkeys) => set({ showHotkeys }),
+      toggleHotkeys: () => set((s) => ({ showHotkeys: !s.showHotkeys })),
+
+      saverEnabled: true,
+      setSaverEnabled: (saverEnabled) => set({ saverEnabled }),
+      saverDelay: 90,
+      setSaverDelay: (saverDelay) => set({ saverDelay }),
+
+      doubleClickToOpen: true,
+      setDoubleClickToOpen: (doubleClickToOpen) => set({ doubleClickToOpen }),
+    }),
+    { name: "subsurfaces95" },
+  ),
+)
 
 export type WindowState = "normal" | "minimized" | "maximized"
 

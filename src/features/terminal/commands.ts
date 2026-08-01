@@ -128,6 +128,17 @@ const system: TerminalCommand[] = [
     },
   },
   {
+    name: "exit",
+    aliases: ["quit", "logout"],
+    group: "system",
+    help: { usage: "exit", description: "Close this terminal" },
+    run: (ctx) => {
+      if (ctx.close) return ctx.close()
+      ctx.print("exit: nothing to close — this terminal is the whole screen.", "muted")
+      ctx.print("`site os` or `site garden` to go somewhere else.", "muted")
+    },
+  },
+  {
     name: "clear",
     aliases: ["cls"],
     group: "system",

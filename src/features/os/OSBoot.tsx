@@ -8,8 +8,9 @@
  * as it is and returns via Start → Restart in MS-DOS mode.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { mixSeed, resolveSeed } from "@/features/boot/bootSeed"
+import { useBootPlayback } from "@/features/boot/useBootPlayback"
 import styles from "./OS.module.scss"
 
 type Tone = "normal" | "dim" | "ok"
@@ -23,6 +24,8 @@ interface PostLine {
 
 interface Props {
   onComplete: () => void
+  /** "post" is the scripted BIOS check; "full" streams the procedural TUI. */
+  variant?: "post" | "full"
 }
 
 /** The label the visitor arrived with, e.g. ?seed=PERSISTENCE. */
@@ -76,7 +79,80 @@ function buildScript(seed: number, label: string | null): PostLine[] {
   return lines
 }
 
-export function OSBoot({ onComplete }: Props) {
+export function OSBoot({ onComplete, variant = "post" }: Props) {
+  // Split rather than branched inside one component: the "full" variant drives
+  // useBootPlayback, and running that generator (with its timers) during a
+  // scripted POST would be pure waste.
+  return variant === "full" ? (
+    <FullBoot onComplete={onComplete} />
+  ) : (
+    <PostBoot onComplete={onComplete} />
+  )
+}
+
+/**
+ * The procedural TUI as a *boot*: the same generator the terminal's attract mode
+ * uses, streamed until it has said enough, then handed off to the desktop.
+ */
+const FULL_BOOT_EVENTS = 46
+
+function FullBoot({ onComplete }: { onComplete: () => void }) {
+  const seedInfo = useMemo(() => resolveSeed(), [])
+  const doneRef = useRef(false)
+  const completeRef = useRef(onComplete)
+  completeRef.current = onComplete
+
+  const reduced = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+    [],
+  )
+
+  const { lines, activeText, emittedCount } = useBootPlayback({
+    seed: seedInfo.value,
+    reducedMotion: reduced,
+    maxLines: 120,
+  })
+
+  const finish = useCallback(() => {
+    if (doneRef.current) return
+    doneRef.current = true
+    completeRef.current()
+  }, [])
+
+  useEffect(() => {
+    if (emittedCount >= FULL_BOOT_EVENTS) finish()
+  }, [emittedCount, finish])
+
+  useEffect(() => {
+    window.addEventListener("keydown", finish)
+    window.addEventListener("pointerdown", finish)
+    return () => {
+      window.removeEventListener("keydown", finish)
+      window.removeEventListener("pointerdown", finish)
+    }
+  }, [finish])
+
+  return (
+    <div className={styles.boot} role="log" aria-label="System startup">
+      {lines.map((line) => (
+        <div key={line.id} className={styles.bootLine}>
+          {line.text || " "}
+        </div>
+      ))}
+      {activeText && (
+        <div className={styles.bootLine}>
+          {activeText}
+          <span className={styles.bootCursor} />
+        </div>
+      )}
+      <div className={styles.bootSkip}>Press any key to continue</div>
+    </div>
+  )
+}
+
+function PostBoot({ onComplete }: { onComplete: () => void }) {
   const seedInfo = useMemo(() => resolveSeed(), [])
   const label = useMemo(() => urlSeedLabel(), [])
   const script = useMemo(() => buildScript(seedInfo.value, label), [seedInfo.value, label])

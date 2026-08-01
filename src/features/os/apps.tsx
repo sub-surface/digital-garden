@@ -15,13 +15,15 @@ import { SYSTEM_PAGE_META } from "@/config/system-pages-meta"
 import { PROGRAMS } from "@/features/terminal/commands"
 import { classifyLayout } from "@/lib/layout"
 import type { NoteMetadata } from "@/types/content"
-import { useOS } from "./osStore"
+import { useOS, useOSSettings, type BootSequence } from "./osStore"
 import { OSIcon, type IconName } from "./OSIcon"
 import styles from "./OS.module.scss"
 import explorer from "./Explorer.module.scss"
 
 export interface AppProps {
   args: Record<string, string>
+  /** The window this app is mounted in — lets an app close or retitle itself. */
+  windowId: string
 }
 
 export interface OSApp {
@@ -108,8 +110,9 @@ function ProgramApp({ args }: AppProps) {
 // navigating. That substitution IS the bridge; no command knows about it.
 // ---------------------------------------------------------------------------
 
-function PromptApp() {
+function PromptApp({ windowId }: AppProps) {
   const openWindow = useOS((s) => s.openWindow)
+  const closeWindow = useOS((s) => s.closeWindow)
   const contentIndex = useStore((s) => s.contentIndex)
   const openNote = useOpenNote()
 
@@ -127,7 +130,13 @@ function PromptApp() {
     [contentIndex, openNote, openWindow],
   )
 
-  return <Terminal surface="window" onOpen={onOpen} />
+  return (
+    <Terminal
+      surface="window"
+      onOpen={onOpen}
+      onClose={() => closeWindow(windowId)}
+    />
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -135,19 +144,15 @@ function PromptApp() {
 // plus every app id and every note slug. One name space, three entry points.
 // ---------------------------------------------------------------------------
 
-function RunApp() {
+function RunApp({ windowId }: AppProps) {
   const [value, setValue] = useState("")
   const [error, setError] = useState<string | null>(null)
   const openWindow = useOS((s) => s.openWindow)
   const closeWindow = useOS((s) => s.closeWindow)
-  const windows = useOS((s) => s.windows)
   const contentIndex = useStore((s) => s.contentIndex)
   const openNote = useOpenNote()
 
-  const dismiss = () => {
-    const self = windows.find((w) => w.appId === "run")
-    if (self) closeWindow(self.id)
-  }
+  const dismiss = () => closeWindow(windowId)
 
   const submit = () => {
     const raw = value.trim().toLowerCase().replace(/\.exe$/, "")
@@ -240,15 +245,11 @@ function RunApp() {
 
 type ShutdownChoice = "off" | "restart" | "dos"
 
-function ShutDownApp() {
+function ShutDownApp({ windowId }: AppProps) {
   const [choice, setChoice] = useState<ShutdownChoice>("off")
   const closeWindow = useOS((s) => s.closeWindow)
-  const windows = useOS((s) => s.windows)
 
-  const dismiss = () => {
-    const self = windows.find((w) => w.appId === "shutdown")
-    if (self) closeWindow(self.id)
-  }
+  const dismiss = () => closeWindow(windowId)
 
   const confirm = () => {
     if (choice === "off") {
@@ -544,18 +545,51 @@ function BinApp() {
 // Display Properties — a Win95 front end for controls the site already has.
 // ---------------------------------------------------------------------------
 
+type SettingsTab = "background" | "appearance" | "startup" | "saver" | "about"
+
+const TABS: [SettingsTab, string][] = [
+  ["background", "Background"],
+  ["appearance", "Appearance"],
+  ["startup", "Startup"],
+  ["saver", "Screen Saver"],
+  ["about", "About"],
+]
+
 function DisplayApp() {
+  const [tab, setTab] = useState<SettingsTab>("background")
+
+  return (
+    <div className={explorer.root}>
+      <div className={styles.tabStrip}>
+        {TABS.map(([id, label]) => (
+          <button
+            key={id}
+            className={styles.tab}
+            data-active={tab === id}
+            onClick={() => setTab(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "background" && <BackgroundTab />}
+      {tab === "appearance" && <AppearanceTab />}
+      {tab === "startup" && <StartupTab />}
+      {tab === "saver" && <SaverTab />}
+      {tab === "about" && <AboutTab />}
+    </div>
+  )
+}
+
+function BackgroundTab() {
   const bgMode = useStore((s) => s.bgMode)
   const setBgMode = useStore((s) => s.setBgMode)
-  const theme = useStore((s) => s.theme)
-  const toggleTheme = useStore((s) => s.toggleTheme)
-  const accentBase = useStore((s) => s.accentBase)
-  const setAccentBase = useStore((s) => s.setAccentBase)
 
   return (
     <div className={explorer.props}>
       <label className={explorer.field}>
-        <span>Background</span>
+        <span>Wallpaper</span>
         <select
           value={bgMode}
           onChange={(e) => setBgMode(e.target.value as BgMode)}
@@ -569,9 +603,23 @@ function DisplayApp() {
           ))}
         </select>
       </label>
-
       <p className={explorer.desc}>{BG_META[bgMode]?.desc}</p>
+      <p className={styles.runHint}>Press B on the desktop to cycle.</p>
+    </div>
+  )
+}
 
+function AppearanceTab() {
+  const theme = useStore((s) => s.theme)
+  const toggleTheme = useStore((s) => s.toggleTheme)
+  const accentBase = useStore((s) => s.accentBase)
+  const setAccentBase = useStore((s) => s.setAccentBase)
+  const cycleAccent = useStore((s) => s.cycleAccent)
+  const showHotkeys = useOSSettings((s) => s.showHotkeys)
+  const setShowHotkeys = useOSSettings((s) => s.setShowHotkeys)
+
+  return (
+    <div className={explorer.props}>
       <label className={explorer.field}>
         <span>Colour scheme</span>
         <button className={explorer.button} onClick={toggleTheme}>
@@ -580,14 +628,178 @@ function DisplayApp() {
       </label>
 
       <label className={explorer.field}>
-        <span>Accent</span>
-        <input
-          type="color"
-          value={accentBase}
-          onChange={(e) => setAccentBase(e.target.value)}
-          className={explorer.colour}
-        />
+        <span>Accent — title bars, Start rail, highlights</span>
+        <div className={explorer.runRowInline}>
+          <input
+            type="color"
+            value={accentBase}
+            onChange={(e) => setAccentBase(e.target.value)}
+            className={explorer.colour}
+          />
+          <button className={explorer.button} onClick={cycleAccent}>
+            Next
+          </button>
+        </div>
       </label>
+
+      <label className={explorer.radioRow}>
+        <input
+          type="checkbox"
+          checked={showHotkeys}
+          onChange={(e) => setShowHotkeys(e.target.checked)}
+        />
+        Show the shortcut list on the desktop (F1)
+      </label>
+    </div>
+  )
+}
+
+function StartupTab() {
+  const bootSequence = useOSSettings((s) => s.bootSequence)
+  const setBootSequence = useOSSettings((s) => s.setBootSequence)
+
+  const OPTIONS: { id: BootSequence; label: string; desc: string }[] = [
+    { id: "off", label: "Straight to the desktop", desc: "No sequence. Fastest." },
+    { id: "post", label: "Power-on self test", desc: "The BIOS check. A few seconds." },
+    {
+      id: "full",
+      label: "Full procedural sequence",
+      desc: "The original endless TUI, seeded and different every time, running until it has said enough.",
+    },
+  ]
+
+  return (
+    <div className={explorer.props}>
+      <span>When the machine starts:</span>
+
+      {OPTIONS.map((opt) => (
+        <div key={opt.id}>
+          <label className={explorer.radioRow}>
+            <input
+              type="radio"
+              name="bootseq"
+              checked={bootSequence === opt.id}
+              onChange={() => setBootSequence(opt.id)}
+            />
+            {opt.label}
+          </label>
+          <p className={explorer.desc} style={{ margin: "2px 0 0 24px" }}>
+            {opt.desc}
+          </p>
+        </div>
+      ))}
+
+      <button
+        className={explorer.button}
+        style={{ alignSelf: "flex-start" }}
+        onClick={() => {
+          // Clear the once-per-tab flag, then reload so it actually replays.
+          try {
+            sessionStorage.removeItem("subsurfaces95:booted")
+          } catch {
+            /* storage disabled — reload still works, it just won't replay */
+          }
+          window.location.reload()
+        }}
+      >
+        Replay boot now
+      </button>
+
+      <p className={styles.runHint}>
+        The sequence is seeded — append <code>?seed=WORD</code> to the URL and it boots the same
+        way every time.
+      </p>
+    </div>
+  )
+}
+
+function SaverTab() {
+  const enabled = useOSSettings((s) => s.saverEnabled)
+  const setEnabled = useOSSettings((s) => s.setSaverEnabled)
+  const delay = useOSSettings((s) => s.saverDelay)
+  const setDelay = useOSSettings((s) => s.setSaverDelay)
+
+  return (
+    <div className={explorer.props}>
+      <label className={explorer.field}>
+        <span>Screen saver</span>
+        <select
+          className={explorer.select}
+          value={enabled ? "constellation" : "none"}
+          onChange={(e) => setEnabled(e.target.value !== "none")}
+        >
+          <option value="none">(None)</option>
+          <option value="constellation">CONSTELLATION.SCR</option>
+        </select>
+      </label>
+
+      <p className={explorer.desc}>
+        The garden's own knowledge graph. The screen saver is made of your notes.
+      </p>
+
+      <label className={explorer.field}>
+        <span>Wait</span>
+        <select
+          className={explorer.select}
+          value={delay}
+          disabled={!enabled}
+          onChange={(e) => setDelay(Number(e.target.value))}
+        >
+          {[30, 60, 90, 180, 300, 600].map((s) => (
+            <option key={s} value={s}>
+              {s < 60 ? `${s} seconds` : `${s / 60} minute${s === 60 ? "" : "s"}`}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  )
+}
+
+function AboutTab() {
+  const contentIndex = useStore((s) => s.contentIndex)
+  const notes = contentIndex ? Object.keys(contentIndex).length : 0
+
+  return (
+    <div className={explorer.props}>
+      <div className={explorer.aboutHead}>
+        <OSIcon name="computer" size={48} />
+        <div>
+          <strong>Subsurfaces 95</strong>
+          <p className={explorer.desc} style={{ margin: 0 }}>
+            A second reading interface for the same garden.
+          </p>
+        </div>
+      </div>
+
+      <table className={explorer.aboutTable}>
+        <tbody>
+          <tr>
+            <td>Registered to</td>
+            <td>subsurfaces.net</td>
+          </tr>
+          <tr>
+            <td>Documents</td>
+            <td>{notes || "—"}</td>
+          </tr>
+          <tr>
+            <td>Applications</td>
+            <td>{Object.keys(APPS).length}</td>
+          </tr>
+          <tr>
+            <td>Programs</td>
+            <td>{Object.keys(PROGRAMS).length}</td>
+          </tr>
+          <tr>
+            <td>Physical memory</td>
+            <td>16,384 KB</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p className={styles.runHint}>
+        Chrome is 1995. Documents are the garden, rendered exactly as they are on the main site.
+      </p>
     </div>
   )
 }
@@ -648,7 +860,7 @@ export const APPS: Record<string, OSApp> = {
     menus: ["File", "Edit", "View", "Help"],
     Component: BinApp,
   },
-  display: { icon: "display", defaultSize: { w: 420, h: 480 }, Component: DisplayApp },
+  display: { icon: "display", defaultSize: { w: 470, h: 480 }, Component: DisplayApp },
 }
 
 /** System pages worth surfacing under Start → Programs. */

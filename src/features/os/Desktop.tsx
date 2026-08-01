@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useStore } from "@/store"
+import { useStore, BG_MODES } from "@/store"
 import type { NoteMetadata } from "@/types/content"
-import { useOS, focusedWindowId } from "./osStore"
+import { useOS, useOSSettings, focusedWindowId } from "./osStore"
 import { APPS, useOpenNote } from "./apps"
 import { WindowFrame } from "./WindowFrame"
 import { Taskbar, TASKBAR_H, type MenuTarget } from "./Taskbar"
@@ -119,9 +119,50 @@ export function Desktop() {
 
   useOSLinks(openSlug)
 
-  // Alt+Tab cycles, Alt+F4 closes, Ctrl+Esc opens Start.
+  // Global hotkeys. Bare-letter bindings must never fire while the user is
+  // typing — the terminal, the Run box and the search overlay all live here.
   useEffect(() => {
+    const isTyping = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null
+      if (!el) return false
+      const tag = el.tagName
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable
+    }
+
     const onKey = (e: KeyboardEvent) => {
+      // Ctrl+P — the terminal, one keystroke away, anywhere in the OS.
+      if (e.ctrlKey && !e.shiftKey && (e.key === "p" || e.key === "P")) {
+        e.preventDefault()
+        const app = APPS.prompt
+        openWindow({
+          appId: "prompt",
+          args: {},
+          title: "MS-DOS Prompt",
+          w: app?.defaultSize?.w,
+          h: app?.defaultSize?.h,
+        })
+        return
+      }
+
+      if (e.key === "F1") {
+        e.preventDefault()
+        useOSSettings.getState().toggleHotkeys()
+        return
+      }
+
+      if (!isTyping(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // B — next background. The wallpaper is the site's ambient canvas, so
+        // this is the same cycle the main site's BgModeToggle walks.
+        if (e.key === "b" || e.key === "B") {
+          e.preventDefault()
+          const { bgMode, setBgMode } = useStore.getState()
+          const idx = BG_MODES.indexOf(bgMode as (typeof BG_MODES)[number])
+          const next = BG_MODES[(idx + 1) % BG_MODES.length]
+          setBgMode(next)
+          return
+        }
+      }
+
       if (e.ctrlKey && e.key === "Escape") {
         e.preventDefault()
         setStartOpen(!useOS.getState().isStartOpen)
@@ -147,7 +188,7 @@ export function Desktop() {
 
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [setStartOpen])
+  }, [setStartOpen, openWindow])
 
   return (
     <>
@@ -169,6 +210,8 @@ export function Desktop() {
           ]}
         />
       )}
+
+      <HotkeyHints />
 
       <div
         className={styles.desktop}
@@ -217,7 +260,7 @@ export function Desktop() {
               bounds={bounds}
               menus={app.menus}
             >
-              <Component args={win.args} />
+              <Component args={win.args} windowId={win.id} />
             </WindowFrame>
           )
         })}
@@ -225,6 +268,43 @@ export function Desktop() {
 
       <Taskbar onOpenShortcut={openShortcut} />
     </>
+  )
+}
+
+/**
+ * A small crib sheet, top-right. Win95 never had one; a site that hands you an
+ * OS with no manual should. F1 toggles it, and the choice persists.
+ */
+const HOTKEYS: [string, string][] = [
+  ["B", "next background"],
+  ["Ctrl+P", "command prompt"],
+  ["Ctrl+Esc", "Start menu"],
+  ["Alt+Tab", "next window"],
+  ["Alt+F4", "close window"],
+  ["F1", "hide this"],
+]
+
+function HotkeyHints() {
+  const show = useOSSettings((s) => s.showHotkeys)
+  const setShow = useOSSettings((s) => s.setShowHotkeys)
+
+  if (!show) return null
+
+  return (
+    <div className={styles.hints}>
+      <div className={styles.hintsHead}>
+        <span>Shortcuts</span>
+        <button className={styles.hintsClose} onClick={() => setShow(false)} aria-label="Hide shortcuts">
+          &times;
+        </button>
+      </div>
+      {HOTKEYS.map(([key, what]) => (
+        <div key={key} className={styles.hintRow}>
+          <kbd className={styles.kbd}>{key}</kbd>
+          <span>{what}</span>
+        </div>
+      ))}
+    </div>
   )
 }
 

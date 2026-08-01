@@ -62,6 +62,8 @@ export interface TerminalContext {
   open: (slug: string, title?: string) => void
   /** Absolute or cross-subdomain navigation. */
   navigate: (url: string) => void
+  /** Close the surrounding window. Present only inside the OS. */
+  close?: () => void
 
   user: () => { username: string | null; role: string | null; email: string | null } | null
   requireLogin: () => void

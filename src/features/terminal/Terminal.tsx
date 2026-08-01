@@ -29,11 +29,13 @@ interface Props {
   onOpen?: (slug: string, title?: string) => void
   /** Rendered top-right; the OS passes nothing since its chrome owns that. */
   header?: React.ReactNode
+  /** Supplied by the OS so `exit` can close the window it lives in. */
+  onClose?: () => void
 }
 
 const MAX_LINES = 400
 
-export function Terminal({ surface = "page", onOpen, header }: Props) {
+export function Terminal({ surface = "page", onOpen, header, onClose }: Props) {
   const seedInfo = useMemo(() => resolveSeed(), [])
   const [seedDisplay, setSeedDisplay] = useState(seedInfo.display)
   const isPhone = usePhoneViewport()
@@ -91,6 +93,12 @@ export function Terminal({ surface = "page", onOpen, header }: Props) {
     injectLine("", "normal")
     setMode("prompt")
   }, [setPaused, injectLine])
+
+  // In a window the attract sequence is just noise — a 680px MS-DOS Prompt
+  // wants to be a prompt. Fullscreen still opens on the procedural boot.
+  useEffect(() => {
+    if (surface === "window") collapseToPrompt()
+  }, [surface, collapseToPrompt])
 
   useEffect(() => {
     if (mode === "prompt") return
@@ -168,6 +176,7 @@ export function Terminal({ surface = "page", onOpen, header }: Props) {
         else window.location.assign(`/${slug}`)
       },
       navigate: (url) => window.location.assign(url),
+      close: onClose,
       user: () =>
         session ? { username, role, email: session.user.email ?? null } : null,
       requireLogin: () => window.location.assign("https://wiki.subsurfaces.net/profile"),
@@ -196,7 +205,7 @@ export function Terminal({ surface = "page", onOpen, header }: Props) {
       },
     }),
     [
-      surface, injectLine, clearLines, notes, onOpen, session, username, role,
+      surface, injectLine, clearLines, notes, onOpen, onClose, session, username, role,
       theme, setTheme, seedInfo.value, seedDisplay, music,
     ],
   )

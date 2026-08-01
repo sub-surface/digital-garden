@@ -792,3 +792,92 @@
   display: block;
   text-align: center;
 }
+
+// ---------------------------------------------------------------------------
+// Hotkey crib sheet, top-right of the desktop. F1 toggles.
+// ---------------------------------------------------------------------------
+.hints {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 168px;
+  padding: 6px 8px 7px;
+  background: color-mix(in srgb, var(--os-face) 82%, transparent);
+  color: var(--os-text);
+  font-size: 11px;
+  @include bevel-out;
+}
+
+.hintsHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--os-bevel-dark);
+  font-weight: 700;
+}
+
+.hintsClose {
+  width: 15px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--os-face);
+  color: var(--os-text);
+  font: 700 10px/1 var(--font-code);
+  cursor: default;
+  @include bevel-out;
+}
+
+.hintRow {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  color: var(--os-text-dim);
+}
+
+.kbd {
+  flex: none;
+  min-width: 52px;
+  padding: 0 4px;
+  background: var(--os-doc-bg);
+  color: var(--os-text);
+  font: 10px/1.5 var(--font-code);
+  text-align: center;
+  @include bevel-out;
+  border-width: 1px;
+}
+
+// ---------------------------------------------------------------------------
+// Tabbed property sheets (Settings)
+// ---------------------------------------------------------------------------
+.tabStrip {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 4px 4px 0;
+  background: var(--os-face);
+}
+
+.tab {
+  padding: 4px 12px 5px;
+  background: var(--os-face);
+  color: var(--os-text-dim);
+  font: inherit;
+  cursor: default;
+  border: 2px solid;
+  border-color: var(--os-bevel-light) var(--os-bevel-darker) transparent var(--os-bevel-light);
+
+  &[data-active="true"] {
+    color: var(--os-text);
+    font-weight: 700;
+    padding-bottom: 6px;
+    margin-bottom: -2px;
+  }
+}

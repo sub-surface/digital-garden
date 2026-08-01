@@ -9,6 +9,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { BgCanvas } from "@/components/layout/BgCanvas"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 import { OSBoot, OSSplash } from "./OSBoot"
+import { useOSSettings } from "./osStore"
 import { Desktop } from "./Desktop"
 import styles from "./OS.module.scss"
 
@@ -44,7 +45,12 @@ function markBooted(): void {
 
 export function OSShell() {
   const isPhone = usePhoneViewport()
-  const [stage, setStage] = useState<Stage>(() => (hasBooted() ? "desktop" : "post"))
+  const bootSequence = useOSSettings((s) => s.bootSequence)
+  // Read once, on mount: flipping the setting later must not restart a desktop
+  // that is already up.
+  const [stage, setStage] = useState<Stage>(() =>
+    hasBooted() || useOSSettings.getState().bootSequence === "off" ? "desktop" : "post",
+  )
 
   const finishPost = useCallback(() => {
     markBooted()
@@ -84,7 +90,9 @@ export function OSShell() {
       <BgCanvas />
 
       {stage === "desktop" && <Desktop />}
-      {stage === "post" && <OSBoot onComplete={finishPost} />}
+      {stage === "post" && (
+        <OSBoot onComplete={finishPost} variant={bootSequence === "full" ? "full" : "post"} />
+      )}
       {stage === "splash" && <OSSplash onDone={() => setStage("desktop")} />}
 
       {stage === "desktop" && <ScreenSaver />}
@@ -143,12 +151,13 @@ function BlueScreen() {
 }
 
 /**
- * CONSTELLATION.SCR — after 90s idle the knowledge graph takes the screen.
+ * CONSTELLATION.SCR — after an idle period the knowledge graph takes the screen.
  * It is the garden's own graph, so the screensaver is made of your notes.
+ * Delay and on/off live in Settings → Screen Saver.
  */
-const IDLE_MS = 90_000
-
 function ScreenSaver() {
+  const enabled = useOSSettings((s) => s.saverEnabled)
+  const delaySeconds = useOSSettings((s) => s.saverDelay)
   const [active, setActive] = useState(false)
   // Mirrored in a ref so the pointermove handler can decide whether anything
   // changed WITHOUT calling setState — pointermove fires continuously, and this
@@ -156,6 +165,7 @@ function ScreenSaver() {
   const activeRef = useRef(false)
 
   useEffect(() => {
+    if (!enabled) return
     let timer: ReturnType<typeof setTimeout>
     let lastArmed = 0
 
@@ -165,7 +175,7 @@ function ScreenSaver() {
       timer = setTimeout(() => {
         activeRef.current = true
         setActive(true)
-      }, IDLE_MS)
+      }, Math.max(10, delaySeconds) * 1000)
     }
 
     const onActivity = () => {
@@ -188,9 +198,9 @@ function ScreenSaver() {
       clearTimeout(timer)
       events.forEach((e) => window.removeEventListener(e, onActivity))
     }
-  }, [])
+  }, [enabled, delaySeconds])
 
-  if (!active) return null
+  if (!enabled || !active) return null
 
   return (
     <div className={styles.saver}>
