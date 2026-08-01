@@ -1,0 +1,608 @@
+@use "./os" as *;
+
+// ---------------------------------------------------------------------------
+// Root. All chrome colour derives from the site's existing tokens, so light
+// mode, dark mode and the ROYGBIV accent cycle all work in the OS for free.
+// Dark mode effectively gives you "Windows Standard (High Contrast Black)".
+// ---------------------------------------------------------------------------
+.os {
+  --os-face: var(--color-bg-surface);
+  --os-face-raised: color-mix(in srgb, var(--color-bg-surface) 92%, var(--color-text));
+  --os-bevel-light: color-mix(in srgb, var(--os-face) 65%, white);
+  --os-bevel-dark: color-mix(in srgb, var(--os-face) 65%, black);
+  --os-bevel-darker: color-mix(in srgb, var(--os-face) 35%, black);
+  --os-doc-bg: var(--color-bg);
+  --os-text: var(--color-text);
+  --os-text-dim: var(--color-text-muted);
+
+  // The Win95 title gradient is exactly the right home for the site accent.
+  --os-title-active: linear-gradient(
+    90deg,
+    var(--color-accent-base),
+    color-mix(in srgb, var(--color-accent-base) 40%, var(--color-bg))
+  );
+  --os-title-idle: color-mix(in srgb, var(--color-text-muted) 35%, var(--os-face));
+  --os-title-text: #fff;
+
+  --os-taskbar-h: 32px;
+  --os-font: var(--font-body);
+  --os-font-size: 12px;
+
+  position: fixed;
+  inset: 0;
+  overflow: hidden; // the desktop never scrolls; documents scroll inside windows
+  font-family: var(--os-font);
+  font-size: var(--os-font-size);
+  color: var(--os-text);
+  user-select: none;
+  @include crisp;
+}
+
+// ---------------------------------------------------------------------------
+// Desktop — BgCanvas shows through at z-0, exactly as on the main site.
+// ---------------------------------------------------------------------------
+.desktop {
+  position: absolute;
+  inset: 0 0 var(--os-taskbar-h) 0;
+  z-index: 1;
+}
+
+.iconGrid {
+  position: absolute;
+  inset: 8px auto 8px 8px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(auto-fill, 84px);
+  gap: 4px;
+  align-content: start;
+}
+
+.icon {
+  width: 76px;
+  padding: 6px 2px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px dotted transparent;
+  color: var(--os-title-text);
+  cursor: default;
+  text-align: center;
+  font: inherit;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
+
+  &:hover .iconGlyph {
+    filter: brightness(1.15);
+  }
+
+  &:focus-visible {
+    border-color: currentColor;
+    outline: none;
+  }
+
+  &[data-selected="true"] {
+    border-color: var(--os-title-text);
+    background: color-mix(in srgb, var(--color-accent-base) 40%, transparent);
+  }
+}
+
+.iconLabel {
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.iconGlyph {
+  flex: none;
+}
+
+// ---------------------------------------------------------------------------
+// Windows
+// ---------------------------------------------------------------------------
+.window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--os-face);
+  @include bevel-out;
+  @include crisp;
+  padding: 2px;
+}
+
+.windowMax {
+  inset: 0 0 var(--os-taskbar-h) 0 !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.titleBar {
+  flex: none;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 2px 0 3px;
+  background: var(--os-title-idle);
+  color: var(--os-title-text);
+  cursor: default;
+  touch-action: none; // pointer events own the drag; don't let the browser pan
+
+  .window[data-focused="true"] & {
+    background: var(--os-title-active);
+  }
+}
+
+.titleText {
+  flex: 1;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titleButtons {
+  display: flex;
+  gap: 2px;
+}
+
+.titleBtn {
+  width: 18px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--os-face);
+  color: var(--os-text);
+  font: 700 10px/1 var(--font-code);
+  cursor: default;
+  @include bevel-out;
+
+  &:active {
+    @include bevel-pressed;
+  }
+
+  &:focus-visible {
+    outline: 1px dotted var(--os-text);
+    outline-offset: -3px;
+  }
+}
+
+.menuBar {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 1px 2px;
+}
+
+.menuItem {
+  padding: 2px 7px;
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--os-text);
+  cursor: default;
+
+  &:hover,
+  &[aria-expanded="true"] {
+    background: var(--color-accent-base);
+    color: var(--os-title-text);
+  }
+}
+
+// The document canvas. Chrome stops here — everything inside is the garden's
+// own typography, untouched. See docs/os-95-spec.md §2.1.
+.docArea {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--os-doc-bg);
+  @include bevel-in;
+  user-select: text;
+}
+
+.statusBar {
+  flex: none;
+  display: flex;
+  gap: 3px;
+  padding: 2px 0 0;
+  font-size: 11px;
+  color: var(--os-text-dim);
+}
+
+.statusCell {
+  padding: 1px 6px;
+  @include bevel-in;
+
+  &:first-child {
+    flex: 1;
+  }
+}
+
+// Eight grips: four edges, four corners. Invisible, 5px, outside the padding.
+.grip {
+  position: absolute;
+  touch-action: none;
+  z-index: 2;
+}
+.gripN { top: -2px; left: 6px; right: 6px; height: 5px; cursor: ns-resize; }
+.gripS { bottom: -2px; left: 6px; right: 6px; height: 5px; cursor: ns-resize; }
+.gripE { right: -2px; top: 6px; bottom: 6px; width: 5px; cursor: ew-resize; }
+.gripW { left: -2px; top: 6px; bottom: 6px; width: 5px; cursor: ew-resize; }
+.gripNE { top: -2px; right: -2px; width: 10px; height: 10px; cursor: nesw-resize; }
+.gripNW { top: -2px; left: -2px; width: 10px; height: 10px; cursor: nwse-resize; }
+.gripSE { bottom: -2px; right: -2px; width: 10px; height: 10px; cursor: nwse-resize; }
+.gripSW { bottom: -2px; left: -2px; width: 10px; height: 10px; cursor: nesw-resize; }
+
+// The drag outline. Authentic, and far cheaper than reflowing a live MDX
+// document at 60fps.
+.dragGhost {
+  position: absolute;
+  z-index: 9999;
+  pointer-events: none;
+  border: 2px dotted var(--os-title-text);
+  mix-blend-mode: difference;
+}
+
+// ---------------------------------------------------------------------------
+// Taskbar
+// ---------------------------------------------------------------------------
+.taskbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--os-taskbar-h);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  background: var(--os-face);
+  border-top: 2px solid var(--os-bevel-light);
+}
+
+.startBtn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px 0 4px;
+  background: var(--os-face);
+  color: var(--os-text);
+  font: 700 12px/1 var(--os-font);
+  cursor: default;
+  @include bevel-out;
+
+  &[aria-expanded="true"] {
+    @include bevel-pressed;
+  }
+}
+
+.taskDivider {
+  flex: none;
+  width: 0;
+  height: 22px;
+  @include bevel-groove;
+  border-left: 1px solid var(--os-bevel-darker);
+  border-right: 1px solid var(--os-bevel-light);
+  border-top: none;
+  border-bottom: none;
+}
+
+.taskList {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.taskBtn {
+  flex: 0 1 160px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 6px;
+  background: var(--os-face);
+  color: var(--os-text);
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  @include bevel-out;
+
+  &[data-active="true"] {
+    @include bevel-pressed;
+    font-weight: 700;
+  }
+}
+
+.taskBtnLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tray {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  @include bevel-in;
+  font-variant-numeric: tabular-nums;
+}
+
+// ---------------------------------------------------------------------------
+// Start menu
+// ---------------------------------------------------------------------------
+.startMenu {
+  position: absolute;
+  left: 2px;
+  bottom: var(--os-taskbar-h);
+  z-index: 600;
+  display: flex;
+  min-width: 240px;
+  background: var(--os-face);
+  @include bevel-out;
+  padding: 2px;
+}
+
+// The vertical banner down the left edge.
+.startRail {
+  flex: none;
+  width: 26px;
+  background: linear-gradient(
+    0deg,
+    var(--color-accent-base),
+    color-mix(in srgb, var(--color-accent-base) 30%, var(--color-bg))
+  );
+  color: var(--os-title-text);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 8px 4px;
+  font: 700 15px/1 var(--font-header);
+  letter-spacing: 0.06em;
+}
+
+.startItems {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 2px;
+}
+
+.startItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 24px 5px 6px;
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--os-text);
+  text-align: left;
+  cursor: default;
+  white-space: nowrap;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-accent-base);
+    color: var(--os-title-text);
+    outline: none;
+  }
+
+  &[data-disabled="true"] {
+    color: var(--os-text-dim);
+  }
+}
+
+.startSep {
+  margin: 3px 2px;
+  @include bevel-groove;
+}
+
+.startRow {
+  position: relative;
+  display: flex;
+
+  > .startItem {
+    flex: 1;
+  }
+}
+
+.startLabel {
+  flex: 1;
+}
+
+.startArrow {
+  margin-left: 12px;
+  font-size: 9px;
+}
+
+// Flyouts open to the right of their row and are bottom-anchored, so a long
+// Programs list grows upward instead of off the bottom of the screen.
+.startFlyout {
+  position: absolute;
+  left: 100%;
+  bottom: -2px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding: 2px;
+  background: var(--os-face);
+  @include bevel-out;
+}
+
+.startEmpty {
+  padding: 5px 8px;
+  color: var(--os-text-dim);
+}
+
+// ---------------------------------------------------------------------------
+// Boot / POST
+// ---------------------------------------------------------------------------
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: #000;
+  color: #d8d8d8;
+  font: 13px/1.5 var(--font-code);
+  padding: 24px clamp(16px, 5vw, 64px);
+  overflow: hidden;
+  cursor: default;
+  white-space: pre-wrap;
+}
+
+.bootLine {
+  min-height: 1.5em;
+}
+
+.bootDim { color: #777; }
+.bootOk { color: color-mix(in srgb, var(--color-accent-base) 70%, #fff); }
+.bootCursor {
+  display: inline-block;
+  width: 0.6em;
+  height: 1em;
+  vertical-align: text-bottom;
+  background: currentColor;
+  animation: osBlink 1s step-end infinite;
+}
+
+.bootSkip {
+  position: fixed;
+  right: 16px;
+  bottom: 12px;
+  color: #555;
+  font-size: 11px;
+}
+
+@keyframes osBlink {
+  50% { opacity: 0; }
+}
+
+// Splash between POST and desktop.
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  background: var(--color-bg);
+  text-align: center;
+}
+
+.splashTitle {
+  font: 700 clamp(30px, 7vw, 60px) / 1 var(--font-header);
+  color: var(--color-heading);
+  letter-spacing: -0.02em;
+}
+
+.splashRule {
+  width: min(420px, 60vw);
+  height: 3px;
+  background: var(--color-accent-base);
+}
+
+.splashSub {
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
+// ---------------------------------------------------------------------------
+// Phone guard. A desktop OS at 390px is bad; saying so in character is free.
+// Breakpoint comes from the shared $bp-phone (see breakpoints.ts / gotcha #13),
+// auto-injected into every .scss by vite.config.ts.
+// ---------------------------------------------------------------------------
+.crt {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-content: center;
+  gap: 18px;
+  padding: 32px 24px;
+  background: #000;
+  color: #d8d8d8;
+  font: 13px/1.7 var(--font-code);
+  text-align: left;
+}
+
+.crtTitle {
+  color: var(--color-accent-base);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.crtBtn {
+  justify-self: center;
+  margin-top: 8px;
+  padding: 5px 22px;
+  background: #1a1a1f;
+  color: #d8d8d8;
+  font: inherit;
+  cursor: pointer;
+  @include bevel-out;
+}
+
+.docPad {
+  padding: 16px 20px;
+}
+
+// ---------------------------------------------------------------------------
+// The document canvas contract (spec §2.1). Chrome stops at .docArea; what
+// follows is the garden's own typography, deliberately NOT restyled. These
+// rules only undo assumptions that a 620px window can't hold — they never
+// touch type, colour or spacing.
+//
+// :global because the markup comes from NoteBody/MDX, not from this module.
+// Scoped under .os-doc, which only exists inside an OS window, and shipped in
+// the lazily-loaded OS chunk.
+// ---------------------------------------------------------------------------
+:global(.os-doc) {
+  // NoteRenderer's 900px article grid (and its right margin column) is never
+  // mounted here — NoteBody emits a bare .note-content — so there is no grid to
+  // fight. All that's left is to stop wide children from forcing a scrollbar.
+  :global(.note-content) {
+    max-width: 100%;
+  }
+
+  img,
+  video,
+  table,
+  pre {
+    max-width: 100%;
+  }
+
+  // Wide content scrolls inside itself rather than widening the window.
+  pre,
+  :global(.katex-display) {
+    overflow-x: auto;
+  }
+
+  // Telescopic text, callouts, sidenotes and KaTeX all inherit untouched.
+}
+
+// Games and system pages fill the frame edge-to-edge.
+:global(.os-doc--full) {
+  height: 100%;
+
+  :global(.note-content) {
+    height: 100%;
+  }
+}

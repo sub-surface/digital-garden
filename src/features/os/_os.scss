@@ -1,0 +1,45 @@
+// SUBSURFACES 95 — chrome primitives.
+//
+// Mixins only. This partial is @use'd by several modules, so it must never emit
+// CSS at top level (same law as _breakpoints.scss). Note that a partial pulled
+// in via @use does NOT receive vite.config.ts's auto-injection, so anything
+// needing $bp-phone must @use "../../styles/breakpoints" itself.
+
+// Raised: light on top-left, dark on bottom-right. Buttons, window frames, the
+// taskbar. The doubled border is what gives Win95 its depth without a shadow.
+@mixin bevel-out {
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--os-bevel-light) var(--os-bevel-darker) var(--os-bevel-darker)
+    var(--os-bevel-light);
+}
+
+// Sunken: the inverse. Document canvases, text fields, status-bar wells.
+@mixin bevel-in {
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--os-bevel-darker) var(--os-bevel-light) var(--os-bevel-light)
+    var(--os-bevel-darker);
+}
+
+// Pressed state for a raised control — swaps the bevel and nudges the label.
+@mixin bevel-pressed {
+  @include bevel-in;
+  padding-top: 1px;
+  padding-left: 1px;
+}
+
+// A hairline groove, for menu separators and toolbar dividers.
+@mixin bevel-groove {
+  border: none;
+  border-top: 1px solid var(--os-bevel-darker);
+  border-bottom: 1px solid var(--os-bevel-light);
+}
+
+// Nothing in this OS is rounded, blurred or shadowed. Applied at the root so a
+// stray global rule can't soften the chrome.
+@mixin crisp {
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}

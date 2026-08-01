@@ -1,0 +1,210 @@
+@use "./os" as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--os-face);
+  color: var(--os-text);
+  font-size: 12px;
+}
+
+.path {
+  flex: none;
+  padding: 3px 6px;
+  margin: 2px;
+  background: var(--os-doc-bg);
+  font-family: var(--font-code);
+  font-size: 11px;
+  @include bevel-in;
+}
+
+.table {
+  flex: 1;
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--os-doc-bg);
+  align-self: start;
+
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 3px 6px;
+    text-align: left;
+    font-weight: 400;
+    background: var(--os-face);
+    @include bevel-out;
+    border-width: 1px;
+  }
+
+  td {
+    padding: 2px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+  }
+}
+
+.row {
+  cursor: default;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-accent-base) 22%, transparent);
+  }
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dos,
+.num {
+  font-family: var(--font-code);
+  font-size: 11px;
+  color: var(--os-text-dim);
+}
+
+.num {
+  text-align: right;
+}
+
+.count {
+  flex: none;
+  margin: 2px;
+  padding: 2px 6px;
+  color: var(--os-text-dim);
+  @include bevel-in;
+}
+
+.drives {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 10px;
+  padding: 12px;
+  margin: 2px;
+  background: var(--os-doc-bg);
+  @include bevel-in;
+}
+
+.drive {
+  width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+  background: none;
+  border: 1px dotted transparent;
+  color: var(--os-text);
+  font: inherit;
+  text-align: center;
+  cursor: default;
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-accent-base) 22%, transparent);
+  }
+
+  &:focus-visible {
+    border-color: currentColor;
+    outline: none;
+  }
+}
+
+.empty {
+  display: grid;
+  place-content: center;
+  height: 100%;
+  color: var(--os-text-dim);
+  background: var(--os-doc-bg);
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px;
+  background: var(--os-face);
+
+  p {
+    margin: 0 0 6px;
+  }
+}
+
+.errorIcon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #b4424c;
+  color: #fff;
+  font-weight: 700;
+}
+
+.errorHint {
+  color: var(--os-text-dim);
+}
+
+.props {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: var(--os-face);
+  height: 100%;
+  overflow: auto;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.select {
+  font: inherit;
+  padding: 2px;
+  background: var(--os-doc-bg);
+  color: var(--os-text);
+  @include bevel-in;
+
+  &:focus-visible {
+    outline: 1px dotted var(--os-text);
+    outline-offset: -3px;
+  }
+}
+
+.desc {
+  margin: 0;
+  color: var(--os-text-dim);
+  font-style: italic;
+}
+
+.button {
+  padding: 4px 10px;
+  background: var(--os-face);
+  color: var(--os-text);
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  @include bevel-out;
+
+  &:active {
+    @include bevel-pressed;
+  }
+}
+
+.colour {
+  width: 64px;
+  height: 26px;
+  padding: 2px;
+  background: var(--os-face);
+  @include bevel-in;
+}

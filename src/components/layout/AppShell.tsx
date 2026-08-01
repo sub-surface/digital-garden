@@ -10,7 +10,7 @@ import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 import { slugFromPathname } from "@/lib/slug"
 const WikiShell = lazy(() => import("./WikiShell").then(m => ({ default: m.WikiShell })))
 const ChatShell = lazy(() => import("./ChatShell").then(m => ({ default: m.ChatShell })))
-const OSShell = lazy(() => import("@/features/boot/BootPage").then(m => ({ default: m.BootPage })))
+const OSShell = lazy(() => import("@/features/os/OSShell").then(m => ({ default: m.OSShell })))
 import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
 import { BgCanvas } from "./BgCanvas"
