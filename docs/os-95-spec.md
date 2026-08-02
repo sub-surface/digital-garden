@@ -258,7 +258,7 @@ interface OSApp {
 | **Explorer** | — | Internal folder navigation, details/search, guarded Backspace, and local-file create/open/delete. |
 | **Find: All Files** | `FIND.EXE` | Native name/content search over the shared lazy FlexSearch index plus browser-local `H:` text files, with garden/local scope and direct open. |
 | **MS-DOS Prompt** | `COMMAND.COM` | Shared terminal registry in a compact ANSI-aware frame. |
-| **Media Player** | `MPLAYER.EXE` | Compact playlist/player over the existing music context and `music.json`. |
+| **Media Player** | `MPLAYER.EXE` | Winamp-inspired deck over the single shared music context: four visualisers plus searchable Library, reorderable Queue and persisted Mixes. |
 | **Task Manager** | `TASKMGR.EXE` | Running-window list, switching and End Task. Taskbar buttons also expose close controls. |
 | **Minesweeper / Chess / HeXO / SIGIL / arcade** | `*.EXE` | Direct `SYSTEM_PAGES` components in a bounded program host. |
 | **Subsurfaces Messenger** | `MSGR.EXE` | `ChatRoom` in chrome. |
@@ -528,25 +528,61 @@ The completed personal-machine layer adds:
   Until that optional table exists, GET reports the capability as unavailable
   and the Restore control is disabled rather than producing a console 500.
 - **Media and sound.** The media window adds real analyser-backed FFT/scope
-  views, editable queue, repeat modes and named persisted mixes. System cues are
-  synthesized, individually enabled, and quiet by default (startup/notification
-  on; window open/close off). When music is playing, every screensaver shows a
-  compact cover/title/artist/progress card without turning the saver into a
-  second player.
+  views, editable queue, repeat modes and named persisted mixes. The workstation
+  follow-through adds peak-hold spectrum, phosphor scope, waterfall and radial
+  modes plus explicit Library / Queue / Mixes views. System cues are synthesized,
+  individually enabled, and quiet by default (startup/notification on; window
+  open/close off). When music is playing, every screensaver shows a compact
+  cover/title/artist/progress card without turning the saver into a second player.
 - **Messenger.** A small adapter owns rooms, token/user state, retry and logged-
   out behavior around the shared `ChatRoom`.
-
-Persistence remains intentionally legible: `subsurfaces95` (settings, widget and
-desktop positions), `subsurfaces95-files`, `subsurfaces95-solitaire`,
-`subsurfaces95-media`, and the existing shared `music-session`/`music-volume`.
-The four OS-owned persisted stores carry schema version `1` with migration
-hooks; window geometry remains session-only.
 - The taskbar has per-window close controls; Escape closes the active window;
   desktop icons reorder on the grid; Task Manager, Account and the compact media
   player are first-class utilities. Browser-conflicting OS hotkeys were removed.
 - Music assets go through a range-aware same-origin Worker route, fixing the OS
   subdomain CORS failure. The production CSP now permits the data-backed font the
   rendered content already emits.
+
+Persistence remains intentionally legible: `subsurfaces95` (settings, widget and
+desktop positions), `subsurfaces95-files`, `subsurfaces95-solitaire`,
+`subsurfaces95-media`, and the existing shared `music-session`/`music-volume`.
+The four OS-owned persisted stores carry schema version `1` with migration
+hooks; window geometry remains session-only.
+
+### 13.1 Media workstation contract
+
+`MPLAYER.EXE` is a richer control surface for the existing global
+`MusicProvider`, not a second player. There remains one `<audio>` element and one
+Web Audio graph across the garden and OS. `public/music.json` remains generated,
+read-only catalogue input; library metadata and audio uploading remain outside
+the player.
+
+The listening session and editable queue use stable track slugs. Restore accepts
+the old numeric playlist shape once and migrates it against the current manifest.
+Queues intentionally preserve duplicate entries. Named Mixes persist the same
+ordered slug list, while Library search and Mix loading discard catalogue entries
+that no longer exist. Queue rows support drag, keyboard-friendly up/down controls
+and independent removal; Play Next and Add are different actions.
+
+Visualisers are Canvas 2D and stay inside the shared analyser budget. They cap
+device-pixel ratio and frame rate, reuse typed arrays, resize through
+`ResizeObserver`, lower their cadence for reduced motion and stop scheduling
+frames when the document or canvas is not visible. A future WebGL mode must be a
+separate lazy boundary and must not make the base workstation pay its bundle or
+GPU cost.
+
+Deliberately deferred follow-ons:
+
+- an EQ/filter rack (LPF/HPF first), with bypass and audible-state reset;
+- detachable EQ / visualiser / playlist panes, windowshade mode and a bounded
+  skin-token system;
+- Mix rename, duplicate, import/export or sharing;
+- stereo vectorscope and a WebGL feedback/MilkDrop-like mode;
+- gapless playback and crossfade, which require a measured audio-graph design
+  rather than overlapping the current single media element by accident;
+- deciding whether the compact garden player or a dedicated music subdomain
+  should expose this queue editor. The OS implementation is the reference model,
+  not permission to maintain three diverging queue implementations.
 
 The remaining boundaries and browser-certification work live in ROADMAP §29.
 
@@ -566,7 +602,8 @@ The remaining boundaries and browser-certification work live in ROADMAP §29.
 - **Interaction regressions are executable.** Vitest + React Testing Library run
   under `npm test`, initially covering auth lifecycle, error containment,
   same-origin links, minimized-task restoration, same-file editor dedupe and
-  keyboard-openable Start flyouts.
+  keyboard-openable Start flyouts, and now covering duplicate queue reorder plus
+  Mix persistence in Media Player.
 - **Correctness details are shared primitives.** `activateWindow` owns restore +
   focus; full logoff owns sign-out + window teardown + logon transition; a
   foundation validates its designated suit; single/double-click preferences

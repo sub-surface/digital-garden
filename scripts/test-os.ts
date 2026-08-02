@@ -3,6 +3,14 @@ import { canFound, canStack, deal, type Card } from "../src/features/os/solitair
 import { parseFeed } from "../src/worker/widgets"
 import { handleRestores, validRestoreSlug } from "../src/worker/restores"
 import type { RouteCtx } from "../src/worker/types"
+import {
+  insertNext,
+  migrateQueue,
+  moveQueueItem,
+  queueIndexAfterMove,
+  queueIndexAfterRemoval,
+  shuffleQueue,
+} from "../src/components/ui/music/musicQueue"
 
 const first = deal(0xc7ab2c90)
 const repeat = deal(0xc7ab2c90)
@@ -21,6 +29,18 @@ assert(canFound(card("clubs", 1), undefined, "clubs"))
 assert(!canFound(card("hearts", 1), undefined, "clubs"), "an ace cannot enter another suit's empty foundation")
 assert(canFound(card("clubs", 2), card("clubs", 1)))
 assert(!canFound(card("spades", 2), card("clubs", 1)))
+
+const queueTracks = [{ slug: "alpha" }, { slug: "beta" }, { slug: "gamma" }]
+assert.deepEqual(migrateQueue([2, 0, 2, 99, "missing"], queueTracks), ["gamma", "alpha", "gamma"])
+assert.deepEqual(migrateQueue(["beta", "beta"], queueTracks), ["beta", "beta"], "queues preserve repeats")
+assert.deepEqual(insertNext(["alpha", "gamma"], 0, "beta"), ["alpha", "beta", "gamma"])
+assert.deepEqual(insertNext(["alpha"], -1, "beta"), ["beta", "alpha"])
+assert.deepEqual(moveQueueItem(["alpha", "beta", "gamma"], 0, 2), ["beta", "gamma", "alpha"])
+assert.equal(queueIndexAfterMove(1, 0, 2), 0)
+assert.equal(queueIndexAfterMove(0, 0, 2), 2)
+assert.equal(queueIndexAfterRemoval(2, 0), 1)
+assert.equal(queueIndexAfterRemoval(1, 1), -1)
+assert.deepEqual(shuffleQueue(["alpha", "beta", "gamma"], () => 0), ["beta", "gamma", "alpha"])
 
 const feed = parseFeed(`
   <rss><channel><item><title><![CDATA[A &amp; B]]></title><link>https://example.com/a</link><pubDate>today</pubDate></item>
@@ -49,4 +69,4 @@ try {
   globalThis.fetch = originalFetch
 }
 
-console.log("OS rules: solitaire, feeds, and graceful restore capability detection pass.")
+console.log("OS rules: solitaire, media queues, feeds, and graceful restore capability detection pass.")

@@ -130,7 +130,7 @@ export const APPS: Record<string, OSApp> = {
   images: { icon: "folder", defaultSize: { w: 700, h: 500 }, menus: closeMenus, Component: ImagesApp },
   computer: { icon: "computer", defaultSize: { w: 460, h: 320 }, menus: closeMenus, Component: ComputerApp },
   prompt: { icon: "terminal", defaultSize: { w: 680, h: 420 }, multiInstance: true, Component: PromptApp },
-  media: { icon: "music", defaultSize: { w: 540, h: 520 }, menus: closeMenus, Component: MediaPlayerApp },
+  media: { icon: "music", defaultSize: { w: 640, h: 590 }, menus: closeMenus, Component: MediaPlayerApp },
   solitaire: { icon: "app", defaultSize: { w: 720, h: 610 }, menus: closeMenus, Component: SolitaireApp },
   taskmgr: { icon: "computer", defaultSize: { w: 520, h: 360 }, menus: closeMenus, Component: TaskManagerApp },
   account: { icon: "computer", defaultSize: { w: 470, h: 500 }, menus: closeMenus, Component: AccountApp },

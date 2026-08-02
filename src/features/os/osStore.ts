@@ -556,7 +556,7 @@ export const useOSMedia = create<OSMediaStore>()(
       savedPlaylists: {},
       savePlaylist: (requested, slugs) => set((state) => {
         const name = requested.trim().slice(0, 40) || "Mixtape"
-        return { savedPlaylists: { ...state.savedPlaylists, [name]: [...new Set(slugs)] } }
+        return { savedPlaylists: { ...state.savedPlaylists, [name]: slugs.filter(Boolean) } }
       }),
       deletePlaylist: (name) => set((state) => {
         const savedPlaylists = { ...state.savedPlaylists }

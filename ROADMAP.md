@@ -387,8 +387,9 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
   window (audio stays in the main doc; `createPortal` keeps React handlers live). (2026-06-15)
 - [ ] **Music player — extras (notes for later):**
   - LPF/HPF filter knobs behind a toggle (BiquadFilter on the music graph).
-  - Playlist reordering by drag remains open. Queue editing, loop-all and single-track repeat now
-    ship in the OS Media Player; decide whether the compact garden player should expose them too.
+  - Queue drag/reordering, Play Next/Add, duplicate entries, named mixes, repeat modes and stable
+    slug persistence now ship in the OS Media Player. Decide whether the compact garden player
+    should expose them too rather than creating a second queue implementation.
   - Scratch first-activation latency: prewarm decodes on open, but a cold first scratch can still
     fall back to silent scrub until decode lands — consider decoding to a smaller/again-cached form.
 - [x] **"Random note" button** — dice icon in QuickControls (main shell) + `r` hotkey. Picks a
@@ -1095,14 +1096,14 @@ user keeps a tab open on, rather than anything that follows a single tab around.
   pop-out, or do both coexist (quick controls in-garden, full app on the subdomain)? Leaning
   toward both existing — the in-garden bar is for casual listening while browsing, the subdomain
   is for "I just want music running while I do other things all day."
-- [ ] **§11's existing "Music player — extras" wishlist becomes this app's natural feature set**
-  once it exists: LPF/HPF filter knobs (BiquadFilter, already scoped there), playlist reordering,
-  loop modes. Advanced realtime controls make much more sense as first-class UI on a dedicated
-  player page than squeezed into the garden's compact `MusicBar`. Those items don't need to move,
-  just noting they're the natural next step here.
+- [ ] **§11's remaining "Music player — extras" wishlist becomes this app's natural feature set**
+  once it exists: LPF/HPF filter knobs and the OS player's established slug queue/mix editor.
+  Advanced realtime controls make much more sense as first-class UI on a dedicated player page
+  than squeezed into the garden's compact `MusicBar`; reuse the queue model rather than forking it.
 - [ ] Realtime/effects ideas worth scoping in: a visible LPF/HPF with a big obvious knob (the
   scratch mechanic already proves the audio graph can do real-time parameter changes cheaply), a
-  proper playlist/queue view, maybe a shareable "now playing" state if that's ever wanted.
+  full-page treatment of the existing OS queue/mix view, maybe a shareable "now playing" state if
+  that's ever wanted.
 - [ ] Not yet decided: whether this is a fully separate Worker (like `omega.subsurfaces.net`'s
   standalone HTML approach) or a lazy-loaded shell within the existing Worker/SPA build, same as
   the other four shells. The latter is far less infra to stand up and is probably right unless
@@ -1417,10 +1418,15 @@ What remains is deliberately ordered by value and architectural dependency:
 9. [x] **Window shade and richer task switching.** Double-click title bar rolls
    up; Ctrl/Cmd+` cycles tasks inside the page. Do not reinstate
    Alt+Tab/Alt+F4/Ctrl+Esc interception: those belong to the reader's real OS.
-10. [x] **Music workstation ideas.** Spectrum/oscilloscope visualization, saved
-    playlists, queue editing and repeat modes ship. Gapless/crossfade remains an
-    audio-graph experiment; editing metadata or uploading audio remains an owner
-    workflow inheriting item 3's audit/preview requirements.
+10. [x] **Music workstation ideas.** A Winamp-inspired deck now has peak-hold
+    spectrum, phosphor scope, waterfall and radial visualisers; searchable
+    Library / Queue / Mixes views; explicit Play Next/Add; duplicate-preserving
+    drag reorder; shuffle/repeat/stop; and named mixes. Sessions and queues use
+    stable slugs with legacy numeric-playlist migration. Rendering pauses when
+    hidden and caps DPR/frame rate. Gapless/crossfade, filters, detachable panes,
+    skins and WebGL feedback remain explicitly deferred in the OS spec; editing
+    metadata or uploading audio remains an owner workflow inheriting item 3's
+    audit/preview requirements.
 11. [x] **Messenger window.** The adapter owns room selection,
     session/token state and a useful logged-out view around the shared `ChatRoom`.
 12. [x] **Sound set and ARG ambience.** The synthesized cues now have a

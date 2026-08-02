@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import type { Track } from "@/types/content"
 import { musicAssetUrl } from "@/lib/musicAsset"
+import { migrateQueue } from "./musicQueue"
 
 interface MusicContextType {
   tracks: Track[]
@@ -10,8 +11,9 @@ interface MusicContextType {
   progress: number
   duration: number
   currentTime: number
-  playTrack: (target: number | string) => void
+  playTrack: (target: number | string, queuePosition?: number) => void
   togglePlay: () => void
+  stop: () => void
   nextTrack: () => void
   prevTrack: () => void
   setVolume: (volume: number) => void
@@ -22,10 +24,10 @@ interface MusicContextType {
   audioRef: React.RefObject<HTMLAudioElement | null>
   repeatMode: "off" | "track" | "all"
   setRepeatMode: (mode: "off" | "track" | "all") => void
-  playlist: number[]
-  setPlaylist: (list: number[]) => void
-  playlistIndex: number
-  setPlaylistIndex: (index: number) => void
+  queue: string[]
+  setQueue: (list: string[]) => void
+  queueIndex: number
+  setQueueIndex: (index: number) => void
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined)
@@ -48,8 +50,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [duration, setDuration] = useState<number>(0)
   
   const [repeatMode, setRepeatMode] = useState<"off" | "track" | "all">("all")
-  const [playlist, setPlaylist] = useState<number[]>([])
-  const [playlistIndex, setPlaylistIndex] = useState<number>(-1)
+  const [queue, setQueue] = useState<string[]>([])
+  const [queueIndex, setQueueIndex] = useState<number>(-1)
   
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -63,7 +65,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const lastSaveRef = useRef<number>(0)
 
   // Fetch tracks on mount, then restore the last session (track + position +
-  // playlist) from localStorage. We never auto-resume *playing* — browsers
+  // queue) from localStorage. We never auto-resume *playing* — browsers
   // block autoplay without a gesture — so playback stays paused until the user
   // interacts, but everything else picks up exactly where they left off.
   useEffect(() => {
@@ -86,22 +88,34 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (raw) {
             const s = JSON.parse(raw) as {
               trackIndex?: number
+              trackSlug?: string
               time?: number
               repeatMode?: "off" | "track" | "all"
-              playlist?: number[]
+              queue?: string[]
+              queueIndex?: number
+              playlist?: Array<number | string>
               playlistIndex?: number
             }
+            const restoredTrackIndex = typeof s.trackSlug === "string"
+              ? adjusted.findIndex((track) => track.slug === s.trackSlug)
+              : s.trackIndex
             if (
-              typeof s.trackIndex === "number" &&
-              s.trackIndex >= 0 &&
-              s.trackIndex < adjusted.length
+              typeof restoredTrackIndex === "number" &&
+              restoredTrackIndex >= 0 &&
+              restoredTrackIndex < adjusted.length
             ) {
-              setCurrentTrackIndex(s.trackIndex)
+              setCurrentTrackIndex(restoredTrackIndex)
               resumeTimeRef.current = s.time && s.time > 0 ? s.time : 0
             }
             if (s.repeatMode) setRepeatMode(s.repeatMode)
-            if (Array.isArray(s.playlist)) setPlaylist(s.playlist)
-            if (typeof s.playlistIndex === "number") setPlaylistIndex(s.playlistIndex)
+            const restoredQueue = migrateQueue(s.queue ?? s.playlist, adjusted)
+            setQueue(restoredQueue)
+            const restoredIndex = s.queueIndex ?? s.playlistIndex
+            setQueueIndex(
+              typeof restoredIndex === "number" && restoredIndex >= 0 && restoredIndex < restoredQueue.length
+                ? restoredIndex
+                : -1,
+            )
           }
         } catch (err) {
           console.warn("Failed to restore music session:", err)
@@ -182,7 +196,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const currentTrack = tracks[currentTrackIndex] || null
 
-  // Persist immediately when the track / repeat / playlist changes (the time
+  // Persist immediately when the track / repeat / queue changes (the time
   // path is throttled separately). Skips the empty initial render.
   useEffect(() => {
     if (tracks.length === 0) return
@@ -191,16 +205,17 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         "music-session",
         JSON.stringify({
           trackIndex: currentTrackIndex,
+          trackSlug: currentTrack?.slug,
           time: resumeTimeRef.current || audioRef.current?.currentTime || 0,
           repeatMode,
-          playlist,
-          playlistIndex,
+          queue,
+          queueIndex,
         }),
       )
     } catch {
       /* non-fatal */
     }
-  }, [currentTrackIndex, repeatMode, playlist, playlistIndex, tracks.length])
+  }, [currentTrack?.slug, currentTrackIndex, repeatMode, queue, queueIndex, tracks.length])
 
   // --- Media Session: drive the player from OS / lockscreen / media keys. ---
   // Metadata (title, artist, artwork) updates per track; action handlers route
@@ -241,7 +256,14 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsPlaying((playing) => !playing)
   }, [ensureAudioContext])
 
-  const playTrack = useCallback((target: number | string) => {
+  const stop = useCallback(() => {
+    setIsPlaying(false)
+    if (audioRef.current) audioRef.current.currentTime = 0
+    setCurrentTime(0)
+    setProgress(0)
+  }, [])
+
+  const playTrack = useCallback((target: number | string, queuePosition = -1) => {
     ensureAudioContext()
     
     let index = -1
@@ -252,6 +274,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
 
     if (index === -1) return
+    setQueueIndex(queuePosition)
 
     if (index === currentTrackIndex) {
       togglePlay()
@@ -262,28 +285,36 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [currentTrackIndex, ensureAudioContext, togglePlay, tracks])
 
   const nextTrack = useCallback(() => {
+    if (tracks.length === 0) return
     ensureAudioContext()
-    if (playlist.length > 0) {
-      const nextIdx = (playlistIndex + 1) % playlist.length
-      setPlaylistIndex(nextIdx)
-      setCurrentTrackIndex(playlist[nextIdx])
+    if (queue.length > 0) {
+      const nextIndex = queueIndex >= 0 ? (queueIndex + 1) % queue.length : 0
+      const trackIndex = tracks.findIndex((track) => track.slug === queue[nextIndex])
+      if (trackIndex < 0) return
+      setQueueIndex(nextIndex)
+      setCurrentTrackIndex(trackIndex)
     } else {
       setCurrentTrackIndex((prev) => (prev + 1) % tracks.length)
     }
     setIsPlaying(true)
-  }, [ensureAudioContext, playlist, playlistIndex, tracks.length])
+  }, [ensureAudioContext, queue, queueIndex, tracks])
 
   const prevTrack = useCallback(() => {
+    if (tracks.length === 0) return
     ensureAudioContext()
-    if (playlist.length > 0) {
-      const prevIdx = (playlistIndex - 1 + playlist.length) % playlist.length
-      setPlaylistIndex(prevIdx)
-      setCurrentTrackIndex(playlist[prevIdx])
+    if (queue.length > 0) {
+      const previousIndex = queueIndex >= 0
+        ? (queueIndex - 1 + queue.length) % queue.length
+        : queue.length - 1
+      const trackIndex = tracks.findIndex((track) => track.slug === queue[previousIndex])
+      if (trackIndex < 0) return
+      setQueueIndex(previousIndex)
+      setCurrentTrackIndex(trackIndex)
     } else {
       setCurrentTrackIndex((prev) => (prev - 1 + tracks.length) % tracks.length)
     }
     setIsPlaying(true)
-  }, [ensureAudioContext, playlist, playlistIndex, tracks.length])
+  }, [ensureAudioContext, queue, queueIndex, tracks])
 
   const setVolume = useCallback((v: number) => {
     const clamped = Math.max(0, Math.min(1, v))
@@ -356,10 +387,11 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         "music-session",
         JSON.stringify({
           trackIndex: currentTrackIndex,
+          trackSlug: currentTrack?.slug,
           time: time ?? audioRef.current?.currentTime ?? 0,
           repeatMode,
-          playlist,
-          playlistIndex,
+          queue,
+          queueIndex,
         }),
       )
     } catch {
@@ -376,9 +408,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else if (repeatMode === "all") {
       nextTrack()
     } else {
-      if (playlist.length > 0 && playlistIndex === playlist.length - 1) {
+      if (queue.length > 0 && queueIndex === queue.length - 1) {
         setIsPlaying(false)
-      } else if (playlist.length === 0 && currentTrackIndex === tracks.length - 1) {
+      } else if (queue.length === 0 && currentTrackIndex === tracks.length - 1) {
         setIsPlaying(false)
       } else {
         nextTrack()
@@ -398,6 +430,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         currentTime,
         playTrack,
         togglePlay,
+        stop,
         nextTrack,
         prevTrack,
         setVolume,
@@ -407,10 +440,10 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         audioRef,
         repeatMode,
         setRepeatMode,
-        playlist,
-        setPlaylist,
-        playlistIndex,
-        setPlaylistIndex,
+        queue,
+        setQueue,
+        queueIndex,
+        setQueueIndex,
       }}
     >
       {children}

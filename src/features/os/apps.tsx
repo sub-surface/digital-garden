@@ -33,6 +33,13 @@ import { OSIcon, type IconName } from "./OSIcon"
 import { playOSSound } from "./osSounds"
 import { APPS } from "./appRegistry"
 import { dosName, fileExt, useOpenNote } from "./appNavigation"
+import {
+  insertNext,
+  moveQueueItem,
+  queueIndexAfterMove,
+  queueIndexAfterRemoval,
+  shuffleQueue,
+} from "@/components/ui/music/musicQueue"
 import styles from "./OS.module.scss"
 import explorer from "./Explorer.module.scss"
 
@@ -1611,123 +1618,433 @@ function AboutTab() {
   )
 }
 
-function MediaVisualizer({ analyser, mode }: { analyser: AnalyserNode | null; mode: "spectrum" | "scope" }) {
+type MediaVizMode = "spectrum" | "scope" | "waterfall" | "radial"
+type MediaView = "library" | "queue" | "mixes"
+
+const MEDIA_VIZ_MODES: ReadonlyArray<{ id: MediaVizMode; label: string }> = [
+  { id: "spectrum", label: "SPEC" },
+  { id: "scope", label: "SCOPE" },
+  { id: "waterfall", label: "FALL" },
+  { id: "radial", label: "RAD" },
+]
+
+function mediaTime(seconds: number) {
+  if (!Number.isFinite(seconds)) return "0:00"
+  const absolute = Math.max(0, Math.floor(Math.abs(seconds)))
+  return `${Math.floor(absolute / 60)}:${String(absolute % 60).padStart(2, "0")}`
+}
+
+function MediaVisualizer({ analyser, mode }: { analyser: AnalyserNode | null; mode: MediaVizMode }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+
   useEffect(() => {
     const canvas = canvasRef.current
     const context = canvas?.getContext("2d")
     if (!canvas || !context) return
+
+    const frequency = analyser ? new Uint8Array(analyser.frequencyBinCount) : null
+    const waveform = analyser ? new Uint8Array(analyser.fftSize) : null
+    const peaks = new Float32Array(64)
+    const edges = new Uint16Array(65)
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
+    let width = 1
+    let height = 1
+    let dpr = 1
+    let bars = 32
     let frame = 0
-    const bins = analyser ? new Uint8Array(analyser.frequencyBinCount) : null
-    const draw = () => {
-      frame = requestAnimationFrame(draw)
-      const width = canvas.clientWidth
-      const height = canvas.clientHeight
-      const dpr = Math.min(2, window.devicePixelRatio || 1)
-      const pixelWidth = Math.floor(width * dpr)
-      const pixelHeight = Math.floor(height * dpr)
+    let running = false
+    let pageVisible = document.visibilityState === "visible"
+    let elementVisible = true
+    let previousFrame = 0
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect()
+      width = Math.max(1, rect.width)
+      height = Math.max(1, rect.height)
+      dpr = Math.min(2, window.devicePixelRatio || 1)
+      const pixelWidth = Math.max(1, Math.round(width * dpr))
+      const pixelHeight = Math.max(1, Math.round(height * dpr))
       if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
         canvas.width = pixelWidth
         canvas.height = pixelHeight
       }
+      bars = Math.max(20, Math.min(64, Math.floor(width / 7)))
+      const maxBin = Math.max(2, (analyser?.frequencyBinCount ?? 2) - 1)
+      for (let index = 0; index <= bars; index++) {
+        edges[index] = Math.min(maxBin, Math.floor(Math.exp(Math.log(maxBin) * index / bars)))
+      }
+      peaks.fill(0)
+    }
+
+    const drawGrid = (fade = false) => {
       context.setTransform(dpr, 0, 0, dpr, 0, 0)
-      context.fillStyle = "#080a08"
+      context.fillStyle = fade ? "rgba(8,10,8,.2)" : "#080a08"
       context.fillRect(0, 0, width, height)
-      context.strokeStyle = "rgba(155,208,107,.13)"
-      for (let x = 0; x < width; x += 18) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke() }
-      for (let y = 0; y < height; y += 14) { context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke() }
-      if (!analyser || !bins) return
-      context.strokeStyle = "#9bd06b"
-      context.fillStyle = "#9bd06b"
-      if (mode === "scope") {
-        analyser.getByteTimeDomainData(bins)
-        context.beginPath()
-        bins.forEach((value, index) => {
-          const x = index / (bins.length - 1) * width
-          const y = value / 255 * height
-          if (index === 0) context.moveTo(x, y)
-          else context.lineTo(x, y)
-        })
-        context.stroke()
-      } else {
-        analyser.getByteFrequencyData(bins)
-        const bars = Math.min(56, Math.floor(width / 4))
-        for (let index = 0; index < bars; index++) {
-          const bin = Math.floor(Math.pow(index / bars, 1.8) * (bins.length - 1))
-          const barHeight = bins[bin] / 255 * height
-          context.fillRect(index / bars * width, height - barHeight, Math.max(1, width / bars - 1), barHeight)
-        }
+      context.strokeStyle = "rgba(155,208,107,.12)"
+      context.lineWidth = 1
+      for (let x = 0; x < width; x += 20) {
+        context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke()
+      }
+      for (let y = 0; y < height; y += 16) {
+        context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke()
       }
     }
-    draw()
-    return () => cancelAnimationFrame(frame)
+
+    const bandLevel = (index: number) => {
+      if (!frequency) return 0
+      const start = edges[index]
+      const end = Math.max(start + 1, edges[index + 1])
+      let total = 0
+      for (let bin = start; bin < end; bin++) total += frequency[bin]
+      return total / (end - start) / 255
+    }
+
+    const draw = (now: number) => {
+      if (!running) return
+      frame = requestAnimationFrame(draw)
+      const interval = reducedMotion ? 120 : 1000 / 30
+      if (now - previousFrame < interval) return
+      previousFrame = now
+
+      if (!analyser || !frequency || !waveform) {
+        drawGrid()
+        context.fillStyle = "rgba(155,208,107,.55)"
+        context.textAlign = "center"
+        context.font = "10px monospace"
+        context.fillText("AUDIO ANALYSER STANDBY", width / 2, height / 2 + 3)
+        return
+      }
+
+      if (mode === "scope") {
+        analyser.getByteTimeDomainData(waveform)
+        drawGrid(true)
+        context.beginPath()
+        for (let index = 0; index < waveform.length; index++) {
+          const x = index / (waveform.length - 1) * width
+          const y = waveform[index] / 255 * height
+          if (index === 0) context.moveTo(x, y)
+          else context.lineTo(x, y)
+        }
+        context.strokeStyle = "#b9ff72"
+        context.shadowColor = "#76dc38"
+        context.shadowBlur = 5
+        context.lineWidth = 1.25
+        context.stroke()
+        context.shadowBlur = 0
+        return
+      }
+
+      analyser.getByteFrequencyData(frequency)
+      if (mode === "waterfall") {
+        context.setTransform(1, 0, 0, 1, 0, 0)
+        context.drawImage(canvas, 0, -Math.max(1, Math.round(2 * dpr)))
+        context.setTransform(dpr, 0, 0, dpr, 0, 0)
+        const stripHeight = Math.max(1.5, 2 * dpr)
+        for (let index = 0; index < bars; index++) {
+          const level = bandLevel(index)
+          context.fillStyle = level > .72 ? "#ffc85a" : level > .38 ? "#9bd06b" : "#315b2e"
+          context.fillRect(index / bars * width, height - stripHeight, width / bars + .5, stripHeight)
+        }
+        return
+      }
+
+      drawGrid()
+      if (mode === "radial") {
+        const centerX = width / 2
+        const centerY = height / 2
+        const radius = Math.min(width, height) * .16
+        context.lineWidth = Math.max(1, width / bars - 1)
+        for (let index = 0; index < bars; index++) {
+          const angle = index / bars * Math.PI * 2 - Math.PI / 2
+          const level = bandLevel(index)
+          const reach = radius + level * Math.min(width, height) * .31
+          context.beginPath()
+          context.moveTo(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius)
+          context.lineTo(centerX + Math.cos(angle) * reach, centerY + Math.sin(angle) * reach)
+          context.strokeStyle = level > .68 ? "#ffc85a" : "#9bd06b"
+          context.stroke()
+        }
+        context.beginPath()
+        context.arc(centerX, centerY, radius - 3, 0, Math.PI * 2)
+        context.strokeStyle = "rgba(185,255,114,.65)"
+        context.lineWidth = 1
+        context.stroke()
+        return
+      }
+
+      const barWidth = width / bars
+      for (let index = 0; index < bars; index++) {
+        const level = bandLevel(index)
+        const barHeight = level * (height - 5)
+        peaks[index] = Math.max(barHeight, peaks[index] - (reducedMotion ? 4 : 1.5))
+        context.fillStyle = level > .72 ? "#ffc85a" : level > .42 ? "#9bd06b" : "#4d8439"
+        context.fillRect(index * barWidth, height - barHeight, Math.max(1, barWidth - 1), barHeight)
+        context.fillStyle = "#d8ffac"
+        context.fillRect(index * barWidth, height - peaks[index] - 1, Math.max(1, barWidth - 1), 1)
+      }
+    }
+
+    const start = () => {
+      if (running || !pageVisible || !elementVisible) return
+      running = true
+      frame = requestAnimationFrame(draw)
+    }
+    const stopDrawing = () => {
+      running = false
+      cancelAnimationFrame(frame)
+    }
+    const onVisibility = () => {
+      pageVisible = document.visibilityState === "visible"
+      if (pageVisible) start()
+      else stopDrawing()
+    }
+
+    resize()
+    const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize)
+    resizeObserver?.observe(canvas)
+    const intersectionObserver = typeof IntersectionObserver === "undefined"
+      ? null
+      : new IntersectionObserver(([entry]) => {
+        elementVisible = entry.isIntersecting
+        if (elementVisible) start()
+        else stopDrawing()
+      })
+    intersectionObserver?.observe(canvas)
+    document.addEventListener("visibilitychange", onVisibility)
+    start()
+
+    return () => {
+      stopDrawing()
+      resizeObserver?.disconnect()
+      intersectionObserver?.disconnect()
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
   }, [analyser, mode])
+
   return <canvas ref={canvasRef} className={styles.mediaVisual} aria-label={`${mode} visualisation`} />
 }
 
 export function MediaPlayerApp() {
   const {
     tracks, currentTrackIndex, currentTrack, isPlaying, currentTime, duration, volume,
-    playTrack, togglePlay, nextTrack, prevTrack, seek, setVolume, analyser,
-    repeatMode, setRepeatMode, playlist, setPlaylist, setPlaylistIndex,
+    playTrack, togglePlay, stop, nextTrack, prevTrack, seek, setVolume, analyser,
+    repeatMode, setRepeatMode, queue, setQueue, queueIndex, setQueueIndex,
   } = useMusic()
   const savedPlaylists = useOSMedia((state) => state.savedPlaylists)
   const savePlaylist = useOSMedia((state) => state.savePlaylist)
   const deletePlaylist = useOSMedia((state) => state.deletePlaylist)
-  const [mode, setMode] = useState<"spectrum" | "scope">("spectrum")
+  const [mode, setMode] = useState<MediaVizMode>("spectrum")
+  const [view, setView] = useState<MediaView>("library")
   const [playlistName, setPlaylistName] = useState("Mixtape")
-  const time = (seconds: number) => {
-    if (!Number.isFinite(seconds)) return "0:00"
-    return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`
+  const [query, setQuery] = useState("")
+  const [showRemaining, setShowRemaining] = useState(false)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+
+  const trackBySlug = useMemo(
+    () => new Map(tracks.map((track) => [track.slug, track])),
+    [tracks],
+  )
+  const filteredTracks = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    if (!needle) return tracks
+    return tracks.filter((track) =>
+      `${track.title} ${track.artist} ${track.year ?? ""}`.toLowerCase().includes(needle),
+    )
+  }, [query, tracks])
+  const savedMixes = useMemo(
+    () => Object.entries(savedPlaylists).sort(([left], [right]) => left.localeCompare(right)),
+    [savedPlaylists],
+  )
+
+  const beginTrack = (slug: string, nextQueueIndex = -1) => {
+    if (currentTrack?.slug === slug) {
+      setQueueIndex(nextQueueIndex)
+      seek(0)
+      if (!isPlaying) togglePlay()
+    } else {
+      playTrack(slug, nextQueueIndex)
+    }
   }
+  const removeQueueEntry = (index: number) => {
+    setQueue(queue.filter((_, itemIndex) => itemIndex !== index))
+    setQueueIndex(queueIndexAfterRemoval(queueIndex, index))
+  }
+  const moveQueueEntry = (from: number, to: number) => {
+    setQueue(moveQueueItem(queue, from, to))
+    setQueueIndex(queueIndexAfterMove(queueIndex, from, to))
+  }
+  const shuffle = () => {
+    const source = queue.length > 0 ? queue : tracks.map((track) => track.slug)
+    const shuffled = shuffleQueue(source)
+    setQueue(shuffled)
+    setQueueIndex(currentTrack ? shuffled.indexOf(currentTrack.slug) : -1)
+    setView("queue")
+  }
+  const loadMix = (name: string, autoplay: boolean) => {
+    const slugs = (savedPlaylists[name] ?? []).filter((slug) => trackBySlug.has(slug))
+    setPlaylistName(name)
+    setQueue(slugs)
+    setQueueIndex(autoplay && slugs.length > 0 ? 0 : -1)
+    setView("queue")
+    if (autoplay && slugs[0]) beginTrack(slugs[0], 0)
+  }
+  const cycleRepeat = () => {
+    setRepeatMode(repeatMode === "off" ? "all" : repeatMode === "all" ? "track" : "off")
+  }
+  const shownTime = showRemaining && duration > 0 ? duration - currentTime : currentTime
 
   return (
     <div className={styles.mediaPlayer}>
-      <div className={styles.mediaScreen}>
-        <span>{String(currentTrackIndex + 1).padStart(2, "0")}</span>
-        <strong>{currentTrack?.title ?? "NO TRACK LOADED"}</strong>
-        <span>{time(currentTime)} / {time(duration)}</span>
-      </div>
-      <MediaVisualizer analyser={analyser} mode={mode} />
-      <input type="range" min={0} max={duration || 0} value={currentTime} onChange={(e) => seek(Number(e.target.value))} aria-label="Track position" />
-      <div className={styles.mediaControls}>
-        <button onClick={prevTrack} aria-label="Previous">|◀</button>
-        <button onClick={togglePlay} aria-label={isPlaying ? "Pause" : "Play"}>{isPlaying ? "Ⅱ" : "▶"}</button>
-        <button onClick={nextTrack} aria-label="Next">▶|</button>
-        <button onClick={() => setMode((value) => value === "spectrum" ? "scope" : "spectrum")} aria-label="Change visualisation">{mode === "spectrum" ? "FFT" : "OSC"}</button>
-        <button onClick={() => setRepeatMode(repeatMode === "off" ? "all" : repeatMode === "all" ? "track" : "off")} aria-label="Repeat mode">R:{repeatMode === "track" ? "1" : repeatMode === "all" ? "A" : "-"}</button>
-        <label>VOL <input type="range" min={0} max={100} value={Math.round(volume * 100)} onChange={(e) => setVolume(Number(e.target.value) / 100)} /></label>
-      </div>
-      <div className={styles.mediaMixes}>
-        <input value={playlistName} maxLength={40} onChange={(event) => setPlaylistName(event.target.value)} aria-label="Playlist name" />
-        <button onClick={() => savePlaylist(playlistName, (playlist.length ? playlist : tracks.map((_, index) => index)).flatMap((index) => tracks[index]?.slug ?? []))}>SAVE</button>
-        <select
-          aria-label="Saved playlists"
-          defaultValue=""
-          onChange={(event) => {
-            const name = event.target.value
-            const slugs = savedPlaylists[name]
-            if (!slugs) return
-            setPlaylistName(name)
-            const indices = slugs.map((slug) => tracks.findIndex((track) => track.slug === slug)).filter((index) => index >= 0)
-            setPlaylist(indices)
-            setPlaylistIndex(indices.indexOf(currentTrackIndex))
-          }}
-        >
-          <option value="" disabled>LOAD MIX…</option>
-          {Object.keys(savedPlaylists).map((name) => <option value={name} key={name}>{name}</option>)}
-        </select>
-        <button onClick={() => { if (savedPlaylists[playlistName] && window.confirm(`Delete '${playlistName}'?`)) deletePlaylist(playlistName) }}>DEL</button>
-      </div>
-      <div className={styles.mediaPlaylist}>
-        {tracks.map((track, index) => (
-          <div className={styles.mediaTrack} key={track.slug} data-active={index === currentTrackIndex}>
-            <button onClick={() => playTrack(index)}><span>{String(index + 1).padStart(2, "0")}</span>{track.title}</button>
-            <button title={playlist.includes(index) ? "Remove from queue" : "Add to queue"} onClick={() => setPlaylist(playlist.includes(index) ? playlist.filter((item) => item !== index) : [...playlist, index])}>
-              {playlist.includes(index) ? "−" : "+"}
-            </button>
+      <div className={styles.mediaDeck}>
+        <div className={styles.mediaScreen} aria-live="polite">
+          <span className={styles.mediaStatus}>{isPlaying ? "PLAY" : currentTrack ? "PAUSE" : "READY"}</span>
+          <button
+            className={styles.mediaMarquee}
+            onClick={() => setShowRemaining((remaining) => !remaining)}
+            title="Toggle elapsed / remaining time"
+          >
+            <span>{currentTrack ? `${currentTrack.artist} - ${currentTrack.title}` : "SUBSURFACES MEDIA PLAYER"}</span>
+          </button>
+          <button className={styles.mediaClock} onClick={() => setShowRemaining((remaining) => !remaining)}>
+            {showRemaining && duration > 0 ? "-" : ""}{mediaTime(shownTime)}
+          </button>
+          <span className={styles.mediaPosition}>
+            {queueIndex >= 0 ? `${queueIndex + 1}/${queue.length}` : String(currentTrackIndex + 1).padStart(2, "0")}
+          </span>
+        </div>
+        <div className={styles.mediaVizPanel}>
+          <MediaVisualizer analyser={analyser} mode={mode} />
+          <div className={styles.mediaVizModes} aria-label="Visualiser mode">
+            {MEDIA_VIZ_MODES.map((candidate) => (
+              <button key={candidate.id} data-active={candidate.id === mode} onClick={() => setMode(candidate.id)}>
+                {candidate.label}
+              </button>
+            ))}
           </div>
-        ))}
+        </div>
+        <input
+          className={styles.mediaSeek}
+          type="range"
+          min={0}
+          max={duration || 0}
+          value={currentTime}
+          onChange={(event) => seek(Number(event.target.value))}
+          aria-label="Track position"
+        />
+        <div className={styles.mediaControls}>
+          <div className={styles.mediaTransport}>
+            <button onClick={prevTrack} aria-label="Previous track">|&lt;</button>
+            <button onClick={togglePlay} aria-label={isPlaying ? "Pause" : "Play"}>{isPlaying ? "||" : ">"}</button>
+            <button onClick={stop} aria-label="Stop">[]</button>
+            <button onClick={nextTrack} aria-label="Next track">&gt;|</button>
+          </div>
+          <button onClick={shuffle} disabled={tracks.length === 0} title="Shuffle into queue">SHUF</button>
+          <button onClick={cycleRepeat} title={`Repeat: ${repeatMode}`} aria-label={`Repeat mode: ${repeatMode}`}>
+            R:{repeatMode === "track" ? "1" : repeatMode === "all" ? "A" : "-"}
+          </button>
+          <label>VOL
+            <input type="range" min={0} max={100} value={Math.round(volume * 100)} onChange={(event) => setVolume(Number(event.target.value) / 100)} />
+          </label>
+        </div>
+      </div>
+
+      <div className={styles.mediaBrowser}>
+        <div className={styles.mediaTabs} role="tablist" aria-label="Music browser">
+          {(["library", "queue", "mixes"] as const).map((tab) => (
+            <button key={tab} role="tab" aria-selected={view === tab} onClick={() => setView(tab)}>
+              {tab.toUpperCase()} <span>{tab === "library" ? tracks.length : tab === "queue" ? queue.length : savedMixes.length}</span>
+            </button>
+          ))}
+        </div>
+
+        {view === "library" && (
+          <>
+            <div className={styles.mediaToolbar}>
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search title, artist, year..." aria-label="Search music library" />
+              <span>{filteredTracks.length} TRACKS</span>
+            </div>
+            <div className={styles.mediaPlaylist} role="tabpanel">
+              {filteredTracks.map((track) => {
+                const index = tracks.indexOf(track)
+                return (
+                  <div className={styles.mediaTrack} key={track.slug} data-active={index === currentTrackIndex}>
+                    <button className={styles.mediaTrackMain} onClick={() => beginTrack(track.slug)}>
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <span><strong>{track.title}</strong><small>{track.artist}{track.year ? ` / ${track.year}` : ""}</small></span>
+                      <time>{track.duration ? mediaTime(track.duration) : "--:--"}</time>
+                    </button>
+                    <button title="Play next" onClick={() => setQueue(insertNext(queue, queueIndex, track.slug))}>NEXT</button>
+                    <button title="Add another copy to queue" onClick={() => setQueue([...queue, track.slug])}>+</button>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {view === "queue" && (
+          <>
+            <div className={styles.mediaToolbar}>
+              <span>{queue.length ? `${queue.length} QUEUED / DRAG TO REORDER` : "QUEUE IS EMPTY"}</span>
+              <button onClick={() => { setQueue([]); setQueueIndex(-1) }} disabled={queue.length === 0}>CLEAR</button>
+            </div>
+            <div className={styles.mediaPlaylist} role="tabpanel">
+              {queue.map((slug, index) => {
+                const track = trackBySlug.get(slug)
+                if (!track) return null
+                return (
+                  <div
+                    className={`${styles.mediaTrack} ${styles.mediaQueueTrack}`}
+                    key={`${slug}-${index}`}
+                    data-active={index === queueIndex}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={() => {
+                      if (dragIndex !== null) moveQueueEntry(dragIndex, index)
+                      setDragIndex(null)
+                    }}
+                  >
+                    <button
+                      className={styles.mediaDragHandle}
+                      draggable
+                      onDragStart={() => setDragIndex(index)}
+                      onDragEnd={() => setDragIndex(null)}
+                      title="Drag to reorder"
+                      aria-label={`Move ${track.title}`}
+                    >::</button>
+                    <button className={styles.mediaTrackMain} onClick={() => beginTrack(slug, index)}>
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <span><strong>{track.title}</strong><small>{track.artist}</small></span>
+                      <time>{track.duration ? mediaTime(track.duration) : "--:--"}</time>
+                    </button>
+                    <span className={styles.mediaMoveButtons}>
+                      <button onClick={() => moveQueueEntry(index, index - 1)} disabled={index === 0} aria-label="Move up">^</button>
+                      <button onClick={() => moveQueueEntry(index, index + 1)} disabled={index === queue.length - 1} aria-label="Move down">v</button>
+                    </span>
+                    <button onClick={() => removeQueueEntry(index)} aria-label={`Remove ${track.title} from queue`}>x</button>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {view === "mixes" && (
+          <div className={`${styles.mediaPlaylist} ${styles.mediaMixes}`} role="tabpanel">
+            <div className={styles.mediaMixEditor}>
+              <input value={playlistName} maxLength={40} onChange={(event) => setPlaylistName(event.target.value)} aria-label="Mix name" />
+              <button onClick={() => savePlaylist(playlistName, queue)} disabled={queue.length === 0}>SAVE QUEUE</button>
+            </div>
+            {savedMixes.length === 0 && <p className={styles.mediaEmpty}>Build a queue, then save it as a mix.</p>}
+            {savedMixes.map(([name, slugs]) => (
+              <div className={styles.mediaMix} key={name}>
+                <span><strong>{name}</strong><small>{slugs.length} track{slugs.length === 1 ? "" : "s"}</small></span>
+                <button onClick={() => loadMix(name, false)}>LOAD</button>
+                <button onClick={() => loadMix(name, true)}>PLAY</button>
+                <button onClick={() => { if (window.confirm(`Delete '${name}'?`)) deletePlaylist(name) }}>DEL</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

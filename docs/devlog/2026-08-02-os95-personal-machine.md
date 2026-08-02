@@ -77,9 +77,13 @@ The follow-up moved the remaining roadmap items through the same boundaries:
 - Recycle Bin restore became a reversible authenticated visibility flag, not a
   content edit. It requires `docs/migrations/2026-08-os-restores.sql`; the main
   garden then exposes only that reader's recovered notes.
-- Media Player now has analyser-backed FFT/scope views, queue editing, named
-  mixes and repeat modes. Startup/notification cues default on; noisy window
-  open/close cues default off and every event has an explicit control.
+- Media Player now has a Winamp-inspired deck with peak-hold spectrum, phosphor
+  scope, waterfall and radial views; searchable Library / Queue / Mixes tabs;
+  Play Next/Add; duplicate-preserving drag reorder; named mixes and repeat modes.
+  Queue and session restore are slug-based with migration from the old numeric
+  playlist. Visual animation pauses offscreen and caps frame rate/DPR. Startup/
+  notification cues default on; noisy window open/close cues default off and
+  every event has an explicit control.
 - Program-host code now contains known full-viewport offenders (heXO,
   Constellation, Filament and the cabinet) and lets internal Escape controls win
   before the OS closes a window. A complete registry browser matrix remains.

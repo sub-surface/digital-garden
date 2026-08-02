@@ -3,10 +3,13 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ProgramBoundary } from "./Desktop"
-import { TaskManagerApp } from "./apps"
-import { useOS, useOSSettings } from "./osStore"
+import { MediaPlayerApp, TaskManagerApp } from "./apps"
+import { useOS, useOSMedia, useOSSettings } from "./osStore"
 import { MenuRow } from "./Taskbar"
 import { useOSLinks } from "./useOSLinks"
+
+const useMusicMock = vi.hoisted(() => vi.fn())
+vi.mock("@/components/ui/music/MusicContext", () => ({ useMusic: useMusicMock }))
 
 function LinkHarness({ openSlug }: { openSlug: (slug: string) => void }) {
   useOSLinks(openSlug)
@@ -38,7 +41,34 @@ function SubmenuHarness() {
 describe("OS interactions", () => {
   beforeEach(() => {
     useOS.setState(useOS.getInitialState(), true)
+    useOSMedia.setState(useOSMedia.getInitialState(), true)
     useOSSettings.setState({ soundEnabled: false })
+    useMusicMock.mockReturnValue({
+      tracks: [
+        { slug: "alpha", title: "Alpha", artist: "One", audio: "", cover: "", duration: 65 },
+        { slug: "beta", title: "Beta", artist: "Two", audio: "", cover: "", duration: 130 },
+      ],
+      currentTrackIndex: 0,
+      currentTrack: { slug: "alpha", title: "Alpha", artist: "One", audio: "", cover: "", duration: 65 },
+      isPlaying: true,
+      currentTime: 12,
+      duration: 65,
+      volume: .5,
+      playTrack: vi.fn(),
+      togglePlay: vi.fn(),
+      stop: vi.fn(),
+      nextTrack: vi.fn(),
+      prevTrack: vi.fn(),
+      seek: vi.fn(),
+      setVolume: vi.fn(),
+      analyser: null,
+      repeatMode: "all",
+      setRepeatMode: vi.fn(),
+      queue: ["alpha", "alpha"],
+      setQueue: vi.fn(),
+      queueIndex: 0,
+      setQueueIndex: vi.fn(),
+    })
   })
 
   it("keeps an application crash inside its window and lets the window close", async () => {
@@ -105,5 +135,21 @@ describe("OS interactions", () => {
 
     expect(programs).toHaveAttribute("aria-expanded", "true")
     expect(screen.getByText("Program list")).toBeInTheDocument()
+  })
+
+  it("reorders duplicate queue entries and saves them intact as a mix", async () => {
+    const music = useMusicMock()
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
+    render(<MediaPlayerApp />)
+
+    await userEvent.click(screen.getByRole("tab", { name: "QUEUE 2" }))
+    await userEvent.click(screen.getAllByRole("button", { name: "Move down" })[0])
+
+    expect(music.setQueue).toHaveBeenCalledWith(["alpha", "alpha"])
+    expect(music.setQueueIndex).toHaveBeenCalledWith(1)
+
+    await userEvent.click(screen.getByRole("tab", { name: "MIXES 0" }))
+    await userEvent.click(screen.getByRole("button", { name: "SAVE QUEUE" }))
+    expect(useOSMedia.getState().savedPlaylists.Mixtape).toEqual(["alpha", "alpha"])
   })
 })
