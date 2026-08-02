@@ -1377,7 +1377,7 @@ sniffs content-type to detect an SPA fallback) are commented exceptions to gotch
 
 The 2026-08-02 continuation shipped the coherent middle layer: Browser vs program
 windows, a writable local `H:\MY DOCUMENTS`, real Notepad, grid-reordered desktop
-icons, startup document, Task Manager, media player, Account bridge, taskbar close,
+icons, startup document, Task Manager, media player, Paint, Petri, Account bridge, taskbar close,
 Escape-to-close, multi-mode screensavers, quiet OS sounds, terminal overlay/tab
 completion/paced toys, and the production music/CSP fixes. The implementation and
 state boundaries are recorded in `docs/os-95-spec.md` §13.
@@ -1470,13 +1470,26 @@ What remains is deliberately ordered by value and architectural dependency:
     The pass also fixed foundation-suit validation, minimized Task Manager
     switching, root-link remounts, full account logoff, same-file Notepad races
     and My Computer's single/double-click preference. (2026-08-02)
+17. [x] **Local creative programs.** `PAINT.EXE` is a bounded pixel editor with
+    gap-free pencil strokes, eraser, fill, picker, mirror mode, bounded undo/redo,
+    a safe versioned `.PXL` format in `H:\MY DOCUMENTS\Pictures`, Explorer/Find
+    routing and explicit PNG export. `PETRI.EXE` is a persistent virtual pet with
+    seeded temperament, needs, moods and four growth forms; it reacts to care,
+    elapsed time, pointer attention, open windows and the shared music session.
+    Petri can become dormant but never dies or uses notifications/streaks. Both
+    programs are independent lazy chunks with pure hostile-state normalization
+    and interaction coverage. Selection/layers/import/animation for Paint and
+    accessories/mini-games/desktop roaming for Petri remain bounded follow-ons
+    in the OS spec; cloud sync requires an explicit revisions/merge design.
+    (2026-08-02)
 
 Verification note: Leon browser-verified the 2026-08-01 OS pass and the taller
 main-site terminal. The 2026-08-02 stabilization adds component-level interaction
 coverage plus static/compiler/build checks, but the full animated OS matrix is
 still open; `npm run dev:os` is the explicit local path, and its pass should
 prioritize item 8, logon, widget drag/stacking, Solitaire and production audio
-playback from `os.subsurfaces.net`.
+playback from `os.subsurfaces.net`, plus Paint pointer drawing and Petri's
+responsive layouts at narrow/default window sizes.
 
 Console follow-up: seed URL canonicalisation now runs after React commit (and
 only on the fullscreen terminal), so opening Ctrl/Cmd+P cannot update the router

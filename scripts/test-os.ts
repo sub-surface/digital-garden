@@ -11,6 +11,24 @@ import {
   queueIndexAfterRemoval,
   shuffleQueue,
 } from "../src/components/ui/music/musicQueue"
+import {
+  createPaintDocument,
+  floodPaint,
+  normalizePaintDocument,
+  paintLine,
+  paintPixel,
+  parsePaintDocument,
+  serializePaintDocument,
+} from "../src/features/os/paintModel"
+import {
+  actOnPetri,
+  createPetri,
+  normalizePetri,
+  petriMood,
+  petriStage,
+  petriTemperament,
+  settlePetri,
+} from "../src/features/os/petriModel"
 
 const first = deal(0xc7ab2c90)
 const repeat = deal(0xc7ab2c90)
@@ -42,6 +60,37 @@ assert.equal(queueIndexAfterRemoval(2, 0), 1)
 assert.equal(queueIndexAfterRemoval(1, 1), -1)
 assert.deepEqual(shuffleQueue(["alpha", "beta", "gamma"], () => 0), ["beta", "gamma", "alpha"])
 
+let picture = createPaintDocument(8, 8)
+picture = paintLine(picture, { x: 3, y: 0 }, { x: 3, y: 7 }, "#111")
+picture = floodPaint(picture, { x: 0, y: 0 }, "#b4424c")
+assert.equal(picture.pixels[2], "#b4424c")
+assert.equal(picture.pixels[3], "#111111", "fill must stop at a painted boundary")
+assert.equal(picture.pixels[4], "")
+picture = paintPixel(picture, { x: 1, y: 7 }, "#fff", true)
+assert.equal(picture.pixels[7 * 8 + 1], "#ffffff")
+assert.equal(picture.pixels[7 * 8 + 6], "#ffffff", "mirror mode paints the opposite cell")
+assert.deepEqual(parsePaintDocument(serializePaintDocument(picture)), picture)
+const hostilePicture = normalizePaintDocument({ width: 999, height: 1, pixels: ["red", "#abc"] })
+assert.equal(hostilePicture.width, 64)
+assert.equal(hostilePicture.height, 8)
+assert.deepEqual(hostilePicture.pixels.slice(0, 2), ["", "#aabbcc"])
+
+const hatchTime = Date.UTC(2026, 7, 2, 12)
+const mote = createPetri(hatchTime, 7)
+assert.equal(petriTemperament(mote), petriTemperament(createPetri(hatchTime, 7)))
+const later = settlePetri(mote, hatchTime + 10 * 60 * 60 * 1_000)
+assert(later.needs.fullness < mote.needs.fullness)
+assert.equal(settlePetri(mote, hatchTime + 60 * 24 * 60 * 60 * 1_000).needs.fullness, 5, "a neglected pet rests but never dies")
+const fed = actOnPetri(later, "feed", hatchTime + 11 * 60 * 60 * 1_000)
+assert(fed.needs.fullness > later.needs.fullness)
+assert.equal(fed.nonce, later.nonce + 1)
+assert.equal(petriStage(mote), "spore")
+assert.equal(petriMood({ ...mote, needs: { ...mote.needs, fullness: 6 } }), "peckish")
+const recoveredPet = normalizePetri({ ...mote, name: "x".repeat(100), needs: { fullness: -1, joy: 200 } }, hatchTime)
+assert.equal(recoveredPet.name.length, 20)
+assert.equal(recoveredPet.needs.fullness, 5)
+assert.equal(recoveredPet.needs.joy, 100)
+
 const feed = parseFeed(`
   <rss><channel><item><title><![CDATA[A &amp; B]]></title><link>https://example.com/a</link><pubDate>today</pubDate></item>
   <item><title>Unsafe</title><link>javascript:alert(1)</link></item></channel></rss>
@@ -69,4 +118,4 @@ try {
   globalThis.fetch = originalFetch
 }
 
-console.log("OS rules: solitaire, media queues, feeds, and graceful restore capability detection pass.")
+console.log("OS rules: solitaire, media queues, Paint, Petri, feeds, and graceful restore detection pass.")

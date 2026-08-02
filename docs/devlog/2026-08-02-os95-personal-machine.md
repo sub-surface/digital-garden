@@ -234,3 +234,30 @@ persisted parameters are clamped before touching the graph. Interaction coverage
 checks pane deduplication, synchronized EQ/crossfade/skin controls and on-demand
 WebGL loading; the pure media check covers parameter normalization and the
 equal-power curve.
+
+## Giving the machine a paintbox and a creature
+
+`PAINT.EXE` is now a real local pixel editor rather than a decorative shortcut.
+It ships pencil, eraser, bounded flood fill, picker, mirror drawing, gap-free
+pointer strokes, grid control and 32-step undo/redo. Editable projects use a
+small normalized version-1 `.PXL` format under
+`H:\MY DOCUMENTS\Pictures`; Explorer and Find route those files back to Paint,
+while PNG remains an explicit enlarged export. Dimensions, colors and hostile
+JSON are clamped before drawing, and unsaved history never leaks into global OS
+state.
+
+`PETRI.EXE` is the gentler long-lived toy: a seeded specimen grows from spore to
+bloom, develops moods, tracks four needs and bond, follows the pointer, notices
+busy desktops and dances to the one shared music session. Its pure timestamp
+model decays without a background worker, caps catch-up at 30 days and floors
+every need above zero, so absence produces dormancy rather than death or a
+punitive streak. One versioned local record is exposed in Display Properties;
+New Egg is the explicit in-app reset.
+
+Both programs have their own lazy implementation/style chunks rather than
+joining the already broad `apps.tsx` bundle. Pure contract tests cover raster
+lines, fill boundaries, mirror behavior, serialization, hostile persistence,
+elapsed-time decay, actions, mood and growth; RTL coverage verifies Paint save
+and Explorer reopen plus Petri care, renaming and music response. Larger ideas
+are kept in the OS spec instead of smuggling sync, notifications, layers or a
+second playback owner into this slice.

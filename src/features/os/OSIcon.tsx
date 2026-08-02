@@ -21,6 +21,8 @@ export type IconName =
   | "chat"
   | "graph"
   | "image"
+  | "paint"
+  | "petri"
   | "user"
 
 interface Props {
@@ -176,6 +178,27 @@ const GLYPHS: Record<IconName, React.ReactNode> = {
       <rect x="2.5" y="3.5" width="11" height="9" fill={A} opacity="0.58" />
       <circle cx="11" cy="6" r="1.5" fill={PAPER} />
       <path d="M3 11l3-3 2 2 2-3 3 4z" fill={INK} />
+    </>
+  ),
+
+  paint: (
+    <>
+      <rect x="1" y="2" width="12" height="11" fill={PAPER} stroke={INK} strokeWidth="0.5" />
+      <rect x="3" y="4" width="3" height="3" fill={A} />
+      <rect x="7" y="4" width="3" height="3" fill="#e8c547" />
+      <rect x="3" y="8" width="3" height="3" fill="#4c8ccf" />
+      <path d="M10 12l4-6 1 1-4 6z" fill={INK} />
+      <rect x="10" y="12" width="2" height="2" fill={A} />
+    </>
+  ),
+
+  petri: (
+    <>
+      <circle cx="8" cy="8" r="7" fill={PAPER} stroke={INK} strokeWidth="0.6" />
+      <circle cx="8" cy="8" r="5.4" fill={A} opacity="0.34" />
+      <path d="M4.5 9c0-2.4 1.4-4 3.6-4 2.5 0 3.9 1.8 3.5 4.1-.3 1.8-1.7 2.8-3.7 2.8-2.2 0-3.4-1.1-3.4-2.9z" fill={A} stroke={INK} strokeWidth="0.4" />
+      <rect x="6" y="7" width="1" height="1.5" fill={INK} />
+      <rect x="9" y="7" width="1" height="1.5" fill={INK} />
     </>
   ),
 

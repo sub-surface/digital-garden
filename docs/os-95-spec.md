@@ -256,9 +256,11 @@ interface OSApp {
 | **Windows Help** | `*.HLP` | The same document renderer in Help-viewer chrome. |
 | **My Computer** | — | Drives: `C:\GARDEN`, local `H:\MY DOCUMENTS`, `W:\WIKI`, `X:\CHAT`, and empty `A:\`. |
 | **Explorer** | — | Internal folder navigation, details/search, guarded Backspace, and local-file create/open/delete. |
-| **Find: All Files** | `FIND.EXE` | Native name/content search over the shared lazy FlexSearch index plus browser-local `H:` text files, with garden/local scope and direct open. |
+| **Find: All Files** | `FIND.EXE` | Native name/content search over the shared lazy FlexSearch index plus browser-local `H:` documents, with garden/local scope and direct open. |
 | **MS-DOS Prompt** | `COMMAND.COM` | Shared terminal registry in a compact ANSI-aware frame. |
-| **Media Player** | `MPLAYER.EXE` | Winamp-inspired deck over the single shared music context: four visualisers plus searchable Library, reorderable Queue and persisted Mixes. |
+| **Media Player** | `MPLAYER.EXE` | Winamp-inspired deck over the single shared music context: six visualisers, EQ, crossfade, skins, detachable panes, searchable Library, reorderable Queue and persisted Mixes. |
+| **Paint** | `PAINT.EXE` | Local pixel editor with palette, pencil, eraser, fill, picker, mirror drawing, undo/redo, `.PXL` project files and explicit PNG export. |
+| **Petri** | `PETRI.EXE` | A persistent, non-punitive virtual pet whose needs, mood and growth react to care, time, attention and the shared music session. |
 | **Task Manager** | `TASKMGR.EXE` | Running-window list, switching and End Task. Taskbar buttons also expose close controls. |
 | **Minesweeper / Chess / HeXO / SIGIL / arcade** | `*.EXE` | Direct `SYSTEM_PAGES` components in a bounded program host. |
 | **Subsurfaces Messenger** | `MSGR.EXE` | `ChatRoom` in chrome. |
@@ -366,7 +368,7 @@ the existing `.subsurfaces.net` cookie domain, read by the main shell.
 | **1** | Finite POST, splash, handoff, skip-on-input, reduced-motion, once-per-session. | **Shipped** |
 | **2** | Store, `WindowFrame`, `useDrag`, drag outline, 8 resize grips, focus/z-order and in-page Ctrl/Cmd+backtick task switching. | **Shipped** — browser-level shortcuts intentionally superseded |
 | **3** | Desktop icons, Taskbar, Start menu with flyouts, mobile CRT panel. | **Shipped** |
-| **4** | Browser, local Notepad, Help, Explorer, My Computer, Recycle Bin, Display Properties, direct-mounted programs. | **Shipped** (2026-08-02) |
+| **4** | Browser, local Notepad/Paint/Petri, Help, Explorer, My Computer, Recycle Bin, Display Properties, direct-mounted programs. | **Shipped** (2026-08-02) |
 | **5** | ARG: Recycle Bin surface + seed payoff wired. | **Partial** — see below |
 
 ### Deviation from §4 (recorded)
@@ -545,7 +547,8 @@ The completed personal-machine layer adds:
 
 Persistence remains intentionally legible: `subsurfaces95` (settings, widget and
 desktop positions), `subsurfaces95-files`, `subsurfaces95-solitaire`,
-`subsurfaces95-media`, and the existing shared `music-session`/`music-volume`.
+`subsurfaces95-media`, `subsurfaces95-petri`, and the existing shared
+`music-session`/`music-volume`.
 The general OS-owned persisted stores carry schema version `1`; the media store
 is version `2` after adding validated skin/visualiser preferences. Every store
 has a migration hook, and window geometry remains session-only.
@@ -607,6 +610,42 @@ Deliberately deferred follow-ons:
   should expose this queue editor. The OS implementation is the reference model,
   not permission to maintain three diverging queue implementations.
 
+### 13.2 Local creative-program contract
+
+`PAINT.EXE` and `PETRI.EXE` are independent dynamic-import boundaries. Their
+implementation, styles and models must remain absent from desktop startup and
+from each other's chunks. The registry may import only shared prop types and
+small metadata; it must not pull either program through the general
+`apps.tsx` bundle.
+
+Paint is a deliberately bounded local pixel editor. Its version-1 `.PXL` format
+is normalized JSON containing dimensions and an indexed color array. Documents
+are clamped to 8–64 pixels per side; transparent or six-digit hex cells are the
+only accepted pixel values, so imported/hostile local state cannot become CSS.
+Save creates or updates a visible file beneath
+`H:\MY DOCUMENTS\Pictures`; Explorer and Find identify `.PXL` by extension and
+route it back to Paint. PNG is an explicit enlarged export, not the editable
+source format. Stroke interpolation, fill, mirror, undo and redo remain local
+editor concerns; history is bounded and intentionally not persisted.
+
+Petri owns one versioned browser-local record under `subsurfaces95-petri`. Its
+elapsed-time model is pure and settles from timestamps on view or action rather
+than running a background loop. Decay is capped at 30 days per settlement and
+every need floors at five: a neglected pet becomes dormant but never dies,
+leaves, sends notifications or punishes the reader. Care changes needs, bond,
+growth, mood and the visual stage. Petri may read the shared music session and
+current OS window count for small reactions, but cannot own playback or add a
+second audio state. Eye tracking writes CSS variables directly and the visible
+clock updates only every 30 seconds, avoiding pointer-driven React renders.
+
+Deliberately deferred follow-ons:
+
+- Paint selection/move, layers, image import, animation and wallpaper handoff;
+- Petri accessories, lightweight mini-games and occasional desktop roaming;
+- pet-to-pet, account/cloud sync, push notifications, currencies or punitive
+  streak mechanics. Any future sync needs the same visible revisions and merge
+  model required for other local `H:` state.
+
 The remaining boundaries and browser-certification work live in ROADMAP §29.
 
 ---
@@ -625,8 +664,8 @@ The remaining boundaries and browser-certification work live in ROADMAP §29.
 - **Interaction regressions are executable.** Vitest + React Testing Library run
   under `npm test`, initially covering auth lifecycle, error containment,
   same-origin links, minimized-task restoration, same-file editor dedupe and
-  keyboard-openable Start flyouts, and now covering duplicate queue reorder plus
-  Mix persistence in Media Player.
+  keyboard-openable Start flyouts, and now covering Media Player pane/state
+  coordination, Paint save/file routing and Petri care/music interaction.
 - **Correctness details are shared primitives.** `activateWindow` owns restore +
   focus; full logoff owns sign-out + window teardown + logon transition; a
   foundation validates its designated suit; single/double-click preferences

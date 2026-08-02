@@ -9,7 +9,7 @@
 import { lazy, type ComponentType } from "react"
 import { SYSTEM_PAGE_META } from "@/config/system-pages-meta"
 import { useOS, useOSFiles, type OSWindow } from "./osStore"
-import type { AppProps } from "./apps"
+import type { AppProps } from "./appTypes"
 import type { IconName } from "./OSIcon"
 import type { OSMenu } from "./osMenus"
 
@@ -49,6 +49,12 @@ const BinApp = lazyApp("BinApp")
 const DisplayApp = lazyApp("DisplayApp")
 const MediaPlayerApp = lazyApp("MediaPlayerApp")
 const MediaPaneApp = lazyApp("MediaPaneApp")
+const PaintApp = lazy(() =>
+  import("./Paint").then((module) => ({ default: module.PaintApp })),
+)
+const PetriApp = lazy(() =>
+  import("./Petri").then((module) => ({ default: module.PetriApp })),
+)
 const TaskManagerApp = lazyApp("TaskManagerApp")
 const AccountApp = lazyApp("AccountApp")
 const OwnerApp = lazyApp("OwnerApp")
@@ -113,6 +119,17 @@ const explorerMenus = (win: OSWindow): OSMenu[] => [
             title: "Untitled.txt — Notepad",
           })
         },
+      },
+      {
+        label: "New Pixel Picture",
+        onSelect: () => useOS.getState().openWindow({
+          appId: "paint",
+          args: {},
+          title: "Untitled.pxl — Paint",
+          w: 720,
+          h: 600,
+          multiInstance: true,
+        }),
         separatorAfter: true,
       },
       { label: "Close", onSelect: () => useOS.getState().closeWindow(win.id) },
@@ -133,6 +150,8 @@ export const APPS: Record<string, OSApp> = {
   prompt: { icon: "terminal", defaultSize: { w: 680, h: 420 }, multiInstance: true, Component: PromptApp },
   media: { icon: "music", defaultSize: { w: 640, h: 590 }, menus: closeMenus, Component: MediaPlayerApp },
   "media-pane": { icon: "music", defaultSize: { w: 500, h: 420 }, menus: closeMenus, Component: MediaPaneApp },
+  paint: { icon: "paint", defaultSize: { w: 720, h: 600 }, menus: closeMenus, multiInstance: true, Component: PaintApp },
+  petri: { icon: "petri", defaultSize: { w: 610, h: 580 }, menus: closeMenus, Component: PetriApp },
   solitaire: { icon: "app", defaultSize: { w: 720, h: 610 }, menus: closeMenus, Component: SolitaireApp },
   taskmgr: { icon: "computer", defaultSize: { w: 520, h: 360 }, menus: closeMenus, Component: TaskManagerApp },
   account: { icon: "computer", defaultSize: { w: 470, h: 500 }, menus: closeMenus, Component: AccountApp },
@@ -150,6 +169,8 @@ export const APPS: Record<string, OSApp> = {
 }
 
 export const CORE_PROGRAM_MENU = [
+  { appId: "paint", title: "Paint" },
+  { appId: "petri", title: "Petri" },
   { appId: "solitaire", title: "Solitaire" },
   { appId: "messenger", title: "Subsurfaces Messenger" },
 ]

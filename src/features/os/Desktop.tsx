@@ -29,6 +29,8 @@ const SHORTCUTS: Shortcut[] = [
   { id: "home", label: "My Documents", icon: "folder", kind: "app", target: "explorer", title: "My Documents", args: { drive: "home" } },
   { id: "images", label: "Images", icon: "folder", kind: "app", target: "images", title: "Images" },
   { id: "notepad", label: "Notepad", icon: "doc", kind: "app", target: "notepad", title: "Untitled.txt — Notepad" },
+  { id: "paint", label: "Paint", icon: "paint", kind: "app", target: "paint", title: "Untitled.pxl — Paint" },
+  { id: "petri", label: "Petri", icon: "petri", kind: "app", target: "petri", title: "Petri" },
   { id: "readme", label: "README.TXT", icon: "doc", kind: "note", target: "i-didnt-read" },
   { id: "readme1st", label: "README.1ST", icon: "doc", kind: "note", target: "readme-1st" },
   { id: "prompt", label: "MS-DOS Prompt", icon: "terminal", kind: "app", target: "prompt", title: "MS-DOS Prompt" },
@@ -285,6 +287,10 @@ export function Desktop() {
                 const id = useOSFiles.getState().createFile()
                 openWindow({ appId: "notepad", args: { fileId: id }, title: "Untitled.txt — Notepad" })
               },
+            },
+            {
+              label: "New Pixel Picture",
+              onClick: () => openWindow({ appId: "paint", args: {}, title: "Untitled.pxl — Paint", w: 720, h: 600, multiInstance: true }),
               separatorAfter: true,
             },
             {

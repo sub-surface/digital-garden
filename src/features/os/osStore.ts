@@ -229,7 +229,8 @@ interface OSStore {
   activateWindow: (id: string) => void
   moveWindow: (id: string, x: number, y: number) => void
   resizeWindow: (id: string, geo: WindowGeometry) => void
-  updateWindowArgs: (id: string, args: Record<string, string>) => void
+  /** Merge args into a window; `undefined` removes a stale argument. */
+  updateWindowArgs: (id: string, args: Record<string, string | undefined>) => void
   setWindowTitle: (id: string, title: string) => void
   setWindowState: (id: string, state: WindowState) => void
   toggleMinimize: (id: string) => void
@@ -342,7 +343,17 @@ export const useOS = create<OSStore>((set, get) => ({
     set((s) => ({ windows: s.windows.map((w) => (w.id === id ? { ...w, ...geo } : w)) })),
 
   updateWindowArgs: (id, args) =>
-    set((s) => ({ windows: s.windows.map((w) => (w.id === id ? { ...w, args: { ...w.args, ...args } } : w)) })),
+    set((s) => ({
+      windows: s.windows.map((w) => {
+        if (w.id !== id) return w
+        const next = { ...w.args }
+        for (const [key, value] of Object.entries(args)) {
+          if (value === undefined) delete next[key]
+          else next[key] = value
+        }
+        return { ...w, args: next }
+      }),
+    })),
 
   setWindowTitle: (id, title) =>
     set((s) => ({ windows: s.windows.map((w) => (w.id === id ? { ...w, title } : w)) })),
@@ -410,7 +421,7 @@ const WELCOME_FILE: OSFile = {
   id: "welcome",
   name: "Welcome.txt",
   content:
-    "This folder belongs to you.\n\nFiles created in Notepad are saved in this browser only. " +
+    "This folder belongs to you.\n\nFiles created in Notepad and Paint are saved in this browser only. " +
     "Settings > Storage shows exactly what the machine remembers and lets you remove it.",
   updatedAt: "1995-08-24T00:00:00.000Z",
 }

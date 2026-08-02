@@ -3,9 +3,13 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ProgramBoundary } from "./Desktop"
-import { MediaPaneApp, MediaPlayerApp, TaskManagerApp } from "./apps"
+import { ExplorerApp, MediaPaneApp, MediaPlayerApp, TaskManagerApp } from "./apps"
+import { PaintApp } from "./Paint"
+import { PetriApp, usePetriStore } from "./Petri"
 import { MediaVisualizer } from "./media/MediaVisualizer"
-import { useOS, useOSMedia, useOSSettings } from "./osStore"
+import { createPaintDocument, parsePaintDocument, serializePaintDocument } from "./paintModel"
+import { createPetri } from "./petriModel"
+import { useOS, useOSFiles, useOSMedia, useOSSettings } from "./osStore"
 import { MenuRow } from "./Taskbar"
 import { useOSLinks } from "./useOSLinks"
 
@@ -42,7 +46,9 @@ function SubmenuHarness() {
 describe("OS interactions", () => {
   beforeEach(() => {
     useOS.setState(useOS.getInitialState(), true)
+    useOSFiles.setState(useOSFiles.getInitialState(), true)
     useOSMedia.setState(useOSMedia.getInitialState(), true)
+    usePetriStore.setState(usePetriStore.getInitialState(), true)
     useOSSettings.setState({ soundEnabled: false })
     useMusicMock.mockReturnValue({
       tracks: [
@@ -204,5 +210,56 @@ describe("OS interactions", () => {
     render(<MediaVisualizer analyser={null} mode="feedback" skin="classic" />)
 
     expect(await screen.findByText("WEBGL2 UNAVAILABLE")).toBeInTheDocument()
+  })
+
+  it("saves a Paint project as a visible local pixel picture", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
+    useOS.getState().openWindow({ appId: "paint", args: {}, title: "Untitled.pxl — Paint", multiInstance: true, silent: true })
+    const windowId = useOS.getState().windows[0].id
+    render(<PaintApp args={{}} windowId={windowId} />)
+
+    const name = screen.getByRole("textbox", { name: "Picture name" })
+    await userEvent.clear(name)
+    await userEvent.type(name, "Tiny Mote")
+    await userEvent.click(screen.getByRole("button", { name: "Save" }))
+
+    const picture = useOSFiles.getState().files.find((file) => file.name === "Tiny Mote.pxl")
+    expect(picture?.folder).toBe("Pictures")
+    expect(parsePaintDocument(picture?.content).pixels).toHaveLength(32 * 24)
+    expect(screen.getByRole("status")).toHaveTextContent("H:\\MY DOCUMENTS\\Pictures\\Tiny Mote.pxl")
+    expect(useOS.getState().windows[0].args.fileId).toBe(picture?.id)
+
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "New picture size" }), "16x16")
+    expect(useOS.getState().windows[0].args.fileId).toBeUndefined()
+    expect(useOS.getState().windows[0].title).toBe("Untitled.pxl — Paint")
+  })
+
+  it("opens .pxl files from My Documents in Paint", async () => {
+    const content = serializePaintDocument(createPaintDocument(16, 16))
+    useOSFiles.getState().createFile("Mote.pxl", content, "Pictures")
+    useOSSettings.setState({ doubleClickToOpen: false })
+    render(<ExplorerApp args={{ drive: "home", folder: "Pictures" }} windowId="explorer-test" />)
+
+    await userEvent.click(screen.getByText("Mote.pxl"))
+
+    expect(useOS.getState().windows).toHaveLength(1)
+    expect(useOS.getState().windows[0]).toMatchObject({ appId: "paint", title: "Mote.pxl — Paint" })
+  })
+
+  it("lets Petri react to care, names, and the shared music session", async () => {
+    usePetriStore.setState({ pet: createPetri(Date.now(), 7) })
+    render(<PetriApp args={{}} windowId="petri-test" />)
+
+    expect(screen.getByText("♫ dancing to Alpha")).toBeInTheDocument()
+    const fullness = usePetriStore.getState().pet.needs.fullness
+    await userEvent.click(screen.getByRole("button", { name: /Feed/ }))
+    expect(usePetriStore.getState().pet.needs.fullness).toBeGreaterThan(fullness)
+    expect(screen.getByText("a perfect little crumb. no notes.")).toBeInTheDocument()
+
+    const name = screen.getByRole("textbox", { name: "Pet name" })
+    await userEvent.clear(name)
+    await userEvent.type(name, "Pip")
+    fireEvent.blur(name)
+    expect(usePetriStore.getState().pet.name).toBe("Pip")
   })
 })

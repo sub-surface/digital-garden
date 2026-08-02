@@ -51,6 +51,8 @@ import {
 } from "./media/mediaTheme"
 import styles from "./OS.module.scss"
 import explorer from "./Explorer.module.scss"
+import type { AppProps } from "./appTypes"
+import { isPaintFile } from "./paintModel"
 
 const Terminal = lazy(() =>
   import("@/features/terminal/Terminal").then((module) => ({ default: module.Terminal })),
@@ -70,12 +72,6 @@ const WikiEditPage = lazy(() =>
 const ChatRoom = lazy(() =>
   import("@/components/ui/chat/ChatRoom").then((module) => ({ default: module.ChatRoom })),
 )
-
-export interface AppProps {
-  args: Record<string, string>
-  /** The window this app is mounted in — lets an app close or retitle itself. */
-  windowId: string
-}
 
 // ---------------------------------------------------------------------------
 // Document apps — chrome differs, renderer does not.
@@ -564,8 +560,15 @@ export function ExplorerApp({ args, windowId }: AppProps) {
     setWindowTitle(windowId, isHome ? "My Documents" : address)
   }, [address, isHome, setWindowTitle, windowId])
 
-  const openLocalFile = (id: string, name: string) =>
-    openWindow({ appId: "notepad", args: { fileId: id }, title: `${name} — Notepad` })
+  const openLocalFile = (id: string, name: string) => {
+    const paint = isPaintFile(name)
+    openWindow({
+      appId: paint ? "paint" : "notepad",
+      args: { fileId: id },
+      title: `${name} — ${paint ? "Paint" : "Notepad"}`,
+      ...(paint ? { w: 720, h: 600 } : {}),
+    })
+  }
   const activate = (action: () => void, event: React.MouseEvent) => {
     if (!doubleClick && event.detail === 1) action()
     if (doubleClick && event.detail === 2) action()
@@ -583,6 +586,14 @@ export function ExplorerApp({ args, windowId }: AppProps) {
     const requested = window.prompt("Folder name:", "New Folder")
     if (requested) createFolder(requested, folder)
   }
+  const makePicture = () => openWindow({
+    appId: "paint",
+    args: {},
+    title: "Untitled.pxl — Paint",
+    w: 720,
+    h: 600,
+    multiInstance: true,
+  })
   const deleteSelected = () => {
     if (!selected || !window.confirm("Delete the selected local item and anything inside it?")) return
     if (selected.startsWith("file:")) deleteFile(selected.slice(5))
@@ -604,6 +615,7 @@ export function ExplorerApp({ args, windowId }: AppProps) {
       <div className={explorer.toolbar}>
         <button type="button" disabled={parent === null} onClick={() => parent !== null && enterFolder(parent)}>Up</button>
         {isHome && <button type="button" onClick={makeFile}>New Text Document</button>}
+        {isHome && <button type="button" onClick={makePicture}>New Pixel Picture</button>}
         {isHome && <button type="button" onClick={makeFolder}>New Folder</button>}
         {isHome && selected && (
           <button type="button" onClick={deleteSelected}>Delete</button>
@@ -660,9 +672,9 @@ export function ExplorerApp({ args, windowId }: AppProps) {
           })}
           {isHome && visibleLocalFiles.map((file) => (
             <tr key={file.id} className={explorer.row} data-selected={selected === `file:${file.id}`} onClick={(e) => { setSelected(`file:${file.id}`); activate(() => openLocalFile(file.id, file.name), e) }}>
-              <td className={explorer.name}><OSIcon name="doc" size={16} /><span>{file.name}</span></td>
+              <td className={explorer.name}><OSIcon name={isPaintFile(file.name) ? "paint" : "doc"} size={16} /><span>{file.name}</span></td>
               <td className={explorer.num}>{Math.max(1, Math.ceil(file.content.length / 1024))}KB</td>
-              <td>Text Document</td><td className={explorer.dos}>{dosName(file.name, "TXT")}</td>
+              <td>{isPaintFile(file.name) ? "Pixel Picture" : "Text Document"}</td><td className={explorer.dos}>{dosName(file.name, isPaintFile(file.name) ? "PXL" : "TXT")}</td>
             </tr>
           ))}
         </tbody>
@@ -692,7 +704,7 @@ export function FindApp({ args }: AppProps) {
   const localDocuments = useMemo(() => files.map((file) => ({
     id: `local:${file.id}`,
     title: file.name,
-    excerpt: file.content.slice(0, 4_000),
+    excerpt: isPaintFile(file.name) ? "Local pixel picture" : file.content.slice(0, 4_000),
     kind: "local" as const,
     target: file.id,
   })), [files])
@@ -717,10 +729,12 @@ export function FindApp({ args }: AppProps) {
     if (result.kind === "local") {
       const file = files.find((candidate) => candidate.id === result.target)
       if (file) {
+        const paint = isPaintFile(file.name)
         openWindow({
-          appId: "notepad",
+          appId: paint ? "paint" : "notepad",
           args: { fileId: file.id },
-          title: `${file.name} — Notepad`,
+          title: `${file.name} — ${paint ? "Paint" : "Notepad"}`,
+          ...(paint ? { w: 720, h: 600 } : {}),
         })
       }
       return
@@ -1529,7 +1543,7 @@ function StorageTab() {
   return (
     <div className={explorer.props}>
       <p className={explorer.desc}>
-        This machine remembers preferences, desktop placement, widget choices, local Notepad files, and your music position in this browser. Open windows remain session-only.
+        This machine remembers preferences, desktop placement, widget choices, local documents and pictures, Petri, and your music position in this browser. Open windows remain session-only.
       </p>
       <table className={explorer.aboutTable}>
         <tbody>
@@ -1539,6 +1553,7 @@ function StorageTab() {
           {storageEstimate && <tr><td>Browser storage</td><td>{(storageEstimate.usage / 1_048_576).toFixed(1)} / {(storageEstimate.quota / 1_048_576).toFixed(0)} MB</td></tr>}
           <tr><td>Settings key</td><td>subsurfaces95</td></tr>
           <tr><td>Files key</td><td>subsurfaces95-files</td></tr>
+          <tr><td>Program data keys</td><td>subsurfaces95-solitaire, subsurfaces95-media, subsurfaces95-petri</td></tr>
           <tr><td>Shared music keys</td><td>music-session, music-volume</td></tr>
         </tbody>
       </table>
@@ -1564,7 +1579,7 @@ function StorageTab() {
         />
         <button
           className={explorer.button}
-          onClick={() => { if (window.confirm("Delete all local Notepad files?")) clearFiles() }}
+          onClick={() => { if (window.confirm("Delete all local documents and pictures?")) clearFiles() }}
           disabled={!files.length}
         >
           Delete local files…

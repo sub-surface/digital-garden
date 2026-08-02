@@ -258,6 +258,7 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  container: os-window / inline-size;
   background: var(--os-doc-bg);
   @include bevel-in;
   user-select: text;
