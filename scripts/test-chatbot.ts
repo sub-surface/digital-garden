@@ -10,6 +10,7 @@
  * Checks:
  *  - keywords never match inside a longer word
  *  - rules that should fire, do
+ *  - the best-scoring rule wins and the standing topic is a fallback
  *  - every persona answers everything with a non-empty string
  *  - no line is both a generic and a rule response (the two tiers must differ)
  *  - `recent` suppression holds while any alternative exists
@@ -85,7 +86,22 @@ for (const [id, keyword, input] of plural) {
   if (!hit) fail(`${id}: plural "${input}" did not reach the '${keyword}' rule`)
 }
 
-// 3. Everyone answers everything.
+// 3. Rule selection and standing-topic fallback. The first input hits Willow's
+//    earlier causality rule twice and later truth rule three times; scoring must
+//    choose the latter. A direct input match must still beat the topic fallback.
+const willowTruth = new Set(responsesFor("willow", "truth"))
+const willowCause = new Set(responsesFor("willow", "cause"))
+
+const bestScored = generateReply("willow", "why cause truth belief observe")
+if (!willowTruth.has(bestScored)) fail("willow: best-scoring truth rule did not beat the earlier cause rule")
+
+const fromTopic = generateReply("willow", "qqq zzz xyzzy", { topic: "truth belief observe" })
+if (!willowTruth.has(fromTopic)) fail("willow: standing topic was not used when input matched no rule")
+
+const inputFirst = generateReply("willow", "why cause", { topic: "truth belief observe" })
+if (!willowCause.has(inputFirst)) fail("willow: standing topic overrode a direct input match")
+
+// 4. Everyone answers everything.
 const battery = ["", "hello", "what is truth", "do you think it will kill us", "money", "why"]
 for (const id of ids) {
   for (const input of battery) {
@@ -94,7 +110,7 @@ for (const id of ids) {
   }
 }
 
-// 4. Generics and rule responses must be disjoint, or a match looks identical
+// 5. Generics and rule responses must be disjoint, or a match looks identical
 //    to a failure to match.
 for (const id of ids) {
   const inRules = new Set(PERSONAS[id].rules.flatMap((r) => r.responses))
@@ -103,7 +119,7 @@ for (const id of ids) {
   }
 }
 
-// 5. `recent` is honoured while an alternative exists.
+// 6. `recent` is honoured while an alternative exists.
 for (const id of ids) {
   const generics = PERSONAS[id].generics
   if (generics.length < 2) continue
