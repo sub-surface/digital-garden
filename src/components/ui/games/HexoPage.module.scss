@@ -209,6 +209,10 @@
   animation: zenFade 0.18s ease-out;
 }
 
+.zenOverlay[data-embedded="true"] {
+  position: absolute;
+}
+
 .zenBoard {
   width: min(94vw, 1400px);
   height: min(82vh, 800px);

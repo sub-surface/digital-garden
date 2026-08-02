@@ -74,5 +74,3 @@ What does this mean? It means affirming free markets, deregulation, the capitali
 In other words, once you dissociate tactics and strategy–the famous distinction between tactics and strategy where strategy is teleological, transcendent, and representational and tactics is immanent and machinic–if you have no strategy, someone with a strategy will soon commandeer your tactics. Someone who knows what they want to realize will start using you. You become the pawn of another kind of impersonal force, but it’s no longer the glamorous kind of impersonal and seductive force that you hoped to make a compact with, it’s a much more cynical kind of libertarian capitalism.
 
 [Post a comment](https://moskvax.wordpress.com/2010/09/30/accelerationism-ray-brassier/#respond "Post a comment") or leave a trackback: [Trackback URL](https://moskvax.wordpress.com/2010/09/30/accelerationism-ray-brassier/trackback/ "Trackback URL for your post").
-
-![](https://pixel.wp.com/g.gif?blog=10270451&v=wpcom&tz=10&user_id=0&post=305&subd=moskvax&host=moskvax.wordpress.com&ref=http%3A%2F%2Flocalhost%3A3000%2F&rand=0.8729423377786186)

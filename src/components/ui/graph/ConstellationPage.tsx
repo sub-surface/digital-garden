@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useStore } from "@/store"
+import { useProgramHost } from "@/components/ui/games/ProgramHostContext"
 import styles from "./ConstellationPage.module.scss"
 
 /**
@@ -46,12 +47,18 @@ interface Stats {
 }
 
 export function ConstellationPage({ embedded = false }: { embedded?: boolean } = {}) {
+  const programHost = useProgramHost()
+  const isEmbedded = embedded || programHost.embedded
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const navigate = useNavigate()
+  const openNote = useCallback((slug: string) => {
+    if (programHost.open) programHost.open(slug)
+    else navigate({ to: `/${slug}` })
+  }, [navigate, programHost])
   const [ready, setReady] = useState(false)
   const [hovered, setHovered] = useState<string | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
-  const [showStats, setShowStats] = useState(!embedded)
+  const [showStats, setShowStats] = useState(!isEmbedded)
   const hoveredRef = useRef<string | null>(null)
   hoveredRef.current = hovered
 
@@ -317,7 +324,7 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
         if (hit) {
           // close the Knowledge Map overlay if we're inside it, then travel
           if (embedded) useStore.getState().setGraphOpen(false)
-          navigate({ to: `/${hit.id}` })
+          openNote(hit.id)
         }
       }
       dragging = false
@@ -351,14 +358,14 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
       canvas.removeEventListener("pointerup", onUp)
       canvas.removeEventListener("wheel", onWheel)
     }
-  }, [ready, navigate, embedded])
+  }, [ready, openNote, embedded])
 
   return (
     <div
-      className={`${styles.constellationContainer} ${embedded ? styles.embedded : ""}`}
-      data-fullbleed={!embedded || undefined}
+      className={`${styles.constellationContainer} ${isEmbedded ? styles.embedded : ""}`}
+      data-fullbleed={!isEmbedded || undefined}
     >
-      {!embedded && (
+      {!isEmbedded && (
         <header className={styles.header}>
           <h1>Constellation</h1>
           <p>The garden as a night sky. Drift through it — each star a note, each line a link. Click a star to travel there.</p>
@@ -379,7 +386,7 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
               <div className={styles.stat}><strong>{stats.orphans}</strong><span>orphans</span></div>
             </div>
             {stats.hub && (
-              <button className={styles.hubLink} onClick={() => navigate({ to: `/${stats.hub!.id}` })}>
+              <button className={styles.hubLink} onClick={() => openNote(stats.hub!.id)}>
                 ★ most-linked: <em>{stats.hub.title}</em> ({stats.hub.degree})
               </button>
             )}

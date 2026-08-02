@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { apiGet } from "@/lib/api"
+import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
 import styles from "./WikiInfobox.module.scss"
 
 interface ClaimData {
@@ -69,9 +70,7 @@ export function WikiInfobox({ type, data, slug }: Props) {
   return (
     <aside className={styles.infobox} data-type={type} data-panel-ignore>
       {expanded && avatar && (
-        <div className={styles.lightbox} onClick={() => setExpanded(false)}>
-          <img src={avatar} alt={title} className={styles.lightboxImg} />
-        </div>
+        <ImageLightbox src={avatar} alt={title} onClose={() => setExpanded(false)} />
       )}
       <div className={styles.header}>
         {avatar && (

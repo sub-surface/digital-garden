@@ -26,8 +26,9 @@ export const HOTKEYS: Hotkey[] = [
   // Help / discovery
   { key: "?", keys: ["?"], label: "Keyboard shortcuts", group: "Help" },
   // Navigation
-  { key: "k", keys: ["Ctrl", "K"], label: "Search notes", group: "Navigation" },
-  { key: "p", keys: ["Ctrl", "P"], label: "Command palette", group: "Navigation" },
+  { key: "k", keys: ["Ctrl", "K"], label: "Search notes", group: "Navigation", shell: ["main", "wiki", "chat"] },
+  { key: "p", keys: ["Ctrl", "P"], label: "Open terminal", group: "Navigation", shell: ["main", "wiki", "chat"] },
+  { key: "p", keys: ["Ctrl", "Shift", "P"], label: "Command palette", group: "Navigation", shell: ["main", "wiki", "chat"] },
   { key: "r", keys: ["R"], label: "Random note", group: "Navigation", shell: ["main", "wiki"] },
   // Appearance
   { key: "\\", keys: ["\\"], label: "Theme panel", group: "Appearance" },

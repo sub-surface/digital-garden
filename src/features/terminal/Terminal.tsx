@@ -16,7 +16,7 @@ import { useStore } from "@/store"
 import { useAuth } from "@/hooks/useAuth"
 import { useMusic } from "@/components/ui/music/MusicContext"
 import { useBootPlayback } from "@/features/boot/useBootPlayback"
-import { resolveSeed, formatSeed, randomSeed } from "@/features/boot/bootSeed"
+import { resolveSeed, persistResolvedSeed, formatSeed, randomSeed } from "@/features/boot/bootSeed"
 import type { BootTone } from "@/features/boot/bootTypes"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 import { COMMANDS, COMMAND_NAMES, lookup } from "./commands"
@@ -27,6 +27,9 @@ interface Props {
   surface?: Surface
   /** Supplied by the OS (opens a window) and by the route (router navigate). */
   onOpen?: (slug: string, title?: string) => void
+  /** OS adapter for privileged/wiki routes that should become native windows. */
+  onNavigate?: (url: string) => void
+  onRequireLogin?: () => void
   /** Rendered top-right; the OS passes nothing since its chrome owns that. */
   header?: React.ReactNode
   /** Supplied by the OS so `exit` can close the window it lives in. */
@@ -35,8 +38,29 @@ interface Props {
 
 const MAX_LINES = 400
 
-export function Terminal({ surface = "page", onOpen, header, onClose }: Props) {
-  const seedInfo = useMemo(() => resolveSeed(), [])
+function TerminalText({ text }: { text: string }) {
+  const parts = text.split(/(`[^`]+`|https?:\/\/\S+|(?:[A-Z]:\\|\/)\S+)/g)
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (!part) return null
+        const command = part.startsWith("`") && part.endsWith("`")
+        const path = !command && (/^https?:\/\//.test(part) || /^(?:[A-Z]:\\|\/)/.test(part))
+        return (
+          <span key={index} data-syntax={command ? "command" : path ? "path" : undefined}>
+            {command ? part.slice(1, -1) : part}
+          </span>
+        )
+      })}
+    </>
+  )
+}
+
+export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin, header, onClose }: Props) {
+  // Resolution is pure during render. TanStack Router observes history writes,
+  // so canonicalising here used to update <Transitioner> while Terminal was
+  // still rendering. Persist/canonicalise only after commit.
+  const seedInfo = useMemo(() => resolveSeed({ persist: false }), [])
   const [seedDisplay, setSeedDisplay] = useState(seedInfo.display)
   const isPhone = usePhoneViewport()
 
@@ -59,6 +83,11 @@ export function Terminal({ surface = "page", onOpen, header, onClose }: Props) {
   const { session, username, role } = useAuth()
   const music = useMusic()
 
+  useEffect(() => {
+    if (surface !== "page") return
+    persistResolvedSeed(seedInfo.value, seedInfo.source, "replace")
+  }, [seedInfo, surface])
+
   const reducedMotion = useMemo(
     () =>
       typeof window !== "undefined" &&
@@ -67,13 +96,15 @@ export function Terminal({ surface = "page", onOpen, header, onClose }: Props) {
   )
 
   const playback = useBootPlayback({
-    seed: seedInfo.value,
+    // Windowed/overlay terminals start as prompts and should not spin up a
+    // procedural generator for the one render before their collapse effect.
+    seed: surface === "page" ? seedInfo.value : null,
     viewport: isPhone ? "narrow" : "wide",
     reducedMotion,
     maxLines: MAX_LINES,
   })
 
-  const { lines, activeText, activeTone, injectLine, clearLines, setPaused } = playback
+  const { lines, activeText, activeTone, injectLine, replaceLastLines, clearLines, setPaused } = playback
 
   // -------------------------------------------------------------------------
   // attract → prompt
@@ -97,7 +128,7 @@ export function Terminal({ surface = "page", onOpen, header, onClose }: Props) {
   // In a window the attract sequence is just noise — a 680px MS-DOS Prompt
   // wants to be a prompt. Fullscreen still opens on the procedural boot.
   useEffect(() => {
-    if (surface === "window") collapseToPrompt()
+    if (surface !== "page") collapseToPrompt()
   }, [surface, collapseToPrompt])
 
   useEffect(() => {
@@ -156,6 +187,8 @@ export function Terminal({ surface = "page", onOpen, header, onClose }: Props) {
       print: (text, tone: BootTone = "normal") => injectLine(text, tone),
       printLines: (ls, tone: BootTone = "normal") => ls.forEach((l) => injectLine(l, tone)),
       clear: () => clearLines(),
+      replaceLastLines: (count, ls, tone: BootTone = "normal") =>
+        replaceLastLines(count, ls, tone),
       history: () => historyRef.current,
       notes: () => notes,
       fetchNote: async (contentPath) => {
@@ -175,11 +208,11 @@ export function Terminal({ surface = "page", onOpen, header, onClose }: Props) {
         if (onOpen) onOpen(slug, title)
         else window.location.assign(`/${slug}`)
       },
-      navigate: (url) => window.location.assign(url),
+      navigate: (url) => onNavigate ? onNavigate(url) : window.location.assign(url),
       close: onClose,
       user: () =>
         session ? { username, role, email: session.user.email ?? null } : null,
-      requireLogin: () => window.location.assign("https://wiki.subsurfaces.net/profile"),
+      requireLogin: () => onRequireLogin ? onRequireLogin() : window.location.assign("https://wiki.subsurfaces.net/profile"),
       theme: { get: () => theme, set: setTheme },
       seed: {
         value: seedInfo.value,
@@ -205,7 +238,7 @@ export function Terminal({ surface = "page", onOpen, header, onClose }: Props) {
       },
     }),
     [
-      surface, injectLine, clearLines, notes, onOpen, onClose, session, username, role,
+      surface, injectLine, replaceLastLines, clearLines, notes, onOpen, onNavigate, onRequireLogin, onClose, session, username, role,
       theme, setTheme, seedInfo.value, seedDisplay, music,
     ],
   )
@@ -307,15 +340,27 @@ export function Terminal({ surface = "page", onOpen, header, onClose }: Props) {
 
     if (e.key === "Tab") {
       e.preventDefault()
-      // Only the command word completes; arguments are too varied to guess.
-      if (input.includes(" ")) return
       if (tabState) {
         const idx = (tabState.index + 1) % tabState.matches.length
         setTabState({ ...tabState, index: idx })
         setInput(tabState.matches[idx])
         return
       }
-      const matches = COMMAND_NAMES.filter((n) => n.startsWith(input.toLowerCase()))
+
+      const firstSpace = input.indexOf(" ")
+      let matches: string[]
+      if (firstSpace === -1) {
+        matches = COMMAND_NAMES
+          .filter((n) => n.startsWith(input.toLowerCase()))
+          .map(String)
+      } else {
+        const name = input.slice(0, firstSpace).toLowerCase()
+        const value = input.slice(firstSpace + 1)
+        const cmd = lookup(name)
+        matches = cmd?.complete
+          ? cmd.complete(ctx, value).map((candidate) => `${name} ${candidate}`)
+          : []
+      }
       if (!matches.length) return
       setTabState({ matches, index: 0 })
       setInput(matches[0])
@@ -331,7 +376,7 @@ export function Terminal({ surface = "page", onOpen, header, onClose }: Props) {
     setTabState(null)
   }
 
-  const promptSymbol = sessionPrompt ?? (surface === "window" ? "C:\\>" : ">")
+  const promptSymbol = sessionPrompt ?? (surface === "page" ? ">" : "C:\\GARDEN>")
 
   return (
     <div
@@ -344,10 +389,18 @@ export function Terminal({ surface = "page", onOpen, header, onClose }: Props) {
     >
       {header && <div className={styles.header}>{header}</div>}
 
+      {mode === "prompt" && (
+        <div className={styles.masthead} aria-label="Subsurfaces 95 terminal">
+          <span>┌─ SUBSURFACES 95 ─────────────────────────────┐</span>
+          <span>{`│ C:\\GARDEN · W:\\WIKI · X:\\CHAT · ${seedDisplay.padEnd(10)} │`}</span>
+          <span>└──────────────────────────────────────────────┘</span>
+        </div>
+      )}
+
       <div className={styles.feed} ref={feedRef} role="log" aria-label="Terminal output">
         {lines.map((line) => (
           <div key={line.id} className={styles.line} data-tone={line.tone}>
-            {line.text || "\u00a0"}
+            {line.text ? <TerminalText text={line.text} /> : "\u00a0"}
           </div>
         ))}
 

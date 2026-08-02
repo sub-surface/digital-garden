@@ -23,11 +23,11 @@ interface AuthState extends ProfileFields {
 export function useAuth(): AuthState & {
   signIn: (email: string) => Promise<{ error: string | null }>
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
-  signUp: (email: string, username: string, password: string) => Promise<{ error: string | null }>
+  signUp: (email: string, username: string, password: string, redirectOrigin?: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   updateProfile: (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url" | "name_color">>) => Promise<{ error: string | null }>
   changePassword: (newPassword: string) => Promise<{ error: string | null }>
-  resetPassword: (email: string) => Promise<{ error: string | null }>
+  resetPassword: (email: string, redirectOrigin?: string) => Promise<{ error: string | null }>
 } {
   const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<UserRole>(null)
@@ -172,7 +172,7 @@ export function useAuth(): AuthState & {
     return { error: error?.message ?? null }
   }
 
-  async function signUp(email: string, usernameVal: string, password: string) {
+  async function signUp(email: string, usernameVal: string, password: string, redirectOrigin = window.location.origin) {
     if (!supabase) return { error: "Auth not configured" }
 
     // Validate & check uniqueness server-side
@@ -189,15 +189,15 @@ export function useAuth(): AuthState & {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/profile` },
+      options: { emailRedirectTo: `${redirectOrigin}/profile` },
     })
     return { error: error?.message ?? null }
   }
 
-  async function resetPassword(email: string) {
+  async function resetPassword(email: string, redirectOrigin = window.location.origin) {
     if (!supabase) return { error: "Auth not configured" }
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/profile`,
+      redirectTo: `${redirectOrigin}/profile`,
     })
     return { error: error?.message ?? null }
   }

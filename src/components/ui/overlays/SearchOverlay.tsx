@@ -1,31 +1,21 @@
 import { useState, useEffect, useRef } from "react"
 import { useStore } from "@/store"
 import { useFocusTrap } from "@/hooks/useFocusTrap"
-import { useIsWiki } from "@/hooks/useShell"
+import { useShell } from "@/hooks/useShell"
+import { useContentSearch, type ContentSearchResult } from "@/hooks/useContentSearch"
 import { useNavigate } from "@tanstack/react-router"
-import type { Document } from "flexsearch"
 import styles from "./SearchOverlay.module.scss"
-
-interface SearchResult {
-  id: string
-  title: string
-  excerpt: string
-  [key: string]: any
-}
 
 export function SearchOverlay() {
   const isOpen = useStore((s) => s.isSearchOpen)
   const setIsOpen = useStore((s) => s.setSearchOpen)
   const [query, setQuery] = useState("")
-  const [results, setResults] = useState<SearchResult[]>([])
   const [activeIndex, setActiveIndex] = useState(0)
-  const [indexVersion, setIndexVersion] = useState(0)
-  const contentIndex = useStore((s) => s.contentIndex)
   const pushCard = useStore((s) => s.pushCard)
-  const isWiki = useIsWiki()
+  const shell = useShell()
+  const isWiki = shell === "wiki"
   const navigate = useNavigate()
-  
-  const searchIndexRef = useRef<Document<SearchResult> | null>(null)
+  const { results } = useContentSearch({ enabled: isOpen, query })
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Trap focus within the overlay and restore it to the trigger on close. Esc
@@ -33,66 +23,10 @@ export function SearchOverlay() {
   // search input as the landing focus rather than the first tabbable child.
   const trapRef = useFocusTrap<HTMLDivElement>({ active: isOpen, initialFocus: inputRef })
 
-  // Build index lazily — only when search opens for the first time
-  useEffect(() => {
-    if (!isOpen || !contentIndex || searchIndexRef.current) return
-
-    let cancelled = false
-    async function buildIndex() {
-      try {
-        // FlexSearch 0.8 changed its module shape: depending on the bundler,
-        // `Document` may sit on the namespace, on `.default`, or BE `.default`.
-        // Resolve all three so the index never silently fails to build.
-        const mod = (await import("flexsearch")) as unknown as {
-          Document?: typeof Document
-          default?: { Document?: typeof Document } & typeof Document
-        }
-        const DocumentCtor = mod.Document ?? mod.default?.Document ?? mod.default
-        if (!DocumentCtor) throw new Error("flexsearch: Document constructor not found")
-
-        if (cancelled || !contentIndex) return
-
-        const index = new DocumentCtor<SearchResult>({
-          document: {
-            id: "id",
-            index: ["title", "excerpt"],
-            store: ["title", "excerpt"],
-          },
-          tokenize: "forward",
-        })
-
-        Object.entries(contentIndex).forEach(([slug, meta]) => {
-          // Coerce to strings — FlexSearch calls .normalize() on indexed fields,
-          // so a non-string title/excerpt (e.g. a bare-number YAML title) would
-          // otherwise throw and abort the entire index build.
-          try {
-            index.add({
-              id: slug,
-              title: String(meta.title ?? ""),
-              excerpt: String(meta.excerpt ?? ""),
-            })
-          } catch (err) {
-            console.warn(`SearchOverlay: skipped indexing "${slug}":`, err)
-          }
-        })
-
-        if (!cancelled) {
-          searchIndexRef.current = index
-          setIndexVersion((v) => v + 1)
-        }
-      } catch (error) {
-        console.error("SearchOverlay: Failed to build search index:", error)
-      }
-    }
-
-    buildIndex()
-    return () => { cancelled = true }
-  }, [isOpen, contentIndex])
-
   // Ctrl+K handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+      if (shell !== "os" && (e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault()
         setIsOpen(!isOpen)
       } else if (e.key === "Escape") {
@@ -101,58 +35,29 @@ export function SearchOverlay() {
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen])
+  }, [isOpen, setIsOpen, shell])
 
   // Focus input when opened
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 10)
       setQuery("")
-      setResults([])
       setActiveIndex(0)
     }
   }, [isOpen])
 
-  // Perform search
+  // Search results are shared with the OS Find app; only list navigation is
+  // surface-specific here.
   useEffect(() => {
-    if (!query || !searchIndexRef.current) {
-      setResults([])
-      return
-    }
-
-    const searchResults = searchIndexRef.current.search(query, {
-      enrich: true,
-      limit: 10,
-    })
-
-    const flattened: SearchResult[] = []
-    if (searchResults.length > 0) {
-      // FlexSearch returns results grouped by field
-      const seen = new Set<string>()
-      searchResults.forEach((fieldResult: any) => {
-        fieldResult.result.forEach((res: any) => {
-          if (!seen.has(res.id)) {
-            seen.add(res.id)
-            flattened.push({
-              id: res.id,
-              title: res.doc.title,
-              excerpt: res.doc.excerpt,
-            })
-          }
-        })
-      })
-    }
-
-    setResults(flattened)
     setActiveIndex(0)
-  }, [query, indexVersion])
+  }, [results])
 
-  const handleSelect = (result: SearchResult) => {
+  const handleSelect = (result: ContentSearchResult) => {
     if (isWiki) {
-      navigate({ to: `/${result.id}` })
+      navigate({ to: `/${result.target}` })
     } else {
       pushCard(
-        { url: `/${result.id}`, slug: result.id, title: result.title, html: `<div class="note-loading">Loading...</div>` },
+        { url: `/${result.target}`, slug: result.target, title: result.title, html: `<div class="note-loading">Loading...</div>` },
         -1 // from main body
       )
     }

@@ -16,6 +16,7 @@ Custom React 19 + Vite 6 SPA. A digital garden (notes, essays, collections) at `
 
 ```bash
 npm run dev          # prebuild + Vite HMR + nodemon watching content/
+npm run dev:os       # same stack, forced into the SUBSURFACES 95 shell
 npm run build        # prebuild (via npm lifecycle) + tsc --noEmit + vite build → dist/
 npm test             # lightweight script checks (slug/layout parity, sidenotes, generators, OG integrity, package scripts)
 npm run lint         # ESLint — React Hooks rules only, `--max-warnings 25` ratchet (ROADMAP §28.3)

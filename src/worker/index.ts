@@ -11,6 +11,9 @@ import {
 import { handleApiKeys } from "./keys"
 import { handleAdmin } from "./admin"
 import { addSecurityHeaders } from "./security"
+import { handleMusicAsset } from "./media"
+import { handleRestores } from "./restores"
+import { handleWidgetNews, handleWidgetWeather } from "./widgets"
 
 /**
  * Route table with declarative middleware:
@@ -31,6 +34,10 @@ interface Route {
 }
 
 const routes: Route[] = [
+  { method: "GET", pattern: /^\/api\/music\/(audio|covers)\/([a-z0-9][a-z0-9._-]*)$/i, handler: handleMusicAsset },
+  { method: "HEAD", pattern: /^\/api\/music\/(audio|covers)\/([a-z0-9][a-z0-9._-]*)$/i, handler: handleMusicAsset },
+  { method: "GET", pattern: /^\/api\/widgets\/news$/, handler: handleWidgetNews },
+  { method: "GET", pattern: /^\/api\/widgets\/weather$/, handler: handleWidgetWeather },
   { method: "GET", pattern: /^\/api\/chat\/rooms$/, auth: "user", handler: handleChatRooms },
   { method: "POST", pattern: /^\/api\/chat\/rooms$/, auth: "admin", handler: handleChatRooms },
   { method: "PATCH", pattern: /^\/api\/chat\/rooms\/[^/]+$/, auth: "admin", handler: handleChatRooms },
@@ -62,6 +69,7 @@ const routes: Route[] = [
   { method: "GET", pattern: /^\/api\/lock-status$/, handler: handleLockStatus },
 
   { pattern: /^\/api\/bookmarks/, auth: "user", handler: handleBookmarks },
+  { pattern: /^\/api\/os\/restores$/, auth: "user", handler: handleRestores },
 
   { pattern: /^\/api\/(keys|admin\/api-keys)(\/[^/]+)?$/, auth: "user", handler: handleApiKeys },
 

@@ -10,6 +10,16 @@
   font-family: var(--font-code);
 }
 
+.fsRoot[data-embedded="true"] {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.fsRoot[data-embedded="true"] .panel {
+  max-height: calc(100% - 5rem);
+}
+
 .canvas {
   position: absolute;
   inset: 0;

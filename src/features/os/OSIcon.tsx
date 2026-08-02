@@ -20,6 +20,8 @@ export type IconName =
   | "music"
   | "chat"
   | "graph"
+  | "image"
+  | "user"
 
 interface Props {
   name: IconName
@@ -165,6 +167,23 @@ const GLYPHS: Record<IconName, React.ReactNode> = {
       <path d="M4 12L7 5l4 6 2-4" stroke={A} strokeWidth="1" fill="none" />
       <circle cx="7" cy="5" r="1.4" fill={PAPER} />
       <circle cx="11" cy="11" r="1.2" fill={A} />
+    </>
+  ),
+
+  image: (
+    <>
+      <rect x="1" y="2" width="14" height="12" fill={PAPER} stroke={INK} strokeWidth="0.5" />
+      <rect x="2.5" y="3.5" width="11" height="9" fill={A} opacity="0.58" />
+      <circle cx="11" cy="6" r="1.5" fill={PAPER} />
+      <path d="M3 11l3-3 2 2 2-3 3 4z" fill={INK} />
+    </>
+  ),
+
+  user: (
+    <>
+      <rect x="1" y="1" width="14" height="14" fill={METAL} stroke={INK} strokeWidth="0.5" />
+      <circle cx="8" cy="5.5" r="3" fill={PAPER} stroke={INK} strokeWidth="0.5" />
+      <path d="M3 14v-2.5C3 9.6 5.2 8.5 8 8.5s5 1.1 5 3V14z" fill={A} stroke={INK} strokeWidth="0.5" />
     </>
   ),
 }

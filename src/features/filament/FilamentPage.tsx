@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
+import { useProgramHost } from "@/components/ui/games/ProgramHostContext"
 import { PRESETS, type PresetName } from "./presets"
 import { formatAge } from "./cosmology"
 import {
@@ -54,6 +55,7 @@ const fmt = (n: number) =>
 const fmtZ = (z: number) => (z >= 100 ? z.toFixed(0) : z >= 10 ? z.toFixed(1) : z.toFixed(2))
 
 export function FilamentPage() {
+  const programHost = useProgramHost()
   const isPhone = usePhoneViewport()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const workerRef = useRef<Worker | null>(null)
@@ -344,7 +346,10 @@ export function FilamentPage() {
       if (!controlsRef.current?.contains(e.target as Node)) setControlsOpen(false)
     }
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setControlsOpen(false)
+      if (e.key === "Escape") {
+        e.preventDefault()
+        setControlsOpen(false)
+      }
     }
     document.addEventListener("pointerdown", onPointerDown, true)
     document.addEventListener("keydown", onKeyDown)
@@ -577,7 +582,7 @@ export function FilamentPage() {
   }
 
   return (
-    <div className={styles.simulation} data-fullbleed>
+    <div className={styles.simulation} data-fullbleed data-embedded={programHost.embedded || undefined}>
       <canvas
         ref={canvasRef}
         className={styles.stage}

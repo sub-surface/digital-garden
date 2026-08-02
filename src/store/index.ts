@@ -126,6 +126,11 @@ interface GardenStore {
   toggleCommandPalette: () => void
   setCommandPalette: (open: boolean) => void
 
+  // Cross-surface terminal (Ctrl/Cmd+P)
+  isTerminalOpen: boolean
+  toggleTerminal: () => void
+  setTerminal: (open: boolean) => void
+
   // Search
   isSearchOpen: boolean
   setSearchOpen: (open: boolean) => void
@@ -309,6 +314,10 @@ export const useStore = create<GardenStore>()(
       isCommandPaletteOpen: false,
       toggleCommandPalette: () => set((s) => ({ isCommandPaletteOpen: !s.isCommandPaletteOpen })),
       setCommandPalette: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
+
+      isTerminalOpen: false,
+      toggleTerminal: () => set((s) => ({ isTerminalOpen: !s.isTerminalOpen })),
+      setTerminal: (isTerminalOpen) => set({ isTerminalOpen }),
 
       isSearchOpen: false,
       setSearchOpen: (isSearchOpen) => set({ isSearchOpen }),

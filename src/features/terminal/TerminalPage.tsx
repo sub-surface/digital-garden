@@ -15,7 +15,7 @@ export function TerminalPage() {
   const onOpen = useCallback(
     (slug: string) => {
       // Same shape QuickControls uses for the catch-all note route.
-      navigate({ to: "/$", params: { _splat: slug } as any })
+      navigate({ to: "/$", params: { _splat: slug } })
     },
     [navigate],
   )

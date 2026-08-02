@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react"
 import type { Track } from "@/types/content"
+import { musicAssetUrl } from "@/lib/musicAsset"
 
 interface MusicContextType {
   tracks: Track[]
@@ -53,6 +54,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null)
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
   // Position to seek to once the restored track's metadata loads (resume across
   // page loads). Cleared after it's applied so a later track change starts at 0.
@@ -74,8 +76,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           p && p.startsWith("/Media") ? `/content${p}` : p
         const adjusted = data.map((t) => ({
           ...t,
-          audio: fix(t.audio),
-          cover: fix(t.cover),
+          audio: musicAssetUrl(fix(t.audio)),
+          cover: musicAssetUrl(fix(t.cover)),
         }))
         setTracks(adjusted)
 
@@ -137,6 +139,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       audioContextRef.current = ctx
       analyserRef.current = analyser
+      setAnalyser(analyser)
       sourceRef.current = source
       
       // Store on window for background engine access (port of Quartz logic)
@@ -400,7 +403,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setVolume,
         seek,
         currentTrack,
-        analyser: analyserRef.current,
+        analyser,
         audioRef,
         repeatMode,
         setRepeatMode,

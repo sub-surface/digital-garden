@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useStore } from "@/store"
 import { useMusic } from "@/components/ui/music/MusicContext"
-import { useOS, focusedWindowId } from "./osStore"
-import { APPS, PROGRAM_MENU } from "./apps"
+import { useAuth } from "@/hooks/useAuth"
+import { useOS, useOSFiles, useOSSettings, focusedWindowId } from "./osStore"
+import { APPS, CORE_PROGRAM_MENU, PROGRAM_MENU } from "./apps"
 import { OSIcon } from "./OSIcon"
 import styles from "./OS.module.scss"
 
@@ -25,6 +26,13 @@ export interface MenuTarget {
 interface Props {
   onOpenShortcut: (target: MenuTarget) => void
 }
+
+const DEFAULT_TASKBAR_PINS = [
+  { appId: "explorer", title: "C:\\GARDEN" },
+  { appId: "images", title: "Images" },
+  { appId: "prompt", title: "MS-DOS Prompt" },
+  { appId: "media", title: "Subsurfaces Media Player" },
+] as const
 
 function useClock() {
   const [now, setNow] = useState(() => new Date())
@@ -50,6 +58,7 @@ export function Taskbar({ onOpenShortcut }: Props) {
   const setStartOpen = useOS((s) => s.setStartOpen)
   const focusWindow = useOS((s) => s.focusWindow)
   const toggleMinimize = useOS((s) => s.toggleMinimize)
+  const closeWindow = useOS((s) => s.closeWindow)
   const clock = useClock()
 
   const focused = focusedWindowId(windows)
@@ -70,28 +79,50 @@ export function Taskbar({ onOpenShortcut }: Props) {
 
         <div className={styles.taskDivider} />
 
+        <div className={styles.quickLaunch} aria-label="Pinned applications">
+          {DEFAULT_TASKBAR_PINS.map((pin) => {
+            const app = APPS[pin.appId]
+            const running = windows.some((win) => win.appId === pin.appId)
+            return (
+              <button
+                key={pin.appId}
+                type="button"
+                className={styles.quickLaunchBtn}
+                data-running={running || undefined}
+                title={pin.title}
+                aria-label={`Open ${pin.title}`}
+                onClick={() => onOpenShortcut({ kind: "app", target: pin.appId, label: pin.title, title: pin.title })}
+              >
+                <OSIcon name={app.icon} size={16} />
+              </button>
+            )
+          })}
+        </div>
+
+        <div className={styles.taskDivider} />
+
         <div className={styles.taskList}>
           {windows.map((win) => {
             const app = APPS[win.appId]
             const active = focused === win.id && win.state !== "minimized"
             return (
-              <button
-                key={win.id}
-                className={styles.taskBtn}
-                data-active={active}
-                onClick={() => {
-                  // Clicking the active window's button minimizes it; clicking
-                  // any other raises it. Standard taskbar behaviour.
-                  if (active) toggleMinimize(win.id)
-                  else if (win.state === "minimized") toggleMinimize(win.id)
-                  else focusWindow(win.id)
-                  if (win.state === "minimized") focusWindow(win.id)
-                }}
-                title={win.title}
-              >
-                {app && <OSIcon name={app.icon} size={16} />}
-                <span className={styles.taskBtnLabel}>{win.title}</span>
-              </button>
+              <div key={win.id} className={styles.taskGroup} data-active={active}>
+                <button
+                  className={styles.taskBtn}
+                  data-active={active}
+                  onClick={() => {
+                    if (active) toggleMinimize(win.id)
+                    else if (win.state === "minimized") toggleMinimize(win.id)
+                    else focusWindow(win.id)
+                    if (win.state === "minimized") focusWindow(win.id)
+                  }}
+                  title={win.title}
+                >
+                  {app && <OSIcon name={app.icon} size={16} />}
+                  <span className={styles.taskBtnLabel}>{win.title}</span>
+                </button>
+                <button className={styles.taskClose} onClick={() => closeWindow(win.id)} aria-label={`Close ${win.title}`}>×</button>
+              </div>
             )
           })}
         </div>
@@ -120,7 +151,6 @@ function SystemTray({
   onOpenShortcut: (t: MenuTarget) => void
 }) {
   const openWindow = useOS((s) => s.openWindow)
-  const setSearchOpen = useStore((s) => s.setSearchOpen)
   const toggleTheme = useStore((s) => s.toggleTheme)
   const theme = useStore((s) => s.theme)
   const contentIndex = useStore((s) => s.contentIndex)
@@ -140,14 +170,16 @@ function SystemTray({
       {volumeOpen && (
         <VolumePopup
           volume={music.volume}
-          isPlaying={music.isPlaying}
           onVolume={music.setVolume}
-          onToggle={music.togglePlay}
           onClose={() => setVolumeOpen(false)}
         />
       )}
 
-      <button className={styles.trayBtn} title="Find a note (Ctrl+K)" onClick={() => setSearchOpen(true)}>
+      <button
+        className={styles.trayBtn}
+        title="Find files or folders"
+        onClick={() => openWindow({ appId: "find", args: {}, title: "Find: All Files", w: 720, h: 500 })}
+      >
         <OSIcon name="folder" size={16} />
       </button>
 
@@ -191,18 +223,15 @@ function SystemTray({
 
 function VolumePopup({
   volume,
-  isPlaying,
   onVolume,
-  onToggle,
   onClose,
 }: {
   volume: number
-  isPlaying: boolean
   onVolume: (v: number) => void
-  onToggle: () => void
   onClose: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const previousVolume = useRef(volume || 0.5)
 
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
@@ -231,8 +260,13 @@ function VolumePopup({
         // Vertical, as the real one was.
         style={{ writingMode: "vertical-lr", direction: "rtl" }}
       />
-      <button className={styles.volumeBtn} onClick={onToggle}>
-        {isPlaying ? "Pause" : "Play"}
+      <button className={styles.volumeBtn} onClick={() => {
+        if (volume > 0) {
+          previousVolume.current = volume
+          onVolume(0)
+        } else onVolume(previousVolume.current)
+      }}>
+        {volume > 0 ? "Mute" : "Unmute"}
       </button>
     </div>
   )
@@ -245,7 +279,11 @@ type Flyout = "programs" | "documents" | "help" | null
 function StartMenu({ onOpenShortcut }: Props) {
   const setStartOpen = useOS((s) => s.setStartOpen)
   const openWindow = useOS((s) => s.openWindow)
+  const windows = useOS((s) => s.windows)
+  const files = useOSFiles((s) => s.files)
   const contentIndex = useStore((s) => s.contentIndex)
+  const auth = useAuth()
+  const music = useMusic()
   const [flyout, setFlyout] = useState<Flyout>(null)
 
   const recent = useMemo(() => {
@@ -268,6 +306,19 @@ function StartMenu({ onOpenShortcut }: Props) {
     })
   }
 
+  const showLogon = () => {
+    setStartOpen(false)
+    useOSSettings.getState().setShowLogon(true)
+    useOS.getState().closeAll()
+    window.dispatchEvent(new CustomEvent("os:logon"))
+  }
+
+  const identity = auth.loading
+    ? "Checking account..."
+    : auth.session
+      ? auth.username ?? auth.session.user.email ?? "Subsurfaces user"
+      : "Guest"
+
   return (
     <div className={styles.startMenu} onPointerDown={(e) => e.stopPropagation()}>
       <div className={styles.startRail}>Subsurfaces 95</div>
@@ -281,6 +332,17 @@ function StartMenu({ onOpenShortcut }: Props) {
           flyout={
             flyout === "programs" && (
               <div className={styles.startFlyout}>
+                {CORE_PROGRAM_MENU.map((program) => (
+                  <button
+                    key={program.appId}
+                    className={styles.startItem}
+                    onClick={() => openApp(program.appId, program.title)}
+                  >
+                    <OSIcon name={APPS[program.appId]?.icon ?? "app"} size={16} />
+                    {program.title}
+                  </button>
+                ))}
+                <div className={styles.startSep} />
                 {PROGRAM_MENU.map((p) => (
                   <button
                     key={p.slug}
@@ -323,6 +385,36 @@ function StartMenu({ onOpenShortcut }: Props) {
         />
 
         <MenuRow
+          label="Windows Explorer"
+          icon="folder"
+          onEnter={() => setFlyout(null)}
+          onClick={() => openApp("explorer", "C:\\GARDEN")}
+        />
+
+        <MenuRow
+          label="Notepad"
+          icon="doc"
+          onEnter={() => setFlyout(null)}
+          onClick={() => openApp("notepad", "Untitled — Notepad")}
+        />
+
+        <MenuRow
+          label="Subsurfaces Media Player"
+          icon="music"
+          onEnter={() => setFlyout(null)}
+          onClick={() => openApp("media", "Subsurfaces Media Player")}
+        />
+
+        <MenuRow
+          label="Task Manager"
+          icon="computer"
+          onEnter={() => setFlyout(null)}
+          onClick={() => openApp("taskmgr", "Task Manager")}
+        />
+
+        <div className={styles.startSep} />
+
+        <MenuRow
           label="Run..."
           icon="app"
           onEnter={() => setFlyout(null)}
@@ -344,10 +436,10 @@ function StartMenu({ onOpenShortcut }: Props) {
         />
 
         <MenuRow
-          label="Find"
+          label="Find: Files or Folders..."
           icon="folder"
           onEnter={() => setFlyout(null)}
-          onClick={() => openApp("explorer", "C:\\GARDEN")}
+          onClick={() => openApp("find", "Find: All Files")}
         />
 
         <MenuRow
@@ -386,14 +478,107 @@ function StartMenu({ onOpenShortcut }: Props) {
         />
 
         <MenuRow
+          label={auth.session ? `Log Off ${identity}...` : "Log On..."}
+          icon="user"
+          onEnter={() => setFlyout(null)}
+          onClick={() => auth.session ? openApp("logoff", "Log Off Subsurfaces") : showLogon()}
+        />
+
+        <MenuRow
           label="Shut Down..."
           icon="computer"
           onEnter={() => setFlyout(null)}
           onClick={() => openApp("shutdown", "Shut Down Windows")}
         />
       </div>
+
+      <aside className={styles.startIdentity} aria-label="Subsurfaces account">
+        <div className={styles.startIdentityHead}>
+          <span className={styles.startAvatar}>
+            <OSIcon name="user" size={36} />
+            {auth.avatar_url && (
+              <img
+                src={auth.avatar_url}
+                alt=""
+                referrerPolicy="no-referrer"
+                onError={(event) => { event.currentTarget.hidden = true }}
+              />
+            )}
+          </span>
+          <span className={styles.startIdentityCopy}>
+            <strong title={identity}>{identity}</strong>
+            <small>{accountLabel(auth.loading, auth.role, Boolean(auth.session))}</small>
+          </span>
+        </div>
+
+        {auth.session?.user.email && auth.username && (
+          <span className={styles.startIdentityEmail} title={auth.session.user.email}>
+            {auth.session.user.email}
+          </span>
+        )}
+
+        <div className={styles.startIdentityLinks}>
+          {auth.session ? (
+            <>
+              <button type="button" onClick={() => openApp("profile", "My Subsurfaces Profile")}>
+                <OSIcon name="user" size={14} /> My Profile
+              </button>
+              <button
+                type="button"
+                onClick={() => auth.claimed_slug
+                  ? onOpenShortcut({ kind: "note", target: auth.claimed_slug, label: "My Wiki Page" })
+                  : openApp("newpage", "Create a Wiki Page")}
+              >
+                <OSIcon name="doc" size={14} /> {auth.claimed_slug ? "My Wiki Page" : "Create Wiki Page"}
+              </button>
+              {auth.role === "admin" && (
+                <button type="button" onClick={() => openApp("owner", "Owner Workstation")}>
+                  <OSIcon name="computer" size={14} /> Owner Workstation
+                </button>
+              )}
+            </>
+          ) : (
+            <button type="button" onClick={showLogon}>
+              <OSIcon name="user" size={14} /> Log on or join
+            </button>
+          )}
+          <button type="button" onClick={() => openApp("explorer", "My Documents", { drive: "home" })}>
+            <OSIcon name="folder" size={14} /> My Documents
+          </button>
+          <button type="button" onClick={() => openApp("images", "Images")}>
+            <OSIcon name="image" size={14} /> Images
+          </button>
+        </div>
+
+        {music.isPlaying && music.currentTrack && (
+          <button
+            type="button"
+            className={styles.startNowPlaying}
+            onClick={() => openApp("media", "Subsurfaces Media Player")}
+          >
+            <OSIcon name="music" size={14} />
+            <span><small>NOW PLAYING</small><strong>{music.currentTrack.title}</strong></span>
+          </button>
+        )}
+
+        <span className={styles.startMachineStatus}>
+          {windows.length} running · {files.length} local {files.length === 1 ? "file" : "files"}
+        </span>
+        {!auth.session && !auth.loading && (
+          <span className={styles.startGuestNote}>Local files and settings stay in this browser.</span>
+        )}
+      </aside>
     </div>
   )
+}
+
+function accountLabel(loading: boolean, role: ReturnType<typeof useAuth>["role"], signedIn: boolean) {
+  if (loading) return "Contacting domain..."
+  if (!signedIn) return "LOCAL DESKTOP"
+  if (role === "admin") return "OWNER"
+  if (role === "editor") return "EDITOR"
+  if (role === "pending") return "ACCOUNT PENDING"
+  return "SUBSURFACES ACCOUNT"
 }
 
 const HELP_FILES = [
@@ -414,7 +599,7 @@ interface MenuRowProps {
 function MenuRow({ label, icon, submenu, onEnter, onClick, flyout }: MenuRowProps) {
   return (
     <div className={styles.startRow} onPointerEnter={onEnter}>
-      <button className={styles.startItem} onClick={onClick}>
+      <button className={styles.startItem} title={label} onClick={onClick}>
         <OSIcon name={icon} size={16} />
         <span className={styles.startLabel}>{label}</span>
         {submenu && <span className={styles.startArrow}>▸</span>}

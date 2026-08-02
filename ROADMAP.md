@@ -13,8 +13,8 @@ the sequenced/opinionated cut (`docs/archive/iteration-spec.md`), the HeXO resea
 - Detail backers: `docs/future.md` (full backlog by domain), `docs/archive/iteration-spec.md` (rationale
   + proposed shapes), `../hexgo-theory/{DIRECTION,SPEC}.md` (the theory).
 
-Last reconciled against the working tree: 2026-07-12 (post A&D essay publish / sidenotes +
-epigraph + dropcap article polish / Inbox page / codebase stale-file hygiene sweep).
+Last reconciled against the working tree: 2026-08-02 (SUBSURFACES 95 personal-machine
+continuation; see §29 and `docs/os-95-spec.md` §13).
 
 2026-07-12 (later session): elegance-review pass over the open proposals — §18–§21, §23, §25
 gained implementation notes from a code read (corrected the §21 prebuild/`SYSTEM_PAGES` approach,
@@ -1370,3 +1370,84 @@ Two things that look like residue but are settled, not deferred: the two `format
 stay separate (see the 28.9 note above — different formatters, same name), and the two raw `fetch`
 call sites (`/api/chess/gif` returns a blob; `WikiEditPage`'s raw-markdown fetch isn't JSON and
 sniffs content-type to detect an SPA fallback) are commented exceptions to gotcha #19, not misses.
+
+---
+
+## 29. SUBSURFACES 95 — personal-machine backlog
+
+The 2026-08-02 continuation shipped the coherent middle layer: Browser vs program
+windows, a writable local `H:\MY DOCUMENTS`, real Notepad, grid-reordered desktop
+icons, startup document, Task Manager, media player, Account bridge, taskbar close,
+Escape-to-close, multi-mode screensavers, quiet OS sounds, terminal overlay/tab
+completion/paced toys, and the production music/CSP fixes. The implementation and
+state boundaries are recorded in `docs/os-95-spec.md` §13.
+
+What remains is deliberately ordered by value and architectural dependency:
+
+1. [x] **★ SOL.EXE.** Self-contained Klondike with keyboard/touch affordances,
+   seeded deals, a tiny persisted win counter, and the card-cascade ending. It
+   uses the direct program-host contract and adds no garden-wide state.
+2. [x] **Native OS logon and first-run home setup.** A post-boot welcome now
+   offers native sign-in, create-account and recovery plus an explicit guest
+   path. Profile/new-page setup mounts the established wiki surfaces inside OS
+   windows; there is still only one auth/API path.
+3. [x] **Owner workstation tools.** `new`, `edit` and `admin` keep their existing
+   role gates, PR/review boundary and audit surfaces, but now open native OS
+   windows from the terminal. No unlogged terminal backdoor was added.
+4. [x] **Filesystem v2.** JSON import/restore, directories, quota display,
+   conflict handling and visible storage keys ship. Preserve the current split:
+   published `C:\GARDEN` is read-only; local `H:` is writable; server publishing
+   crosses a visible wiki boundary. Account sync remains deferred until it has
+   revisions and an explicit merge model.
+5. [x] **Desktop placement v2.** Free 2D grid coordinates, collision resolution,
+   marquee selection and keyboard rearrangement ship. The old persisted string
+   order remains a migration-safe fallback until an icon is explicitly placed.
+6. [x] **Widgets, behind an explicit network/privacy control.** Independent,
+   draggable clock/calendar/weather/feed instruments ship. NYT and weather are
+   cached at the Worker; custom RSS/Atom URLs and OPML import are browser-local,
+   visibly fail on CORS, and all network widgets remain off until enabled.
+7. [x] **Cross-shell ARG restore flag.** Recycle Bin restore now writes a
+   reversible per-user server flag. The main garden reveals recovered drafts in
+   its own control/search only for that reader. Deployment requires applying
+   `docs/migrations/2026-08-os-restores.sql`.
+8. [ ] **Program-host hardening pass.** Browser-check every `SYSTEM_PAGES` entry
+   at narrow, default and maximized sizes; replace remaining page-level `fixed`,
+   `100vh` and global Escape assumptions with the host context. Hex Life, the
+   cabinet, heXO, Constellation and Filament are adapted; only the full-registry
+   visual certification remains.
+9. [x] **Window shade and richer task switching.** Double-click title bar rolls
+   up; Ctrl/Cmd+` cycles tasks inside the page. Do not reinstate
+   Alt+Tab/Alt+F4/Ctrl+Esc interception: those belong to the reader's real OS.
+10. [x] **Music workstation ideas.** Spectrum/oscilloscope visualization, saved
+    playlists, queue editing and repeat modes ship. Gapless/crossfade remains an
+    audio-graph experiment; editing metadata or uploading audio remains an owner
+    workflow inheriting item 3's audit/preview requirements.
+11. [x] **Messenger window.** The adapter owns room selection,
+    session/token state and a useful logged-out view around the shared `ChatRoom`.
+12. [x] **Sound set and ARG ambience.** The synthesized cues now have a
+    per-event control panel. The removed 377-line AmbientEngine remains available
+    in `2f7963c`, but should return only if it earns its bundle/runtime cost.
+13. [x] **Desktop media affordances.** Explorer, Images, MS-DOS Prompt and the
+    music player are pinned beside Start. `C:\GARDEN\IMAGES` lists the generated
+    media manifest without preloading full-resolution originals and opens the
+    shared site lightbox. That viewer now owns wheel/button/keyboard zoom, drag
+    panning and album navigation across notes, chat, photography, wiki portraits
+    and the OS. An active screensaver carries a quiet now-playing card.
+14. [x] **Start-menu consolidation and native Find.** Explorer, Notepad, Media
+    Player and Task Manager now sit at the top level instead of hiding inside
+    Programs. `FIND.EXE` shares the garden overlay's lazy FlexSearch backend,
+    adds browser-local `H:` documents without uploading them, scopes by drive,
+    and opens results directly in Browser or Notepad.
+
+Verification note: Leon browser-verified the 2026-08-01 OS pass and the taller
+main-site terminal. This continuation has static/compiler/test coverage but did
+not start the expensive animated OS preview; `npm run dev:os` is the explicit
+local path, and its pass should prioritize item 8, logon, widget drag/stacking,
+Solitaire and production audio playback from `os.subsurfaces.net`.
+
+Console follow-up: seed URL canonicalisation now runs after React commit (and
+only on the fullscreen terminal), so opening Ctrl/Cmd+P cannot update the router
+Transitioner during render. An unapplied optional `os_restores` migration now
+reports `available: false` instead of throwing a GET 500; writes remain disabled
+until the documented migration is installed. The copied WordPress tracking
+pixel in the Accelerationism clipping was removed at its canonical source.

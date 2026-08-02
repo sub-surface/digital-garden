@@ -46,6 +46,10 @@
       }
     }
   }
+
+  &[data-zen][data-embedded="true"] {
+    position: absolute;
+  }
 }
 
 .header {

@@ -7,11 +7,15 @@
 
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { BgCanvas } from "@/components/layout/BgCanvas"
+import { useMusic } from "@/components/ui/music/MusicContext"
+import { useStore } from "@/store"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 import { OSBoot, OSSplash } from "./OSBoot"
-import { useOSSettings } from "./osStore"
+import { useOS, useOSSettings } from "./osStore"
 import { Desktop } from "./Desktop"
 import styles from "./OS.module.scss"
+import { playOSSound } from "./osSounds"
+import { OSLogon } from "./OSLogon"
 
 const Constellation = lazy(() =>
   import("@/components/ui/graph/ConstellationPage").then((m) => ({ default: m.ConstellationPage })),
@@ -21,7 +25,7 @@ const Terminal = lazy(() =>
   import("@/features/terminal/Terminal").then((m) => ({ default: m.Terminal })),
 )
 
-type Stage = "post" | "splash" | "desktop" | "dos"
+type Stage = "post" | "splash" | "logon" | "desktop" | "dos"
 
 /** Boot plays once per tab, not once per navigation. */
 const BOOTED_KEY = "subsurfaces95:booted"
@@ -49,20 +53,37 @@ export function OSShell() {
   // Read once, on mount: flipping the setting later must not restart a desktop
   // that is already up.
   const [stage, setStage] = useState<Stage>(() =>
-    hasBooted() || useOSSettings.getState().bootSequence === "off" ? "desktop" : "post",
+    hasBooted() || useOSSettings.getState().bootSequence === "off"
+      ? useOSSettings.getState().showLogon ? "logon" : "desktop"
+      : "post",
   )
+
+  const enterDesktop = useCallback((setupWiki = false) => {
+    setStage("desktop")
+    const settings = useOSSettings.getState()
+    if (settings.soundEnabled && settings.soundEvents?.startup) playOSSound("startup", settings.soundVolume)
+    if (setupWiki) {
+      useOS.getState().openWindow({ appId: "newpage", args: {}, title: "Create a Wiki Page", w: 760, h: 620, silent: true })
+    }
+  }, [])
 
   const finishPost = useCallback(() => {
     markBooted()
     setStage("splash")
   }, [])
 
-  // Start → Restart in MS-DOS mode. An event rather than a prop so the Start
-  // menu doesn't need a channel threaded through Desktop and Taskbar.
+  // Start-menu session actions use events rather than a prop channel threaded
+  // through Desktop and Taskbar. Logoff returns to the native account screen;
+  // DOS mode swaps the desktop for the shared fullscreen terminal.
   useEffect(() => {
     const toDos = () => setStage("dos")
+    const toLogon = () => setStage("logon")
     window.addEventListener("os:dos-mode", toDos)
-    return () => window.removeEventListener("os:dos-mode", toDos)
+    window.addEventListener("os:logon", toLogon)
+    return () => {
+      window.removeEventListener("os:dos-mode", toDos)
+      window.removeEventListener("os:logon", toLogon)
+    }
   }, [])
 
   if (isPhone) return <PhoneGuard />
@@ -93,7 +114,14 @@ export function OSShell() {
       {stage === "post" && (
         <OSBoot onComplete={finishPost} variant={bootSequence === "full" ? "full" : "post"} />
       )}
-      {stage === "splash" && <OSSplash onDone={() => setStage("desktop")} />}
+      {stage === "splash" && <OSSplash onDone={() => {
+        if (useOSSettings.getState().showLogon) setStage("logon")
+        else enterDesktop()
+      }} />}
+      {stage === "logon" && <OSLogon onContinue={({ guest, rememberGuest, setupWiki }) => {
+        if (guest && rememberGuest) useOSSettings.getState().setShowLogon(false)
+        enterDesktop(setupWiki)
+      }} />}
 
       {stage === "desktop" && <ScreenSaver />}
       {stage === "desktop" && <BlueScreen />}
@@ -158,11 +186,14 @@ function BlueScreen() {
 function ScreenSaver() {
   const enabled = useOSSettings((s) => s.saverEnabled)
   const delaySeconds = useOSSettings((s) => s.saverDelay)
+  const saverMode = useOSSettings((s) => s.saverMode)
+  const music = useMusic()
   const [active, setActive] = useState(false)
   // Mirrored in a ref so the pointermove handler can decide whether anything
   // changed WITHOUT calling setState — pointermove fires continuously, and this
   // page is already running an animated canvas.
   const activeRef = useRef(false)
+  const previousBgRef = useRef<ReturnType<typeof useStore.getState>["bgMode"] | null>(null)
 
   useEffect(() => {
     if (!enabled) return
@@ -173,6 +204,10 @@ function ScreenSaver() {
       clearTimeout(timer)
       lastArmed = Date.now()
       timer = setTimeout(() => {
+        if (saverMode !== "constellation") {
+          previousBgRef.current = useStore.getState().bgMode
+          useStore.setState({ bgMode: saverMode })
+        }
         activeRef.current = true
         setActive(true)
       }, Math.max(10, delaySeconds) * 1000)
@@ -180,6 +215,10 @@ function ScreenSaver() {
 
     const onActivity = () => {
       if (activeRef.current) {
+        if (previousBgRef.current) {
+          useStore.setState({ bgMode: previousBgRef.current })
+          previousBgRef.current = null
+        }
         activeRef.current = false
         setActive(false)
         arm()
@@ -196,17 +235,40 @@ function ScreenSaver() {
 
     return () => {
       clearTimeout(timer)
+      activeRef.current = false
+      setActive(false)
+      if (previousBgRef.current) {
+        useStore.setState({ bgMode: previousBgRef.current })
+        previousBgRef.current = null
+      }
       events.forEach((e) => window.removeEventListener(e, onActivity))
     }
-  }, [enabled, delaySeconds])
+  }, [enabled, delaySeconds, saverMode])
 
   if (!enabled || !active) return null
 
   return (
-    <div className={styles.saver}>
-      <Suspense fallback={null}>
-        <Constellation embedded />
-      </Suspense>
+    <div className={styles.saver} data-ambient={saverMode !== "constellation" || undefined}>
+      {saverMode === "constellation" ? (
+        <Suspense fallback={null}>
+          <Constellation embedded />
+        </Suspense>
+      ) : (
+        <div className={styles.saverAmbientLabel}>{saverMode.toUpperCase()}.SCR</div>
+      )}
+      {music.isPlaying && music.currentTrack && (
+        <div className={styles.saverNowPlaying} aria-label={`Now playing ${music.currentTrack.title} by ${music.currentTrack.artist}`}>
+          {music.currentTrack.cover && <img src={music.currentTrack.cover} alt="" />}
+          <div className={styles.saverTrackMeta}>
+            <span>NOW PLAYING</span>
+            <strong>{music.currentTrack.title}</strong>
+            <em>{music.currentTrack.artist}</em>
+            <div className={styles.saverProgress}>
+              <i style={{ width: `${Math.max(0, Math.min(100, music.progress * 100))}%` }} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

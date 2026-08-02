@@ -7,16 +7,41 @@
  * mount. See docs/os-95-spec.md §6.
  */
 
-import { useCallback, useMemo, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { NoteBody } from "@/components/ui/reader/NoteBody"
 import { Terminal } from "@/features/terminal/Terminal"
 import { useStore, BG_MODES, BG_META, type BgMode } from "@/store"
 import { SYSTEM_PAGE_META } from "@/config/system-pages-meta"
+import { SYSTEM_PAGES } from "@/config/system-pages"
 import { PROGRAMS } from "@/features/terminal/commands"
 import { classifyLayout } from "@/lib/layout"
 import type { NoteMetadata } from "@/types/content"
-import { useOS, useOSSettings, type BootSequence } from "./osStore"
+import { useMusic } from "@/components/ui/music/MusicContext"
+import { useAuth } from "@/hooks/useAuth"
+import { WikiAdminPage } from "@/components/ui/wiki/WikiAdminPage"
+import { WikiProfilePage } from "@/components/ui/wiki/WikiProfilePage"
+import { WikiNewPage } from "@/components/ui/wiki/WikiNewPage"
+import { WikiEditPage } from "@/components/ui/wiki/WikiEditPage"
+import { ChatRoom } from "@/components/ui/chat/ChatRoom"
+import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
+import type { ChatRoom as ChatRoomType } from "@/types/chat"
+import { apiGet } from "@/lib/api"
+import { useRestoredNotes } from "@/hooks/useRestoredNotes"
+import { useContentSearch, type ContentSearchResult } from "@/hooks/useContentSearch"
+import { ProgramHostProvider } from "@/components/ui/games/ProgramHostContext"
+import {
+  useOS,
+  useOSFiles,
+  useOSMedia,
+  useOSSettings,
+  type BootSequence,
+  type OSWindow,
+  type ScreenSaverMode,
+} from "./osStore"
 import { OSIcon, type IconName } from "./OSIcon"
+import type { OSMenu } from "./osMenus"
+import { playOSSound } from "./osSounds"
+import { SolitaireApp } from "./Solitaire"
 import styles from "./OS.module.scss"
 import explorer from "./Explorer.module.scss"
 
@@ -29,7 +54,7 @@ export interface AppProps {
 export interface OSApp {
   icon: IconName
   defaultSize?: { w: number; h: number }
-  menus?: string[]
+  menus?: (win: OSWindow) => OSMenu[]
   multiInstance?: boolean
   Component: React.ComponentType<AppProps>
 }
@@ -64,42 +89,167 @@ export function appForNote(note: NoteMetadata): string {
   if (note.system) return "program"
   const layout = classifyLayout(note.slug, { layout: note.layout, type: note.type })
   if (layout === "game") return "program"
-  return layout === "article" ? "wordpad" : "notepad"
+  return "browser"
 }
 
 /** Shared open-a-note action, used by the desktop, Explorer and the Start menu. */
 export function useOpenNote() {
   const openWindow = useOS((s) => s.openWindow)
-  return (note: NoteMetadata) => {
+  return useCallback((note: NoteMetadata) => {
     const appId = appForNote(note)
     const ext = fileExt(note)
     openWindow({
       appId,
       args: { slug: note.slug },
       title: `${note.title} — ${dosName(note.slug, ext)}`,
-      multiInstance: appId === "notepad",
       ...(appId === "program" ? { w: 860, h: 640 } : {}),
     })
-  }
+  }, [openWindow])
 }
 
 // ---------------------------------------------------------------------------
 // Document apps — chrome differs, renderer does not.
 // ---------------------------------------------------------------------------
 
-function DocApp({ args }: AppProps) {
+function BrowserApp({ args }: AppProps) {
   return (
-    <div className={`${styles.docPad} os-doc`}>
-      <NoteBody slug={args.slug} />
+    <div className={styles.browser} data-reader={args.reader === "1" || undefined}>
+      <div className={styles.browserAddress}>
+        <span>Address</span>
+        <input readOnly value={`garden://${args.slug}`} aria-label="Document address" />
+      </div>
+      <div className={`${styles.docPad} os-doc`}>
+        <NoteBody slug={args.slug} />
+      </div>
     </div>
   )
 }
 
-/** System pages (games, shelves, the graph) mount edge-to-edge, no doc padding. */
-function ProgramApp({ args }: AppProps) {
+function NotepadApp({ args, windowId }: AppProps) {
+  const files = useOSFiles((s) => s.files)
+  const createFile = useOSFiles((s) => s.createFile)
+  const saveFile = useOSFiles((s) => s.saveFile)
+  const updateWindowArgs = useOS((s) => s.updateWindowArgs)
+  const setWindowTitle = useOS((s) => s.setWindowTitle)
+  const openWindow = useOS((s) => s.openWindow)
+  const createdRef = useRef(false)
+  const file = files.find((candidate) => candidate.id === args.fileId)
+  const [name, setName] = useState(file?.name ?? "Untitled.txt")
+  const [content, setContent] = useState(file?.content ?? "")
+  const [dirty, setDirty] = useState(false)
+  const loadedFileId = useRef<string | null>(null)
+  const pendingRef = useRef({ id: file?.id, content, name, dirty })
+  pendingRef.current = { id: file?.id, content, name, dirty }
+
+  useEffect(() => {
+    if (args.fileId || createdRef.current) return
+    createdRef.current = true
+    const id = createFile()
+    updateWindowArgs(windowId, { fileId: id })
+  }, [args.fileId, createFile, updateWindowArgs, windowId])
+
+  useEffect(() => {
+    if (!file || loadedFileId.current === file.id) return
+    loadedFileId.current = file.id
+    setName(file.name)
+    setContent(file.content)
+    setDirty(false)
+    setWindowTitle(windowId, `${file.name} — Notepad`)
+  }, [file, setWindowTitle, windowId])
+
+  const save = useCallback(() => {
+    if (!file) return
+    saveFile(file.id, content, name)
+    const savedName = useOSFiles.getState().files.find((candidate) => candidate.id === file.id)?.name ?? file.name
+    setName(savedName)
+    setWindowTitle(windowId, `${savedName} — Notepad`)
+    setDirty(false)
+  }, [content, file, name, saveFile, setWindowTitle, windowId])
+
+  useEffect(() => {
+    if (!file || !dirty) return
+    const timer = window.setTimeout(save, 700)
+    return () => window.clearTimeout(timer)
+  }, [dirty, file, name, content, save])
+
+  // Debouncing keeps localStorage off the keystroke path; flushing on close or
+  // pagehide makes the persistence promise honest even inside that 700ms gap.
+  useEffect(() => {
+    const flush = () => {
+      const pending = pendingRef.current
+      if (pending.id && pending.dirty) saveFile(pending.id, pending.content, pending.name)
+    }
+    window.addEventListener("pagehide", flush)
+    return () => {
+      window.removeEventListener("pagehide", flush)
+      flush()
+    }
+  }, [saveFile])
+
+  if (!file) return <div className={explorer.empty}>Preparing a local document…</div>
+
   return (
-    <div className="os-doc os-doc--full">
-      <NoteBody slug={args.slug} />
+    <div className={styles.notepad} onKeyDown={(e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault()
+        save()
+      }
+    }}>
+      <div className={styles.notepadToolbar}>
+        <input
+          value={name}
+          aria-label="File name"
+          onChange={(e) => { setName(e.target.value); setDirty(true) }}
+        />
+        <button type="button" onClick={save} disabled={!dirty}>Save</button>
+        <button
+          type="button"
+          onClick={() => {
+            const id = createFile()
+            openWindow({ appId: "notepad", args: { fileId: id }, title: "Untitled.txt — Notepad", multiInstance: true })
+          }}
+        >
+          New
+        </button>
+        <span>{dirty ? "modified" : "saved locally"}</span>
+      </div>
+      <textarea
+        className={styles.notepadText}
+        value={content}
+        spellCheck
+        aria-label={`Contents of ${name}`}
+        onChange={(e) => { setContent(e.target.value); setDirty(true) }}
+      />
+    </div>
+  )
+}
+
+/** System pages mount directly: the application, never its companion note. */
+function ProgramApp({ args, windowId }: AppProps) {
+  const closeWindow = useOS((s) => s.closeWindow)
+  const openWindow = useOS((s) => s.openWindow)
+  const contentIndex = useStore((s) => s.contentIndex)
+  const openNote = useOpenNote()
+  const page = SYSTEM_PAGES[args.slug?.toLowerCase()]
+  if (!page) {
+    return <div className={explorer.error}>Cannot run '{args.slug || "(missing program)"}'.</div>
+  }
+  const Component = page.component
+  return (
+    <div className={styles.programHost} data-program={args.slug} data-layout={page.layout}>
+      <ProgramHostProvider value={{
+        embedded: true,
+        close: () => closeWindow(windowId),
+        open: (slug) => {
+          const note = contentIndex?.[slug]
+          if (note) openNote(note)
+          else openWindow({ appId: "program", args: { slug }, title: slug, w: 860, h: 640 })
+        },
+      }}>
+        <Suspense fallback={<div className="note-loading">{page.loading}</div>}>
+          <Component />
+        </Suspense>
+      </ProgramHostProvider>
     </div>
   )
 }
@@ -130,10 +280,27 @@ function PromptApp({ windowId }: AppProps) {
     [contentIndex, openNote, openWindow],
   )
 
+  const onNavigate = useCallback((target: string) => {
+    const url = new URL(target, window.location.origin)
+    const path = url.pathname.replace(/^\//, "")
+    if (url.hostname === "wiki.subsurfaces.net" || url.origin === window.location.origin) {
+      if (path === "new") return openWindow({ appId: "newpage", args: {}, title: "Create a Wiki Page", w: 760, h: 620 })
+      if (path === "admin") return openWindow({ appId: "owner", args: {}, title: "Owner Workstation", w: 780, h: 580 })
+      if (path === "profile") return openWindow({ appId: "profile", args: {}, title: "My Subsurfaces Profile", w: 760, h: 610 })
+      if (path.startsWith("edit/")) {
+        const slug = decodeURIComponent(path.slice(5))
+        return openWindow({ appId: "edit", args: { slug }, title: `Edit ${slug}`, w: 780, h: 640, multiInstance: true })
+      }
+    }
+    window.open(target, "_blank", "noopener")
+  }, [openWindow])
+
   return (
     <Terminal
       surface="window"
       onOpen={onOpen}
+      onNavigate={onNavigate}
+      onRequireLogin={() => openWindow({ appId: "account", args: {}, title: "Log On to Subsurfaces", w: 470, h: 500 })}
       onClose={() => closeWindow(windowId)}
     />
   )
@@ -305,6 +472,57 @@ function ShutDownApp({ windowId }: AppProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Log Off — deliberately separate from shutdown. The session is shared with
+// the garden/wiki/chat, while the local H: drive and machine preferences remain
+// on this browser for the next person who logs on.
+// ---------------------------------------------------------------------------
+
+function LogOffApp({ windowId }: AppProps) {
+  const auth = useAuth()
+  const closeWindow = useOS((s) => s.closeWindow)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const identity = auth.username ?? auth.session?.user.email ?? "this account"
+
+  const confirm = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await auth.signOut()
+      useOSSettings.getState().setShowLogon(true)
+      useOS.getState().closeAll()
+      window.dispatchEvent(new CustomEvent("os:logon"))
+    } catch {
+      setBusy(false)
+      setError("Windows could not log off. Check the connection and try again.")
+    }
+  }
+
+  return (
+    <div className={explorer.props}>
+      <div className={explorer.error} style={{ padding: 0 }}>
+        <OSIcon name="user" size={34} />
+        <div>
+          <p><strong>Log off {identity}?</strong></p>
+          <span className={explorer.errorHint}>
+            Your local files and desktop settings will remain on this browser.
+          </span>
+        </div>
+      </div>
+      {error && <span className={styles.runHint} style={{ color: "#b4424c" }}>{error}</span>}
+      <div className={styles.runActions}>
+        <button className={styles.runBtn} disabled={busy} onClick={() => void confirm()}>
+          {busy ? "Logging off..." : "Yes"}
+        </button>
+        <button className={styles.runBtn} disabled={busy} onClick={() => closeWindow(windowId)}>
+          No
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Explorer
 // ---------------------------------------------------------------------------
 
@@ -313,116 +531,429 @@ function useNotes(): NoteMetadata[] {
   return useMemo(() => (contentIndex ? Object.values(contentIndex) : []), [contentIndex])
 }
 
-function ExplorerApp({ args }: AppProps) {
+function ExplorerApp({ args, windowId }: AppProps) {
   const notes = useNotes()
+  const localFiles = useOSFiles((s) => s.files)
+  const localFolders = useOSFiles((s) => s.folders)
+  const createFile = useOSFiles((s) => s.createFile)
+  const createFolder = useOSFiles((s) => s.createFolder)
+  const deleteFile = useOSFiles((s) => s.deleteFile)
+  const deleteFolder = useOSFiles((s) => s.deleteFolder)
   const openNote = useOpenNote()
   const openWindow = useOS((s) => s.openWindow)
-  const folder = args.folder ?? ""
+  const setWindowTitle = useOS((s) => s.setWindowTitle)
+  const doubleClick = useOSSettings((s) => s.doubleClickToOpen)
+  const isHome = args.drive === "home"
+  const [folder, setFolder] = useState(args.folder ?? "")
+  const [query, setQuery] = useState("")
+  const [selected, setSelected] = useState<string | null>(null)
 
-  const { subfolders, files } = useMemo(() => {
+  const { subfolders, gardenFiles } = useMemo(() => {
     const subs = new Set<string>()
     const out: NoteMetadata[] = []
-
     for (const note of notes) {
-      if (note.draft) continue // drafts live in the Recycle Bin only
+      if (note.draft) continue
       const noteFolder = note.folder ?? ""
       if (folder === "") {
         if (noteFolder === "") out.push(note)
         else subs.add(noteFolder.split("/")[0])
-      } else if (noteFolder === folder) {
-        out.push(note)
-      } else if (noteFolder.startsWith(`${folder}/`)) {
+      } else if (noteFolder === folder) out.push(note)
+      else if (noteFolder.startsWith(`${folder}/`)) {
         subs.add(noteFolder.slice(folder.length + 1).split("/")[0])
       }
     }
-
+    const q = query.trim().toLowerCase()
     return {
-      subfolders: Array.from(subs).sort((a, b) => a.localeCompare(b)),
-      files: out.sort((a, b) => a.title.localeCompare(b.title)),
+      subfolders: Array.from(subs).filter((name) => !q || name.toLowerCase().includes(q)).sort(),
+      gardenFiles: out.filter((note) => !q || note.title.toLowerCase().includes(q)).sort((a, b) => a.title.localeCompare(b.title)),
     }
-  }, [notes, folder])
+  }, [notes, folder, query])
 
+  const visibleLocalFiles = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return localFiles.filter((file) => (file.folder ?? "") === folder && (!q || file.name.toLowerCase().includes(q)))
+  }, [folder, localFiles, query])
+  const visibleLocalFolders = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return localFolders.filter((path) => {
+      const parts = path.split("/")
+      const parentPath = parts.slice(0, -1).join("/")
+      return parentPath === folder && (!q || parts.at(-1)?.toLowerCase().includes(q))
+    })
+  }, [folder, localFolders, query])
   const parent = folder === "" ? null : folder.split("/").slice(0, -1).join("/")
+  const address = isHome
+    ? `H:\\MY DOCUMENTS${folder ? `\\${folder.replace(/\//g, "\\")}` : ""}`
+    : `C:\\GARDEN${folder ? `\\${folder.replace(/\//g, "\\")}` : ""}`
+
+  useEffect(() => {
+    setWindowTitle(windowId, isHome ? "My Documents" : address)
+  }, [address, isHome, setWindowTitle, windowId])
+
+  const openLocalFile = (id: string, name: string) =>
+    openWindow({ appId: "notepad", args: { fileId: id }, title: `${name} — Notepad`, multiInstance: true })
+  const activate = (action: () => void, event: React.MouseEvent) => {
+    if (!doubleClick && event.detail === 1) action()
+    if (doubleClick && event.detail === 2) action()
+  }
+  const enterFolder = (path: string) => {
+    setFolder(path)
+    setSelected(null)
+  }
+  const makeFile = () => {
+    const id = createFile("Untitled.txt", "", isHome ? folder : "")
+    const file = useOSFiles.getState().files.find((candidate) => candidate.id === id)
+    if (file) openLocalFile(file.id, file.name)
+  }
+  const makeFolder = () => {
+    const requested = window.prompt("Folder name:", "New Folder")
+    if (requested) createFolder(requested, folder)
+  }
+  const deleteSelected = () => {
+    if (!selected || !window.confirm("Delete the selected local item and anything inside it?")) return
+    if (selected.startsWith("file:")) deleteFile(selected.slice(5))
+    if (selected.startsWith("folder:")) deleteFolder(selected.slice(7))
+    setSelected(null)
+  }
 
   return (
-    <div className={explorer.root}>
-      <div className={explorer.path}>C:\GARDEN{folder ? `\\${folder.replace(/\//g, "\\")}` : ""}</div>
+    <div
+      className={explorer.root}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Backspace") {
+          e.preventDefault()
+          if (parent !== null) enterFolder(parent)
+        }
+      }}
+    >
+      <div className={explorer.toolbar}>
+        <button type="button" disabled={parent === null} onClick={() => parent !== null && enterFolder(parent)}>Up</button>
+        {isHome && <button type="button" onClick={makeFile}>New Text Document</button>}
+        {isHome && <button type="button" onClick={makeFolder}>New Folder</button>}
+        {isHome && selected && (
+          <button type="button" onClick={deleteSelected}>Delete</button>
+        )}
+        <input
+          className={explorer.search}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Find in this folder"
+          aria-label="Filter files"
+        />
+      </div>
+      <label className={explorer.path}>
+        <span>Address</span>
+        <input readOnly value={address} aria-label="Explorer address" />
+      </label>
 
       <table className={explorer.table}>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Size</th>
-            <th>Type</th>
-            <th>MS-DOS name</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Name</th><th>Size</th><th>Type</th><th>MS-DOS name</th></tr></thead>
         <tbody>
-          {parent !== null && (
-            <tr
-              className={explorer.row}
-              onDoubleClick={() =>
-                openWindow({
-                  appId: "explorer",
-                  args: parent ? { folder: parent } : {},
-                  title: parent ? `${parent.split("/").pop()}` : "C:\\GARDEN",
-                })
-              }
-            >
-              <td className={explorer.name}>
-                <OSIcon name="folder" size={16} />
-                <span>..</span>
-              </td>
+          {!isHome && parent !== null && (
+            <tr className={explorer.row} onClick={(e) => activate(() => enterFolder(parent), e)}>
+              <td className={explorer.name}><OSIcon name="folder" size={16} /><span>..</span></td>
               <td colSpan={3} />
             </tr>
           )}
-
-          {subfolders.map((sub) => {
+          {!isHome && subfolders.map((sub) => {
             const path = folder ? `${folder}/${sub}` : sub
             return (
-              <tr
-                key={path}
-                className={explorer.row}
-                onDoubleClick={() =>
-                  openWindow({ appId: "explorer", args: { folder: path }, title: sub })
-                }
-              >
-                <td className={explorer.name}>
-                  <OSIcon name="folder" size={16} />
-                  <span>{sub}</span>
-                </td>
-                <td />
-                <td>File Folder</td>
-                <td className={explorer.dos}>{sub.slice(0, 8).toUpperCase()}</td>
+              <tr key={path} className={explorer.row} data-selected={selected === path} onClick={(e) => { setSelected(path); activate(() => enterFolder(path), e) }}>
+                <td className={explorer.name}><OSIcon name="folder" size={16} /><span>{sub}</span></td>
+                <td /><td>File Folder</td><td className={explorer.dos}>{sub.slice(0, 8).toUpperCase()}</td>
               </tr>
             )
           })}
-
-          {files.map((note) => {
+          {!isHome && gardenFiles.map((note) => {
             const ext = fileExt(note)
             return (
-              <tr key={note.slug} className={explorer.row} onDoubleClick={() => openNote(note)}>
-                <td className={explorer.name}>
-                  <OSIcon
-                    name={ext === "EXE" ? "app" : ext === "DOC" ? "article" : "doc"}
-                    size={16}
-                  />
-                  <span>{note.title}</span>
-                </td>
-                <td className={explorer.num}>
-                  {note.readingTime ? `${note.readingTime * 2}KB` : "—"}
-                </td>
-                <td>{TYPE_LABEL[ext] ?? "File"}</td>
-                <td className={explorer.dos}>{dosName(note.slug, ext)}</td>
+              <tr key={note.slug} className={explorer.row} data-selected={selected === note.slug} onClick={(e) => { setSelected(note.slug); activate(() => openNote(note), e) }}>
+                <td className={explorer.name}><OSIcon name={ext === "EXE" ? "app" : ext === "DOC" ? "article" : "doc"} size={16} /><span>{note.title}</span></td>
+                <td className={explorer.num}>{note.readingTime ? `${note.readingTime * 2}KB` : "—"}</td>
+                <td>{TYPE_LABEL[ext] ?? "File"}</td><td className={explorer.dos}>{dosName(note.slug, ext)}</td>
               </tr>
             )
           })}
+          {isHome && visibleLocalFolders.map((path) => {
+            const name = path.split("/").at(-1) ?? path
+            return (
+              <tr key={path} className={explorer.row} data-selected={selected === `folder:${path}`} onClick={(e) => { setSelected(`folder:${path}`); activate(() => enterFolder(path), e) }}>
+                <td className={explorer.name}><OSIcon name="folder" size={16} /><span>{name}</span></td>
+                <td /><td>File Folder</td><td className={explorer.dos}>{name.slice(0, 8).toUpperCase()}</td>
+              </tr>
+            )
+          })}
+          {isHome && visibleLocalFiles.map((file) => (
+            <tr key={file.id} className={explorer.row} data-selected={selected === `file:${file.id}`} onClick={(e) => { setSelected(`file:${file.id}`); activate(() => openLocalFile(file.id, file.name), e) }}>
+              <td className={explorer.name}><OSIcon name="doc" size={16} /><span>{file.name}</span></td>
+              <td className={explorer.num}>{Math.max(1, Math.ceil(file.content.length / 1024))}KB</td>
+              <td>Text Document</td><td className={explorer.dos}>{dosName(file.name, "TXT")}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
+      <div className={explorer.count}>{(isHome ? visibleLocalFolders.length + visibleLocalFiles.length : subfolders.length + gardenFiles.length)} object(s) · local files stay in this browser</div>
+    </div>
+  )
+}
 
-      <div className={explorer.count}>
-        {subfolders.length + files.length} object(s)
+// ---------------------------------------------------------------------------
+// Find: All Files — Win95 chrome over the same lazy FlexSearch index as the
+// garden overlay. Local H: documents are namespaced into the shared index and
+// never leave the browser.
+// ---------------------------------------------------------------------------
+
+type FindScope = "all" | "garden" | "local"
+
+function FindApp({ args }: AppProps) {
+  const notes = useStore((state) => state.contentIndex)
+  const files = useOSFiles((state) => state.files)
+  const openWindow = useOS((state) => state.openWindow)
+  const openNote = useOpenNote()
+  const [draftQuery, setDraftQuery] = useState(args.query ?? "")
+  const [query, setQuery] = useState(args.query ?? "")
+  const [scope, setScope] = useState<FindScope>("all")
+  const [selected, setSelected] = useState<string | null>(null)
+  const localDocuments = useMemo(() => files.map((file) => ({
+    id: `local:${file.id}`,
+    title: file.name,
+    excerpt: file.content.slice(0, 4_000),
+    kind: "local" as const,
+    target: file.id,
+  })), [files])
+  const search = useContentSearch({
+    enabled: true,
+    query,
+    extraDocuments: localDocuments,
+    limit: 250,
+  })
+  const results = useMemo(
+    () => search.results.filter((result) => scope === "all" || result.kind === scope),
+    [scope, search.results],
+  )
+  const selectedResult = results.find((result) => result.id === selected) ?? null
+
+  useEffect(() => {
+    if (selected && !results.some((result) => result.id === selected)) setSelected(null)
+  }, [results, selected])
+
+  const openResult = (result: ContentSearchResult | null) => {
+    if (!result) return
+    if (result.kind === "local") {
+      const file = files.find((candidate) => candidate.id === result.target)
+      if (file) {
+        openWindow({
+          appId: "notepad",
+          args: { fileId: file.id },
+          title: `${file.name} — Notepad`,
+          multiInstance: true,
+        })
+      }
+      return
+    }
+    const note = notes?.[result.target]
+    if (note) openNote(note)
+  }
+
+  const locationFor = (result: ContentSearchResult) => {
+    if (result.kind === "local") {
+      const folder = files.find((file) => file.id === result.target)?.folder
+      return `H:\\MY DOCUMENTS${folder ? `\\${folder.replace(/\//g, "\\")}` : ""}`
+    }
+    const folder = notes?.[result.target]?.folder
+    return `C:\\GARDEN${folder ? `\\${folder.replace(/\//g, "\\")}` : ""}`
+  }
+
+  return (
+    <div className={explorer.root}>
+      <form
+        className={explorer.findForm}
+        onSubmit={(event) => {
+          event.preventDefault()
+          setSelected(null)
+          setQuery(draftQuery.trim())
+        }}
+      >
+        <div className={explorer.findFields}>
+          <label>
+            Named or containing text:
+            <input
+              autoFocus
+              className={explorer.search}
+              value={draftQuery}
+              onChange={(event) => setDraftQuery(event.target.value)}
+              placeholder="title, phrase, or filename"
+            />
+          </label>
+          <label>
+            Look in:
+            <select
+              className={explorer.search}
+              value={scope}
+              onChange={(event) => setScope(event.target.value as FindScope)}
+            >
+              <option value="all">Subsurfaces 95</option>
+              <option value="garden">C:\GARDEN</option>
+              <option value="local">H:\MY DOCUMENTS</option>
+            </select>
+          </label>
+        </div>
+        <div className={explorer.findActions}>
+          <button className={explorer.button} type="submit" disabled={!draftQuery.trim()}>
+            Find Now
+          </button>
+          <button
+            className={explorer.button}
+            type="button"
+            disabled={!selectedResult}
+            onClick={() => openResult(selectedResult)}
+          >
+            Open
+          </button>
+        </div>
+      </form>
+
+      <div className={explorer.findHint}>
+        Searches published/recovered garden documents and browser-local text files.
       </div>
+      <div className={explorer.findResults}>
+        <table className={explorer.table}>
+          <thead><tr><th>Name</th><th>In Folder</th><th>Type</th></tr></thead>
+          <tbody>
+            {results.map((result) => (
+              <tr
+                key={result.id}
+                className={explorer.row}
+                data-selected={selected === result.id}
+                onClick={() => setSelected(result.id)}
+                onDoubleClick={() => openResult(result)}
+              >
+                <td className={explorer.name}>
+                  <OSIcon name={result.kind === "local" ? "doc" : "article"} size={16} />
+                  <span>{result.title}</span>
+                </td>
+                <td className={explorer.dos}>{locationFor(result)}</td>
+                <td>{result.kind === "local" ? "Text Document" : "Garden Document"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {query && results.length === 0 && (
+          <div className={explorer.empty}>
+            {search.error ?? (search.ready ? "No files found." : "Preparing the search index...")}
+          </div>
+        )}
+        {!query && <div className={explorer.empty}>Enter a name or phrase to begin.</div>}
+      </div>
+      {selectedResult && (
+        <div className={explorer.findPreview}>{selectedResult.excerpt || "No preview available."}</div>
+      )}
+      <div className={explorer.count}>
+        {search.error
+          ? "Search unavailable"
+          : query
+            ? `${results.length} object(s) found`
+            : search.ready ? "Ready" : "Building index..."}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Images — a filesystem view over the media manifest the reader already uses.
+// It deliberately lists metadata instead of eagerly downloading dozens of
+// multi-megabyte originals; opening a file hands off to the shared lightbox.
+// ---------------------------------------------------------------------------
+
+function ImagesApp() {
+  const dimensions = useStore((state) => state.imageDimensions)
+  const [query, setQuery] = useState("")
+  const [selected, setSelected] = useState<string | null>(null)
+  const [viewerSrc, setViewerSrc] = useState<string | null>(null)
+
+  const images = useMemo(() => {
+    const needle = query.trim().toLowerCase()
+    return Object.entries(dimensions ?? {})
+      .filter(([src]) => src.startsWith("/content/Media/"))
+      .map(([src, size]) => {
+        const relative = src.slice("/content/Media/".length)
+        const parts = relative.split("/")
+        return {
+          src,
+          name: parts.at(-1) ?? relative,
+          folder: parts.slice(0, -1).join("\\") || "Images",
+          width: size.width,
+          height: size.height,
+        }
+      })
+      .filter((image) => !needle || `${image.name} ${image.folder}`.toLowerCase().includes(needle))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [dimensions, query])
+
+  const viewerIndex = viewerSrc ? images.findIndex((image) => image.src === viewerSrc) : -1
+  const viewer = viewerIndex >= 0 ? images[viewerIndex] : null
+
+  return (
+    <div className={explorer.root}>
+      <div className={explorer.toolbar}>
+        <button
+          type="button"
+          disabled={!selected}
+          onClick={() => selected && setViewerSrc(selected)}
+        >
+          Open
+        </button>
+        <input
+          className={explorer.search}
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value)
+            setSelected(null)
+          }}
+          placeholder="Find an image"
+          aria-label="Filter images"
+        />
+      </div>
+      <label className={explorer.path}>
+        <span>Address</span>
+        <input readOnly value="C:\\GARDEN\\IMAGES" aria-label="Images folder address" />
+      </label>
+
+      <table className={explorer.table}>
+        <thead><tr><th>Name</th><th>Dimensions</th><th>Folder</th><th>Type</th></tr></thead>
+        <tbody>
+          {images.map((image) => (
+            <tr
+              key={image.src}
+              className={explorer.row}
+              data-selected={selected === image.src}
+              onClick={() => setSelected(image.src)}
+              onDoubleClick={() => setViewerSrc(image.src)}
+            >
+              <td className={explorer.name}><OSIcon name="image" size={16} /><span>{image.name}</span></td>
+              <td className={explorer.num}>{image.width} × {image.height}</td>
+              <td className={explorer.dos}>{image.folder}</td>
+              <td>Image</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className={explorer.count}>
+        {dimensions ? `${images.length} object(s) · double-click to view` : "Reading media index…"}
+      </div>
+
+      {viewer && (
+        <ImageLightbox
+          src={viewer.src}
+          alt={viewer.name}
+          caption={viewer.name}
+          positionLabel={`${viewerIndex + 1} / ${images.length} · ${viewer.width} × ${viewer.height}`}
+          onPrevious={viewerIndex > 0 ? () => setViewerSrc(images[viewerIndex - 1].src) : undefined}
+          onNext={viewerIndex < images.length - 1 ? () => setViewerSrc(images[viewerIndex + 1].src) : undefined}
+          onClose={() => setViewerSrc(null)}
+        />
+      )}
     </div>
   )
 }
@@ -441,6 +972,7 @@ const TYPE_LABEL: Record<string, string> = {
 const DRIVES = [
   { letter: "A:", label: "3½ Floppy", icon: "doc" as IconName, action: "floppy" },
   { letter: "C:", label: "GARDEN", icon: "computer" as IconName, action: "explorer" },
+  { letter: "H:", label: "MY DOCUMENTS", icon: "folder" as IconName, action: "home" },
   { letter: "W:", label: "WIKI", icon: "folder" as IconName, action: "wiki" },
   { letter: "X:", label: "CHAT", icon: "chat" as IconName, action: "chat" },
 ]
@@ -459,6 +991,8 @@ function ComputerApp() {
             onDoubleClick={() => {
               if (d.action === "explorer") {
                 openWindow({ appId: "explorer", args: {}, title: "C:\\GARDEN" })
+              } else if (d.action === "home") {
+                openWindow({ appId: "explorer", args: { drive: "home" }, title: "My Documents" })
               } else if (d.action === "wiki") {
                 window.open("https://wiki.subsurfaces.net", "_blank", "noopener")
               } else if (d.action === "chat") {
@@ -506,10 +1040,19 @@ function FloppyApp() {
 function BinApp() {
   const notes = useNotes()
   const openNote = useOpenNote()
+  const openWindow = useOS((state) => state.openWindow)
+  const { slugs, authenticated, available, error, setRestored } = useRestoredNotes()
+  const restored = useMemo(() => new Set(slugs), [slugs])
   const drafts = useMemo(() => notes.filter((n) => n.draft), [notes])
+  const inBin = useMemo(() => drafts.filter((note) => !restored.has(note.slug)), [drafts, restored])
 
-  if (drafts.length === 0) {
-    return <div className={explorer.empty}>The Recycle Bin is empty.</div>
+  if (inBin.length === 0) {
+    return (
+      <div className={explorer.empty}>
+        <p>The Recycle Bin is empty.</p>
+        {drafts.length > 0 && <p>{drafts.length} file(s) recovered to the main garden.</p>}
+      </div>
+    )
   }
 
   return (
@@ -521,10 +1064,11 @@ function BinApp() {
             <th>Name</th>
             <th>Original Location</th>
             <th>Type</th>
+            <th />
           </tr>
         </thead>
         <tbody>
-          {drafts.map((note) => (
+          {inBin.map((note) => (
             <tr key={note.slug} className={explorer.row} onDoubleClick={() => openNote(note)}>
               <td className={explorer.name}>
                 <OSIcon name="doc" size={16} />
@@ -532,11 +1076,33 @@ function BinApp() {
               </td>
               <td className={explorer.dos}>C:\GARDEN\{(note.folder ?? "").replace(/\//g, "\\")}</td>
               <td>{TYPE_LABEL[fileExt(note)] ?? "File"}</td>
+              <td>
+                <button
+                  className={explorer.button}
+                  type="button"
+                  disabled={authenticated && !available}
+                  onDoubleClick={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    if (!authenticated) {
+                      openWindow({ appId: "account", args: {}, title: "Log On to Subsurfaces", w: 470, h: 500 })
+                      return
+                    }
+                    void setRestored(note.slug, true)
+                  }}
+                >
+                  {!authenticated ? "Log on to restore" : available ? "Restore" : "Recovery unavailable"}
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div className={explorer.count}>{drafts.length} object(s)</div>
+      <div className={explorer.count}>
+        {inBin.length} object(s){restored.size > 0 ? ` · ${restored.size} recovered` : ""}
+        {!available ? " · server migration pending" : ""}
+        {error ? ` · ${error}` : ""}
+      </div>
     </div>
   )
 }
@@ -545,18 +1111,21 @@ function BinApp() {
 // Display Properties — a Win95 front end for controls the site already has.
 // ---------------------------------------------------------------------------
 
-type SettingsTab = "background" | "appearance" | "startup" | "saver" | "about"
+type SettingsTab = "background" | "appearance" | "startup" | "saver" | "widgets" | "storage" | "about"
 
 const TABS: [SettingsTab, string][] = [
   ["background", "Background"],
   ["appearance", "Appearance"],
   ["startup", "Startup"],
   ["saver", "Screen Saver"],
+  ["widgets", "Widgets"],
+  ["storage", "Storage"],
   ["about", "About"],
 ]
 
-function DisplayApp() {
-  const [tab, setTab] = useState<SettingsTab>("background")
+function DisplayApp({ args }: AppProps) {
+  const initialTab = TABS.some(([id]) => id === args.tab) ? args.tab as SettingsTab : "background"
+  const [tab, setTab] = useState<SettingsTab>(initialTab)
 
   return (
     <div className={explorer.root}>
@@ -577,6 +1146,8 @@ function DisplayApp() {
       {tab === "appearance" && <AppearanceTab />}
       {tab === "startup" && <StartupTab />}
       {tab === "saver" && <SaverTab />}
+      {tab === "widgets" && <WidgetsTab />}
+      {tab === "storage" && <StorageTab />}
       {tab === "about" && <AboutTab />}
     </div>
   )
@@ -617,6 +1188,14 @@ function AppearanceTab() {
   const cycleAccent = useStore((s) => s.cycleAccent)
   const showHotkeys = useOSSettings((s) => s.showHotkeys)
   const setShowHotkeys = useOSSettings((s) => s.setShowHotkeys)
+  const soundEnabled = useOSSettings((s) => s.soundEnabled)
+  const setSoundEnabled = useOSSettings((s) => s.setSoundEnabled)
+  const soundVolume = useOSSettings((s) => s.soundVolume)
+  const setSoundVolume = useOSSettings((s) => s.setSoundVolume)
+  const soundEvents = useOSSettings((s) => s.soundEvents)
+  const setSoundEvent = useOSSettings((s) => s.setSoundEvent)
+  const doubleClickToOpen = useOSSettings((s) => s.doubleClickToOpen)
+  const setDoubleClickToOpen = useOSSettings((s) => s.setDoubleClickToOpen)
 
   return (
     <div className={explorer.props}>
@@ -650,6 +1229,41 @@ function AppearanceTab() {
         />
         Show the shortcut list on the desktop (F1)
       </label>
+      <label className={explorer.radioRow}>
+        <input type="checkbox" checked={doubleClickToOpen} onChange={(e) => setDoubleClickToOpen(e.target.checked)} />
+        Double-click desktop and Explorer items to open
+      </label>
+
+      <label className={explorer.radioRow}>
+        <input type="checkbox" checked={soundEnabled} onChange={(e) => setSoundEnabled(e.target.checked)} />
+        Use quiet system sounds
+      </label>
+      <label className={explorer.field}>
+        <span>System sound volume — {Math.round(soundVolume * 100)}%</span>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(soundVolume * 100)}
+          disabled={!soundEnabled}
+          onChange={(e) => setSoundVolume(Number(e.target.value) / 100)}
+          onPointerUp={() => { if (soundEvents?.notify) playOSSound("notify", soundVolume) }}
+        />
+      </label>
+      <div className={styles.soundEvents}>
+        {(["startup", "open", "close", "notify"] as const).map((sound) => (
+          <label className={explorer.radioRow} key={sound}>
+            <input
+              type="checkbox"
+              checked={soundEvents?.[sound] ?? false}
+              disabled={!soundEnabled}
+              onChange={(event) => setSoundEvent(sound, event.target.checked)}
+            />
+            {sound === "startup" ? "Startup" : sound === "notify" ? "Notification / test" : `Window ${sound}`}
+            <button type="button" className={explorer.button} disabled={!soundEnabled} onClick={() => playOSSound(sound, soundVolume)}>Test</button>
+          </label>
+        ))}
+      </div>
     </div>
   )
 }
@@ -657,6 +1271,10 @@ function AppearanceTab() {
 function StartupTab() {
   const bootSequence = useOSSettings((s) => s.bootSequence)
   const setBootSequence = useOSSettings((s) => s.setBootSequence)
+  const openWelcome = useOSSettings((s) => s.openWelcome)
+  const setOpenWelcome = useOSSettings((s) => s.setOpenWelcome)
+  const showLogon = useOSSettings((s) => s.showLogon)
+  const setShowLogon = useOSSettings((s) => s.setShowLogon)
 
   const OPTIONS: { id: BootSequence; label: string; desc: string }[] = [
     { id: "off", label: "Straight to the desktop", desc: "No sequence. Fastest." },
@@ -705,6 +1323,15 @@ function StartupTab() {
         Replay boot now
       </button>
 
+      <label className={explorer.radioRow}>
+        <input type="checkbox" checked={openWelcome} onChange={(e) => setOpenWelcome(e.target.checked)} />
+        Open Subsurface Territories after logon
+      </label>
+      <label className={explorer.radioRow}>
+        <input type="checkbox" checked={showLogon} onChange={(e) => setShowLogon(e.target.checked)} />
+        Show account / guest choice when this machine starts
+      </label>
+
       <p className={styles.runHint}>
         The sequence is seeded — append <code>?seed=WORD</code> to the URL and it boots the same
         way every time.
@@ -718,6 +1345,8 @@ function SaverTab() {
   const setEnabled = useOSSettings((s) => s.setSaverEnabled)
   const delay = useOSSettings((s) => s.saverDelay)
   const setDelay = useOSSettings((s) => s.setSaverDelay)
+  const saverMode = useOSSettings((s) => s.saverMode)
+  const setSaverMode = useOSSettings((s) => s.setSaverMode)
 
   return (
     <div className={explorer.props}>
@@ -725,16 +1354,25 @@ function SaverTab() {
         <span>Screen saver</span>
         <select
           className={explorer.select}
-          value={enabled ? "constellation" : "none"}
-          onChange={(e) => setEnabled(e.target.value !== "none")}
+          value={enabled ? saverMode : "none"}
+          onChange={(e) => {
+            const value = e.target.value
+            setEnabled(value !== "none")
+            if (value !== "none") setSaverMode(value as ScreenSaverMode)
+          }}
         >
           <option value="none">(None)</option>
           <option value="constellation">CONSTELLATION.SCR</option>
+          {BG_MODES.map((mode) => (
+            <option key={mode} value={mode}>{BG_META[mode].label.toUpperCase()}.SCR</option>
+          ))}
         </select>
       </label>
 
       <p className={explorer.desc}>
-        The garden's own knowledge graph. The screen saver is made of your notes.
+        {saverMode === "constellation"
+          ? "The garden's own knowledge graph. The screen saver is made of your notes."
+          : "The selected ambient wallpaper takes over while the desktop rests."}
       </p>
 
       <label className={explorer.field}>
@@ -756,9 +1394,213 @@ function SaverTab() {
   )
 }
 
+function WidgetsTab() {
+  const show = useOSSettings((state) => state.showWidgets)
+  const setShow = useOSSettings((state) => state.setShowWidgets)
+  const network = useOSSettings((state) => state.networkWidgetsEnabled)
+  const setNetwork = useOSSettings((state) => state.setNetworkWidgetsEnabled)
+  const weather = useOSSettings((state) => state.weatherEnabled)
+  const setWeather = useOSSettings((state) => state.setWeatherEnabled)
+  const location = useOSSettings((state) => state.weatherLocation)
+  const setLocation = useOSSettings((state) => state.setWeatherLocation)
+  const customFeeds = useOSSettings((state) => state.customFeeds)
+  const addCustomFeeds = useOSSettings((state) => state.addCustomFeeds)
+  const removeCustomFeed = useOSSettings((state) => state.removeCustomFeed)
+  const [locationStatus, setLocationStatus] = useState<string | null>(null)
+  const [feedTitle, setFeedTitle] = useState("")
+  const [feedUrl, setFeedUrl] = useState("")
+  const [feedStatus, setFeedStatus] = useState<string | null>(null)
+  const opmlRef = useRef<HTMLInputElement>(null)
+
+  const locate = () => {
+    if (!navigator.geolocation) { setLocationStatus("This browser does not provide location access."); return }
+    setLocationStatus("Waiting for browser permission…")
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const approximate = {
+          lat: Number(position.coords.latitude.toFixed(2)),
+          lon: Number(position.coords.longitude.toFixed(2)),
+        }
+        setLocation(approximate)
+        setWeather(true)
+        setLocationStatus("Approximate coordinates saved in this browser. Weather will now use the Worker proxy.")
+      },
+      () => setLocationStatus("Location permission was declined or unavailable."),
+      { enableHighAccuracy: false, maximumAge: 3_600_000, timeout: 10_000 },
+    )
+  }
+
+  return (
+    <div className={explorer.props}>
+      <label className={explorer.radioRow}>
+        <input type="checkbox" checked={show} onChange={(event) => setShow(event.target.checked)} />
+        Show the desktop clock and widgets
+      </label>
+      <p className={explorer.desc}>The clock is local and never makes a network request.</p>
+      <label className={explorer.radioRow}>
+        <input type="checkbox" checked={network} onChange={(event) => setNetwork(event.target.checked)} />
+        Allow network widgets (news and weather)
+      </label>
+      <p className={explorer.desc}>
+        Off by default. When enabled, the Subsurfaces Worker fetches and caches a fixed news feed. It does not receive your identity.
+      </p>
+      <label className={explorer.radioRow}>
+        <input
+          type="checkbox"
+          checked={weather}
+          disabled={!network || !location}
+          onChange={(event) => setWeather(event.target.checked)}
+        />
+        Show local weather
+      </label>
+      <div className={explorer.runRowInline}>
+        <button className={explorer.button} type="button" disabled={!network} onClick={locate}>
+          {location ? "Update approximate location…" : "Choose approximate location…"}
+        </button>
+        {location && (
+          <button className={explorer.button} type="button" onClick={() => { setLocation(null); setWeather(false) }}>
+            Forget location
+          </button>
+        )}
+      </div>
+      {location && <p className={explorer.desc}>Stored locally as {location.lat.toFixed(2)}, {location.lon.toFixed(2)} (roughly 1 km precision).</p>}
+      {locationStatus && <p className={explorer.desc} role="status">{locationStatus}</p>}
+      <div className={styles.settingsRule} />
+      <strong>Custom feeds</strong>
+      <p className={explorer.desc}>
+        Add an RSS/Atom URL or import an OPML subscription list. Custom feeds are requested directly by this browser, only while network widgets are enabled; a publisher may see your IP, and feeds without browser CORS permission will show as unavailable.
+      </p>
+      <div className={styles.feedAdd}>
+        <input className={explorer.select} value={feedTitle} onChange={(event) => setFeedTitle(event.target.value)} placeholder="Feed name" aria-label="Feed name" />
+        <input className={explorer.select} value={feedUrl} onChange={(event) => setFeedUrl(event.target.value)} placeholder="https://example.com/feed.xml" aria-label="Feed URL" />
+        <button className={explorer.button} type="button" onClick={() => {
+          const added = addCustomFeeds([{ title: feedTitle, url: feedUrl }])
+          setFeedStatus(added ? "Feed added." : "Enter a new HTTP or HTTPS feed URL.")
+          if (added) { setFeedTitle(""); setFeedUrl("") }
+        }}>Add</button>
+        <button className={explorer.button} type="button" onClick={() => opmlRef.current?.click()}>Import OPML…</button>
+        <input
+          ref={opmlRef}
+          type="file"
+          accept=".opml,.xml,text/xml,application/xml"
+          hidden
+          onChange={async (event) => {
+            const file = event.target.files?.[0]
+            if (!file) return
+            try {
+              const document = new DOMParser().parseFromString(await file.text(), "application/xml")
+              if (document.querySelector("parsererror")) throw new Error("Invalid XML")
+              const candidates = [...document.querySelectorAll("outline[xmlUrl]")].map((node) => ({
+                title: node.getAttribute("title") || node.getAttribute("text") || "Untitled feed",
+                url: node.getAttribute("xmlUrl") || "",
+              }))
+              const added = addCustomFeeds(candidates)
+              setFeedStatus(added ? `Imported ${added} feed${added === 1 ? "" : "s"}.` : "No new feed URLs were found in that file.")
+            } catch {
+              setFeedStatus("That file is not a readable OPML subscription list.")
+            }
+            event.target.value = ""
+          }}
+        />
+      </div>
+      {customFeeds.length > 0 && (
+        <div className={styles.feedList}>
+          {customFeeds.map((feed) => (
+            <div key={feed.id}><span><strong>{feed.title}</strong><small>{feed.url}</small></span><button className={explorer.button} type="button" onClick={() => removeCustomFeed(feed.id)}>Remove</button></div>
+          ))}
+        </div>
+      )}
+      {feedStatus && <p className={explorer.desc} role="status">{feedStatus}</p>}
+      <p className={styles.runHint}>Drag widgets by their small heading. Right-click any widget to return here.</p>
+    </div>
+  )
+}
+
+function StorageTab() {
+  const files = useOSFiles((s) => s.files)
+  const folders = useOSFiles((s) => s.folders)
+  const importArchive = useOSFiles((s) => s.importArchive)
+  const clearFiles = useOSFiles((s) => s.clearFiles)
+  const resetDesktopOrder = useOSSettings((s) => s.resetDesktopOrder)
+  const bytes = new Blob([JSON.stringify(files)]).size
+  const importRef = useRef<HTMLInputElement>(null)
+  const [storageEstimate, setStorageEstimate] = useState<{ usage: number; quota: number } | null>(null)
+  const [importStatus, setImportStatus] = useState<string | null>(null)
+
+  useEffect(() => {
+    navigator.storage?.estimate().then((estimate) => {
+      if (estimate.usage != null && estimate.quota != null) {
+        setStorageEstimate({ usage: estimate.usage, quota: estimate.quota })
+      }
+    }).catch(() => undefined)
+  }, [])
+
+  const download = () => {
+    const blob = new Blob([JSON.stringify({ version: 2, files, folders }, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    anchor.download = "subsurfaces95-files.json"
+    anchor.click()
+    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  }
+
+  return (
+    <div className={explorer.props}>
+      <p className={explorer.desc}>
+        This machine remembers preferences, desktop placement, widget choices, local Notepad files, and your music position in this browser. Open windows remain session-only.
+      </p>
+      <table className={explorer.aboutTable}>
+        <tbody>
+          <tr><td>Local documents</td><td>{files.length}</td></tr>
+          <tr><td>Local folders</td><td>{folders.length}</td></tr>
+          <tr><td>Document storage</td><td>{bytes.toLocaleString()} bytes</td></tr>
+          {storageEstimate && <tr><td>Browser storage</td><td>{(storageEstimate.usage / 1_048_576).toFixed(1)} / {(storageEstimate.quota / 1_048_576).toFixed(0)} MB</td></tr>}
+          <tr><td>Settings key</td><td>subsurfaces95</td></tr>
+          <tr><td>Files key</td><td>subsurfaces95-files</td></tr>
+          <tr><td>Shared music keys</td><td>music-session, music-volume</td></tr>
+        </tbody>
+      </table>
+      <div className={explorer.runRowInline}>
+        <button className={explorer.button} onClick={download} disabled={!files.length}>Export files…</button>
+        <button className={explorer.button} onClick={() => importRef.current?.click()}>Import files…</button>
+        <input
+          ref={importRef}
+          type="file"
+          accept="application/json,.json"
+          hidden
+          onChange={async (event) => {
+            const file = event.target.files?.[0]
+            if (!file) return
+            try {
+              const result = importArchive(JSON.parse(await file.text()))
+              setImportStatus(`Imported ${result.imported}; skipped ${result.skipped}. Name conflicts were preserved as copies.`)
+            } catch {
+              setImportStatus("That file is not a valid SUBSURFACES 95 archive.")
+            }
+            event.target.value = ""
+          }}
+        />
+        <button
+          className={explorer.button}
+          onClick={() => { if (window.confirm("Delete all local Notepad files?")) clearFiles() }}
+          disabled={!files.length}
+        >
+          Delete local files…
+        </button>
+      </div>
+      {importStatus && <p className={explorer.desc}>{importStatus}</p>}
+      <button className={explorer.button} onClick={resetDesktopOrder} style={{ alignSelf: "flex-start" }}>
+        Reset desktop icon order
+      </button>
+    </div>
+  )
+}
+
 function AboutTab() {
   const contentIndex = useStore((s) => s.contentIndex)
   const notes = contentIndex ? Object.keys(contentIndex).length : 0
+  const { username, role } = useAuth()
 
   return (
     <div className={explorer.props}>
@@ -776,7 +1618,7 @@ function AboutTab() {
         <tbody>
           <tr>
             <td>Registered to</td>
-            <td>subsurfaces.net</td>
+            <td>{username ?? "Guest"}{role ? ` (${role})` : ""}</td>
           </tr>
           <tr>
             <td>Documents</td>
@@ -804,29 +1646,369 @@ function AboutTab() {
   )
 }
 
+function MediaVisualizer({ analyser, mode }: { analyser: AnalyserNode | null; mode: "spectrum" | "scope" }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const context = canvas?.getContext("2d")
+    if (!canvas || !context) return
+    let frame = 0
+    const bins = analyser ? new Uint8Array(analyser.frequencyBinCount) : null
+    const draw = () => {
+      frame = requestAnimationFrame(draw)
+      const width = canvas.clientWidth
+      const height = canvas.clientHeight
+      const dpr = Math.min(2, window.devicePixelRatio || 1)
+      const pixelWidth = Math.floor(width * dpr)
+      const pixelHeight = Math.floor(height * dpr)
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth
+        canvas.height = pixelHeight
+      }
+      context.setTransform(dpr, 0, 0, dpr, 0, 0)
+      context.fillStyle = "#080a08"
+      context.fillRect(0, 0, width, height)
+      context.strokeStyle = "rgba(155,208,107,.13)"
+      for (let x = 0; x < width; x += 18) { context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke() }
+      for (let y = 0; y < height; y += 14) { context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke() }
+      if (!analyser || !bins) return
+      context.strokeStyle = "#9bd06b"
+      context.fillStyle = "#9bd06b"
+      if (mode === "scope") {
+        analyser.getByteTimeDomainData(bins)
+        context.beginPath()
+        bins.forEach((value, index) => {
+          const x = index / (bins.length - 1) * width
+          const y = value / 255 * height
+          if (index === 0) context.moveTo(x, y)
+          else context.lineTo(x, y)
+        })
+        context.stroke()
+      } else {
+        analyser.getByteFrequencyData(bins)
+        const bars = Math.min(56, Math.floor(width / 4))
+        for (let index = 0; index < bars; index++) {
+          const bin = Math.floor(Math.pow(index / bars, 1.8) * (bins.length - 1))
+          const barHeight = bins[bin] / 255 * height
+          context.fillRect(index / bars * width, height - barHeight, Math.max(1, width / bars - 1), barHeight)
+        }
+      }
+    }
+    draw()
+    return () => cancelAnimationFrame(frame)
+  }, [analyser, mode])
+  return <canvas ref={canvasRef} className={styles.mediaVisual} aria-label={`${mode} visualisation`} />
+}
+
+function MediaPlayerApp() {
+  const {
+    tracks, currentTrackIndex, currentTrack, isPlaying, currentTime, duration, volume,
+    playTrack, togglePlay, nextTrack, prevTrack, seek, setVolume, analyser,
+    repeatMode, setRepeatMode, playlist, setPlaylist, setPlaylistIndex,
+  } = useMusic()
+  const savedPlaylists = useOSMedia((state) => state.savedPlaylists)
+  const savePlaylist = useOSMedia((state) => state.savePlaylist)
+  const deletePlaylist = useOSMedia((state) => state.deletePlaylist)
+  const [mode, setMode] = useState<"spectrum" | "scope">("spectrum")
+  const [playlistName, setPlaylistName] = useState("Mixtape")
+  const time = (seconds: number) => {
+    if (!Number.isFinite(seconds)) return "0:00"
+    return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`
+  }
+
+  return (
+    <div className={styles.mediaPlayer}>
+      <div className={styles.mediaScreen}>
+        <span>{String(currentTrackIndex + 1).padStart(2, "0")}</span>
+        <strong>{currentTrack?.title ?? "NO TRACK LOADED"}</strong>
+        <span>{time(currentTime)} / {time(duration)}</span>
+      </div>
+      <MediaVisualizer analyser={analyser} mode={mode} />
+      <input type="range" min={0} max={duration || 0} value={currentTime} onChange={(e) => seek(Number(e.target.value))} aria-label="Track position" />
+      <div className={styles.mediaControls}>
+        <button onClick={prevTrack} aria-label="Previous">|◀</button>
+        <button onClick={togglePlay} aria-label={isPlaying ? "Pause" : "Play"}>{isPlaying ? "Ⅱ" : "▶"}</button>
+        <button onClick={nextTrack} aria-label="Next">▶|</button>
+        <button onClick={() => setMode((value) => value === "spectrum" ? "scope" : "spectrum")} aria-label="Change visualisation">{mode === "spectrum" ? "FFT" : "OSC"}</button>
+        <button onClick={() => setRepeatMode(repeatMode === "off" ? "all" : repeatMode === "all" ? "track" : "off")} aria-label="Repeat mode">R:{repeatMode === "track" ? "1" : repeatMode === "all" ? "A" : "-"}</button>
+        <label>VOL <input type="range" min={0} max={100} value={Math.round(volume * 100)} onChange={(e) => setVolume(Number(e.target.value) / 100)} /></label>
+      </div>
+      <div className={styles.mediaMixes}>
+        <input value={playlistName} maxLength={40} onChange={(event) => setPlaylistName(event.target.value)} aria-label="Playlist name" />
+        <button onClick={() => savePlaylist(playlistName, (playlist.length ? playlist : tracks.map((_, index) => index)).flatMap((index) => tracks[index]?.slug ?? []))}>SAVE</button>
+        <select
+          aria-label="Saved playlists"
+          defaultValue=""
+          onChange={(event) => {
+            const name = event.target.value
+            const slugs = savedPlaylists[name]
+            if (!slugs) return
+            setPlaylistName(name)
+            const indices = slugs.map((slug) => tracks.findIndex((track) => track.slug === slug)).filter((index) => index >= 0)
+            setPlaylist(indices)
+            setPlaylistIndex(indices.indexOf(currentTrackIndex))
+          }}
+        >
+          <option value="" disabled>LOAD MIX…</option>
+          {Object.keys(savedPlaylists).map((name) => <option value={name} key={name}>{name}</option>)}
+        </select>
+        <button onClick={() => { if (savedPlaylists[playlistName] && window.confirm(`Delete '${playlistName}'?`)) deletePlaylist(playlistName) }}>DEL</button>
+      </div>
+      <div className={styles.mediaPlaylist}>
+        {tracks.map((track, index) => (
+          <div className={styles.mediaTrack} key={track.slug} data-active={index === currentTrackIndex}>
+            <button onClick={() => playTrack(index)}><span>{String(index + 1).padStart(2, "0")}</span>{track.title}</button>
+            <button title={playlist.includes(index) ? "Remove from queue" : "Add to queue"} onClick={() => setPlaylist(playlist.includes(index) ? playlist.filter((item) => item !== index) : [...playlist, index])}>
+              {playlist.includes(index) ? "−" : "+"}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function TaskManagerApp({ windowId }: AppProps) {
+  const windows = useOS((s) => s.windows)
+  const closeWindow = useOS((s) => s.closeWindow)
+  const focusWindow = useOS((s) => s.focusWindow)
+  return (
+    <div className={explorer.root}>
+      <table className={explorer.table}>
+        <thead><tr><th>Task</th><th>Status</th><th /></tr></thead>
+        <tbody>
+          {windows.map((win) => (
+            <tr key={win.id} className={explorer.row} onDoubleClick={() => focusWindow(win.id)}>
+              <td>{win.title}</td>
+              <td>{win.state === "minimized" ? "Not visible" : "Running"}</td>
+              <td><button className={explorer.button} onClick={() => closeWindow(win.id)}>{win.id === windowId ? "End this task" : "End Task"}</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className={explorer.count}>{windows.length} task(s) · double-click to switch</div>
+    </div>
+  )
+}
+
+function AccountApp() {
+  const auth = useAuth()
+  const openWindow = useOS((s) => s.openWindow)
+  const [mode, setMode] = useState<"login" | "signup" | "recover">("login")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [newUsername, setNewUsername] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const redirectOrigin = "https://wiki.subsurfaces.net"
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setSubmitting(true)
+    setMessage(null)
+    const result = mode === "signup"
+      ? await auth.signUp(email.trim(), newUsername.trim(), password, redirectOrigin)
+      : mode === "recover"
+        ? await auth.resetPassword(email.trim(), redirectOrigin)
+        : await auth.signInWithPassword(email.trim(), password)
+    setSubmitting(false)
+    setMessage(result.error ?? (mode === "signup"
+      ? "Account created. Check your email, then return here to log on."
+      : mode === "recover" ? "Password reset instructions sent." : "Logged on."))
+  }
+
+  const usernameValid = /^[a-zA-Z0-9-]{3,30}$/.test(newUsername)
+
+  if (auth.loading) return <div className={explorer.empty}>Contacting the domain controller…</div>
+  if (!auth.session) {
+    return (
+      <form className={explorer.props} onSubmit={submit}>
+        <div className={explorer.aboutHead}>
+          <OSIcon name="computer" size={42} />
+          <div><strong>Log On to Subsurfaces</strong><p className={explorer.desc}>One account for wiki, chat and this machine.</p></div>
+        </div>
+        <div className={explorer.runRowInline}>
+          <button type="button" className={explorer.button} onClick={() => { setMode("login"); setMessage(null) }}>Log on</button>
+          <button type="button" className={explorer.button} onClick={() => { setMode("signup"); setMessage(null) }}>Create account</button>
+          <button type="button" className={explorer.button} onClick={() => { setMode("recover"); setMessage(null) }}>Forgot password</button>
+        </div>
+        {mode === "signup" && (
+          <label className={explorer.field}>User name<input className={explorer.select} value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required /></label>
+        )}
+        <label className={explorer.field}>Email<input className={explorer.select} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
+        {mode !== "recover" && (
+          <label className={explorer.field}>Password<input className={explorer.select} type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
+        )}
+        {mode === "signup" && newUsername && !usernameValid && <p className={explorer.desc}>Use 3–30 letters, numbers or hyphens.</p>}
+        {message && <p className={explorer.desc} role="status">{message}</p>}
+        <button className={explorer.button} disabled={submitting || (mode === "signup" && !usernameValid)}>
+          {submitting ? "Please wait…" : mode === "signup" ? "Create Account" : mode === "recover" ? "Send Reset Link" : "Log On"}
+        </button>
+      </form>
+    )
+  }
+
+  return (
+    <div className={explorer.props}>
+      <div className={explorer.aboutHead}>
+        <OSIcon name="computer" size={42} />
+        <div><strong>{auth.username ?? auth.session.user.email ?? "User"}</strong><p className={explorer.desc}>{auth.role ?? "local session"}</p></div>
+      </div>
+      <p className={explorer.desc}>
+        Your Subsurfaces account follows you across the garden, wiki, chat, and this machine.
+      </p>
+      <button className={explorer.button} onClick={() => openWindow({ appId: "profile", args: {}, title: "My Subsurfaces Profile", w: 760, h: 610 })}>Open profile and account settings…</button>
+      <button className={explorer.button} onClick={() => auth.claimed_slug
+        ? openWindow({ appId: "browser", args: { slug: auth.claimed_slug }, title: "My Wiki Page", w: 740, h: 570 })
+        : openWindow({ appId: "newpage", args: {}, title: "Create a Wiki Page", w: 760, h: 620 })}
+      >{auth.claimed_slug ? "Open my wiki page…" : "Create my wiki page…"}</button>
+      {auth.role === "admin" && (
+        <button className={explorer.button} onClick={() => openWindow({ appId: "owner", args: {}, title: "Owner Workstation", w: 780, h: 580 })}>Open owner workstation…</button>
+      )}
+      <button className={explorer.button} onClick={() => void auth.signOut()}>Log off</button>
+    </div>
+  )
+}
+
+function OwnerApp() {
+  return <div className={styles.ownerHost} data-wiki><WikiAdminPage /></div>
+}
+
+function ProfileApp() {
+  return <div className={styles.ownerHost} data-wiki><WikiProfilePage /></div>
+}
+
+function NewPageApp() {
+  return <div className={styles.ownerHost} data-wiki><WikiNewPage /></div>
+}
+
+function EditPageApp({ args }: AppProps) {
+  return <div className={styles.ownerHost} data-wiki><WikiEditPage slug={args.slug} /></div>
+}
+
+function MessengerApp() {
+  const auth = useAuth()
+  const openWindow = useOS((s) => s.openWindow)
+  const [rooms, setRooms] = useState<ChatRoomType[]>([])
+  const [room, setRoom] = useState<ChatRoomType | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    if (!auth.session) return
+    try {
+      const result = await apiGet<{ rooms: ChatRoomType[] }>("/api/chat/rooms", { token: auth.session.access_token })
+      const active = (result.rooms ?? []).filter((candidate) => !candidate.archived)
+      setRooms(active)
+      setRoom((current) => active.find((candidate) => candidate.id === current?.id) ?? active.find((candidate) => candidate.name === "general") ?? active[0] ?? null)
+      setError(null)
+    } catch {
+      setError("The chat service could not be reached.")
+    }
+  }, [auth.session])
+
+  useEffect(() => { void refresh() }, [refresh])
+
+  if (auth.loading) return <div className={explorer.empty}>Dialling chat.subsurfaces.net…</div>
+  if (!auth.session) {
+    return (
+      <div className={explorer.props}>
+        <p>Messenger uses your Subsurfaces account.</p>
+        <button className={explorer.button} onClick={() => openWindow({ appId: "account", args: {}, title: "Log On to Subsurfaces", w: 470, h: 500 })}>Log on or create an account…</button>
+      </div>
+    )
+  }
+  if (error) return <div className={explorer.error}>{error}<button className={explorer.button} onClick={() => void refresh()}>Retry</button></div>
+  if (!room) return <div className={explorer.empty}>No active chat rooms.</div>
+
+  return (
+    <div className={styles.messengerHost} data-chat style={{ "--chat-font-scale": 1 } as React.CSSProperties}>
+      <ChatRoom
+        key={room.id}
+        roomId={room.id}
+        roomName={room.name}
+        accessToken={auth.session.access_token}
+        currentUserId={auth.session.user.id}
+        currentUsername={auth.username}
+        currentAvatarUrl={auth.avatar_url}
+        rooms={rooms}
+        onRoomChange={setRoom}
+        onRefreshRooms={() => void refresh()}
+      />
+    </div>
+  )
+}
+
+const closeMenus = (win: OSWindow): OSMenu[] => [{
+  label: "File",
+  items: [{ label: "Close", onSelect: () => useOS.getState().closeWindow(win.id) }],
+}]
+
+const browserMenus = (win: OSWindow): OSMenu[] => [
+  {
+    label: "File",
+    items: [
+      {
+        label: "Open in main site",
+        onSelect: () => window.open(`https://subsurfaces.net/${win.args.slug}`, "_blank", "noopener"),
+        separatorAfter: true,
+      },
+      { label: "Close", onSelect: () => useOS.getState().closeWindow(win.id) },
+    ],
+  },
+  {
+    label: "Edit",
+    items: [{
+      label: win.args.reader === "1" ? "Exit reader mode" : "View in reader mode",
+      onSelect: () => useOS.getState().updateWindowArgs(win.id, { reader: win.args.reader === "1" ? "0" : "1" }),
+    }],
+  },
+  {
+    label: "Help",
+    items: [{ label: "About this document", onSelect: () => useOS.getState().openWindow({ appId: "display", args: {}, title: "Display Properties", w: 470, h: 480 }) }],
+  },
+]
+
+const explorerMenus = (win: OSWindow): OSMenu[] => [
+  {
+    label: "File",
+    items: [
+      {
+        label: "New Text Document",
+        onSelect: () => {
+          const id = useOSFiles.getState().createFile()
+          useOS.getState().openWindow({ appId: "notepad", args: { fileId: id }, title: "Untitled.txt — Notepad", multiInstance: true })
+        },
+        separatorAfter: true,
+      },
+      { label: "Close", onSelect: () => useOS.getState().closeWindow(win.id) },
+    ],
+  },
+  { label: "View", items: [{ label: "Refresh", onSelect: () => useOS.getState().focusWindow(win.id) }] },
+]
+
 // ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
 export const APPS: Record<string, OSApp> = {
+  browser: {
+    icon: "article",
+    defaultSize: { w: 740, h: 570 },
+    menus: browserMenus,
+    Component: BrowserApp,
+  },
   notepad: {
     icon: "doc",
     defaultSize: { w: 600, h: 460 },
-    menus: ["File", "Edit", "Search", "Help"],
+    menus: closeMenus,
     multiInstance: true,
-    Component: DocApp,
-  },
-  wordpad: {
-    icon: "article",
-    defaultSize: { w: 720, h: 560 },
-    menus: ["File", "Edit", "View", "Insert", "Format", "Help"],
-    Component: DocApp,
+    Component: NotepadApp,
   },
   help: {
     icon: "help",
     defaultSize: { w: 560, h: 500 },
-    menus: ["File", "Edit", "Bookmark", "Options", "Help"],
-    Component: DocApp,
+    menus: browserMenus,
+    Component: BrowserApp,
   },
   program: {
     icon: "app",
@@ -836,13 +2018,25 @@ export const APPS: Record<string, OSApp> = {
   explorer: {
     icon: "folder",
     defaultSize: { w: 660, h: 440 },
-    menus: ["File", "Edit", "View", "Help"],
+    menus: explorerMenus,
     Component: ExplorerApp,
+  },
+  find: {
+    icon: "folder",
+    defaultSize: { w: 720, h: 500 },
+    menus: closeMenus,
+    Component: FindApp,
+  },
+  images: {
+    icon: "folder",
+    defaultSize: { w: 700, h: 500 },
+    menus: closeMenus,
+    Component: ImagesApp,
   },
   computer: {
     icon: "computer",
     defaultSize: { w: 460, h: 320 },
-    menus: ["File", "Edit", "View", "Help"],
+    menus: closeMenus,
     Component: ComputerApp,
   },
   prompt: {
@@ -851,17 +2045,32 @@ export const APPS: Record<string, OSApp> = {
     multiInstance: true,
     Component: PromptApp,
   },
+  media: { icon: "music", defaultSize: { w: 540, h: 520 }, menus: closeMenus, Component: MediaPlayerApp },
+  solitaire: { icon: "app", defaultSize: { w: 720, h: 610 }, menus: closeMenus, Component: SolitaireApp },
+  taskmgr: { icon: "computer", defaultSize: { w: 520, h: 360 }, menus: closeMenus, Component: TaskManagerApp },
+  account: { icon: "computer", defaultSize: { w: 470, h: 500 }, menus: closeMenus, Component: AccountApp },
+  owner: { icon: "computer", defaultSize: { w: 780, h: 580 }, menus: closeMenus, Component: OwnerApp },
+  profile: { icon: "computer", defaultSize: { w: 760, h: 610 }, menus: closeMenus, Component: ProfileApp },
+  newpage: { icon: "doc", defaultSize: { w: 760, h: 620 }, menus: closeMenus, Component: NewPageApp },
+  edit: { icon: "doc", defaultSize: { w: 780, h: 640 }, menus: closeMenus, multiInstance: true, Component: EditPageApp },
+  messenger: { icon: "chat", defaultSize: { w: 720, h: 580 }, menus: closeMenus, Component: MessengerApp },
   run: { icon: "app", defaultSize: { w: 420, h: 210 }, Component: RunApp },
+  logoff: { icon: "user", defaultSize: { w: 410, h: 230 }, Component: LogOffApp },
   shutdown: { icon: "computer", defaultSize: { w: 400, h: 250 }, Component: ShutDownApp },
   floppy: { icon: "doc", defaultSize: { w: 420, h: 220 }, Component: FloppyApp },
   bin: {
     icon: "bin",
     defaultSize: { w: 600, h: 380 },
-    menus: ["File", "Edit", "View", "Help"],
+    menus: closeMenus,
     Component: BinApp,
   },
-  display: { icon: "display", defaultSize: { w: 470, h: 480 }, Component: DisplayApp },
+  display: { icon: "display", defaultSize: { w: 500, h: 520 }, menus: closeMenus, Component: DisplayApp },
 }
+
+export const CORE_PROGRAM_MENU = [
+  { appId: "solitaire", title: "Solitaire" },
+  { appId: "messenger", title: "Subsurfaces Messenger" },
+]
 
 /** System pages worth surfacing under Start → Programs. */
 export const PROGRAM_MENU = Object.entries(SYSTEM_PAGE_META)

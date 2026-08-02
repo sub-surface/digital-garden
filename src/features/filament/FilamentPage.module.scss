@@ -11,6 +11,15 @@
   font-family: var(--font-code);
 }
 
+.simulation[data-embedded="true"] {
+  height: 100%;
+
+  .parameterPanel,
+  .diagnosticsPanel {
+    max-height: calc(100% - 5rem);
+  }
+}
+
 .stage {
   position: absolute;
   inset: 0;

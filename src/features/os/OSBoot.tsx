@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { mixSeed, resolveSeed } from "@/features/boot/bootSeed"
+import { mixSeed, persistResolvedSeed, resolveSeed } from "@/features/boot/bootSeed"
 import { useBootPlayback } from "@/features/boot/useBootPlayback"
 import styles from "./OS.module.scss"
 
@@ -97,10 +97,14 @@ export function OSBoot({ onComplete, variant = "post" }: Props) {
 const FULL_BOOT_EVENTS = 46
 
 function FullBoot({ onComplete }: { onComplete: () => void }) {
-  const seedInfo = useMemo(() => resolveSeed(), [])
+  const seedInfo = useMemo(() => resolveSeed({ persist: false }), [])
   const doneRef = useRef(false)
   const completeRef = useRef(onComplete)
   completeRef.current = onComplete
+
+  useEffect(() => {
+    persistResolvedSeed(seedInfo.value, seedInfo.source, "replace")
+  }, [seedInfo])
 
   const reduced = useMemo(
     () =>
@@ -153,7 +157,7 @@ function FullBoot({ onComplete }: { onComplete: () => void }) {
 }
 
 function PostBoot({ onComplete }: { onComplete: () => void }) {
-  const seedInfo = useMemo(() => resolveSeed(), [])
+  const seedInfo = useMemo(() => resolveSeed({ persist: false }), [])
   const label = useMemo(() => urlSeedLabel(), [])
   const script = useMemo(() => buildScript(seedInfo.value, label), [seedInfo.value, label])
 
@@ -161,6 +165,10 @@ function PostBoot({ onComplete }: { onComplete: () => void }) {
   const doneRef = useRef(false)
   const completeRef = useRef(onComplete)
   completeRef.current = onComplete
+
+  useEffect(() => {
+    persistResolvedSeed(seedInfo.value, seedInfo.source, "replace")
+  }, [seedInfo])
 
   const reduced = useMemo(
     () =>

@@ -182,7 +182,15 @@ export function canonicalSeedUrl(seed: number): string {
  * An explicit but invalid URL seed generates a fresh seed instead of silently
  * falling back to a previous browser session.
  */
-export function resolveSeed(): ResolvedSeed {
+export interface ResolveSeedOptions {
+  /**
+   * Canonicalising calls history.replaceState, which must never happen during
+   * React render. Renderers resolve purely, then persist from an effect.
+   */
+  persist?: boolean
+}
+
+export function resolveSeed({ persist = true }: ResolveSeedOptions = {}): ResolvedSeed {
   if (!hasWindow()) {
     const value = NON_ZERO_FALLBACK
     return { source: "fallback", value, display: formatSeed(value) }
@@ -215,5 +223,7 @@ export function resolveSeed(): ResolvedSeed {
     }
   }
 
-  return persistResolvedSeed(value, source, "replace")
+  return persist
+    ? persistResolvedSeed(value, source, "replace")
+    : { source, value: normalizeSeed(value), display: formatSeed(value) }
 }

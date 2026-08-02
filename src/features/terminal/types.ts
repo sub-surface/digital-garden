@@ -13,7 +13,7 @@ import type { BootTone } from "@/features/boot/bootTypes"
 export type Tone = BootTone
 
 /** Where the terminal is mounted. The only thing commands branch on. */
-export type Surface = "page" | "window"
+export type Surface = "page" | "window" | "overlay"
 
 /** A garden note as the terminal sees it. */
 export interface TerminalNote {
@@ -49,6 +49,8 @@ export interface TerminalContext {
   /** Convenience for multi-line output; blank strings are legal spacers. */
   printLines: (lines: string[], tone?: Tone) => void
   clear: () => void
+  /** Replace recent output in-place for small animations instead of dumping frames. */
+  replaceLastLines: (count: number, lines: string[], tone?: Tone) => void
 
   history: () => readonly string[]
   notes: () => readonly TerminalNote[]
@@ -105,5 +107,7 @@ export interface TerminalCommand {
   group: CommandGroup
   help: CommandHelp
   requireRole?: "admin" | "editor"
+  /** Full argument-string candidates. The terminal owns cycling and insertion. */
+  complete?: (ctx: TerminalContext, value: string) => readonly string[]
   run: (ctx: TerminalContext, args: string[]) => void | Promise<void>
 }

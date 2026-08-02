@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useStore } from "@/store"
 import styles from "./HexLifePage.module.scss"
+import { useProgramHost } from "./ProgramHostContext"
 
 /**
  * Hex Life — a fullscreen cellular-automaton playground on a hexagonal grid
@@ -54,21 +55,24 @@ export function HexLifePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const navigate = useNavigate()
   const popCard = useStore((s) => s.popCard)
+  const programHost = useProgramHost()
 
   // Close the fullscreen toy: pop the panel card it opened in, or (on the
   // dedicated /hex-life route, where there's no card) go back to the arcade.
   const close = useCallback(() => {
+    if (programHost.close) return programHost.close()
     const stack = useStore.getState().panelStack
     if (stack.length > 0) popCard()
     else navigate({ to: "/$", params: { _splat: "arcade" } as any })
-  }, [popCard, navigate])
+  }, [popCard, navigate, programHost])
 
   // Esc closes too.
   useEffect(() => {
+    if (programHost.embedded) return
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close() }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [close])
+  }, [close, programHost.embedded])
 
   // grid dimensions scale with cell size; stored in refs so the sim loop reads live values
   const colsRef = useRef(0)
@@ -375,7 +379,7 @@ export function HexLifePage() {
   }, [allocGrid])
 
   return (
-    <div className={styles.fsRoot}>
+    <div className={styles.fsRoot} data-embedded={programHost.embedded || undefined}>
       <canvas ref={canvasRef} className={styles.canvas} />
 
       <button

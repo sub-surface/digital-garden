@@ -4,7 +4,7 @@ export function addSecurityHeaders(headers: Headers) {
     "default-src 'self'",
     "script-src 'self' https://challenges.cloudflare.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
     // wss: — Supabase Realtime connects over WebSocket; https: alone blocks it
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",

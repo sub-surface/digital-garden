@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useStore, BG_MODES } from "@/store"
 import type { NoteMetadata } from "@/types/content"
-import { useOS, useOSSettings, focusedWindowId } from "./osStore"
+import { useOS, useOSFiles, useOSSettings, focusedWindowId } from "./osStore"
 import { APPS, useOpenNote } from "./apps"
 import { WindowFrame } from "./WindowFrame"
 import { Taskbar, TASKBAR_H, type MenuTarget } from "./Taskbar"
 import { OSIcon, type IconName } from "./OSIcon"
 import { ContextMenu } from "./ContextMenu"
+import { DesktopWidgets } from "./DesktopWidgets"
 import { useOSLinks } from "./useOSLinks"
 import styles from "./OS.module.scss"
 
@@ -23,9 +24,15 @@ interface Shortcut extends MenuTarget {
 const SHORTCUTS: Shortcut[] = [
   { id: "computer", label: "My Computer", icon: "computer", kind: "app", target: "computer", title: "My Computer" },
   { id: "garden", label: "C:\\GARDEN", icon: "folder", kind: "app", target: "explorer", title: "C:\\GARDEN" },
+  { id: "home", label: "My Documents", icon: "folder", kind: "app", target: "explorer", title: "My Documents", args: { drive: "home" } },
+  { id: "images", label: "Images", icon: "folder", kind: "app", target: "images", title: "Images" },
+  { id: "notepad", label: "Notepad", icon: "doc", kind: "app", target: "notepad", title: "Untitled.txt — Notepad" },
   { id: "readme", label: "README.TXT", icon: "doc", kind: "note", target: "i-didnt-read" },
   { id: "readme1st", label: "README.1ST", icon: "doc", kind: "note", target: "readme-1st" },
   { id: "prompt", label: "MS-DOS Prompt", icon: "terminal", kind: "app", target: "prompt", title: "MS-DOS Prompt" },
+  { id: "media", label: "Media Player", icon: "music", kind: "app", target: "media", title: "Subsurfaces Media Player" },
+  { id: "messenger", label: "Messenger", icon: "chat", kind: "app", target: "messenger", title: "Subsurfaces Messenger" },
+  { id: "solitaire", label: "Solitaire", icon: "app", kind: "app", target: "solitaire", title: "Solitaire" },
   { id: "bin", label: "Recycle Bin", icon: "bin", kind: "app", target: "bin", title: "Recycle Bin" },
   { id: "constellation", label: "CONSTELLATION", icon: "graph", kind: "note", target: "graph" },
   { id: "display", label: "Display", icon: "display", kind: "app", target: "display", title: "Display Properties" },
@@ -53,8 +60,19 @@ export function Desktop() {
   const contentIndex = useStore((s) => s.contentIndex)
   const openNote = useOpenNote()
   const viewport = useViewport()
-  const [selected, setSelected] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string[]>([])
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const desktopOrder = useOSSettings((s) => s.desktopOrder)
+  const desktopPositions = useOSSettings((s) => s.desktopPositions)
+  const setDesktopPosition = useOSSettings((s) => s.setDesktopPosition)
+  const setDesktopPositions = useOSSettings((s) => s.setDesktopPositions)
+  const resetDesktopOrder = useOSSettings((s) => s.resetDesktopOrder)
+  const openWelcome = useOSSettings((s) => s.openWelcome)
+  const draggedIcon = useRef<string | null>(null)
+  const iconGridRef = useRef<HTMLDivElement>(null)
+  const marqueeStart = useRef<{ x: number; y: number } | null>(null)
+  const welcomedRef = useRef(false)
 
   const bounds = useMemo(
     () => ({ width: viewport.width, height: viewport.height, bottomInset: TASKBAR_H }),
@@ -62,6 +80,33 @@ export function Desktop() {
   )
 
   const focused = focusedWindowId(windows)
+  const orderedShortcuts = useMemo(() => {
+    if (!desktopOrder.length) return SHORTCUTS
+    const rank = new Map(desktopOrder.map((id, index) => [id, index]))
+    return [...SHORTCUTS].sort((a, b) =>
+      (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+    )
+  }, [desktopOrder])
+  const gridRows = Math.max(1, Math.floor((viewport.height - TASKBAR_H - 16) / 88))
+  const gridCols = Math.max(1, Math.floor((viewport.width - 16) / 80))
+  const iconPosition = useCallback((id: string, index: number) => {
+    const stored = desktopPositions[id]
+    return stored
+      ? { col: Math.min(gridCols, Math.max(1, stored.col)), row: Math.min(gridRows, Math.max(1, stored.row)) }
+      : { col: Math.floor(index / gridRows) + 1, row: (index % gridRows) + 1 }
+  }, [desktopPositions, gridCols, gridRows])
+  const moveIcon = useCallback((id: string, col: number, row: number) => {
+    const next = { ...desktopPositions }
+    const fromIndex = orderedShortcuts.findIndex((shortcut) => shortcut.id === id)
+    const from = iconPosition(id, fromIndex)
+    const target = orderedShortcuts.find((shortcut, index) => {
+      const position = iconPosition(shortcut.id, index)
+      return shortcut.id !== id && position.col === col && position.row === row
+    })
+    next[id] = { col, row }
+    if (target) next[target.id] = from
+    setDesktopPositions(next)
+  }, [desktopPositions, iconPosition, orderedShortcuts, setDesktopPositions])
 
   const openShortcut = useCallback(
     (shortcut: MenuTarget) => {
@@ -85,10 +130,9 @@ export function Desktop() {
         openNote(note)
       } else {
         openWindow({
-          appId: "notepad",
+          appId: "browser",
           args: { slug: shortcut.target },
           title: shortcut.label,
-          multiInstance: true,
         })
       }
     },
@@ -119,6 +163,20 @@ export function Desktop() {
 
   useOSLinks(openSlug)
 
+  useEffect(() => {
+    if (!openWelcome || welcomedRef.current || !contentIndex?.index) return
+    welcomedRef.current = true
+    const note = contentIndex.index
+    openWindow({
+      appId: "browser",
+      args: { slug: note.slug },
+      title: `${note.title} — ${note.slug.toUpperCase()}.TXT`,
+      w: 740,
+      h: 570,
+      silent: true,
+    })
+  }, [contentIndex, openWelcome, openWindow])
+
   // Global hotkeys. Bare-letter bindings must never fire while the user is
   // typing — the terminal, the Run box and the search overlay all live here.
   useEffect(() => {
@@ -126,12 +184,15 @@ export function Desktop() {
       const el = target as HTMLElement | null
       if (!el) return false
       const tag = el.tagName
-      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable
+      if (el.isContentEditable) return true
+      if (tag === "TEXTAREA" || tag === "SELECT") return true
+      if (tag === "INPUT") return !(el as HTMLInputElement).readOnly
+      return false
     }
 
     const onKey = (e: KeyboardEvent) => {
       // Ctrl+P — the terminal, one keystroke away, anywhere in the OS.
-      if (e.ctrlKey && !e.shiftKey && (e.key === "p" || e.key === "P")) {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "p" || e.key === "P")) {
         e.preventDefault()
         const app = APPS.prompt
         openWindow({
@@ -163,26 +224,37 @@ export function Desktop() {
         }
       }
 
-      if (e.ctrlKey && e.key === "Escape") {
+      if (e.key === "Backspace" && !isTyping(e.target)) {
         e.preventDefault()
-        setStartOpen(!useOS.getState().isStartOpen)
         return
       }
-      if (e.altKey && e.key === "Tab") {
+
+      // Ctrl+` is deliberately scoped to this page: a compact in-machine task
+      // switcher that does not steal Alt+Tab from the reader's real desktop.
+      if ((e.ctrlKey || e.metaKey) && e.key === "`") {
         e.preventDefault()
         const state = useOS.getState()
-        const visible = state.windows.filter((w) => w.state !== "minimized")
-        if (visible.length < 2) return
-        // Focus the *lowest* window — repeated presses walk the whole stack.
-        const bottom = visible.reduce((low, w) => (w.z < low.z ? w : low))
-        state.focusWindow(bottom.id)
+        const ordered = [...state.windows].sort((a, b) => b.z - a.z)
+        if (!ordered.length) return
+        const current = focusedWindowId(ordered)
+        const index = Math.max(0, ordered.findIndex((win) => win.id === current))
+        const next = ordered[(index + 1) % ordered.length]
+        if (next.state === "minimized") state.toggleMinimize(next.id)
+        state.focusWindow(next.id)
         return
       }
-      if (e.altKey && e.key === "F4") {
+
+      if (e.key === "Escape") {
+        // Embedded programs get first refusal: zen modes and control sheets use
+        // Escape internally and call preventDefault before this window handler.
+        if (e.defaultPrevented) return
+        const overlays = useStore.getState()
+        if (overlays.isSearchOpen || overlays.isCheatSheetOpen || overlays.isThemePanelOpen) return
         e.preventDefault()
         const state = useOS.getState()
         const top = focusedWindowId(state.windows)
         if (top) state.closeWindow(top)
+        else state.setStartOpen(false)
       }
     }
 
@@ -198,10 +270,21 @@ export function Desktop() {
           y={menu.y}
           onClose={() => setMenu(null)}
           entries={[
-            { label: "Arrange Icons", disabled: true },
-            { label: "Line up Icons", disabled: true, separatorAfter: true },
+            {
+              label: useOSSettings.getState().showWidgets ? "Hide Desktop Widgets" : "Show Desktop Widgets",
+              onClick: () => useOSSettings.getState().setShowWidgets(!useOSSettings.getState().showWidgets),
+            },
+            { label: "Arrange Icons", onClick: resetDesktopOrder },
+            { label: "Line up Icons", onClick: resetDesktopOrder, separatorAfter: true },
             { label: "Refresh", onClick: () => window.location.reload(), separatorAfter: true },
-            { label: "New", disabled: true, separatorAfter: true },
+            {
+              label: "New Text Document",
+              onClick: () => {
+                const id = useOSFiles.getState().createFile()
+                openWindow({ appId: "notepad", args: { fileId: id }, title: "Untitled.txt — Notepad", multiInstance: true })
+              },
+              separatorAfter: true,
+            },
             {
               label: "Properties",
               onClick: () =>
@@ -224,27 +307,93 @@ export function Desktop() {
         onPointerDown={(e) => {
           // A press on the desktop itself clears selection and dismisses Start.
           if (e.target === e.currentTarget) {
-            setSelected(null)
+            setSelected([])
             setStartOpen(false)
+            if (e.button === 0) {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const start = { x: e.clientX - rect.left, y: e.clientY - rect.top }
+              marqueeStart.current = start
+              setMarquee({ ...start, w: 0, h: 0 })
+              e.currentTarget.setPointerCapture(e.pointerId)
+            }
           }
         }}
+        onPointerMove={(e) => {
+          const start = marqueeStart.current
+          if (!start) return
+          const rect = e.currentTarget.getBoundingClientRect()
+          const x = e.clientX - rect.left
+          const y = e.clientY - rect.top
+          setMarquee({ x: Math.min(start.x, x), y: Math.min(start.y, y), w: Math.abs(x - start.x), h: Math.abs(y - start.y) })
+        }}
+        onPointerUp={(e) => {
+          const box = marquee
+          marqueeStart.current = null
+          setMarquee(null)
+          if (!box || (box.w < 4 && box.h < 4)) return
+          const hits = orderedShortcuts.filter((shortcut, index) => {
+            const position = iconPosition(shortcut.id, index)
+            const icon = { x: 8 + (position.col - 1) * 80, y: 8 + (position.row - 1) * 88, w: 76, h: 84 }
+            return icon.x < box.x + box.w && icon.x + icon.w > box.x && icon.y < box.y + box.h && icon.y + icon.h > box.y
+          }).map((shortcut) => shortcut.id)
+          setSelected(hits)
+          e.currentTarget.releasePointerCapture(e.pointerId)
+        }}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          const id = draggedIcon.current
+          const grid = iconGridRef.current
+          if (!id || !grid) return
+          e.preventDefault()
+          const rect = grid.getBoundingClientRect()
+          const col = Math.min(gridCols, Math.max(1, Math.floor((e.clientX - rect.left) / 80) + 1))
+          const row = Math.min(gridRows, Math.max(1, Math.floor((e.clientY - rect.top) / 88) + 1))
+          moveIcon(id, col, row)
+        }}
       >
-        <div className={styles.iconGrid}>
-          {SHORTCUTS.map((shortcut) => (
+        <DesktopWidgets />
+        {marquee && <div className={styles.marquee} style={{ left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h }} />}
+        <div className={styles.iconGrid} ref={iconGridRef}>
+          {orderedShortcuts.map((shortcut, shortcutIndex) => {
+            const position = iconPosition(shortcut.id, shortcutIndex)
+            return (
             <button
               key={shortcut.id}
               className={styles.icon}
-              data-selected={selected === shortcut.id}
-              onClick={() => setSelected(shortcut.id)}
-              onDoubleClick={() => openShortcut(shortcut)}
+              data-selected={selected.includes(shortcut.id)}
+              style={{ gridColumn: position.col, gridRow: position.row }}
+              onClick={(e) => {
+                setSelected([shortcut.id])
+                if (!useOSSettings.getState().doubleClickToOpen && e.detail === 1) openShortcut(shortcut)
+              }}
+              onDoubleClick={() => {
+                if (useOSSettings.getState().doubleClickToOpen) openShortcut(shortcut)
+              }}
+              draggable
+              onDragStart={() => { draggedIcon.current = shortcut.id }}
+              onDragEnd={() => { draggedIcon.current = null }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                const from = draggedIcon.current
+                if (!from || from === shortcut.id) return
+                moveIcon(from, position.col, position.row)
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") openShortcut(shortcut)
+                if (e.ctrlKey && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+                  e.preventDefault()
+                  const col = position.col + (e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : 0)
+                  const row = position.row + (e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0)
+                  moveIcon(shortcut.id, Math.min(gridCols, Math.max(1, col)), Math.min(gridRows, Math.max(1, row)))
+                }
               }}
             >
               <OSIcon name={shortcut.icon} size={32} className={styles.iconGlyph} />
               <span className={styles.iconLabel}>{shortcut.label}</span>
             </button>
-          ))}
+          )})}
         </div>
 
         {windows.map((win) => {
@@ -258,7 +407,7 @@ export function Desktop() {
               icon={app.icon}
               focused={focused === win.id}
               bounds={bounds}
-              menus={app.menus}
+              menus={app.menus?.(win)}
             >
               <Component args={win.args} windowId={win.id} />
             </WindowFrame>
@@ -278,9 +427,8 @@ export function Desktop() {
 const HOTKEYS: [string, string][] = [
   ["B", "next background"],
   ["Ctrl+P", "command prompt"],
-  ["Ctrl+Esc", "Start menu"],
-  ["Alt+Tab", "next window"],
-  ["Alt+F4", "close window"],
+  ["Ctrl+`", "next task"],
+  ["Esc", "close active window"],
   ["F1", "hide this"],
 ]
 

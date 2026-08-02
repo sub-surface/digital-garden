@@ -9,14 +9,115 @@
   font-size: 12px;
 }
 
+.toolbar {
+  flex: none;
+  display: flex;
+  gap: 4px;
+  padding: 3px 4px;
+
+  button {
+    padding: 3px 8px;
+    background: var(--os-face);
+    color: var(--os-text);
+    font: inherit;
+    @include bevel-out;
+  }
+}
+
+.search {
+  flex: 1;
+  min-width: 100px;
+  padding: 2px 6px;
+  background: var(--os-doc-bg);
+  color: var(--os-text);
+  font: 11px/1.4 var(--font-code);
+  @include bevel-in;
+}
+
+.findForm {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 10px;
+  background: var(--os-face);
+}
+
+.findFields {
+  flex: 1;
+  display: grid;
+  gap: 6px;
+
+  label {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    align-items: center;
+    gap: 7px;
+  }
+}
+
+.findActions {
+  display: grid;
+  gap: 5px;
+  min-width: 86px;
+
+  button { text-align: center; }
+}
+
+.findHint {
+  flex: none;
+  padding: 4px 10px;
+  border-top: 1px solid var(--os-bevel-light);
+  color: var(--os-text-dim);
+  font-size: 10px;
+}
+
+.findResults {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 2px;
+  overflow: auto;
+  background: var(--os-doc-bg);
+  @include bevel-in;
+
+  .table { margin: 0; }
+  .empty { min-height: 100%; }
+}
+
+.findPreview {
+  flex: none;
+  max-height: 54px;
+  overflow: hidden;
+  margin: 0 2px;
+  padding: 5px 7px;
+  background: var(--os-doc-bg);
+  color: var(--os-text-dim);
+  font: 10px/1.35 var(--font-code);
+  @include bevel-in;
+}
+
 .path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex: none;
   padding: 3px 6px;
   margin: 2px;
-  background: var(--os-doc-bg);
+  background: var(--os-face);
   font-family: var(--font-code);
   font-size: 11px;
   @include bevel-in;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: var(--os-doc-bg);
+    color: var(--os-text);
+    font: inherit;
+  }
 }
 
 .table {
@@ -52,6 +153,11 @@
 
   &:hover {
     background: color-mix(in srgb, var(--color-accent-base) 22%, transparent);
+  }
+
+  &[data-selected="true"] {
+    background: var(--color-accent-base);
+    color: var(--os-title-text);
   }
 }
 

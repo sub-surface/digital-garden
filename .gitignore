@@ -6,6 +6,7 @@ dist/
 Thumbs.db
 .env
 .env.local
+!.env.os
 .claude
 # ── Generated at build time (ROADMAP §28.13/§28.14) ──────────────────────────
 # ONE policy: anything `scripts/prebuild.ts` deterministically regenerates from

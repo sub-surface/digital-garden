@@ -22,6 +22,17 @@ import { normalizeSlug } from "@/lib/slug"
 
 const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]
 
+const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+
+function matchesPrefix(values: readonly string[], value: string): string[] {
+  const q = value.toLowerCase()
+  return Array.from(new Set(values.filter((candidate) => candidate.toLowerCase().startsWith(q)))).sort()
+}
+
+function noteCompletions(ctx: TerminalContext, value: string): string[] {
+  return matchesPrefix(ctx.notes().map((note) => note.slug), value)
+}
+
 function findNote(ctx: TerminalContext, query: string): TerminalNote | null {
   const q = normalizeSlug(query)
   const notes = ctx.notes()
@@ -97,6 +108,7 @@ const system: TerminalCommand[] = [
     aliases: ["?", "man"],
     group: "system",
     help: { usage: "help [command]", description: "List commands, or explain one" },
+    complete: (_ctx, value) => matchesPrefix(COMMAND_NAMES, value),
     run: (ctx, args) => {
       if (args[0]) {
         const cmd = lookup(args[0])
@@ -206,6 +218,7 @@ const system: TerminalCommand[] = [
     name: "theme",
     group: "system",
     help: { usage: "theme [light|dark]", description: "Get or set the site theme" },
+    complete: (_ctx, value) => matchesPrefix(["light", "dark"], value),
     run: (ctx, args) => {
       const arg = args[0]?.toLowerCase()
       if (!arg) return ctx.print(ctx.theme.get())
@@ -220,6 +233,7 @@ const system: TerminalCommand[] = [
     name: "seed",
     group: "system",
     help: { usage: "seed [new]", description: "Show the session seed, or generate one" },
+    complete: (_ctx, value) => matchesPrefix(["new"], value),
     run: (ctx, args) => {
       if (args[0] === "new") {
         ctx.seed.reseed()
@@ -236,7 +250,7 @@ const system: TerminalCommand[] = [
     run: (ctx) => {
       const notes = ctx.notes()
       ctx.printLines([
-        `  surface   ${ctx.surface === "window" ? "windowed (SUBSURFACES 95)" : "fullscreen"}`,
+        `  surface   ${ctx.surface === "window" ? "windowed (SUBSURFACES 95)" : ctx.surface === "overlay" ? "garden overlay" : "fullscreen"}`,
         `  notes     ${notes.length} indexed`,
         `  identity  ${ctx.user()?.username ?? "guest"}`,
         `  seed      ${ctx.seed.display}`,
@@ -256,6 +270,14 @@ const content: TerminalCommand[] = [
     aliases: ["dir"],
     group: "content",
     help: { usage: "ls [folder]", description: "List notes, or the contents of a folder" },
+    complete: (ctx, value) =>
+      matchesPrefix(
+        ctx.notes().flatMap((note) => {
+          const parts = (note.folder ?? "").split("/").filter(Boolean)
+          return parts.map((_, index) => parts.slice(0, index + 1).join("/"))
+        }),
+        value,
+      ),
     run: (ctx, args) => {
       const notes = ctx.notes()
       const folder = args[0]?.replace(/\/+$/, "").toLowerCase()
@@ -287,6 +309,7 @@ const content: TerminalCommand[] = [
     aliases: ["read", "less"],
     group: "content",
     help: { usage: "cat <note>", description: "Print a note into the terminal" },
+    complete: noteCompletions,
     run: async (ctx, args) => {
       if (!args.length) return usage(ctx, content[1])
       const note = findNote(ctx, args.join(" "))
@@ -312,6 +335,7 @@ const content: TerminalCommand[] = [
     name: "open",
     aliases: ["o"],
     group: "content",
+    complete: noteCompletions,
     help: { usage: "open <note>", description: "Open a note — a window in the OS, a page on the site" },
     run: (ctx, args) => {
       if (!args.length) return usage(ctx, content[2])
@@ -348,6 +372,7 @@ const content: TerminalCommand[] = [
     name: "tags",
     group: "content",
     help: { usage: "tags [tag]", description: "List all tags, or notes under one" },
+    complete: (ctx, value) => matchesPrefix(ctx.notes().flatMap((note) => note.tags), value),
     run: (ctx, args) => {
       const notes = ctx.notes()
       if (!args[0]) {
@@ -381,6 +406,7 @@ const content: TerminalCommand[] = [
     name: "site",
     aliases: ["www", "garden"],
     group: "content",
+    complete: (_ctx, value) => matchesPrefix(["garden", "wiki", "chat", "os"], value),
     help: { usage: "site [wiki|chat|os]", description: "Leave for another surface" },
     run: (ctx, args) => {
       const target = args[0]?.toLowerCase() ?? "main"
@@ -408,6 +434,7 @@ const music: TerminalCommand[] = [
     name: "play",
     group: "music",
     help: { usage: "play [track]", description: "Play a track, or resume" },
+    complete: (ctx, value) => matchesPrefix(ctx.music.tracks.map((track) => track.title), value),
     run: (ctx, args) => {
       const { tracks } = ctx.music
       if (!tracks.length) return ctx.print("no tracks loaded", "error")
@@ -498,12 +525,27 @@ const people: TerminalCommand[] = [
     name: "edit",
     group: "people",
     help: { usage: "edit <note>", description: "Open a note in the wiki editor" },
+    complete: noteCompletions,
     run: (ctx, args) => {
       if (!args.length) return ctx.print("usage: edit <note>", "warning")
       const note = findNote(ctx, args.join(" "))
       const slug = note?.slug ?? normalizeSlug(args.join(" "))
       ctx.navigate(`https://wiki.subsurfaces.net/edit/${slug}`)
     },
+  },
+  {
+    name: "new",
+    group: "people",
+    help: { usage: "new", description: "Create a wiki page" },
+    requireRole: "editor",
+    run: (ctx) => ctx.navigate("https://wiki.subsurfaces.net/new"),
+  },
+  {
+    name: "admin",
+    group: "people",
+    help: { usage: "admin", description: "Open the owner dashboard" },
+    requireRole: "admin",
+    run: (ctx) => ctx.navigate("https://wiki.subsurfaces.net/admin"),
   },
 ]
 
@@ -572,13 +614,16 @@ const toys: TerminalCommand[] = [
     name: "moth",
     group: "toys",
     help: { usage: "moth", description: "A moth passes through" },
-    run: (ctx) => {
+    run: async (ctx) => {
       const width = 46
       const frames = 6
       for (let i = 0; i < frames; i++) {
         const x = Math.floor((i / (frames - 1)) * (width - 4))
         const wings = i % 2 === 0 ? "\\|/" : "/|\\"
-        ctx.print(`${" ".repeat(x)}${wings}`, i === frames - 1 ? "muted" : "tender")
+        const line = `${" ".repeat(x)}${wings}`
+        if (i === 0) ctx.print(line, "tender")
+        else ctx.replaceLastLines(1, [line], i === frames - 1 ? "muted" : "tender")
+        await wait(120)
       }
     },
   },
@@ -586,7 +631,7 @@ const toys: TerminalCommand[] = [
     name: "maze",
     group: "toys",
     help: { usage: "maze [width]", description: "Generate a maze" },
-    run: (ctx, args) => {
+    run: async (ctx, args) => {
       // Ten PRINT. The whole program, and still the best ratio of line count to
       // output in the history of the form.
       const w = Math.max(8, Math.min(Number(args[0]) || 40, 78))
@@ -594,6 +639,7 @@ const toys: TerminalCommand[] = [
         let line = "  "
         for (let col = 0; col < w; col++) line += Math.random() < 0.5 ? "╱" : "╲"
         ctx.print(line, "accent")
+        await wait(45)
       }
     },
   },
@@ -601,7 +647,7 @@ const toys: TerminalCommand[] = [
     name: "matrix",
     group: "toys",
     help: { usage: "matrix", description: "Glyph rain, briefly" },
-    run: (ctx) => {
+    run: async (ctx) => {
       const glyphs = "アイウエオカキクケコサシスセソ0123456789"
       for (let row = 0; row < 10; row++) {
         let line = "  "
@@ -609,6 +655,7 @@ const toys: TerminalCommand[] = [
           line += Math.random() < 0.28 ? glyphs[Math.floor(Math.random() * glyphs.length)] : " "
         }
         ctx.print(line, row < 3 ? "success" : row < 7 ? "accent" : "muted")
+        await wait(70)
       }
     },
   },
@@ -616,7 +663,7 @@ const toys: TerminalCommand[] = [
     name: "grow",
     group: "toys",
     help: { usage: "grow", description: "Something grows" },
-    run: (ctx) => {
+    run: async (ctx) => {
       const stages = [
         "  .",
         "  |",
@@ -629,7 +676,12 @@ const toys: TerminalCommand[] = [
         "   |",
         "  _|_",
       ]
-      stages.forEach((s, i) => ctx.print(s, i < 3 ? "muted" : i < 7 ? "success" : "tender"))
+      for (let i = 0; i < stages.length; i++) {
+        const tone = i < 3 ? "muted" : i < 7 ? "success" : "tender"
+        if (i === 0) ctx.print(stages[i], tone)
+        else ctx.replaceLastLines(1, [stages[i]], tone)
+        await wait(110)
+      }
     },
   },
   {
@@ -748,6 +800,7 @@ const people2: TerminalCommand[] = [
         ctx.print(`${PERSONAS[speaker].name}: ${reply}`, PERSONAS[speaker].color)
         utterance = reply
         speaker = speaker === a ? b : a
+        await wait(260)
       }
 
       ctx.print("")

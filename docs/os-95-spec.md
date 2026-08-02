@@ -101,10 +101,10 @@ options are "Murmuration", "Orrery", "Bubble Chamber".
 
 The endless TUI is good work and stays reachable:
 
-- **MS-DOS Prompt** app — a window running the existing `BOOT_COMMANDS` registry.
-- **Start → Shut Down → Restart in MS-DOS mode** — drops to the current
-  fullscreen endless `BootPage`, unchanged.
-- `/boot` on the main site keeps working exactly as today.
+- **MS-DOS Prompt** app — a compact window running the shared terminal registry.
+- **Start → Shut Down → Restart in MS-DOS mode** — drops to that terminal
+  fullscreen, with the procedural sequence as scrollback.
+- `/boot` redirects to `/terminal`; Ctrl/Cmd+P opens the same prompt over a note.
 
 ### 2.5 Failure is visible.
 
@@ -122,9 +122,9 @@ The reason this is tractable. Almost nothing here is new rendering work.
 |---|---|---|
 | Render a note in a box | `NoteBody` | Slug in, MDX out. Case-insensitive resolve, `SYSTEM_PAGES` handling, `music:` link interception, telescopic handlers. |
 | A floating card with a title bar | `PanelCard` | Title, close, promote, scrollable content. A Win95 window is this with new chrome + free positioning. |
-| Apps (chess, HeXO, arcade, shelves…) | `SYSTEM_PAGES` | `NoteBody` already mounts every registry entry. Each becomes an OS app for free. |
-| A command shell | `BOOT_COMMANDS` (~60 cmds) | `ls`, `cat`, `find`, `tags`, `random`, `whoami`, `play`, `calc`, `maze`, `life`, `orbit`, `matrix`, `whois`, `edit`, `neofetch`… Powers MS-DOS Prompt **and** Start → Run. |
-| A file system | `content-index.json` + folder tree | Folders → directories, notes → files. `FolderPage` already walks it. |
+| Apps (chess, HeXO, arcade, shelves…) | `SYSTEM_PAGES` | Programs mount their registry component directly inside a bounded program host; the companion note is not rendered around them. |
+| A command shell | `src/features/terminal/commands.ts` (52 cmds) | One registry powers `/terminal`, Ctrl/Cmd+P, the OS prompt and DOS mode. Help and completion are registry-derived and tested together. |
+| A file system | `content-index.json` + `subsurfaces95-files` | `C:\GARDEN` maps published content read-only; `H:\MY DOCUMENTS` is a small writable, browser-local document store. |
 | Boot sequence | `src/features/boot/*` | Timing-free generators + `useBootPlayback` owning clocks. A finite variant is an addition, not a rewrite. |
 | Wallpaper | `BgCanvas` | Drop in at z-0. |
 | Music player | turntable + `music.json` | Becomes Media Player. |
@@ -246,14 +246,16 @@ interface OSApp {
 
 | App | Filename | Implementation |
 |---|---|---|
-| **Notepad** | `NOTEPAD.EXE` | `<NoteBody slug>` in `.os-doc`. Multi-instance. Status bar shows word count + `growth:`. |
-| **WordPad** | `WORDPAD.EXE` | Same, wider default, for `layout: article` notes. Adds a toolbar that is inert and honest about it. |
-| **Windows Help** | `*.HLP` | Same renderer, Help-viewer chrome — Contents / Index / Back buttons. Home of the field-guide and dictionary shitposts. |
-| **My Computer** | — | Explorer over `content-index.json`. Drives: `C:\GARDEN`, `W:\WIKI`, `X:\CHAT`, `A:\` (empty, errors in character). |
-| **Explorer** | — | Folder tree + list/details view. Double-click a note → Notepad/WordPad by `classifyLayout()`. |
-| **MS-DOS Prompt** | `COMMAND.COM` | `BOOT_COMMANDS` in a window. |
-| **Media Player** | `MPLAYER.EXE` | Existing turntable + `music.json`. |
-| **Minesweeper / Chess / HeXO / SIGIL / arcade** | `*.EXE` | `SYSTEM_PAGES` entries via `NoteBody`. Free. |
+| **Browser** | `BROWSER.EXE` | Published notes and articles in centred garden typography; File → Open in main site and Edit → View in reader mode. |
+| **Notepad** | `NOTEPAD.EXE` | Real editable local text files with debounced save plus close/pagehide flush. Multi-instance. |
+| **Windows Help** | `*.HLP` | The same document renderer in Help-viewer chrome. |
+| **My Computer** | — | Drives: `C:\GARDEN`, local `H:\MY DOCUMENTS`, `W:\WIKI`, `X:\CHAT`, and empty `A:\`. |
+| **Explorer** | — | Internal folder navigation, details/search, guarded Backspace, and local-file create/open/delete. |
+| **Find: All Files** | `FIND.EXE` | Native name/content search over the shared lazy FlexSearch index plus browser-local `H:` text files, with garden/local scope and direct open. |
+| **MS-DOS Prompt** | `COMMAND.COM` | Shared terminal registry in a compact ANSI-aware frame. |
+| **Media Player** | `MPLAYER.EXE` | Compact playlist/player over the existing music context and `music.json`. |
+| **Task Manager** | `TASKMGR.EXE` | Running-window list, switching and End Task. Taskbar buttons also expose close controls. |
+| **Minesweeper / Chess / HeXO / SIGIL / arcade** | `*.EXE` | Direct `SYSTEM_PAGES` components in a bounded program host. |
 | **Subsurfaces Messenger** | `MSGR.EXE` | `ChatRoom` in chrome. |
 | **Recycle Bin** | — | ARG surface. See §8. |
 | **Display Properties** | `CONTROL.EXE` | Tabbed dialog over `BG_MODES`, theme, accent, `bgOpacity`. |
@@ -359,7 +361,7 @@ the existing `.subsurfaces.net` cookie domain, read by the main shell.
 | **1** | Finite POST, splash, handoff, skip-on-input, reduced-motion, once-per-session. | **Shipped** |
 | **2** | Store, `WindowFrame`, `useDrag`, drag outline, 8 resize grips, focus/z-order, Alt+Tab / Alt+F4 / Ctrl+Esc. | **Shipped** |
 | **3** | Desktop icons, Taskbar, Start menu with flyouts, mobile CRT panel. | **Shipped** |
-| **4** | Notepad, WordPad, Help, Explorer, My Computer, Recycle Bin, Display Properties, games via `program`. | **Partial** — see below |
+| **4** | Browser, local Notepad, Help, Explorer, My Computer, Recycle Bin, Display Properties, direct-mounted programs. | **Shipped** (2026-08-02) |
 | **5** | ARG: Recycle Bin surface + seed payoff wired. | **Partial** — see below |
 
 ### Deviation from §4 (recorded)
@@ -372,16 +374,14 @@ subsequently retired altogether — see §12.
 
 ### Still open
 
-- **Messenger (`ChatRoom` in a window).** Not the thin wrapper the other apps
-  are: it needs `roomId`, `accessToken`, `currentUserId`, a rooms fetch and a
-  logged-out state. Its own piece of work.
-- **Marquee select** on the desktop, and icon drag-to-rearrange.
-- **Cross-shell restore flag** (§8.4) — restoring from the Recycle Bin does not
-  yet unhide anything on the main site.
-- **Not visually verified.** Build, typecheck, lint and test gates are green, but
-  the desktop has not been run in a browser — the animated background canvas
-  makes preview servers expensive here. First run should check drag feel, window
-  focus order, and MDX inside a 620px document canvas.
+- **Full program-host visual certification.** The known viewport/fixed-position
+  offenders now understand the bounded host, but every `SYSTEM_PAGES` entry still
+  needs narrow/default/maximized browser inspection.
+- **Account filesystem sync.** Local directories/import/export ship; remote sync
+  deliberately waits for revision history and an explicit conflict model.
+- **2026-08-02 continuation not visually verified as an OS.** Leon verified the
+  first OS pass and the taller main-site terminal. Use `npm run dev:os` for the
+  remaining logon, widget, Solitaire, program-host and production-audio pass.
 
 ---
 
@@ -404,9 +404,9 @@ around them was four features wearing one coat.
   generated stream *and* `injectLine`, so attract mode and the prompt share one
   line buffer and the transition is just pausing the generator. The boot art
   becomes scrollback rather than being discarded.
-- **Three frames, one module.** `/terminal` fullscreen on the main site; the
-  MS-DOS Prompt window in the OS; fullscreen again under Start → Restart in
-  MS-DOS mode. `/boot` redirects to `/terminal`.
+- **Four frames, one module.** `/terminal` fullscreen; Ctrl/Cmd+P over the main,
+  wiki and chat surfaces; the MS-DOS Prompt window in the OS; fullscreen again
+  under Start → Restart in MS-DOS mode. `/boot` redirects to `/terminal`.
 - **The bridge is one function.** `ctx.open(slug)` navigates on the main site and
   opens a *window* in the OS. No command branches on surface; the substitution
   happens once, at the mount site.
@@ -456,5 +456,87 @@ clock); Disks 1–3 completing the Recycle Bin ARG.
 
 - Pixel-perfect Win95 replication. We inherit the site's theme by design (§2.2).
 - Window snapping, tiling, virtual desktops.
-- A writable filesystem. Explorer is a *reader*; the wiki is where writing happens.
+- A general-purpose or server-backed filesystem. `H:\MY DOCUMENTS` deliberately
+  stops at small browser-local text files; publishing still belongs to the wiki.
 - Emulating real Win95 apps beyond the joke's needs.
+
+---
+
+## 13. Personal-machine continuation (2026-08-02)
+
+The second pass treats the desktop as somewhere a reader can live, not just a
+diorama:
+
+- `C:\GARDEN` is a proper Browser/Explorer surface; programs mount directly;
+  `H:\MY DOCUMENTS` and Notepad provide the small writable part.
+- Startup may open **Subsurface Territories**. Preferences, icon order, quiet
+  system sounds, screensaver choice and local files are visible and controllable
+  under Display Properties → Storage. Open windows stay session-only by design.
+- Ctrl/Cmd+P is now the terminal rather than the command palette (which remains
+  at Ctrl/Cmd+Shift+P). It has a persistent machine header, contextual colouring,
+  argument completion and paced text toys. `help` and completion derive from the
+  command registry, with a regression test enforcing that contract.
+
+The completed personal-machine layer adds:
+
+- **Native arrival.** POST/splash hands to a Win95-native account screen using
+  the existing Supabase/wiki auth methods. A reader can sign in, create/recover
+  an account, continue explicitly as a guest, or opt into wiki-page setup. The
+  guest choice can be remembered and reset under Startup settings.
+- **Integrated identity and owner surfaces.** Profile, new-page, edit and admin
+  components mount in OS windows. Terminal `new`, `edit` and `admin` route to
+  those windows while retaining the established role gates, PR/review boundary
+  and audit path. Start exposes that same identity as a compact right-hand card:
+  account role, profile/wiki routes, local folders, current playback and live
+  machine counts. Log Off clears the shared session and open windows, then
+  returns to the native account screen without erasing browser-local files or
+  desktop preferences; guests get Log On in the same bottom system slot.
+- **Actual desktop state.** SOL.EXE is seeded Klondike with persisted stats;
+  desktop icons use collision-aware 2D cells, marquee selection and Ctrl+Arrow
+  rearrangement; double-click title bars shade windows and Ctrl/Cmd+` cycles
+  tasks without stealing shortcuts from the reader's real OS.
+- **Launch surface and Images.** Explorer, Images, MS-DOS Prompt and Media
+  Player are pinned beside Start, while the Images desktop folder exposes the
+  generated `/content/Media` dimension manifest as a lightweight file list.
+  Originals load only when opened in the shared fullscreen image viewer, whose
+  zoom/pan/navigation controls are also used by notes, chat, albums and wiki
+  portraits. Start keeps Explorer, Notepad, Media Player and Task Manager at the
+  top level; Programs is reserved for games/content applications. Its Find row
+  and the tray search button open one native file finder backed by the same
+  lazy FlexSearch hook as the main garden overlay, extended locally with `H:`.
+- **Filesystem v2.** `H:` supports directories, recursive deletion, JSON
+  import/export, conflict-safe names and quota visibility. Content remains
+  read-only on `C:`; publishing still crosses the visible wiki boundary.
+- **Private-by-default widgets.** Clock and calendar are local. News and weather
+  make no request until enabled; fixed feeds/weather are cached at the Worker,
+  approximate weather coordinates are rounded, and custom RSS/Atom subscriptions
+  or OPML imports remain browser-local. Each instrument is independently
+  draggable, persists its position, stays below windows, and right-clicks back
+  to its settings.
+- **Cross-shell recovery.** `os_restores` stores a reversible `(user_id, slug)`
+  flag. Recycle Bin writes it; the main garden reads it to reveal that reader's
+  recovered draft in search/a small control. Apply
+  `docs/migrations/2026-08-os-restores.sql` before deploying the feature.
+  Until that optional table exists, GET reports the capability as unavailable
+  and the Restore control is disabled rather than producing a console 500.
+- **Media and sound.** The media window adds real analyser-backed FFT/scope
+  views, editable queue, repeat modes and named persisted mixes. System cues are
+  synthesized, individually enabled, and quiet by default (startup/notification
+  on; window open/close off). When music is playing, every screensaver shows a
+  compact cover/title/artist/progress card without turning the saver into a
+  second player.
+- **Messenger.** A small adapter owns rooms, token/user state, retry and logged-
+  out behavior around the shared `ChatRoom`.
+
+Persistence remains intentionally legible: `subsurfaces95` (settings, widget and
+desktop positions), `subsurfaces95-files`, `subsurfaces95-solitaire`,
+`subsurfaces95-media`, and the existing shared `music-session`/`music-volume`.
+Window geometry remains session-only.
+- The taskbar has per-window close controls; Escape closes the active window;
+  desktop icons reorder on the grid; Task Manager, Account and the compact media
+  player are first-class utilities. Browser-conflicting OS hotkeys were removed.
+- Music assets go through a range-aware same-origin Worker route, fixing the OS
+  subdomain CORS failure. The production CSP now permits the data-backed font the
+  rendered content already emits.
+
+The remaining boundaries and browser-certification work live in ROADMAP §29.

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useFocusTrap } from "@/hooks/useFocusTrap"
 import styles from "./GameCabinet.module.scss"
+import { useProgramHost } from "./ProgramHostContext"
 
 export type CabinetStatus = "ready" | "playing" | "won" | "lost"
 
@@ -61,6 +62,7 @@ export function GameCabinet({
     return v ? parseInt(v, 10) || 0 : 0
   })
   const [isZen, setIsZen] = useState(false)
+  const programHost = useProgramHost()
 
   // Keep best as the running max; persist whenever it grows.
   useEffect(() => {
@@ -90,6 +92,7 @@ export function GameCabinet({
       data-zen={isZen || undefined}
       data-win={status === "won" || undefined}
       data-status={status}
+      data-embedded={programHost.embedded || undefined}
     >
       <header className={styles.header}>
         <h1 className={styles.title}>{title}</h1>

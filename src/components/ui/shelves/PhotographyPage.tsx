@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
 import styles from "./Collections.module.scss"
 
 interface AlbumPhoto {
@@ -32,18 +33,6 @@ export function PhotoAlbums() {
       .catch(() => setLoading(false))
   }, [])
 
-  // Lightbox keyboard nav
-  useEffect(() => {
-    if (lightboxIndex === null || !activeAlbum) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") setLightboxIndex(i => Math.min((i ?? 0) + 1, activeAlbum.photos.length - 1))
-      if (e.key === "ArrowLeft")  setLightboxIndex(i => Math.max((i ?? 0) - 1, 0))
-      if (e.key === "Escape") setLightboxIndex(null)
-    }
-    window.addEventListener("keydown", handler)
-    return () => window.removeEventListener("keydown", handler)
-  }, [lightboxIndex, activeAlbum])
-
   if (loading) return <div className={styles.albumsLoading}>loading albums...</div>
   if (albums.length === 0) return <p>No albums yet.</p>
 
@@ -76,26 +65,19 @@ export function PhotoAlbums() {
         </div>
 
         {photo && (
-          <div className={styles.lightbox} onClick={() => setLightboxIndex(null)}>
-            <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
-              <img src={photoSrc(photo.file)} alt={photo.caption ?? photo.file} />
-              {photo.caption && (
-                <div className={styles.lightboxMeta}><p>{photo.caption}</p></div>
-              )}
-              <div className={styles.lightboxNav}>
-                <button
-                  disabled={lightboxIndex === 0}
-                  onClick={() => setLightboxIndex(i => Math.max((i ?? 0) - 1, 0))}
-                >←</button>
-                <span>{(lightboxIndex ?? 0) + 1} / {activeAlbum.photos.length}</span>
-                <button
-                  disabled={lightboxIndex === activeAlbum.photos.length - 1}
-                  onClick={() => setLightboxIndex(i => Math.min((i ?? 0) + 1, activeAlbum.photos.length - 1))}
-                >→</button>
-              </div>
-            </div>
-            <button className={styles.closeLightbox} onClick={() => setLightboxIndex(null)}>&times;</button>
-          </div>
+          <ImageLightbox
+            src={photoSrc(photo.file)}
+            alt={photo.caption ?? photo.file}
+            caption={photo.caption}
+            positionLabel={`${(lightboxIndex ?? 0) + 1} / ${activeAlbum.photos.length}`}
+            onPrevious={lightboxIndex !== null && lightboxIndex > 0
+              ? () => setLightboxIndex((index) => Math.max((index ?? 0) - 1, 0))
+              : undefined}
+            onNext={lightboxIndex !== null && lightboxIndex < activeAlbum.photos.length - 1
+              ? () => setLightboxIndex((index) => Math.min((index ?? 0) + 1, activeAlbum.photos.length - 1))
+              : undefined}
+            onClose={() => setLightboxIndex(null)}
+          />
         )}
       </div>
     )

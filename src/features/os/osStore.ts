@@ -9,6 +9,8 @@
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import type { BgMode } from "@/store"
+import { playOSSound, type OSSound } from "./osSounds"
 
 // ---------------------------------------------------------------------------
 // Settings — persisted, unlike window state.
@@ -20,6 +22,9 @@ import { persist } from "zustand/middleware"
 // ---------------------------------------------------------------------------
 
 export type BootSequence = "off" | "post" | "full"
+export type ScreenSaverMode = "constellation" | BgMode
+export type OSWidgetId = "clock" | "calendar" | "weather" | "feeds"
+export interface OSCustomFeed { id: string; title: string; url: string }
 
 interface OSSettings {
   /** off = straight to desktop; post = the BIOS check; full = the procedural TUI. */
@@ -35,9 +40,44 @@ interface OSSettings {
   /** Idle seconds before CONSTELLATION.SCR takes over. */
   saverDelay: number
   setSaverDelay: (v: number) => void
+  saverMode: ScreenSaverMode
+  setSaverMode: (v: ScreenSaverMode) => void
 
   doubleClickToOpen: boolean
   setDoubleClickToOpen: (v: boolean) => void
+
+  openWelcome: boolean
+  setOpenWelcome: (v: boolean) => void
+  showLogon: boolean
+  setShowLogon: (v: boolean) => void
+
+  soundEnabled: boolean
+  setSoundEnabled: (v: boolean) => void
+  soundVolume: number
+  setSoundVolume: (v: number) => void
+  soundEvents: Record<OSSound, boolean>
+  setSoundEvent: (sound: OSSound, enabled: boolean) => void
+
+  showWidgets: boolean
+  setShowWidgets: (v: boolean) => void
+  networkWidgetsEnabled: boolean
+  setNetworkWidgetsEnabled: (v: boolean) => void
+  weatherEnabled: boolean
+  setWeatherEnabled: (v: boolean) => void
+  weatherLocation: { lat: number; lon: number } | null
+  setWeatherLocation: (value: { lat: number; lon: number } | null) => void
+  widgetPositions: Partial<Record<OSWidgetId, { x: number; y: number }>>
+  setWidgetPosition: (id: OSWidgetId, value: { x: number; y: number }) => void
+  customFeeds: OSCustomFeed[]
+  addCustomFeeds: (feeds: Omit<OSCustomFeed, "id">[]) => number
+  removeCustomFeed: (id: string) => void
+
+  desktopOrder: string[]
+  setDesktopOrder: (ids: string[]) => void
+  desktopPositions: Record<string, { col: number; row: number }>
+  setDesktopPosition: (id: string, col: number, row: number) => void
+  setDesktopPositions: (positions: Record<string, { col: number; row: number }>) => void
+  resetDesktopOrder: () => void
 }
 
 export const useOSSettings = create<OSSettings>()(
@@ -54,15 +94,76 @@ export const useOSSettings = create<OSSettings>()(
       setSaverEnabled: (saverEnabled) => set({ saverEnabled }),
       saverDelay: 90,
       setSaverDelay: (saverDelay) => set({ saverDelay }),
+      saverMode: "constellation",
+      setSaverMode: (saverMode) => set({ saverMode }),
 
       doubleClickToOpen: true,
       setDoubleClickToOpen: (doubleClickToOpen) => set({ doubleClickToOpen }),
+
+      openWelcome: true,
+      setOpenWelcome: (openWelcome) => set({ openWelcome }),
+      showLogon: true,
+      setShowLogon: (showLogon) => set({ showLogon }),
+
+      soundEnabled: true,
+      setSoundEnabled: (soundEnabled) => set({ soundEnabled }),
+      soundVolume: 0.32,
+      setSoundVolume: (soundVolume) => set({ soundVolume }),
+      soundEvents: { startup: true, open: false, close: false, notify: true },
+      setSoundEvent: (sound, enabled) => set((state) => ({
+        soundEvents: { ...state.soundEvents, [sound]: enabled },
+      })),
+
+      showWidgets: true,
+      setShowWidgets: (showWidgets) => set({ showWidgets }),
+      networkWidgetsEnabled: false,
+      setNetworkWidgetsEnabled: (networkWidgetsEnabled) => set({ networkWidgetsEnabled }),
+      weatherEnabled: false,
+      setWeatherEnabled: (weatherEnabled) => set({ weatherEnabled }),
+      weatherLocation: null,
+      setWeatherLocation: (weatherLocation) => set({ weatherLocation }),
+      widgetPositions: {},
+      setWidgetPosition: (id, value) => set((state) => ({
+        widgetPositions: { ...state.widgetPositions, [id]: value },
+      })),
+      customFeeds: [],
+      addCustomFeeds: (candidates) => {
+        let added = 0
+        set((state) => {
+          const urls = new Set(state.customFeeds.map((feed) => feed.url.toLowerCase()))
+          const customFeeds = [...state.customFeeds]
+          for (const candidate of candidates.slice(0, 50)) {
+            let url: URL
+            try { url = new URL(candidate.url) } catch { continue }
+            if (!/^https?:$/.test(url.protocol) || urls.has(url.href.toLowerCase())) continue
+            urls.add(url.href.toLowerCase())
+            customFeeds.push({
+              id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `feed-${Date.now()}-${added}`,
+              title: candidate.title.trim().slice(0, 80) || url.hostname,
+              url: url.href,
+            })
+            added++
+          }
+          return { customFeeds }
+        })
+        return added
+      },
+      removeCustomFeed: (id) => set((state) => ({ customFeeds: state.customFeeds.filter((feed) => feed.id !== id) })),
+
+      desktopOrder: [],
+      setDesktopOrder: (desktopOrder) => set({ desktopOrder }),
+      desktopPositions: {},
+      setDesktopPosition: (id, col, row) => set((state) => ({
+        desktopPositions: { ...state.desktopPositions, [id]: { col, row } },
+      })),
+      setDesktopPositions: (desktopPositions) => set({ desktopPositions }),
+      resetDesktopOrder: () => set({ desktopOrder: [], desktopPositions: {} }),
     }),
     { name: "subsurfaces95" },
   ),
 )
 
-export type WindowState = "normal" | "minimized" | "maximized"
+export type WindowState = "normal" | "minimized" | "maximized" | "shaded"
 
 export interface WindowGeometry {
   x: number
@@ -97,6 +198,8 @@ export interface OpenWindowInput {
   h?: number
   /** Multi-instance apps (Notepad) skip the dedupe check. */
   multiInstance?: boolean
+  /** Used for automatic welcome/restoration actions, which should not chime. */
+  silent?: boolean
 }
 
 interface OSStore {
@@ -110,9 +213,12 @@ interface OSStore {
   focusWindow: (id: string) => void
   moveWindow: (id: string, x: number, y: number) => void
   resizeWindow: (id: string, geo: WindowGeometry) => void
+  updateWindowArgs: (id: string, args: Record<string, string>) => void
+  setWindowTitle: (id: string, title: string) => void
   setWindowState: (id: string, state: WindowState) => void
   toggleMinimize: (id: string) => void
   toggleMaximize: (id: string) => void
+  toggleShade: (id: string) => void
   setStartOpen: (open: boolean) => void
   closeAll: () => void
 }
@@ -135,7 +241,7 @@ export const useOS = create<OSStore>((set, get) => ({
   nextId: 1,
   isStartOpen: false,
 
-  openWindow: ({ appId, args = {}, title, w, h, multiInstance }) => {
+  openWindow: ({ appId, args = {}, title, w, h, multiInstance, silent }) => {
     const state = get()
 
     if (!multiInstance) {
@@ -176,9 +282,16 @@ export const useOS = create<OSStore>((set, get) => ({
       nextId: state.nextId + 1,
       isStartOpen: false,
     })
+    const settings = useOSSettings.getState()
+    if (!silent && settings.soundEnabled && settings.soundEvents?.open) playOSSound("open", settings.soundVolume)
   },
 
-  closeWindow: (id) => set((s) => ({ windows: s.windows.filter((w) => w.id !== id) })),
+  closeWindow: (id) => {
+    const exists = get().windows.some((w) => w.id === id)
+    set((s) => ({ windows: s.windows.filter((w) => w.id !== id) }))
+    const settings = useOSSettings.getState()
+    if (exists && settings.soundEnabled && settings.soundEvents?.close) playOSSound("close", settings.soundVolume)
+  },
 
   focusWindow: (id) =>
     set((s) => {
@@ -196,6 +309,12 @@ export const useOS = create<OSStore>((set, get) => ({
 
   resizeWindow: (id, geo) =>
     set((s) => ({ windows: s.windows.map((w) => (w.id === id ? { ...w, ...geo } : w)) })),
+
+  updateWindowArgs: (id, args) =>
+    set((s) => ({ windows: s.windows.map((w) => (w.id === id ? { ...w, args: { ...w.args, ...args } } : w)) })),
+
+  setWindowTitle: (id, title) =>
+    set((s) => ({ windows: s.windows.map((w) => (w.id === id ? { ...w, title } : w)) })),
 
   setWindowState: (id, state) =>
     set((s) => ({ windows: s.windows.map((w) => (w.id === id ? { ...w, state } : w)) })),
@@ -220,10 +339,205 @@ export const useOS = create<OSStore>((set, get) => ({
       }),
     })),
 
+  toggleShade: (id) =>
+    set((s) => ({
+      windows: s.windows.map((w) =>
+        w.id === id
+          ? { ...w, state: w.state === "shaded" ? "normal" : "shaded" }
+          : w,
+      ),
+    })),
+
   setStartOpen: (open) => set({ isStartOpen: open }),
 
   closeAll: () => set({ windows: [] }),
 }))
+
+export interface OSFile {
+  id: string
+  name: string
+  content: string
+  /** Slash-separated path beneath H:\\MY DOCUMENTS. Old persisted files default to root. */
+  folder?: string
+  updatedAt: string
+}
+
+interface OSFilesStore {
+  files: OSFile[]
+  folders: string[]
+  createFile: (name?: string, content?: string, folder?: string) => string
+  createFolder: (name?: string, parent?: string) => string
+  saveFile: (id: string, content: string, name?: string) => void
+  moveFile: (id: string, folder: string) => void
+  deleteFile: (id: string) => void
+  deleteFolder: (path: string) => void
+  importArchive: (value: unknown) => { imported: number; skipped: number }
+  clearFiles: () => void
+}
+
+const WELCOME_FILE: OSFile = {
+  id: "welcome",
+  name: "Welcome.txt",
+  content:
+    "This folder belongs to you.\n\nFiles created in Notepad are saved in this browser only. " +
+    "Settings > Storage shows exactly what the machine remembers and lets you remove it.",
+  updatedAt: "1995-08-24T00:00:00.000Z",
+}
+
+function cleanFolder(path: string): string {
+  return path.split("/").map((part) => part.trim().replace(/[\\:*?\"<>|]/g, "-")).filter(Boolean).join("/")
+}
+
+function addFolderTree(folders: Set<string>, path: string) {
+  const parts = cleanFolder(path).split("/").filter(Boolean)
+  for (let index = 1; index <= parts.length; index++) folders.add(parts.slice(0, index).join("/"))
+}
+
+function uniqueFileName(files: OSFile[], requested: string, excludeId?: string, folder = ""): string {
+  const cleaned = (requested.trim() || "Untitled.txt").replace(/[\\/:*?\"<>|]/g, "-")
+  const withExt = /\.[a-z0-9]{1,5}$/i.test(cleaned) ? cleaned : `${cleaned}.txt`
+  const collides = (name: string) => files.some(
+    (file) => file.id !== excludeId && (file.folder ?? "") === folder && file.name.toLowerCase() === name.toLowerCase(),
+  )
+  if (!collides(withExt)) return withExt
+  const dot = withExt.lastIndexOf(".")
+  const base = withExt.slice(0, dot)
+  const ext = withExt.slice(dot)
+  let index = 2
+  while (collides(`${base} (${index})${ext}`)) index++
+  return `${base} (${index})${ext}`
+}
+
+export const useOSFiles = create<OSFilesStore>()(
+  persist(
+    (set, get) => ({
+      files: [WELCOME_FILE],
+      folders: [],
+      createFile: (requested = "Untitled.txt", content = "", requestedFolder = "") => {
+        const folder = cleanFolder(requestedFolder)
+        const id = typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `file-${Date.now()}`
+        const file: OSFile = {
+          id,
+          name: uniqueFileName(get().files, requested, undefined, folder),
+          content,
+          folder,
+          updatedAt: new Date().toISOString(),
+        }
+        set((state) => ({ files: [...state.files, file] }))
+        return id
+      },
+      createFolder: (requested = "New Folder", requestedParent = "") => {
+        const parent = cleanFolder(requestedParent)
+        const base = cleanFolder(requested).split("/").pop() || "New Folder"
+        const siblings = get().folders.filter((path) => path.split("/").slice(0, -1).join("/") === parent)
+        let name = base
+        let index = 2
+        while (siblings.some((path) => path.split("/").at(-1)?.toLowerCase() === name.toLowerCase())) {
+          name = `${base} (${index++})`
+        }
+        const path = parent ? `${parent}/${name}` : name
+        set((state) => ({ folders: [...state.folders, path].sort() }))
+        return path
+      },
+      saveFile: (id, content, requestedName) =>
+        set((state) => ({
+          files: state.files.map((file) =>
+            file.id === id
+              ? {
+                  ...file,
+                  content,
+                  name: requestedName ? uniqueFileName(state.files, requestedName, id, file.folder ?? "") : file.name,
+                  updatedAt: new Date().toISOString(),
+                }
+              : file,
+          ),
+        })),
+      moveFile: (id, requestedFolder) => set((state) => {
+        const folder = cleanFolder(requestedFolder)
+        return {
+          files: state.files.map((file) => file.id === id
+            ? { ...file, folder, name: uniqueFileName(state.files, file.name, id, folder), updatedAt: new Date().toISOString() }
+            : file),
+        }
+      }),
+      deleteFile: (id) => set((state) => ({ files: state.files.filter((file) => file.id !== id) })),
+      deleteFolder: (path) => set((state) => ({
+        folders: state.folders.filter((folder) => folder !== path && !folder.startsWith(`${path}/`)),
+        files: state.files.filter((file) => (file.folder ?? "") !== path && !(file.folder ?? "").startsWith(`${path}/`)),
+      })),
+      importArchive: (value) => {
+        const source = value && typeof value === "object" ? value as { files?: unknown; folders?: unknown } : {}
+        const rawFiles = Array.isArray(source.files) ? source.files : []
+        const rawFolders = Array.isArray(source.folders) ? source.folders : []
+        let imported = 0
+        let skipped = 0
+        set((state) => {
+          const files = [...state.files]
+          const folders = new Set(state.folders)
+          let totalBytes = files.reduce((sum, file) => sum + file.content.length, 0)
+          for (const raw of rawFolders.slice(0, 250)) {
+            if (typeof raw === "string" && cleanFolder(raw)) addFolderTree(folders, raw)
+          }
+          for (const raw of rawFiles.slice(0, 500)) {
+            if (!raw || typeof raw !== "object") { skipped++; continue }
+            const candidate = raw as Partial<OSFile>
+            if (
+              typeof candidate.name !== "string" ||
+              typeof candidate.content !== "string" ||
+              candidate.content.length > 1_000_000 ||
+              totalBytes + candidate.content.length > 4_000_000
+            ) {
+              skipped++
+              continue
+            }
+            const folder = cleanFolder(typeof candidate.folder === "string" ? candidate.folder : "")
+            if (folder) addFolderTree(folders, folder)
+            files.push({
+              id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `file-${Date.now()}-${imported}`,
+              name: uniqueFileName(files, candidate.name, undefined, folder),
+              content: candidate.content,
+              folder,
+              updatedAt: new Date().toISOString(),
+            })
+            totalBytes += candidate.content.length
+            imported++
+          }
+          return { files, folders: [...folders].sort() }
+        })
+        return { imported, skipped }
+      },
+      clearFiles: () => set({ files: [], folders: [] }),
+    }),
+    { name: "subsurfaces95-files", partialize: (state) => ({ files: state.files, folders: state.folders }) },
+  ),
+)
+
+interface OSMediaStore {
+  savedPlaylists: Record<string, string[]>
+  savePlaylist: (name: string, slugs: string[]) => void
+  deletePlaylist: (name: string) => void
+}
+
+/** Named playlists belong to the OS presentation; playback/session remains in MusicContext. */
+export const useOSMedia = create<OSMediaStore>()(
+  persist(
+    (set) => ({
+      savedPlaylists: {},
+      savePlaylist: (requested, slugs) => set((state) => {
+        const name = requested.trim().slice(0, 40) || "Mixtape"
+        return { savedPlaylists: { ...state.savedPlaylists, [name]: [...new Set(slugs)] } }
+      }),
+      deletePlaylist: (name) => set((state) => {
+        const savedPlaylists = { ...state.savedPlaylists }
+        delete savedPlaylists[name]
+        return { savedPlaylists }
+      }),
+    }),
+    { name: "subsurfaces95-media" },
+  ),
+)
 
 /** Highest-z non-minimized window — the one wearing the active title bar. */
 export function focusedWindowId(windows: OSWindow[]): string | null {

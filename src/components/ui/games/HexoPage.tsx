@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react"
 import { initialState, placeStone, botMove, key, stonesLeft, type HexoState } from "@/lib/hexo"
 import styles from "./HexoPage.module.scss"
+import { useProgramHost } from "./ProgramHostContext"
 
 const HEX_SIZE = 22 // px radius
 const MARGIN_RING = 3 // empty hexes drawn beyond placed stones
@@ -274,6 +275,7 @@ function HexoBoard({ state, onPlace, annotations, setAnnotations, wide }: BoardP
 }
 
 export function HexoPage() {
+  const programHost = useProgramHost()
   const [state, setState] = useState<HexoState>(initialState())
   const [annotations, setAnnotations] = useState<Annotations>({ highlights: new Set(), arrows: [] })
   const [zen, setZen] = useState(false)
@@ -309,9 +311,13 @@ export function HexoPage() {
   // Esc exits zen mode
   useEffect(() => {
     if (!zen) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setZen(false) }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      e.preventDefault()
+      setZen(false)
+    }
+    document.addEventListener("keydown", onKey, true)
+    return () => document.removeEventListener("keydown", onKey, true)
   }, [zen])
 
   const nameFor = (p: 1 | 2) => (vsBot ? (p === 1 ? "You" : "Bot") : `Player ${p}`)
@@ -326,7 +332,7 @@ export function HexoPage() {
 
   if (zen) {
     return (
-      <div className={styles.zenOverlay}>
+      <div className={styles.zenOverlay} data-embedded={programHost.embedded || undefined}>
         <button className={styles.zenClose} onClick={() => setZen(false)} title="Exit zen mode (Esc)" aria-label="Exit zen mode">✕</button>
         <div className={styles.zenBoard} data-win={state.winner ? "true" : undefined}>
           {boardEl}

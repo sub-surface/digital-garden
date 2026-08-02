@@ -7,6 +7,7 @@ import { SearchButton } from "@/components/ui/SearchButton"
 import { RandomNoteButton } from "@/components/ui/RandomNoteButton"
 import { BgModeToggle } from "@/components/ui/BgModeToggle"
 import { ReaderToggle } from "@/components/ui/ReaderToggle"
+import { RecoveredControl } from "./RecoveredControl"
 import styles from "./QuickControls.module.scss"
 
 const NON_ARCADE_SLUGS = new Set(["graph", "constellation"])
@@ -194,6 +195,7 @@ export function QuickControls({ variant = "full", immersive }: QuickControlsProp
       <TerminalToggle />
 
       {/* Profile Icon */}
+      {shell === "main" && <RecoveredControl />}
       {shell !== "main" && (
         <Suspense fallback={null}>
           <ProfileControl />
