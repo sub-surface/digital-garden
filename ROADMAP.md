@@ -1447,6 +1447,11 @@ What remains is deliberately ordered by value and architectural dependency:
     should be linked and dated rather than silently absorbed as character fact.
     Keep ingestion reviewable—content and chatbot changes may share a PR, but
     no automatic publishing pipeline or unreviewed transcript dump.
+    The terminal-only slice landed through PRs #23 and #24: matching, topic
+    continuity and repeat suppression are covered deterministically; channel
+    additions retain #24 as their quoted/trimmed/invented editorial record; and
+    the UI labels every interlocutor as scripted. Cited wiki/news enrichment
+    remains open, as does any future per-line source ledger beyond that PR.
 16. [x] **OS stabilization and program containment.** Each window now owns an
     error boundary with Retry/Close recovery; one root `AuthProvider` owns the
     Supabase session/profile lifecycle; desktop chrome imports a metadata-only
