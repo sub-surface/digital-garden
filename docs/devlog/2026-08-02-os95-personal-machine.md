@@ -166,3 +166,25 @@ site; `npm run dev:os` now selects the OS shell without touching secret-bearing
 local env files. The OS continuation still needs one deliberate visual pass,
 especially logon, widget drag/stacking, Solitaire, the program registry and
 production same-origin audio. Deferred boundaries are sequenced in ROADMAP §29.
+
+## Closing the hook debt and opening the chronicle queue
+
+PR #22 was reviewed and squash-merged as `548aab5`: it expands Ape,
+Charlie(Willow) and My Name without filling in anyone's self-reported survey.
+ROADMAP §29.15 now records the follow-up boundary for the next Philchat content
+PR: cited log/news additions to the wiki may travel with a reviewed expansion of
+the terminal interlocutors, but not as an automatic transcript-ingestion path.
+
+The React Hooks ratchet moved from 23 warnings to zero. The fixes preserve the
+intended event boundaries rather than mechanically widening dependency arrays:
+wallpaper auto-selection still reacts to slug changes only, boot tones and chat
+scrolling use fresh callback refs without restarting their long-lived effects,
+and the GIF picker has one request owner instead of two. Stable chat, media and
+reader callbacks remove needless subscription/effect churn; Ant Farm no longer
+queues an unchanged score update every simulation step. CI actions moved to
+their Node 24-backed v5 runtimes while the application's explicit Node 20 test
+runtime remains a separate migration decision. The lint gate is now
+`--max-warnings 0`, and the full `npm run check` gate passes.
+
+The Start-menu label “Windows Explorer” is now “Garden Files”; the underlying
+app and `C:\GARDEN` filesystem contract are unchanged.

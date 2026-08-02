@@ -137,7 +137,7 @@ export function WikiProfilePage({ username: viewUsername }: Props) {
       }
     }
     if (!auth.loading) fetchProfile()
-  }, [auth.loading, auth.session, auth.username, viewUsername])
+  }, [auth.loading, auth.session, auth.username, auth.role, auth.bio, auth.avatar_url, auth.created_at, isOwnProfile, viewUsername])
 
   // Find a wiki page with matching username frontmatter
   const matchingWikiSlug = (() => {

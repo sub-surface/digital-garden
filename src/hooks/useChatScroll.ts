@@ -22,12 +22,17 @@ export function useChatScroll({
 }: UseChatScrollOpts) {
   const [atBottom, setAtBottom] = useState(true)
   const atBottomRef = useRef(true)
+  const onAtBottomRef = useRef(onAtBottom)
+
+  useEffect(() => {
+    onAtBottomRef.current = onAtBottom
+  }, [onAtBottom])
 
   const scrollToBottom = useCallback(() => {
     const el = listRef.current
     if (!el) return
     el.scrollTop = el.scrollHeight
-  }, [])
+  }, [listRef])
 
   const handleScroll = useCallback(() => {
     const el = listRef.current
@@ -35,13 +40,13 @@ export function useChatScroll({
     const isBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100
     atBottomRef.current = isBottom
     setAtBottom(isBottom)
-    if (isBottom) onAtBottom?.()
+    if (isBottom) onAtBottomRef.current?.()
 
     // Auto-load when scrolled near top
     if (el.scrollTop < 150 && hasMore) {
       loadMore()
     }
-  }, [hasMore, loadMore, onAtBottom])
+  }, [hasMore, listRef, loadMore])
 
   // Restore scroll position after older messages are prepended
   useLayoutEffect(() => {
@@ -52,25 +57,23 @@ export function useChatScroll({
       el.scrollTop = newScrollHeight - prevScrollHeightRef.current
       prevScrollHeightRef.current = 0
     }
-  }, [messages, prevScrollHeightRef])
+  }, [messages, listRef, prevScrollHeightRef])
 
   // Scroll to bottom after initial load
   useEffect(() => {
     if (!loading) {
       scrollToBottom()
-      onAtBottom?.()
+      onAtBottomRef.current?.()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading])
+  }, [loading, scrollToBottom])
 
   // Scroll to bottom when new messages arrive (only if near bottom)
   useEffect(() => {
     if (messages.length > 0 && atBottomRef.current) {
       scrollToBottom()
-      onAtBottom?.()
+      onAtBottomRef.current?.()
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages])
+  }, [messages, scrollToBottom])
 
   return { atBottom, handleScroll, scrollToBottom }
 }

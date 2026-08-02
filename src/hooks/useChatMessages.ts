@@ -62,7 +62,7 @@ export function useChatMessages({
       setLoadingMore(false)
       loadingMoreRef.current = false
     }
-  }, [hasMore, messages, roomId, accessToken])
+  }, [hasMore, messages, roomId, accessToken, listRef])
 
   // Fetch initial messages when room changes
   useEffect(() => {

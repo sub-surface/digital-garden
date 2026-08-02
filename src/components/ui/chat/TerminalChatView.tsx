@@ -230,10 +230,6 @@ export function TerminalChatView({
   const historyRef = useRef<string[]>([])
   const historyIdxRef = useRef(-1)
 
-  function mkId() {
-    return String(++lineIdRef.current)
-  }
-
   // Fetch emotes once on mount
   useEffect(() => {
     const cached = getEmoteCache()
@@ -332,9 +328,10 @@ export function TerminalChatView({
   // Determine if current AC is an emote (not command, not @mention)
   const isEmoteAc = showAc && acCandidates[0]?.startsWith(":")
 
-  function appendLocalLine(text: string, kind: TerminalLine["kind"] = "system") {
-    setLocalLines((prev) => [...prev, { id: mkId(), text, kind }])
-  }
+  const appendLocalLine = useCallback((text: string, kind: TerminalLine["kind"] = "system") => {
+    const id = String(++lineIdRef.current)
+    setLocalLines((prev) => [...prev, { id, text, kind }])
+  }, [])
 
   const handleEnter = useCallback(async () => {
     const raw = input.trim()
@@ -778,7 +775,7 @@ export function TerminalChatView({
     } else {
       await onSend(body)
     }
-  }, [input, messages, currentUserId, currentUsername, roomId, accessToken, onSend, onDelete, onEdit, onPin, onBoot, onReact, isAdmin, shrugPending, showTimestamps, cleared, replyContext, lastReadTimestamp, mutedTyping, chatDensity, setChatDensity, chatFontScale, setChatFontScale])
+  }, [input, messages, currentUsername, roomId, accessToken, onSend, onDelete, onEdit, onPin, onBoot, onReact, isAdmin, shrugPending, showTimestamps, cleared, replyContext, lastReadTimestamp, watched, chatDensity, setChatDensity, chatFontScale, setChatFontScale, appendLocalLine])
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {

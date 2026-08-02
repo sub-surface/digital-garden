@@ -192,6 +192,7 @@ export function useBootPlayback({
   const viewportRef = useRef<BootViewport>(viewport)
   const reducedMotionRef = useRef(reducedMotion)
   const maxLinesRef = useRef(sanitizeMaxLines(maxLines))
+  const onToneRef = useRef(onTone)
 
   useEffect(() => {
     speedRef.current = sanitizeSpeed(speed)
@@ -208,6 +209,10 @@ export function useBootPlayback({
   useEffect(() => {
     maxLinesRef.current = sanitizeMaxLines(maxLines)
   }, [maxLines])
+
+  useEffect(() => {
+    onToneRef.current = onTone
+  }, [onTone])
 
   const setPaused = useCallback((paused: boolean) => {
     pausedRef.current = paused
@@ -289,7 +294,7 @@ export function useBootPlayback({
       setActive(EMPTY_ACTIVE)
       
       if (!event.ephemeral && (event.tone === "tender" || event.tone === "warning")) {
-        onTone?.(event.tone)
+        onToneRef.current?.(event.tone)
       }
     }
 

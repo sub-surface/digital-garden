@@ -159,10 +159,11 @@ export function ColliderPage() {
   }, [])
 
   useEffect(() => {
+    const state = stateRef.current
     draw()
     const ro = new ResizeObserver(draw)
     if (canvasRef.current) ro.observe(canvasRef.current)
-    return () => { ro.disconnect(); cancelAnimationFrame(stateRef.current.raf) }
+    return () => { ro.disconnect(); cancelAnimationFrame(state.raf) }
   }, [draw, seed])
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {

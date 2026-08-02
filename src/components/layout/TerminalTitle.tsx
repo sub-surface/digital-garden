@@ -356,7 +356,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
         scheduleIdle()
       }
     }, delay)
-  }, [runSnippet, isAnimating])
+  }, [runSnippet, isAnimating, isWiki, settledText])
 
   // Boot sequence on mount
   useEffect(() => {

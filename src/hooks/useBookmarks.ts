@@ -40,6 +40,32 @@ export function useBookmarks() {
   const [loggedIn, setLoggedIn] = useState(false)
   const migrated = useRef(false)
 
+  const loadFromServer = useCallback(async () => {
+    try {
+      const token = await getToken()
+      // apiGet throws on a non-2xx status AND on a non-JSON body — the latter
+      // covers what the old content-type guard was for: when the Worker isn't
+      // in front of the assets (e.g. a `vite preview` build, or a misroute),
+      // `/api/bookmarks` resolves to the SPA fallback HTML with a 200, and
+      // apiGet's JSON.parse failure surfaces that as a thrown ApiError instead
+      // of a raw "Unexpected token '<'". Either way lands in the catch below.
+      const data = await apiGet<{ slug: string; title: string; added_at: string }[]>("/api/bookmarks", { token })
+      setBookmarks(data.map((b) => ({ slug: b.slug, title: b.title, addedAt: b.added_at })))
+    } catch (e) {
+      console.warn("useBookmarks: server load failed:", e)
+    }
+  }, [])
+
+  const migrateLocal = useCallback(async (local: Bookmark[]) => {
+    try {
+      const token = await getToken()
+      await apiPost("/api/bookmarks/migrate", { bookmarks: local }, { token })
+      await loadFromServer()
+    } catch (e) {
+      console.warn("useBookmarks: local migration failed:", e)
+    }
+  }, [loadFromServer])
+
   // Detect auth state and load bookmarks accordingly
   useEffect(() => {
     async function init() {
@@ -89,7 +115,7 @@ export function useBookmarks() {
       }
     })
     return () => subscription.unsubscribe()
-  }, [])
+  }, [loadFromServer, migrateLocal])
 
   // Sync localStorage changes across tabs (logged-out only)
   useEffect(() => {
@@ -100,32 +126,6 @@ export function useBookmarks() {
     window.addEventListener("storage", onStorage)
     return () => window.removeEventListener("storage", onStorage)
   }, [loggedIn])
-
-  async function loadFromServer() {
-    try {
-      const token = await getToken()
-      // apiGet throws on a non-2xx status AND on a non-JSON body — the latter
-      // covers what the old content-type guard was for: when the Worker isn't
-      // in front of the assets (e.g. a `vite preview` build, or a misroute),
-      // `/api/bookmarks` resolves to the SPA fallback HTML with a 200, and
-      // apiGet's JSON.parse failure surfaces that as a thrown ApiError instead
-      // of a raw "Unexpected token '<'". Either way lands in the catch below.
-      const data = await apiGet<{ slug: string; title: string; added_at: string }[]>("/api/bookmarks", { token })
-      setBookmarks(data.map((b) => ({ slug: b.slug, title: b.title, addedAt: b.added_at })))
-    } catch (e) {
-      console.warn("useBookmarks: server load failed:", e)
-    }
-  }
-
-  async function migrateLocal(local: Bookmark[]) {
-    try {
-      const token = await getToken()
-      await apiPost("/api/bookmarks/migrate", { bookmarks: local }, { token })
-      await loadFromServer()
-    } catch (e) {
-      console.warn("useBookmarks: local migration failed:", e)
-    }
-  }
 
   const isBookmarked = useCallback((slug: string) =>
     bookmarks.some((b) => b.slug === slug), [bookmarks])

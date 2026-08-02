@@ -1433,11 +1433,21 @@ What remains is deliberately ordered by value and architectural dependency:
     shared site lightbox. That viewer now owns wheel/button/keyboard zoom, drag
     panning and album navigation across notes, chat, photography, wiki portraits
     and the OS. An active screensaver carries a quiet now-playing card.
-14. [x] **Start-menu consolidation and native Find.** Explorer, Notepad, Media
-    Player and Task Manager now sit at the top level instead of hiding inside
-    Programs. `FIND.EXE` shares the garden overlay's lazy FlexSearch backend,
+14. [x] **Start-menu consolidation and native Find.** Garden Files (the Explorer
+    app), Notepad, Media Player and Task Manager now sit at the top level instead
+    of hiding inside Programs. `FIND.EXE` shares the garden overlay's lazy FlexSearch backend,
     adds browser-local `H:` documents without uploading them, scopes by drive,
     and opens results directly in Browser or Notepad.
+15. [ ] **Philchat chronicle intake.** When the next content PR arrives, review
+    the proposed chatter additions alongside two deliberately coupled follow-ups:
+    expand the terminal's interlocutor aliases/persona phrase banks (including
+    deterministic coverage for `chat` and `debate`), and enrich the wiki from
+    cited Philchat logs and relevant news reports. Preserve the boundary from
+    PR #22: survey answers remain self-reported. Log-derived prose needs a
+    source trail, privacy/redaction review and a human editorial pass; news
+    should be linked and dated rather than silently absorbed as character fact.
+    Keep ingestion reviewable—content and chatbot changes may share a PR, but
+    no automatic publishing pipeline or unreviewed transcript dump.
 
 Verification note: Leon browser-verified the 2026-08-01 OS pass and the taller
 main-site terminal. This continuation has static/compiler/test coverage but did

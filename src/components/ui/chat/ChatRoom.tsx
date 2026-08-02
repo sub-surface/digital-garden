@@ -149,7 +149,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     return () => { if (pinTimerRef.current) clearInterval(pinTimerRef.current) }
   }, [pinnedMessages.length])
 
-  async function handlePin(messageId: string) {
+  const handlePin = useCallback(async (messageId: string) => {
     const msg = messages.find(m => m.id === messageId)
     const isPinned = !!msg?.pinned_at
     try {
@@ -173,7 +173,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     } catch {
       showToast(isPinned ? "Failed to unpin" : "Failed to pin")
     }
-  }
+  }, [messages, accessToken, setMessages, currentUserId, roomId, showToast])
 
   const { atBottom, handleScroll, scrollToBottom } = useChatScroll({
     listRef,
@@ -243,7 +243,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [replyTo, popup, searchOpen, channelOpen])
 
-  async function handleReact(messageId: string, emote: string) {
+  const handleReact = useCallback(async (messageId: string, emote: string) => {
     const msg = messages.find(m => m.id === messageId)
     const alreadyReacted = msg?.reactions?.find(r => r.emote === emote)?.reacted ?? false
     const method = alreadyReacted ? "DELETE" : "POST"
@@ -278,9 +278,9 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       setMessages(prevMessages)
       showToast("Reaction failed")
     }
-  }
+  }, [messages, setMessages, accessToken, showToast])
 
-  async function handleDelete(messageId: string) {
+  const handleDelete = useCallback(async (messageId: string) => {
     try {
       await apiDelete(`/api/chat/messages/${messageId}`, undefined, { token: accessToken })
       setMessages((prev) =>
@@ -289,9 +289,9 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
     } catch {
       showToast("Failed to delete message")
     }
-  }
+  }, [accessToken, setMessages, showToast])
 
-  async function handleEdit(messageId: string, newBody: string) {
+  const handleEdit = useCallback(async (messageId: string, newBody: string) => {
     const prev = messages.find((m) => m.id === messageId)
     if (!prev) return
     setEditingMessageId(null)
@@ -312,16 +312,16 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       )
       showToast("Failed to edit message")
     }
-  }
+  }, [messages, setMessages, accessToken, showToast])
 
-  async function handleSend(body: string, replyToId?: string) {
+  const handleSend = useCallback(async (body: string, replyToId?: string) => {
     try {
       await apiPost("/api/chat/messages", { room_id: roomId, body, reply_to: replyToId ?? null }, { token: accessToken })
     } catch {
       showToast("Failed to send message")
     }
     setReplyTo(null)
-  }
+  }, [roomId, accessToken, showToast])
 
   // Derive known users from messages for autocomplete
   const knownUsers = useMemo(() => {

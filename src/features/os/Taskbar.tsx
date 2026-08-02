@@ -385,7 +385,7 @@ function StartMenu({ onOpenShortcut }: Props) {
         />
 
         <MenuRow
-          label="Windows Explorer"
+          label="Garden Files"
           icon="folder"
           onEnter={() => setFlyout(null)}
           onClick={() => openApp("explorer", "C:\\GARDEN")}

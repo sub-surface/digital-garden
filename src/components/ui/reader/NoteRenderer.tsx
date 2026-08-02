@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, Suspense, lazy } from "react"
+import { useState, useMemo, useEffect, useCallback, Suspense, lazy } from "react"
 import { useStore } from "@/store"
 import { ArticleLayout } from "./ArticleLayout"
 import { NoteLayout } from "./NoteLayout"
@@ -55,12 +55,12 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
   const contentIndex = useStore((s) => s.contentIndex)
   const sessionOverrides = useStore((s) => s.sessionOverrides)
 
-  const handleLoad = (loaded: any) => {
+  const handleLoad = useCallback((loaded: any) => {
     setData(prev => ({
       frontmatter: { ...prev.frontmatter, ...loaded.frontmatter },
       headings: (loaded.headings && loaded.headings.length > 0) ? loaded.headings : prev.headings
     }))
-  }
+  }, [])
 
   const resolvedKey = contentIndex ? (resolveSlug(slug, contentIndex) ?? slug) : slug
   const meta = contentIndex?.[resolvedKey]

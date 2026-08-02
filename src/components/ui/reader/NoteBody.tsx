@@ -141,7 +141,7 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
 
     load()
     return () => { cancelled = true }
-  }, [slug, isSystemPage, isTagPage, isFolderPage])
+  }, [slug, isSystemPage, isTagPage, isFolderPage, sysPage, onLoad])
 
   // Extract headings from MDX after render
   useEffect(() => {
@@ -154,7 +154,7 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
       }))
       onLoad({ headings: extracted })
     }
-  }, [MDXComponent, slug])
+  }, [MDXComponent, slug, onLoad])
 
   if (loading) return <div className="note-loading">Loading...</div>
   if (notFound) return <NotFound />

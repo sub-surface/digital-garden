@@ -64,7 +64,7 @@ export function EmotePicker({ onSelect, onSelectGif, onClose }: Props) {
     }
     document.addEventListener("mousedown", handleMouseDown)
     return () => document.removeEventListener("mousedown", handleMouseDown)
-  }, [onClose])
+  }, [onClose, ref])
 
   // (Escape handled by the focus trap)
 
@@ -79,18 +79,15 @@ export function EmotePicker({ onSelect, onSelectGif, onClose }: Props) {
       .finally(() => setGifLoading(false))
   }, [])
 
-  // Fetch trending when switching to GIF tab
-  useEffect(() => {
-    if (tab === "gifs" && gifResults.length === 0 && !gifLoading) {
-      fetchGifs("")
-    }
-  }, [tab])
-
-  // Debounced GIF search
+  // One request path owns both the initial trending feed and typed searches.
+  // Keeping those in separate effects caused two trending requests whenever
+  // the tab first opened; adding the missing loading/results dependencies to
+  // that old effect would also turn an empty/error response into a retry loop.
   useEffect(() => {
     if (tab !== "gifs") return
     if (gifDebounceRef.current) clearTimeout(gifDebounceRef.current)
-    gifDebounceRef.current = setTimeout(() => fetchGifs(gifQuery), 300)
+    const delay = gifQuery.trim() ? 300 : 0
+    gifDebounceRef.current = setTimeout(() => fetchGifs(gifQuery), delay)
     return () => { if (gifDebounceRef.current) clearTimeout(gifDebounceRef.current) }
   }, [gifQuery, tab, fetchGifs])
 

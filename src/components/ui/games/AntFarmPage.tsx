@@ -62,6 +62,7 @@ export function AntFarmPage() {
     }))
 
     let collectedLocal = 0
+    let reportedCollected = 0
 
     // sense a field in three cones ahead; return steering bias
     const sense = (a: Ant, field: Float32Array): number => {
@@ -136,7 +137,10 @@ export function AntFarmPage() {
         }
       }
       foods = foods.filter((f) => f.amount > 0)
-      if (collectedLocal !== collected) setCollected(collectedLocal)
+      if (collectedLocal !== reportedCollected) {
+        reportedCollected = collectedLocal
+        setCollected(collectedLocal)
+      }
     }
 
     // render

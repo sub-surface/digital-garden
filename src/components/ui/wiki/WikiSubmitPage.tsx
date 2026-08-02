@@ -414,6 +414,8 @@ function SurveySection({
 // ── Main component (exported for route + MDX embed) ──
 
 const DRAFT_KEY = "wiki-submit-draft"
+const STEPS = ["Basic Info", "Survey", "Page Content", "Review & Submit"]
+const TOTAL_STEPS = STEPS.length
 
 function saveDraft(data: FormData) {
   // Don't persist large base64 image in localStorage
@@ -449,9 +451,6 @@ export function WikiSubmitForm() {
   const [error, setError] = useState<string | null>(null)
   const [draftSaved, setDraftSaved] = useState(false)
   const uploadDraftRef = useRef<HTMLInputElement>(null)
-
-  const STEPS = ["Basic Info", "Survey", "Page Content", "Review & Submit"]
-  const TOTAL_STEPS = STEPS.length
 
   const setField = (key: string, value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }))

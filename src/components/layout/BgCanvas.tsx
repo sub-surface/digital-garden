@@ -153,12 +153,13 @@ function BgCanvasInner() {
   // Automatically switch to the matching board background on game pages
   useEffect(() => {
     const slug = activeSlug.toLowerCase()
+    const currentMode = useStore.getState().bgMode
     const gameMode =
       slug === "chess" ? "chess" :
       slug === "hexo" ? "hexo" :
       slug === "sigil" || slug === "collider" ? "chamber" : null
     if (gameMode) {
-      if (bgMode !== gameMode) {
+      if (currentMode !== gameMode) {
         if (gameMode === "chamber") {
           // Page-scoped switch: bypass setBgMode so lastBgMode (the user's
           // actual choice) is preserved for the revert.
@@ -170,7 +171,7 @@ function BgCanvasInner() {
       }
     } else {
       // Revert if we were in a game-board mode because of the slug
-      if (bgMode === "chess" || bgMode === "hexo" || (bgMode === "chamber" && autoChamberRef.current)) {
+      if (currentMode === "chess" || currentMode === "hexo" || (currentMode === "chamber" && autoChamberRef.current)) {
         autoChamberRef.current = false
         const lastMode = useStore.getState().lastBgMode
         useStore.getState().setBgMode(lastMode)

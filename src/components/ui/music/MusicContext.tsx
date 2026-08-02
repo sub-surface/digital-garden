@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from "react"
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import type { Track } from "@/types/content"
 import { musicAssetUrl } from "@/lib/musicAsset"
 
@@ -223,28 +223,6 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [currentTrack])
 
-  useEffect(() => {
-    const ms = navigator.mediaSession
-    if (!ms) return
-    const set = (action: MediaSessionAction, handler: (() => void) | null) => {
-      try { ms.setActionHandler(action, handler) } catch { /* unsupported action */ }
-    }
-    set("play", () => setIsPlaying(true))
-    set("pause", () => setIsPlaying(false))
-    set("previoustrack", () => prevTrack())
-    set("nexttrack", () => nextTrack())
-    try {
-      ms.setActionHandler("seekto", (details) => {
-        if (typeof details.seekTime === "number") seek(details.seekTime)
-      })
-    } catch { /* unsupported */ }
-    return () => {
-      for (const a of ["play", "pause", "previoustrack", "nexttrack", "seekto"] as const) {
-        set(a, null)
-      }
-    }
-  }, [tracks, playlist, playlistIndex, currentTrackIndex])
-
   // Keep OS playback state in sync so the lockscreen shows the right play/pause.
   useEffect(() => {
     if (navigator.mediaSession) {
@@ -252,13 +230,18 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [isPlaying])
 
-  const ensureAudioContext = () => {
+  const ensureAudioContext = useCallback(() => {
     if (audioContextRef.current?.state === "suspended") {
       audioContextRef.current.resume()
     }
-  }
+  }, [])
 
-  const playTrack = (target: number | string) => {
+  const togglePlay = useCallback(() => {
+    ensureAudioContext()
+    setIsPlaying((playing) => !playing)
+  }, [ensureAudioContext])
+
+  const playTrack = useCallback((target: number | string) => {
     ensureAudioContext()
     
     let index = -1
@@ -276,14 +259,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCurrentTrackIndex(index)
       setIsPlaying(true)
     }
-  }
+  }, [currentTrackIndex, ensureAudioContext, togglePlay, tracks])
 
-  const togglePlay = () => {
-    ensureAudioContext()
-    setIsPlaying(!isPlaying)
-  }
-
-  const nextTrack = () => {
+  const nextTrack = useCallback(() => {
     ensureAudioContext()
     if (playlist.length > 0) {
       const nextIdx = (playlistIndex + 1) % playlist.length
@@ -293,9 +271,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCurrentTrackIndex((prev) => (prev + 1) % tracks.length)
     }
     setIsPlaying(true)
-  }
+  }, [ensureAudioContext, playlist, playlistIndex, tracks.length])
 
-  const prevTrack = () => {
+  const prevTrack = useCallback(() => {
     ensureAudioContext()
     if (playlist.length > 0) {
       const prevIdx = (playlistIndex - 1 + playlist.length) % playlist.length
@@ -305,20 +283,42 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setCurrentTrackIndex((prev) => (prev - 1 + tracks.length) % tracks.length)
     }
     setIsPlaying(true)
-  }
+  }, [ensureAudioContext, playlist, playlistIndex, tracks.length])
 
-  const setVolume = (v: number) => {
+  const setVolume = useCallback((v: number) => {
     const clamped = Math.max(0, Math.min(1, v))
     setVolumeState(clamped)
     localStorage.setItem("music-volume", clamped.toString())
-  }
+  }, [])
 
-  const seek = (time: number) => {
+  const seek = useCallback((time: number) => {
     if (audioRef.current) {
       audioRef.current.currentTime = time
       setCurrentTime(time)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    const ms = navigator.mediaSession
+    if (!ms) return
+    const set = (action: MediaSessionAction, handler: (() => void) | null) => {
+      try { ms.setActionHandler(action, handler) } catch { /* unsupported action */ }
+    }
+    set("play", () => setIsPlaying(true))
+    set("pause", () => setIsPlaying(false))
+    set("previoustrack", prevTrack)
+    set("nexttrack", nextTrack)
+    try {
+      ms.setActionHandler("seekto", (details) => {
+        if (typeof details.seekTime === "number") seek(details.seekTime)
+      })
+    } catch { /* unsupported */ }
+    return () => {
+      for (const action of ["play", "pause", "previoustrack", "nexttrack", "seekto"] as const) {
+        set(action, null)
+      }
+    }
+  }, [nextTrack, prevTrack, seek])
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {
