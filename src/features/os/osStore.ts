@@ -12,6 +12,9 @@ import { persist } from "zustand/middleware"
 import type { BgMode } from "@/store"
 import { playOSSound, type OSSound } from "./osSounds"
 
+/** Bump with an explicit migrate() branch whenever a persisted shape changes. */
+const OS_PERSIST_VERSION = 1
+
 // ---------------------------------------------------------------------------
 // Settings — persisted, unlike window state.
 //
@@ -159,7 +162,11 @@ export const useOSSettings = create<OSSettings>()(
       setDesktopPositions: (desktopPositions) => set({ desktopPositions }),
       resetDesktopOrder: () => set({ desktopOrder: [], desktopPositions: {} }),
     }),
-    { name: "subsurfaces95" },
+    {
+      name: "subsurfaces95",
+      version: OS_PERSIST_VERSION,
+      migrate: (persisted) => persisted as OSSettings,
+    },
   ),
 )
 
@@ -211,6 +218,8 @@ interface OSStore {
   openWindow: (input: OpenWindowInput) => void
   closeWindow: (id: string) => void
   focusWindow: (id: string) => void
+  /** Restore a minimized window if needed, then bring it to the front. */
+  activateWindow: (id: string) => void
   moveWindow: (id: string, x: number, y: number) => void
   resizeWindow: (id: string, geo: WindowGeometry) => void
   updateWindowArgs: (id: string, args: Record<string, string>) => void
@@ -300,6 +309,21 @@ export const useOS = create<OSStore>((set, get) => ({
       if (!target || target.z === s.nextZ - 1) return {}
       return {
         windows: s.windows.map((w) => (w.id === id ? { ...w, z: s.nextZ } : w)),
+        nextZ: s.nextZ + 1,
+      }
+    }),
+
+  activateWindow: (id) =>
+    set((s) => {
+      const target = s.windows.find((win) => win.id === id)
+      if (!target) return {}
+      if (target.state !== "minimized" && target.z === s.nextZ - 1) return {}
+      return {
+        windows: s.windows.map((win) =>
+          win.id === id
+            ? { ...win, state: win.state === "minimized" ? "normal" : win.state, z: s.nextZ }
+            : win,
+        ),
         nextZ: s.nextZ + 1,
       }
     }),
@@ -510,7 +534,12 @@ export const useOSFiles = create<OSFilesStore>()(
       },
       clearFiles: () => set({ files: [], folders: [] }),
     }),
-    { name: "subsurfaces95-files", partialize: (state) => ({ files: state.files, folders: state.folders }) },
+    {
+      name: "subsurfaces95-files",
+      version: OS_PERSIST_VERSION,
+      migrate: (persisted) => persisted as OSFilesStore,
+      partialize: (state) => ({ files: state.files, folders: state.folders }),
+    },
   ),
 )
 
@@ -535,7 +564,11 @@ export const useOSMedia = create<OSMediaStore>()(
         return { savedPlaylists }
       }),
     }),
-    { name: "subsurfaces95-media" },
+    {
+      name: "subsurfaces95-media",
+      version: OS_PERSIST_VERSION,
+      migrate: (persisted) => persisted as OSMediaStore,
+    },
   ),
 )
 

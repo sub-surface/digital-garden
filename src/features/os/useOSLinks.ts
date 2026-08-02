@@ -51,7 +51,7 @@ export function useOSLinks(openSlug: OpenSlug) {
       if (url.origin !== window.location.origin) return
 
       const slug = slugFromPathname(url.pathname)
-      if (!slug || slug === "index") return
+      if (!slug) return
 
       event.preventDefault()
       event.stopPropagation()

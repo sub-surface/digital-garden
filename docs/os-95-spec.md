@@ -1,6 +1,6 @@
 # SUBSURFACES 95 — OS shell spec
 
-**Status:** draft → in progress
+**Status:** shipped → hardening and browser certification
 **Created:** 2026-08-01
 **Scope:** overhaul `os.subsurfaces.net` from a fullscreen TUI into a windowed,
 Win95-form desktop that hosts the garden's own notes, system pages, and features.
@@ -9,8 +9,10 @@ Win95-form desktop that hosts the garden's own notes, system pages, and features
 
 ## 1. Premise
 
-`os.subsurfaces.net` currently renders one thing: `BootPage`, an endless procedural
-TUI. This spec keeps that work intact and puts a desktop *after* it.
+`os.subsurfaces.net` now renders SUBSURFACES 95: a finite POST/logon sequence and
+a windowed personal-machine desktop. The old endless `BootPage` was retired into
+the shared `/terminal` surface; §9 records that deliberate deviation from the
+original plan.
 
 The sequence a visitor gets:
 
@@ -134,7 +136,7 @@ The reason this is tractable. Almost nothing here is new rendering work.
 
 ---
 
-## 4. Boot → desktop handoff
+## 4. Boot → desktop handoff (original plan; superseded by §9)
 
 `bootTypes.ts` is explicit that "generators describe what should happen, while
 useBootPlayback owns clocks." That separation is what makes this cheap.
@@ -185,16 +187,16 @@ export interface OSWindow {
 }
 ```
 
-Actions: `openWindow`, `closeWindow`, `focusWindow`, `moveWindow`,
+Actions: `openWindow`, `closeWindow`, `focusWindow`, `activateWindow`, `moveWindow`,
 `resizeWindow`, `setWindowState`, `cascade`.
 
 - **Persistence:** deliberately **not** in `PERSISTED_KEYS`. A restored desktop
   full of windows from three weeks ago is hostile. Session-only.
 - **Focus:** `focusWindow` bumps `z` to `maxZ + 1`. Focused window gets
   `--os-title-active`; all others `--os-title-idle`.
-- **Dedupe:** opening an already-open (appId, args) pair focuses the existing
-  window rather than spawning a duplicate. Exception: Notepad, which is
-  multi-instance.
+- **Dedupe:** opening an already-open (appId, args) pair focuses and restores the
+  existing window. Blank Notepads are multi-instance; once a local `fileId` is
+  known, that file has one editor window so delayed saves cannot race.
 
 ### 5.2 Components — `src/features/os/`
 
@@ -203,11 +205,12 @@ os/
   OSShell.tsx           desktop root: BgCanvas + icons + WindowLayer + Taskbar
   Desktop.tsx           icon grid, marquee select, right-click menu
   WindowFrame.tsx       chrome: title bar, min/max/close, resize grips, focus
-  WindowLayer.tsx       maps store windows → WindowFrame
   Taskbar.tsx           Start button, task buttons, tray, clock
-  StartMenu.tsx         the blue sidebar, cascading submenus
-  apps/                 one thin module per app (see §6)
-  os-tokens.scss        theme-derived bevel/face/title variables
+  appRegistry.tsx       eager metadata + lazy program loaders only
+  appNavigation.ts      lightweight note/file routing shared by chrome and apps
+  apps.tsx              lazy built-in implementation chunk
+  Solitaire.tsx         independent lazy game program
+  osStore.ts            session windows + versioned persisted machine stores
   OS.module.scss        chrome
   useDrag.ts            pointer-events drag + resize, no library
 ```
@@ -221,7 +224,9 @@ os/
   than repainting an MDX document at 60fps. Hold `Shift` for live drag.
 - Windows clamp to the desktop; the title bar can never leave the viewport.
 - Cascade new windows at 24px offsets (`PanelCard` already does exactly this).
-- `Alt+Tab` cycles. `Alt+F4` closes focused. `Ctrl+Esc` opens Start.
+- Ctrl/Cmd+backtick cycles tasks inside the page; `Esc` closes the focused window.
+  Browser-conflicting `Alt+Tab`, `Alt+F4` and `Ctrl+Esc` interception was removed
+  deliberately — those shortcuts belong to the reader's real operating system.
 - Minimize animates to its taskbar button.
 
 ---
@@ -359,7 +364,7 @@ the existing `.subsurfaces.net` cookie domain, read by the main shell.
 |---|---|---|
 | **0** | The shitposts: `readme-1st`, `trust-me-bro`, `touch-grass`, `its-giving`, `unread`, `foucault-fight`. | **Shipped** (2026-08-01) |
 | **1** | Finite POST, splash, handoff, skip-on-input, reduced-motion, once-per-session. | **Shipped** |
-| **2** | Store, `WindowFrame`, `useDrag`, drag outline, 8 resize grips, focus/z-order, Alt+Tab / Alt+F4 / Ctrl+Esc. | **Shipped** |
+| **2** | Store, `WindowFrame`, `useDrag`, drag outline, 8 resize grips, focus/z-order and in-page Ctrl/Cmd+backtick task switching. | **Shipped** — browser-level shortcuts intentionally superseded |
 | **3** | Desktop icons, Taskbar, Start menu with flyouts, mobile CRT panel. | **Shipped** |
 | **4** | Browser, local Notepad, Help, Explorer, My Computer, Recycle Bin, Display Properties, direct-mounted programs. | **Shipped** (2026-08-02) |
 | **5** | ARG: Recycle Bin surface + seed payoff wired. | **Partial** — see below |
@@ -445,8 +450,11 @@ clock); Disks 1–3 completing the Recycle Bin ARG.
   `overflow: hidden` on the desktop root, `overflow: auto` on `.os-doc`.
 - **`usePanelClick`** must not fire in the OS shell. It already bails on
   `shell !== "main"` — verify, don't assume.
-- **Bundle:** the OS is lazy per-app; `APPS` entries are `lazy()`. It must not
-  land in the main-site chunk.
+- **Bundle:** desktop chrome imports only `appRegistry.tsx`; every `APPS` entry
+  is a `lazy()` boundary. Built-in programs currently share one async
+  implementation chunk, while Solitaire and heavyweight terminal/wiki/chat
+  descendants have their own boundaries. None may land in the main-site or
+  initial OS chrome chunk.
 - **Scope creep:** the Start menu can eat a week. Cap it at real entries from the
   content index, no bespoke submenus.
 
@@ -531,7 +539,8 @@ The completed personal-machine layer adds:
 Persistence remains intentionally legible: `subsurfaces95` (settings, widget and
 desktop positions), `subsurfaces95-files`, `subsurfaces95-solitaire`,
 `subsurfaces95-media`, and the existing shared `music-session`/`music-volume`.
-Window geometry remains session-only.
+The four OS-owned persisted stores carry schema version `1` with migration
+hooks; window geometry remains session-only.
 - The taskbar has per-window close controls; Escape closes the active window;
   desktop icons reorder on the grid; Task Manager, Account and the compact media
   player are first-class utilities. Browser-conflicting OS hotkeys were removed.
@@ -540,3 +549,25 @@ Window geometry remains session-only.
   rendered content already emits.
 
 The remaining boundaries and browser-certification work live in ROADMAP §29.
+
+---
+
+## 14. Stabilization contract (2026-08-02)
+
+- **A program failure is local.** `Desktop` wraps every lazy program in
+  `ProgramBoundary`, inside its `WindowFrame`. Render/chunk failures offer Retry
+  and Close (plus Reload for stale chunks) without unmounting sibling windows or
+  the desktop.
+- **Authentication has one client lifecycle.** `AuthProvider` is mounted once in
+  `main.tsx`; every `useAuth()` consumer reads the same session, role and profile
+  cache. Shells and windows must not create their own Supabase listeners.
+- **Lazy means absent from desktop startup.** Chrome may import registry metadata
+  and navigation helpers, never `apps.tsx`. Heavy descendants remain dynamic.
+- **Interaction regressions are executable.** Vitest + React Testing Library run
+  under `npm test`, initially covering auth lifecycle, error containment,
+  same-origin links, minimized-task restoration, same-file editor dedupe and
+  keyboard-openable Start flyouts.
+- **Correctness details are shared primitives.** `activateWindow` owns restore +
+  focus; full logoff owns sign-out + window teardown + logon transition; a
+  foundation validates its designated suit; single/double-click preferences
+  apply to My Computer as well as Explorer and desktop icons.

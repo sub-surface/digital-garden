@@ -1,28 +1,20 @@
 /**
- * Application registry for SUBSURFACES 95.
+ * Built-in application implementations for SUBSURFACES 95.
  *
- * Adding an app is one entry here, in the spirit of SYSTEM_PAGES. Almost every
- * app is a thin wrapper: the document apps are `NoteBody` in different chrome,
- * and the games are SYSTEM_PAGES entries that `NoteBody` already knows how to
- * mount. See docs/os-95-spec.md §6.
+ * Desktop chrome must not import this module directly. `appRegistry.tsx` owns
+ * metadata and lazy loaders so these implementations arrive only when a window
+ * opens. Most apps remain thin wrappers: document apps are `NoteBody` in
+ * different chrome, while games come from SYSTEM_PAGES. See the OS spec §6/§14.
  */
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { NoteBody } from "@/components/ui/reader/NoteBody"
-import { Terminal } from "@/features/terminal/Terminal"
 import { useStore, BG_MODES, BG_META, type BgMode } from "@/store"
-import { SYSTEM_PAGE_META } from "@/config/system-pages-meta"
 import { SYSTEM_PAGES } from "@/config/system-pages"
 import { PROGRAMS } from "@/features/terminal/commands"
-import { classifyLayout } from "@/lib/layout"
 import type { NoteMetadata } from "@/types/content"
 import { useMusic } from "@/components/ui/music/MusicContext"
 import { useAuth } from "@/hooks/useAuth"
-import { WikiAdminPage } from "@/components/ui/wiki/WikiAdminPage"
-import { WikiProfilePage } from "@/components/ui/wiki/WikiProfilePage"
-import { WikiNewPage } from "@/components/ui/wiki/WikiNewPage"
-import { WikiEditPage } from "@/components/ui/wiki/WikiEditPage"
-import { ChatRoom } from "@/components/ui/chat/ChatRoom"
 import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
 import type { ChatRoom as ChatRoomType } from "@/types/chat"
 import { apiGet } from "@/lib/api"
@@ -35,15 +27,33 @@ import {
   useOSMedia,
   useOSSettings,
   type BootSequence,
-  type OSWindow,
   type ScreenSaverMode,
 } from "./osStore"
 import { OSIcon, type IconName } from "./OSIcon"
-import type { OSMenu } from "./osMenus"
 import { playOSSound } from "./osSounds"
-import { SolitaireApp } from "./Solitaire"
+import { APPS } from "./appRegistry"
+import { dosName, fileExt, useOpenNote } from "./appNavigation"
 import styles from "./OS.module.scss"
 import explorer from "./Explorer.module.scss"
+
+const Terminal = lazy(() =>
+  import("@/features/terminal/Terminal").then((module) => ({ default: module.Terminal })),
+)
+const WikiAdminPage = lazy(() =>
+  import("@/components/ui/wiki/WikiAdminPage").then((module) => ({ default: module.WikiAdminPage })),
+)
+const WikiProfilePage = lazy(() =>
+  import("@/components/ui/wiki/WikiProfilePage").then((module) => ({ default: module.WikiProfilePage })),
+)
+const WikiNewPage = lazy(() =>
+  import("@/components/ui/wiki/WikiNewPage").then((module) => ({ default: module.WikiNewPage })),
+)
+const WikiEditPage = lazy(() =>
+  import("@/components/ui/wiki/WikiEditPage").then((module) => ({ default: module.WikiEditPage })),
+)
+const ChatRoom = lazy(() =>
+  import("@/components/ui/chat/ChatRoom").then((module) => ({ default: module.ChatRoom })),
+)
 
 export interface AppProps {
   args: Record<string, string>
@@ -51,67 +61,11 @@ export interface AppProps {
   windowId: string
 }
 
-export interface OSApp {
-  icon: IconName
-  defaultSize?: { w: number; h: number }
-  menus?: (win: OSWindow) => OSMenu[]
-  multiInstance?: boolean
-  Component: React.ComponentType<AppProps>
-}
-
-// ---------------------------------------------------------------------------
-// Filenames
-// ---------------------------------------------------------------------------
-
-/** Extension by layout — articles are documents, system pages are executables. */
-export function fileExt(note: Pick<NoteMetadata, "slug" | "layout" | "type" | "system">): string {
-  if (note.system) return "EXE"
-  const layout = classifyLayout(note.slug, { layout: note.layout, type: note.type })
-  if (layout === "game") return "EXE"
-  if (note.type === "book" || note.type === "movie") return "NFO"
-  return layout === "article" ? "DOC" : "TXT"
-}
-
-/**
- * The MS-DOS name, as Explorer's details view would have shown it: six
- * characters, a tilde, an ordinal. Display names stay full-length; this is
- * decoration, and it is the funniest column in the app.
- */
-export function dosName(slug: string, ext: string): string {
-  const base = slug.split("/").pop() ?? slug
-  const clean = base.replace(/[^a-z0-9]/gi, "").toUpperCase()
-  const stem = clean.length > 8 ? `${clean.slice(0, 6)}~1` : clean.padEnd(0)
-  return `${stem || "UNTITLED"}.${ext}`
-}
-
-/** Which document app opens a given note. */
-export function appForNote(note: NoteMetadata): string {
-  if (note.system) return "program"
-  const layout = classifyLayout(note.slug, { layout: note.layout, type: note.type })
-  if (layout === "game") return "program"
-  return "browser"
-}
-
-/** Shared open-a-note action, used by the desktop, Explorer and the Start menu. */
-export function useOpenNote() {
-  const openWindow = useOS((s) => s.openWindow)
-  return useCallback((note: NoteMetadata) => {
-    const appId = appForNote(note)
-    const ext = fileExt(note)
-    openWindow({
-      appId,
-      args: { slug: note.slug },
-      title: `${note.title} — ${dosName(note.slug, ext)}`,
-      ...(appId === "program" ? { w: 860, h: 640 } : {}),
-    })
-  }, [openWindow])
-}
-
 // ---------------------------------------------------------------------------
 // Document apps — chrome differs, renderer does not.
 // ---------------------------------------------------------------------------
 
-function BrowserApp({ args }: AppProps) {
+export function BrowserApp({ args }: AppProps) {
   return (
     <div className={styles.browser} data-reader={args.reader === "1" || undefined}>
       <div className={styles.browserAddress}>
@@ -125,7 +79,7 @@ function BrowserApp({ args }: AppProps) {
   )
 }
 
-function NotepadApp({ args, windowId }: AppProps) {
+export function NotepadApp({ args, windowId }: AppProps) {
   const files = useOSFiles((s) => s.files)
   const createFile = useOSFiles((s) => s.createFile)
   const saveFile = useOSFiles((s) => s.saveFile)
@@ -206,7 +160,7 @@ function NotepadApp({ args, windowId }: AppProps) {
           type="button"
           onClick={() => {
             const id = createFile()
-            openWindow({ appId: "notepad", args: { fileId: id }, title: "Untitled.txt — Notepad", multiInstance: true })
+            openWindow({ appId: "notepad", args: { fileId: id }, title: "Untitled.txt — Notepad" })
           }}
         >
           New
@@ -225,7 +179,7 @@ function NotepadApp({ args, windowId }: AppProps) {
 }
 
 /** System pages mount directly: the application, never its companion note. */
-function ProgramApp({ args, windowId }: AppProps) {
+export function ProgramApp({ args, windowId }: AppProps) {
   const closeWindow = useOS((s) => s.closeWindow)
   const openWindow = useOS((s) => s.openWindow)
   const contentIndex = useStore((s) => s.contentIndex)
@@ -260,7 +214,7 @@ function ProgramApp({ args, windowId }: AppProps) {
 // navigating. That substitution IS the bridge; no command knows about it.
 // ---------------------------------------------------------------------------
 
-function PromptApp({ windowId }: AppProps) {
+export function PromptApp({ windowId }: AppProps) {
   const openWindow = useOS((s) => s.openWindow)
   const closeWindow = useOS((s) => s.closeWindow)
   const contentIndex = useStore((s) => s.contentIndex)
@@ -311,7 +265,7 @@ function PromptApp({ windowId }: AppProps) {
 // plus every app id and every note slug. One name space, three entry points.
 // ---------------------------------------------------------------------------
 
-function RunApp({ windowId }: AppProps) {
+export function RunApp({ windowId }: AppProps) {
   const [value, setValue] = useState("")
   const [error, setError] = useState<string | null>(null)
   const openWindow = useOS((s) => s.openWindow)
@@ -412,7 +366,7 @@ function RunApp({ windowId }: AppProps) {
 
 type ShutdownChoice = "off" | "restart" | "dos"
 
-function ShutDownApp({ windowId }: AppProps) {
+export function ShutDownApp({ windowId }: AppProps) {
   const [choice, setChoice] = useState<ShutdownChoice>("off")
   const closeWindow = useOS((s) => s.closeWindow)
 
@@ -477,7 +431,14 @@ function ShutDownApp({ windowId }: AppProps) {
 // on this browser for the next person who logs on.
 // ---------------------------------------------------------------------------
 
-function LogOffApp({ windowId }: AppProps) {
+export async function logOffOS(signOut: () => Promise<void>) {
+  await signOut()
+  useOSSettings.getState().setShowLogon(true)
+  useOS.getState().closeAll()
+  window.dispatchEvent(new CustomEvent("os:logon"))
+}
+
+export function LogOffApp({ windowId }: AppProps) {
   const auth = useAuth()
   const closeWindow = useOS((s) => s.closeWindow)
   const [busy, setBusy] = useState(false)
@@ -488,10 +449,7 @@ function LogOffApp({ windowId }: AppProps) {
     setBusy(true)
     setError(null)
     try {
-      await auth.signOut()
-      useOSSettings.getState().setShowLogon(true)
-      useOS.getState().closeAll()
-      window.dispatchEvent(new CustomEvent("os:logon"))
+      await logOffOS(auth.signOut)
     } catch {
       setBusy(false)
       setError("Windows could not log off. Check the connection and try again.")
@@ -531,7 +489,7 @@ function useNotes(): NoteMetadata[] {
   return useMemo(() => (contentIndex ? Object.values(contentIndex) : []), [contentIndex])
 }
 
-function ExplorerApp({ args, windowId }: AppProps) {
+export function ExplorerApp({ args, windowId }: AppProps) {
   const notes = useNotes()
   const localFiles = useOSFiles((s) => s.files)
   const localFolders = useOSFiles((s) => s.folders)
@@ -591,7 +549,7 @@ function ExplorerApp({ args, windowId }: AppProps) {
   }, [address, isHome, setWindowTitle, windowId])
 
   const openLocalFile = (id: string, name: string) =>
-    openWindow({ appId: "notepad", args: { fileId: id }, title: `${name} — Notepad`, multiInstance: true })
+    openWindow({ appId: "notepad", args: { fileId: id }, title: `${name} — Notepad` })
   const activate = (action: () => void, event: React.MouseEvent) => {
     if (!doubleClick && event.detail === 1) action()
     if (doubleClick && event.detail === 2) action()
@@ -706,7 +664,7 @@ function ExplorerApp({ args, windowId }: AppProps) {
 
 type FindScope = "all" | "garden" | "local"
 
-function FindApp({ args }: AppProps) {
+export function FindApp({ args }: AppProps) {
   const notes = useStore((state) => state.contentIndex)
   const files = useOSFiles((state) => state.files)
   const openWindow = useOS((state) => state.openWindow)
@@ -747,7 +705,6 @@ function FindApp({ args }: AppProps) {
           appId: "notepad",
           args: { fileId: file.id },
           title: `${file.name} — Notepad`,
-          multiInstance: true,
         })
       }
       return
@@ -866,7 +823,7 @@ function FindApp({ args }: AppProps) {
 // multi-megabyte originals; opening a file hands off to the shared lightbox.
 // ---------------------------------------------------------------------------
 
-function ImagesApp() {
+export function ImagesApp() {
   const dimensions = useStore((state) => state.imageDimensions)
   const [query, setQuery] = useState("")
   const [selected, setSelected] = useState<string | null>(null)
@@ -977,8 +934,23 @@ const DRIVES = [
   { letter: "X:", label: "CHAT", icon: "chat" as IconName, action: "chat" },
 ]
 
-function ComputerApp() {
+export function ComputerApp() {
   const openWindow = useOS((s) => s.openWindow)
+  const doubleClickToOpen = useOSSettings((s) => s.doubleClickToOpen)
+
+  const openDrive = (action: string) => {
+    if (action === "explorer") {
+      openWindow({ appId: "explorer", args: {}, title: "C:\\GARDEN" })
+    } else if (action === "home") {
+      openWindow({ appId: "explorer", args: { drive: "home" }, title: "My Documents" })
+    } else if (action === "wiki") {
+      window.open("https://wiki.subsurfaces.net", "_blank", "noopener")
+    } else if (action === "chat") {
+      window.open("https://chat.subsurfaces.net", "_blank", "noopener")
+    } else {
+      openWindow({ appId: "floppy", args: {}, title: "A:\\" })
+    }
+  }
 
   return (
     <div className={explorer.root}>
@@ -988,18 +960,11 @@ function ComputerApp() {
           <button
             key={d.letter}
             className={explorer.drive}
+            onClick={(event) => {
+              if (!doubleClickToOpen && event.detail === 1) openDrive(d.action)
+            }}
             onDoubleClick={() => {
-              if (d.action === "explorer") {
-                openWindow({ appId: "explorer", args: {}, title: "C:\\GARDEN" })
-              } else if (d.action === "home") {
-                openWindow({ appId: "explorer", args: { drive: "home" }, title: "My Documents" })
-              } else if (d.action === "wiki") {
-                window.open("https://wiki.subsurfaces.net", "_blank", "noopener")
-              } else if (d.action === "chat") {
-                window.open("https://chat.subsurfaces.net", "_blank", "noopener")
-              } else {
-                openWindow({ appId: "floppy", args: {}, title: "A:\\" })
-              }
+              if (doubleClickToOpen) openDrive(d.action)
             }}
           >
             <OSIcon name={d.icon} size={32} />
@@ -1015,7 +980,7 @@ function ComputerApp() {
 }
 
 /** The empty floppy drive. Errors in character — house law: failure is visible. */
-function FloppyApp() {
+export function FloppyApp() {
   return (
     <div className={explorer.error}>
       <div className={explorer.errorIcon}>✕</div>
@@ -1037,7 +1002,7 @@ function FloppyApp() {
 // puzzle; see docs/os-95-spec.md §8.3.
 // ---------------------------------------------------------------------------
 
-function BinApp() {
+export function BinApp() {
   const notes = useNotes()
   const openNote = useOpenNote()
   const openWindow = useOS((state) => state.openWindow)
@@ -1123,7 +1088,7 @@ const TABS: [SettingsTab, string][] = [
   ["about", "About"],
 ]
 
-function DisplayApp({ args }: AppProps) {
+export function DisplayApp({ args }: AppProps) {
   const initialTab = TABS.some(([id]) => id === args.tab) ? args.tab as SettingsTab : "background"
   const [tab, setTab] = useState<SettingsTab>(initialTab)
 
@@ -1700,7 +1665,7 @@ function MediaVisualizer({ analyser, mode }: { analyser: AnalyserNode | null; mo
   return <canvas ref={canvasRef} className={styles.mediaVisual} aria-label={`${mode} visualisation`} />
 }
 
-function MediaPlayerApp() {
+export function MediaPlayerApp() {
   const {
     tracks, currentTrackIndex, currentTrack, isPlaying, currentTime, duration, volume,
     playTrack, togglePlay, nextTrack, prevTrack, seek, setVolume, analyser,
@@ -1768,17 +1733,17 @@ function MediaPlayerApp() {
   )
 }
 
-function TaskManagerApp({ windowId }: AppProps) {
+export function TaskManagerApp({ windowId }: AppProps) {
   const windows = useOS((s) => s.windows)
   const closeWindow = useOS((s) => s.closeWindow)
-  const focusWindow = useOS((s) => s.focusWindow)
+  const activateWindow = useOS((s) => s.activateWindow)
   return (
     <div className={explorer.root}>
       <table className={explorer.table}>
         <thead><tr><th>Task</th><th>Status</th><th /></tr></thead>
         <tbody>
           {windows.map((win) => (
-            <tr key={win.id} className={explorer.row} onDoubleClick={() => focusWindow(win.id)}>
+            <tr key={win.id} className={explorer.row} onDoubleClick={() => activateWindow(win.id)}>
               <td>{win.title}</td>
               <td>{win.state === "minimized" ? "Not visible" : "Running"}</td>
               <td><button className={explorer.button} onClick={() => closeWindow(win.id)}>{win.id === windowId ? "End this task" : "End Task"}</button></td>
@@ -1791,7 +1756,7 @@ function TaskManagerApp({ windowId }: AppProps) {
   )
 }
 
-function AccountApp() {
+export function AccountApp() {
   const auth = useAuth()
   const openWindow = useOS((s) => s.openWindow)
   const [mode, setMode] = useState<"login" | "signup" | "recover">("login")
@@ -1818,6 +1783,16 @@ function AccountApp() {
   }
 
   const usernameValid = /^[a-zA-Z0-9-]{3,30}$/.test(newUsername)
+  const logOff = async () => {
+    setSubmitting(true)
+    setMessage(null)
+    try {
+      await logOffOS(auth.signOut)
+    } catch {
+      setSubmitting(false)
+      setMessage("Windows could not log off. Check the connection and try again.")
+    }
+  }
 
   if (auth.loading) return <div className={explorer.empty}>Contacting the domain controller…</div>
   if (!auth.session) {
@@ -1865,28 +1840,30 @@ function AccountApp() {
       {auth.role === "admin" && (
         <button className={explorer.button} onClick={() => openWindow({ appId: "owner", args: {}, title: "Owner Workstation", w: 780, h: 580 })}>Open owner workstation…</button>
       )}
-      <button className={explorer.button} onClick={() => void auth.signOut()}>Log off</button>
+      <button className={explorer.button} disabled={submitting} onClick={() => void logOff()}>
+        {submitting ? "Logging off…" : "Log off"}
+      </button>
     </div>
   )
 }
 
-function OwnerApp() {
+export function OwnerApp() {
   return <div className={styles.ownerHost} data-wiki><WikiAdminPage /></div>
 }
 
-function ProfileApp() {
+export function ProfileApp() {
   return <div className={styles.ownerHost} data-wiki><WikiProfilePage /></div>
 }
 
-function NewPageApp() {
+export function NewPageApp() {
   return <div className={styles.ownerHost} data-wiki><WikiNewPage /></div>
 }
 
-function EditPageApp({ args }: AppProps) {
+export function EditPageApp({ args }: AppProps) {
   return <div className={styles.ownerHost} data-wiki><WikiEditPage slug={args.slug} /></div>
 }
 
-function MessengerApp() {
+export function MessengerApp() {
   const auth = useAuth()
   const openWindow = useOS((s) => s.openWindow)
   const [rooms, setRooms] = useState<ChatRoomType[]>([])
@@ -1937,143 +1914,3 @@ function MessengerApp() {
     </div>
   )
 }
-
-const closeMenus = (win: OSWindow): OSMenu[] => [{
-  label: "File",
-  items: [{ label: "Close", onSelect: () => useOS.getState().closeWindow(win.id) }],
-}]
-
-const browserMenus = (win: OSWindow): OSMenu[] => [
-  {
-    label: "File",
-    items: [
-      {
-        label: "Open in main site",
-        onSelect: () => window.open(`https://subsurfaces.net/${win.args.slug}`, "_blank", "noopener"),
-        separatorAfter: true,
-      },
-      { label: "Close", onSelect: () => useOS.getState().closeWindow(win.id) },
-    ],
-  },
-  {
-    label: "Edit",
-    items: [{
-      label: win.args.reader === "1" ? "Exit reader mode" : "View in reader mode",
-      onSelect: () => useOS.getState().updateWindowArgs(win.id, { reader: win.args.reader === "1" ? "0" : "1" }),
-    }],
-  },
-  {
-    label: "Help",
-    items: [{ label: "About this document", onSelect: () => useOS.getState().openWindow({ appId: "display", args: {}, title: "Display Properties", w: 470, h: 480 }) }],
-  },
-]
-
-const explorerMenus = (win: OSWindow): OSMenu[] => [
-  {
-    label: "File",
-    items: [
-      {
-        label: "New Text Document",
-        onSelect: () => {
-          const id = useOSFiles.getState().createFile()
-          useOS.getState().openWindow({ appId: "notepad", args: { fileId: id }, title: "Untitled.txt — Notepad", multiInstance: true })
-        },
-        separatorAfter: true,
-      },
-      { label: "Close", onSelect: () => useOS.getState().closeWindow(win.id) },
-    ],
-  },
-  { label: "View", items: [{ label: "Refresh", onSelect: () => useOS.getState().focusWindow(win.id) }] },
-]
-
-// ---------------------------------------------------------------------------
-// Registry
-// ---------------------------------------------------------------------------
-
-export const APPS: Record<string, OSApp> = {
-  browser: {
-    icon: "article",
-    defaultSize: { w: 740, h: 570 },
-    menus: browserMenus,
-    Component: BrowserApp,
-  },
-  notepad: {
-    icon: "doc",
-    defaultSize: { w: 600, h: 460 },
-    menus: closeMenus,
-    multiInstance: true,
-    Component: NotepadApp,
-  },
-  help: {
-    icon: "help",
-    defaultSize: { w: 560, h: 500 },
-    menus: browserMenus,
-    Component: BrowserApp,
-  },
-  program: {
-    icon: "app",
-    defaultSize: { w: 860, h: 640 },
-    Component: ProgramApp,
-  },
-  explorer: {
-    icon: "folder",
-    defaultSize: { w: 660, h: 440 },
-    menus: explorerMenus,
-    Component: ExplorerApp,
-  },
-  find: {
-    icon: "folder",
-    defaultSize: { w: 720, h: 500 },
-    menus: closeMenus,
-    Component: FindApp,
-  },
-  images: {
-    icon: "folder",
-    defaultSize: { w: 700, h: 500 },
-    menus: closeMenus,
-    Component: ImagesApp,
-  },
-  computer: {
-    icon: "computer",
-    defaultSize: { w: 460, h: 320 },
-    menus: closeMenus,
-    Component: ComputerApp,
-  },
-  prompt: {
-    icon: "terminal",
-    defaultSize: { w: 680, h: 420 },
-    multiInstance: true,
-    Component: PromptApp,
-  },
-  media: { icon: "music", defaultSize: { w: 540, h: 520 }, menus: closeMenus, Component: MediaPlayerApp },
-  solitaire: { icon: "app", defaultSize: { w: 720, h: 610 }, menus: closeMenus, Component: SolitaireApp },
-  taskmgr: { icon: "computer", defaultSize: { w: 520, h: 360 }, menus: closeMenus, Component: TaskManagerApp },
-  account: { icon: "computer", defaultSize: { w: 470, h: 500 }, menus: closeMenus, Component: AccountApp },
-  owner: { icon: "computer", defaultSize: { w: 780, h: 580 }, menus: closeMenus, Component: OwnerApp },
-  profile: { icon: "computer", defaultSize: { w: 760, h: 610 }, menus: closeMenus, Component: ProfileApp },
-  newpage: { icon: "doc", defaultSize: { w: 760, h: 620 }, menus: closeMenus, Component: NewPageApp },
-  edit: { icon: "doc", defaultSize: { w: 780, h: 640 }, menus: closeMenus, multiInstance: true, Component: EditPageApp },
-  messenger: { icon: "chat", defaultSize: { w: 720, h: 580 }, menus: closeMenus, Component: MessengerApp },
-  run: { icon: "app", defaultSize: { w: 420, h: 210 }, Component: RunApp },
-  logoff: { icon: "user", defaultSize: { w: 410, h: 230 }, Component: LogOffApp },
-  shutdown: { icon: "computer", defaultSize: { w: 400, h: 250 }, Component: ShutDownApp },
-  floppy: { icon: "doc", defaultSize: { w: 420, h: 220 }, Component: FloppyApp },
-  bin: {
-    icon: "bin",
-    defaultSize: { w: 600, h: 380 },
-    menus: closeMenus,
-    Component: BinApp,
-  },
-  display: { icon: "display", defaultSize: { w: 500, h: 520 }, menus: closeMenus, Component: DisplayApp },
-}
-
-export const CORE_PROGRAM_MENU = [
-  { appId: "solitaire", title: "Solitaire" },
-  { appId: "messenger", title: "Subsurfaces Messenger" },
-]
-
-/** System pages worth surfacing under Start → Programs. */
-export const PROGRAM_MENU = Object.entries(SYSTEM_PAGE_META)
-  .filter(([, meta]) => meta.layout === "game" || meta.layout === "article")
-  .map(([slug, meta]) => ({ slug, title: meta.title }))
-  .sort((a, b) => a.title.localeCompare(b.title))

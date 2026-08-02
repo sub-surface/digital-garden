@@ -59,7 +59,8 @@ export function canStack(card: Card, target?: Card): boolean {
   return target.faceUp && isRed(card) !== isRed(target) && card.rank === target.rank - 1
 }
 
-export function canFound(card: Card, target?: Card): boolean {
+export function canFound(card: Card, target?: Card, foundationSuit?: Suit): boolean {
+  if (foundationSuit && (card.suit !== foundationSuit || (target && target.suit !== foundationSuit))) return false
   if (!target) return card.rank === 1
   return card.suit === target.suit && card.rank === target.rank + 1
 }

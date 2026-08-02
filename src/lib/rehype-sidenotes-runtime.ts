@@ -9,7 +9,7 @@ import { toRoman } from "./roman-numerals"
  * wired into vite.config.ts). This one is exclusively for markdown.ts's
  * standalone runtime `unified()` processor — raw markdown fetched and
  * rendered client-side after build, e.g. LinkPreview's hover preview,
- * WikiEditPage's live edit preview, and BootPage's terminal note rendering.
+ * WikiEditPage's live edit preview, and the shared terminal's note rendering.
  * The two plugins look like duplicates by name but serve different pipelines
  * that are never both applied to the same content.
  */

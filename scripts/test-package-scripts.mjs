@@ -28,4 +28,10 @@ assert.match(
   "check should include the full production build",
 )
 
-console.log("Package verification scripts cover build and Worker typecheck.")
+assert.match(
+  scripts.test ?? "",
+  /npm run test:ui/,
+  "test should include the Vitest interaction suite",
+)
+
+console.log("Package verification scripts cover build, Worker typecheck, and UI interactions.")

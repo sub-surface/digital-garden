@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useStore, BG_MODES } from "@/store"
 import type { NoteMetadata } from "@/types/content"
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
 import { useOS, useOSFiles, useOSSettings, focusedWindowId } from "./osStore"
-import { APPS, useOpenNote } from "./apps"
+import { useOpenNote } from "./appNavigation"
+import { APPS } from "./appRegistry"
 import { WindowFrame } from "./WindowFrame"
 import { Taskbar, TASKBAR_H, type MenuTarget } from "./Taskbar"
 import { OSIcon, type IconName } from "./OSIcon"
@@ -281,7 +283,7 @@ export function Desktop() {
               label: "New Text Document",
               onClick: () => {
                 const id = useOSFiles.getState().createFile()
-                openWindow({ appId: "notepad", args: { fileId: id }, title: "Untitled.txt — Notepad", multiInstance: true })
+                openWindow({ appId: "notepad", args: { fileId: id }, title: "Untitled.txt — Notepad" })
               },
               separatorAfter: true,
             },
@@ -409,7 +411,16 @@ export function Desktop() {
               bounds={bounds}
               menus={app.menus?.(win)}
             >
-              <Component args={win.args} windowId={win.id} />
+              <ProgramBoundary
+                appId={win.appId}
+                title={win.title}
+                windowId={win.id}
+                resetKeys={[win.appId, JSON.stringify(win.args)]}
+              >
+                <Suspense fallback={<ProgramLoading title={win.title} />}>
+                  <Component args={win.args} windowId={win.id} />
+                </Suspense>
+              </ProgramBoundary>
             </WindowFrame>
           )
         })}
@@ -417,6 +428,58 @@ export function Desktop() {
 
       <Taskbar onOpenShortcut={openShortcut} />
     </>
+  )
+}
+
+function ProgramLoading({ title }: { title: string }) {
+  return (
+    <div className={styles.programLoading} role="status">
+      Loading {title}…
+    </div>
+  )
+}
+
+export function ProgramBoundary({
+  appId,
+  title,
+  windowId,
+  resetKeys,
+  children,
+}: {
+  appId: string
+  title: string
+  windowId: string
+  resetKeys?: unknown[]
+  children: ReactNode
+}) {
+  const closeWindow = useOS((state) => state.closeWindow)
+  return (
+    <ErrorBoundary
+      label={`${appId} program`}
+      resetKeys={[windowId, ...(resetKeys ?? [])]}
+      fallback={(error, reset) => {
+        const chunkError = /dynamically imported module|Failed to fetch|Importing a module script failed|ChunkLoadError/i.test(error.message)
+        return (
+          <div className={styles.programError} role="alert">
+            <div className={styles.programErrorDialog}>
+              <OSIcon name="computer" size={32} />
+              <div className={styles.programErrorCopy}>
+                <strong>{title} has performed an illegal operation.</strong>
+                <span>The program will stay isolated from the rest of the desktop.</span>
+                <code>{error.message}</code>
+              </div>
+            </div>
+            <div className={styles.programErrorActions}>
+              <button type="button" onClick={reset}>Retry</button>
+              {chunkError && <button type="button" onClick={() => window.location.reload()}>Reload Windows</button>}
+              <button type="button" onClick={() => closeWindow(windowId)}>Close</button>
+            </div>
+          </div>
+        )
+      }}
+    >
+      {children}
+    </ErrorBoundary>
   )
 }
 

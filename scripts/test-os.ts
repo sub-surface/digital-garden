@@ -17,6 +17,8 @@ assert(canStack(card("hearts", 12), card("clubs", 13)))
 assert(!canStack(card("diamonds", 12), card("hearts", 13)))
 assert(canStack(card("spades", 13)))
 assert(canFound(card("clubs", 1)))
+assert(canFound(card("clubs", 1), undefined, "clubs"))
+assert(!canFound(card("hearts", 1), undefined, "clubs"), "an ace cannot enter another suit's empty foundation")
 assert(canFound(card("clubs", 2), card("clubs", 1)))
 assert(!canFound(card("spades", 2), card("clubs", 1)))
 

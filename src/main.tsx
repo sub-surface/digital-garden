@@ -8,6 +8,7 @@ import { RouterProvider } from "@tanstack/react-router"
 import { router } from "./router"
 import { useStore } from "./store"
 import { MusicProvider } from "@/components/ui/music/MusicContext"
+import { AuthProvider } from "@/hooks/useAuth"
 import "./styles/global.scss"
 
 // Apply initial theme before render
@@ -16,8 +17,10 @@ document.documentElement.setAttribute("data-theme", theme)
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <MusicProvider>
-      <RouterProvider router={router} />
-    </MusicProvider>
+    <AuthProvider>
+      <MusicProvider>
+        <RouterProvider router={router} />
+      </MusicProvider>
+    </AuthProvider>
   </StrictMode>,
 )

@@ -1,4 +1,12 @@
-import { useState, useEffect, useCallback } from "react"
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react"
 import { supabase } from "@/lib/supabase"
 import type { Session } from "@supabase/supabase-js"
 import { apiGet, apiPost, apiPut, apiErrorMessage } from "@/lib/api"
@@ -13,14 +21,14 @@ interface ProfileFields {
   name_color: string | null
 }
 
-interface AuthState extends ProfileFields {
+export interface AuthState extends ProfileFields {
   session: Session | null
   role: UserRole
   loading: boolean
   claimed_slug: string | null
 }
 
-export function useAuth(): AuthState & {
+export type AuthContextValue = AuthState & {
   signIn: (email: string) => Promise<{ error: string | null }>
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, username: string, password: string, redirectOrigin?: string) => Promise<{ error: string | null }>
@@ -28,7 +36,16 @@ export function useAuth(): AuthState & {
   updateProfile: (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url" | "name_color">>) => Promise<{ error: string | null }>
   changePassword: (newPassword: string) => Promise<{ error: string | null }>
   resetPassword: (email: string, redirectOrigin?: string) => Promise<{ error: string | null }>
-} {
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null)
+
+/**
+ * Owns the one Supabase session subscription and profile cache shared by every
+ * shell. Keeping this lifecycle at the application root prevents each caller
+ * of useAuth() from opening another listener and repeating the same bootstrap.
+ */
+function useAuthController(): AuthContextValue {
   const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<UserRole>(null)
   const [loading, setLoading] = useState(true)
@@ -237,4 +254,15 @@ export function useAuth(): AuthState & {
   }, [session])
 
   return { session, role, loading, username, bio, avatar_url, created_at, name_color, claimed_slug, signIn, signInWithPassword, signUp, signOut, updateProfile, changePassword, resetPassword }
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const value = useAuthController()
+  return createElement(AuthContext.Provider, { value }, children)
+}
+
+export function useAuth(): AuthContextValue {
+  const value = useContext(AuthContext)
+  if (!value) throw new Error("useAuth must be used within AuthProvider")
+  return value
 }

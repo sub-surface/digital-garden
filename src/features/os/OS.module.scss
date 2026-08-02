@@ -1626,6 +1626,65 @@
   opacity: 0.72;
 }
 
+// A program can fail without taking the desktop or its sibling windows down.
+.programLoading,
+.programError {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  background: var(--os-face);
+  color: var(--os-text);
+  font: 12px/1.4 var(--font-code);
+}
+
+.programLoading {
+  display: grid;
+  place-items: center;
+  color: var(--os-text-dim);
+}
+
+.programError {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+}
+
+.programErrorDialog {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.programErrorCopy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  code {
+    max-height: 90px;
+    overflow: auto;
+    padding: 6px;
+    background: var(--os-face-raised);
+    border: 1px inset var(--os-bevel-light);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+.programErrorActions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  button {
+    min-width: 84px;
+  }
+}
+
 .hintsHead {
   display: flex;
   align-items: center;

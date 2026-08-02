@@ -30,7 +30,11 @@ const useSolitaireStats = create<SolitaireStats>()(
       recordGame: () => set((state) => ({ games: state.games + 1 })),
       recordWin: () => set((state) => ({ wins: state.wins + 1 })),
     }),
-    { name: "subsurfaces95-solitaire" },
+    {
+      name: "subsurfaces95-solitaire",
+      version: 1,
+      migrate: (persisted) => persisted as SolitaireStats,
+    },
   ),
 )
 
@@ -132,7 +136,7 @@ export function SolitaireApp() {
   const moveToFoundation = (foundation: number, chosen = selection) => {
     if (!chosen) return
     const cards = selectedCards(game, chosen)
-    if (cards.length !== 1 || !canFound(cards[0], game.foundations[foundation].at(-1))) return
+    if (cards.length !== 1 || !canFound(cards[0], game.foundations[foundation].at(-1), SUITS[foundation])) return
     const stripped = removeSelection(game, chosen)
     setGame({
       ...stripped,

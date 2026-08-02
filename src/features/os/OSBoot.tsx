@@ -1,11 +1,11 @@
 /**
  * The finite POST.
  *
- * Deliberately NOT BootPage. BootPage is a 1,100-line application — an endless
- * generator, a command prompt, telemetry panes, an auth modal — and threading a
- * "stop after 40 lines" mode through it would drag all of that into the OS boot
- * for no gain. This is a bounded sequence that hands off. BootPage stays exactly
- * as it is and returns via Start → Restart in MS-DOS mode.
+ * Deliberately not the retired BootPage. That 1,100-line application mixed an
+ * endless generator, command prompt, telemetry panes and auth modal; threading
+ * a "stop after 40 lines" mode through it would have dragged all of that into
+ * OS startup. This bounded sequence hands off, while the extracted shared
+ * Terminal returns via Start → Restart in MS-DOS mode.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"

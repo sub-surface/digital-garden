@@ -302,9 +302,10 @@ Hex Life, Progressions, The Knotted Field (Persian carpet loom — 2026-06-15). 
 
 ## 7. Wiki & content polish
 
-- [~] **Broken wikilinks** — down to **4** (was 35; content cleanup happened). prebuild now emits
+- [~] **Broken wikilinks** — currently **5** (was 35; content cleanup happened). prebuild now emits
   `public/broken-links.json` (`{total, bySlug}`) so the count is trackable and CI could fail above a
-  threshold. The remaining 4 point at notes that don't exist yet (Leon's content call). (2026-06-16)
+  threshold. Three originate in `a-place-to-start-writing`; two originate on `index`. They point at
+  notes that don't exist yet (Leon's content call). (reconciled 2026-08-02)
 - [ ] Page metadata editing (description, tags) from the wiki editor UI.
 - [ ] Watchlist — notify on bookmarked-page edits. Needs a `watchlist` table; pairs with existing
   bookmarks + `edit_log`.
@@ -386,7 +387,8 @@ The public wishlist. Status against code; only the OK'd, shipped ones get reflec
   window (audio stays in the main doc; `createPortal` keeps React handlers live). (2026-06-15)
 - [ ] **Music player — extras (notes for later):**
   - LPF/HPF filter knobs behind a toggle (BiquadFilter on the music graph).
-  - Playlist reordering (drag), loop-all + single-track loop modes.
+  - Playlist reordering by drag remains open. Queue editing, loop-all and single-track repeat now
+    ship in the OS Media Player; decide whether the compact garden player should expose them too.
   - Scratch first-activation latency: prewarm decodes on open, but a cold first scratch can still
     fall back to silent scrub until decode lands — consider decoding to a smaller/again-cached form.
 - [x] **"Random note" button** — dice icon in QuickControls (main shell) + `r` hotkey. Picks a
@@ -893,13 +895,12 @@ games/arcade items are added" — correct, and the reason is more fundamental th
 Ideas surfaced while working the above, not requested — housekeeping foresight and a couple of
 "could be cool" long-shots. None built; flagging for Leon to accept, reject, or reprioritize.
 
-- [ ] **Component/hook test coverage (Vitest + React Testing Library).** Today's only tests are
-  standalone script checks over pure-logic modules (slug, sigil, composer, footnotes) — there is
-  no test harness for React hooks/components at all. §19's `usePanelClick` bug (right layout data
-  available, just never consulted) is exactly the class of regression a handful of unit tests over
-  `usePanelClick`, `useFocusTrap`, `useHotkeys`, and the new `classifyLayout()` would catch for
-  cheap, before they ship. Worth standing up once `classifyLayout()` exists, so it launches with a
-  test rather than becoming the next thing that quietly drifts.
+- [~] **Component/hook test coverage (Vitest + React Testing Library).** Harness shipped
+  2026-08-02 and runs inside `npm test`. Initial coverage locks down the singleton auth lifecycle,
+  per-window OS error isolation, same-origin OS links, Task Manager restoration, local-file
+  deduplication and keyboard-openable Start flyouts. Remaining: broaden into `usePanelClick`,
+  `useFocusTrap`, shared hotkeys and the
+  highest-risk wiki/chat interactions as those areas change.
 - [ ] **Shareable seed/permalink convention across the generative toys.** SIGIL's daily-result
   string idea (§16, `SIGIL-<date>·<optimality>%·<moves>`) is a special case of something more
   general: Apparatus, Collider, and SIGIL are all seeded generators already — a shared `?seed=`
@@ -1075,7 +1076,7 @@ the opener tab and dies with it.
 **Framing**: this doesn't need a new backend — SoundCloud is already the source of truth, R2
 already hosts audio/covers, `music.json` is already the manifest (`docs/music-workflow.md`). What
 it needs is a **new frontend surface**: its own subdomain (e.g. `music.subsurfaces.net`) following
-the same pattern as `os.subsurfaces.net`/`BootPage` — a dedicated shell with nothing else loaded,
+the same pattern as `os.subsurfaces.net`/`OSShell` — a dedicated shell with nothing else loaded,
 opened as its own tab/window so its lifecycle isn't tied to the garden's React tree at all. That's
 what actually delivers "keeps playing after you leave the site" — a genuinely separate origin the
 user keeps a tab open on, rather than anything that follows a single tab around.
@@ -1346,12 +1347,10 @@ places reality differed from the review:
 Recorded so §28 isn't read as exhaustively finished. None of these block the tree; all are
 low-stakes and were consciously left rather than missed.
 
-- [ ] **The `--max-warnings 25` ratchet is debt, not a target.** 25 `exhaustive-deps` warnings and
-  15 surviving suppression comments. The ratchet's only job is to stop the number growing; nothing
-  drives it down. Working it down means auditing one dep array at a time with the tree green, and
-  lowering the number in `package.json` as each lands — the ratchet is the mechanism, so it has to
-  move or it becomes the new floor.
-- [ ] **`BgCanvas.tsx` is still ~1126 lines.** 28.12 typed it (29 `any`s → 0) but deliberately did
+- [x] **The hook-warning ratchet reached zero.** The 25 `exhaustive-deps` warnings were audited and
+  `package.json` now runs ESLint with `--max-warnings 0`; 13 targeted suppression comments remain
+  for intentionally stable lifecycles, and dead directives are still errors. (2026-08-02)
+- [ ] **`BgCanvas.tsx` is still ~1066 lines.** 28.12 typed it (29 `any`s → 0) but deliberately did
   not split it; extracting the draw functions into `src/lib/backgrounds/` was declared out of scope
   so the typing change stayed reviewable. The mapped-type enforcement works either way, so this is
   now purely a file-size question.
@@ -1361,7 +1360,7 @@ low-stakes and were consciously left rather than missed.
   `dots`; `drawField`'s `style: string` parameter is never read; and `BgState` carries `Ripple` /
   `Drop` fields nothing writes. Each needs a quick check that no mode is *supposed* to reach it
   before deleting.
-- [ ] **54 `!important` declarations in SCSS, 21 of them in `global.scss`.** Observed during the
+- [ ] **61 `!important` declarations in SCSS, 21 of them in `global.scss`.** Observed during the
   review but never made it into a numbered item, so it was never scoped. Each one is a specificity
   fight that was won with a hammer; unpicking them safely needs the cascade understood first, which
   is a bigger job than it looks and is why it isn't a §28 item.
@@ -1448,12 +1447,21 @@ What remains is deliberately ordered by value and architectural dependency:
     should be linked and dated rather than silently absorbed as character fact.
     Keep ingestion reviewable—content and chatbot changes may share a PR, but
     no automatic publishing pipeline or unreviewed transcript dump.
+16. [x] **OS stabilization and program containment.** Each window now owns an
+    error boundary with Retry/Close recovery; one root `AuthProvider` owns the
+    Supabase session/profile lifecycle; desktop chrome imports a metadata-only
+    lazy app registry rather than the implementation bundle; persisted OS stores
+    are versioned; and Vitest/RTL interaction coverage ships in `npm test`.
+    The pass also fixed foundation-suit validation, minimized Task Manager
+    switching, root-link remounts, full account logoff, same-file Notepad races
+    and My Computer's single/double-click preference. (2026-08-02)
 
 Verification note: Leon browser-verified the 2026-08-01 OS pass and the taller
-main-site terminal. This continuation has static/compiler/test coverage but did
-not start the expensive animated OS preview; `npm run dev:os` is the explicit
-local path, and its pass should prioritize item 8, logon, widget drag/stacking,
-Solitaire and production audio playback from `os.subsurfaces.net`.
+main-site terminal. The 2026-08-02 stabilization adds component-level interaction
+coverage plus static/compiler/build checks, but the full animated OS matrix is
+still open; `npm run dev:os` is the explicit local path, and its pass should
+prioritize item 8, logon, widget drag/stacking, Solitaire and production audio
+playback from `os.subsurfaces.net`.
 
 Console follow-up: seed URL canonicalisation now runs after React commit (and
 only on the fullscreen terminal), so opening Ctrl/Cmd+P cannot update the router

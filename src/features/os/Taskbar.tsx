@@ -3,7 +3,7 @@ import { useStore } from "@/store"
 import { useMusic } from "@/components/ui/music/MusicContext"
 import { useAuth } from "@/hooks/useAuth"
 import { useOS, useOSFiles, useOSSettings, focusedWindowId } from "./osStore"
-import { APPS, CORE_PROGRAM_MENU, PROGRAM_MENU } from "./apps"
+import { APPS, CORE_PROGRAM_MENU, PROGRAM_MENU } from "./appRegistry"
 import { OSIcon } from "./OSIcon"
 import styles from "./OS.module.scss"
 
@@ -56,7 +56,7 @@ export function Taskbar({ onOpenShortcut }: Props) {
   const windows = useOS((s) => s.windows)
   const isStartOpen = useOS((s) => s.isStartOpen)
   const setStartOpen = useOS((s) => s.setStartOpen)
-  const focusWindow = useOS((s) => s.focusWindow)
+  const activateWindow = useOS((s) => s.activateWindow)
   const toggleMinimize = useOS((s) => s.toggleMinimize)
   const closeWindow = useOS((s) => s.closeWindow)
   const clock = useClock()
@@ -112,9 +112,7 @@ export function Taskbar({ onOpenShortcut }: Props) {
                   data-active={active}
                   onClick={() => {
                     if (active) toggleMinimize(win.id)
-                    else if (win.state === "minimized") toggleMinimize(win.id)
-                    else focusWindow(win.id)
-                    if (win.state === "minimized") focusWindow(win.id)
+                    else activateWindow(win.id)
                   }}
                   title={win.title}
                 >
@@ -285,6 +283,15 @@ function StartMenu({ onOpenShortcut }: Props) {
   const auth = useAuth()
   const music = useMusic()
   const [flyout, setFlyout] = useState<Flyout>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const dismissOutside = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setStartOpen(false)
+    }
+    document.addEventListener("pointerdown", dismissOutside, true)
+    return () => document.removeEventListener("pointerdown", dismissOutside, true)
+  }, [setStartOpen])
 
   const recent = useMemo(() => {
     if (!contentIndex) return []
@@ -320,7 +327,17 @@ function StartMenu({ onOpenShortcut }: Props) {
       : "Guest"
 
   return (
-    <div className={styles.startMenu} onPointerDown={(e) => e.stopPropagation()}>
+    <div
+      ref={menuRef}
+      className={styles.startMenu}
+      onPointerDown={(e) => e.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape") return
+        event.preventDefault()
+        event.stopPropagation()
+        setStartOpen(false)
+      }}
+    >
       <div className={styles.startRail}>Subsurfaces 95</div>
 
       <div className={styles.startItems}>
@@ -596,10 +613,19 @@ interface MenuRowProps {
   flyout?: React.ReactNode
 }
 
-function MenuRow({ label, icon, submenu, onEnter, onClick, flyout }: MenuRowProps) {
+export function MenuRow({ label, icon, submenu, onEnter, onClick, flyout }: MenuRowProps) {
+  const expanded = Boolean(flyout)
   return (
     <div className={styles.startRow} onPointerEnter={onEnter}>
-      <button className={styles.startItem} title={label} onClick={onClick}>
+      <button
+        className={styles.startItem}
+        title={label}
+        aria-label={label}
+        aria-haspopup={submenu ? "menu" : undefined}
+        aria-expanded={submenu ? expanded : undefined}
+        onFocus={onEnter}
+        onClick={onClick ?? (submenu ? onEnter : undefined)}
+      >
         <OSIcon name={icon} size={16} />
         <span className={styles.startLabel}>{label}</span>
         {submenu && <span className={styles.startArrow}>▸</span>}
