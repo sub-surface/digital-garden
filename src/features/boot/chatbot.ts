@@ -1,5 +1,13 @@
 export type PersonaId = "willow" | "deleuze" | "spinoza" | "trump" | "jeh" | "hpcr" | "terry" | "nick" | "mark" | "zizek" | "diogenes" | "bostrom" | "ape"
 
+/**
+ * Editorial boundary: willow, jeh, hpcr and ape are scripted channel-member
+ * personas, not the people themselves. PR #24 is the review record for the
+ * 2026-08-02 additions and distinguishes quoted/trimmed channel lines from
+ * deliberately invented caricature. Keep that distinction reviewable; never
+ * treat this phrase bank as self-reported profile data or commit raw chat logs.
+ */
+
 interface Rule {
   keywords: string[]
   responses: string[]
@@ -20,18 +28,28 @@ export const PERSONAS: Record<PersonaId, Persona> = {
     color: "tender",
     generics: [
       "Not quite...",
+      "Yes and No",
       "Not exactly, they are both positive spaces.",
       "The difference is important.",
       "I would advise against it. The point is things or identity are never there by analogy.",
       "Disagreeing with a truth doesn't make it any less true.",
       "I’m saying your account of materialism is flawed.",
-      "No, it’s fucking not.",
       "This is incoherent. A relation is itself an entity, a distinct thing from any of its members.",
-      "It's not about what it *is*, it's about what it *does*.",
+      "It's not about what it is, it's about what it does.",
       "I know… you are mistaken about that.",
       "I’m afraid you had one too many ellipses…",
       "You are booting the material states to replace them with different material states.",
-      "We only have a thing if it is there. We only have an identity if it is there."
+      "We only have a thing if it is there. We only have an identity if it is there.",
+      "Reform of what and empathy for whom?",
+      "That depends on what the fact does.",
+      "Existing absences are existing presences.",
+      "You are confusing the fact of a thought with facts being thought about. These are different things.",
+      "Having verified beliefs doesn’t mean you will hold them.",
+      "Rather than recognising that existing is one thing many different things something can do.",
+      "Yes, comparatively few of the infinite number of facts are arguments.",
+      "Doesn’t matter whether they should or not. The body will cause what it causes.",
+      "The based have a deontology of desire, desiring only as its own end.",
+      "You need to be sent to TNG’s El-Adrel to learn of Darmok."
     ],
     rules: [
       {
@@ -52,7 +70,7 @@ export const PERSONAS: Record<PersonaId, Persona> = {
         ]
       },
       {
-        keywords: ["power", "social", "society", "law"],
+        keywords: ["power", "social", "society", "law", "politics", "political"],
         responses: [
           "A power relation doesn't occur without the context where it occurs.", 
           "You are kicking the material condition of the social dynamic. It's a very literal metaphor.", 
@@ -277,7 +295,21 @@ export const PERSONAS: Record<PersonaId, Persona> = {
       "Laughing when you should cry is a powerful transgression",
       "Thanks chat",
       "You think too small",
-      "I actually will be doing more things"
+      "I actually will be doing more things",
+      "Absolutely cooked",
+      "Trust the process",
+      "It’s lock in time",
+      "Lift more, have more rizz, and be smarter",
+      "We had that first",
+      "Indian version’s better. Next question",
+      "A billion and a half of us. Do the maths",
+      "Ask me what else we invented",
+      "That’s just yoga with extra steps",
+      "You’d know that if you’d read anything east of Vienna",
+      "Indians and foreigners at the smoking room at airports in India are like two gay lovers reuniting after a decade",
+      "I’m having one, don’t make it weird",
+      "This would all go down easier with a drink in it",
+      "Day drinking is just drinking with better light"
     ],
     rules: [
       {
@@ -348,6 +380,54 @@ export const PERSONAS: Record<PersonaId, Persona> = {
           "I’ll pay you. Genuinely. Name a number.",
           "Read the Indian stuff, it’s right there"
         ]
+      },
+      {
+        keywords: ["greek", "greeks", "plato", "socrates", "aristotle", "western", "west", "europe", "ancient", "origin"],
+        responses: [
+          "The Upanishads settled that a thousand years before your Greeks got round to it",
+          "Nagarjuna did your entire continental turn in the second century, and did it properly",
+          "Every Western idea is a footnote to something a Brahmin wrote down and then got bored of",
+          "You rediscovered non-dualism in 1970 and gave each other prizes for it",
+          "Shankara. Read Shankara. Then come back to me"
+        ]
+      },
+      {
+        keywords: ["jesus", "christ", "bible", "christian", "gospel", "church", "mystic", "monk"],
+        responses: [
+          "Jesus spent the lost years in India. That is not a theory, that is a gap in your own book",
+          "Where do you imagine he picked it up? Nazareth? Be serious",
+          "Every mystic tradition you have is a bad translation of one of ours",
+          "Your monks copied our monks, and shaved their heads worse"
+        ]
+      },
+      {
+        keywords: ["invent", "invention", "discovery", "science", "math", "mathematics", "zero", "number", "technology", "medicine", "surgery"],
+        responses: [
+          "Zero. You’re welcome. Everything you have built since sits on top of it",
+          "We were doing plastic surgery while your physicians were still applying leeches",
+          "Aryabhata had the earth spinning while Europe was still arguing about the edge of it",
+          "Name one. I’ll tell you which century we did it in"
+        ]
+      },
+      {
+        keywords: ["drink", "drinking", "drunk", "beer", "whisky", "whiskey", "wine", "booze", "alcohol", "hangover", "sober", "pub", "bar"],
+        responses: [
+          "Have you considered that all of this would be easier with a drink",
+          "Two drinks and a quick exit. That is the entire evening, planned",
+          "It’s five o’clock somewhere, and that somewhere is here",
+          "Sober is just the part of the day before the good part",
+          "You cannot think properly on an empty liver",
+          "Breakfast is only the meal you have before the first one"
+        ]
+      },
+      {
+        keywords: ["food", "curry", "cooking", "cuisine", "music", "film", "movie", "cinema"],
+        responses: [
+          "Whatever it is, ours has more going on in it",
+          "Your food is beige and you know it",
+          "Bollywood does in three hours what your cinema cannot manage in ten films",
+          "You put one spice in it and called the dish after the spice"
+        ]
       }
     ]
   },
@@ -363,7 +443,15 @@ export const PERSONAS: Record<PersonaId, Persona> = {
       "...",
       "thats stupid lol",
       "what...",
-      "lol you're upset"
+      "lol you're upset",
+      "You’re dramatic",
+      "Happens so often",
+      "It’s not clean like that",
+      "You still don’t know my argument",
+      "Impossible",
+      "Nothing intelligent",
+      "What year is it",
+      "Talk about a bad philosopher"
     ],
     rules: [
       {
@@ -688,7 +776,20 @@ export const PERSONAS: Record<PersonaId, Persona> = {
       "epic",
       "yeah i know im a comedy genius",
       "maybe",
-      "we just kiss a little"
+      "we just kiss a little",
+      "im silly i misinterpreted you for a second",
+      "or at least that's what i took away from it",
+      "What the fuck was that interaction",
+      "You misunderstand",
+      "insert bell curve meme",
+      "not nearly often enough",
+      "Do you have something specific in mind that you're critiquing?",
+      "This always gives me the vibe of somebody saying \"Chocolate is overrated\"",
+      "It's widely appreciated because it is reliably enjoyable",
+      "i would be incredibly surprised if this was a topic of discussion in the literature lol",
+      "If you set things up the right way, then the kind of reasoning youre suggesting here would work, yes",
+      "i mean i think it's more about what youve read rather than how much.",
+      "Im sure you have developed a very good understanding of your pallet and come to conclusion you like coconut oil mixed with whale semen or some shit"
     ],
     rules: [
       {

@@ -188,3 +188,18 @@ runtime remains a separate migration decision. The lint gate is now
 
 The Start-menu label “Windows Explorer” is now “Garden Files”; the underlying
 app and `C:\GARDEN` filesystem contract are unchanged.
+
+## Making the interlocutors coherent and explicit
+
+PR #23 replaces substring keyword matching with precompiled word-boundary
+patterns, best-rule scoring, standing-topic fallback and per-speaker repeat
+suppression. Its deterministic regression suite covers the old `ai`/`again`,
+`bot`/`both`, `cause`/`because` and plural failures and now runs in `npm test`.
+
+PR #24 is rebased as a content-only follow-up. Its description remains the
+editorial source record: Willow, Ape and HPCR additions are quoted or lightly
+trimmed from private channel logs, while Jeh's larger nationalism and drinking
+register is deliberately authored caricature. Raw transcripts are not stored.
+The terminal now calls every interlocutor a scripted persona so those authored
+lines cannot be mistaken for self-reported profile claims. The broader cited
+wiki/news chronicle work remains open in ROADMAP §29.15.
