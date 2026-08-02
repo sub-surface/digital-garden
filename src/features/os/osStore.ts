@@ -11,9 +11,16 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import type { BgMode } from "@/store"
 import { playOSSound, type OSSound } from "./osSounds"
+import {
+  isMediaSkin,
+  isMediaVizMode,
+  type MediaSkin,
+  type MediaVizMode,
+} from "./media/mediaTheme"
 
 /** Bump with an explicit migrate() branch whenever a persisted shape changes. */
 const OS_PERSIST_VERSION = 1
+const OS_MEDIA_PERSIST_VERSION = 2
 
 // ---------------------------------------------------------------------------
 // Settings — persisted, unlike window state.
@@ -547,6 +554,10 @@ interface OSMediaStore {
   savedPlaylists: Record<string, string[]>
   savePlaylist: (name: string, slugs: string[]) => void
   deletePlaylist: (name: string) => void
+  skin: MediaSkin
+  setSkin: (skin: MediaSkin) => void
+  visualizerMode: MediaVizMode
+  setVisualizerMode: (mode: MediaVizMode) => void
 }
 
 /** Named playlists belong to the OS presentation; playback/session remains in MusicContext. */
@@ -563,11 +574,24 @@ export const useOSMedia = create<OSMediaStore>()(
         delete savedPlaylists[name]
         return { savedPlaylists }
       }),
+      skin: "classic",
+      setSkin: (skin) => set({ skin }),
+      visualizerMode: "spectrum",
+      setVisualizerMode: (visualizerMode) => set({ visualizerMode }),
     }),
     {
       name: "subsurfaces95-media",
-      version: OS_PERSIST_VERSION,
-      migrate: (persisted) => persisted as OSMediaStore,
+      version: OS_MEDIA_PERSIST_VERSION,
+      migrate: (persisted) => {
+        const previous = persisted && typeof persisted === "object"
+          ? persisted as Partial<OSMediaStore>
+          : {}
+        return {
+          ...previous,
+          skin: isMediaSkin(previous.skin) ? previous.skin : "classic",
+          visualizerMode: isMediaVizMode(previous.visualizerMode) ? previous.visualizerMode : "spectrum",
+        } as OSMediaStore
+      },
     },
   ),
 )

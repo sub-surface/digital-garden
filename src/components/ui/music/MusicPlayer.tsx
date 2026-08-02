@@ -27,6 +27,7 @@ export function MusicPlayer() {
     currentTrack,
     analyser,
     audioRef,
+    effectsInput,
   } = useMusic()
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -150,7 +151,7 @@ export function MusicPlayer() {
     const cx = rect.left + rect.width / 2
     const cy = rect.top + rect.height / 2
     const angleOf = (px: number, py: number) => Math.atan2(py - cy, px - cx)
-    const analyserNode = (window as unknown as { __musicAnalyser?: AnalyserNode }).__musicAnalyser
+    const scratchOutput = effectsInput
 
     let lastAngle = angleOf(e.clientX, e.clientY)
     let lastT = e.timeStamp
@@ -165,8 +166,8 @@ export function MusicPlayer() {
     let session: ScratchSession | null = null
     let pendingVel = 0
     let ended = false
-    if (analyserNode && trackUrl) {
-      startScratch(analyserNode, trackUrl, audio.currentTime, audio.volume).then((s) => {
+    if (scratchOutput && trackUrl) {
+      startScratch(scratchOutput, trackUrl, audio.currentTime, audio.volume).then((s) => {
         if (ended) { s?.end() ; return }   // released before it loaded
         session = s
         if (session) session.setVelocity(pendingVel)
@@ -230,7 +231,7 @@ export function MusicPlayer() {
     }
     window.addEventListener("pointermove", onMove)
     window.addEventListener("pointerup", onUp)
-  }, [audioRef])
+  }, [audioRef, effectsInput])
 
   if (!isExpanded) return null
 

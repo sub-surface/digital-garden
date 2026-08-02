@@ -48,6 +48,7 @@ const FloppyApp = lazyApp("FloppyApp")
 const BinApp = lazyApp("BinApp")
 const DisplayApp = lazyApp("DisplayApp")
 const MediaPlayerApp = lazyApp("MediaPlayerApp")
+const MediaPaneApp = lazyApp("MediaPaneApp")
 const TaskManagerApp = lazyApp("TaskManagerApp")
 const AccountApp = lazyApp("AccountApp")
 const OwnerApp = lazyApp("OwnerApp")
@@ -131,6 +132,7 @@ export const APPS: Record<string, OSApp> = {
   computer: { icon: "computer", defaultSize: { w: 460, h: 320 }, menus: closeMenus, Component: ComputerApp },
   prompt: { icon: "terminal", defaultSize: { w: 680, h: 420 }, multiInstance: true, Component: PromptApp },
   media: { icon: "music", defaultSize: { w: 640, h: 590 }, menus: closeMenus, Component: MediaPlayerApp },
+  "media-pane": { icon: "music", defaultSize: { w: 500, h: 420 }, menus: closeMenus, Component: MediaPaneApp },
   solitaire: { icon: "app", defaultSize: { w: 720, h: 610 }, menus: closeMenus, Component: SolitaireApp },
   taskmgr: { icon: "computer", defaultSize: { w: 520, h: 360 }, menus: closeMenus, Component: TaskManagerApp },
   account: { icon: "computer", defaultSize: { w: 470, h: 500 }, menus: closeMenus, Component: AccountApp },

@@ -546,16 +546,21 @@ The completed personal-machine layer adds:
 Persistence remains intentionally legible: `subsurfaces95` (settings, widget and
 desktop positions), `subsurfaces95-files`, `subsurfaces95-solitaire`,
 `subsurfaces95-media`, and the existing shared `music-session`/`music-volume`.
-The four OS-owned persisted stores carry schema version `1` with migration
-hooks; window geometry remains session-only.
+The general OS-owned persisted stores carry schema version `1`; the media store
+is version `2` after adding validated skin/visualiser preferences. Every store
+has a migration hook, and window geometry remains session-only.
 
 ### 13.1 Media workstation contract
 
 `MPLAYER.EXE` is a richer control surface for the existing global
-`MusicProvider`, not a second player. There remains one `<audio>` element and one
-Web Audio graph across the garden and OS. `public/music.json` remains generated,
-read-only catalogue input; library metadata and audio uploading remain outside
-the player.
+`MusicProvider`, not a second playback owner. The provider owns two long-lived
+streaming decks feeding one Web Audio graph: the active deck is the public
+transport/scratch target and the other may preload exactly one adjacent track.
+That standby fetch stays metadata-only until crossfade is enabled.
+Two elements are necessary for a real overlap, but there is still one session,
+one analyser, one effects chain and one master output across the garden and OS.
+`public/music.json` remains generated, read-only catalogue input; library
+metadata and audio uploading remain outside the player.
 
 The listening session and editable queue use stable track slugs. Restore accepts
 the old numeric playlist shape once and migrates it against the current manifest.
@@ -564,22 +569,40 @@ ordered slug list, while Library search and Mix loading discard catalogue entrie
 that no longer exist. Queue rows support drag, keyboard-friendly up/down controls
 and independent removal; Play Next and Add are different actions.
 
-Visualisers are Canvas 2D and stay inside the shared analyser budget. They cap
-device-pixel ratio and frame rate, reuse typed arrays, resize through
-`ResizeObserver`, lower their cadence for reduced motion and stop scheduling
-frames when the document or canvas is not visible. A future WebGL mode must be a
-separate lazy boundary and must not make the base workstation pay its bundle or
-GPU cost.
+The effects rack is a five-band peaking EQ followed by bounded HPF and LPF
+controls, with a click-safe dry-path bypass. Presets are only parameter
+shortcuts; manual changes become `Custom`, reset restores neutral audible state,
+and persisted values are
+validated before reaching audio parameters. Scratch worklet audio enters the
+same effects chain as the streaming decks. Crossfade is an optional 0–8 second
+equal-power overlap, applied to automatic and manual transitions. It starts only
+when an adjacent track exists, does not interfere with repeat-one, and cancels
+old gain automation before a rapid skip. With crossfade off, transitions remain
+single-deck and immediate.
+
+Spectrum, phosphor scope, waterfall and radial modes use Canvas 2D. `MELT` and
+`WARP` are WebGL2 ping-pong feedback modes in their own dynamic-import boundary,
+so the base player does not fetch or initialise the GPU engine until selected.
+Both engines cap device-pixel ratio and frame rate, reuse typed arrays, resize
+through `ResizeObserver`, lower their cadence for reduced motion and stop
+scheduling frames when the document or canvas is not visible. WebGL failure is
+contained inside the visualiser. When its detachable pane is visible, the main
+player suspends its copy so only one visual loop owns the analyser/GPU budget.
+
+`EQ`, `VIS` and `PL` open deduplicated real OS windows, not DOM overlays. They
+share MusicProvider and `subsurfaces95-media` state with the main deck; closing a
+pane cannot stop playback. Four bounded token palettes—Classic, Amber CRT,
+Icebox and Night Plum—skin the deck and every detached pane without permitting
+arbitrary CSS or external skin execution.
 
 Deliberately deferred follow-ons:
 
-- an EQ/filter rack (LPF/HPF first), with bypass and audible-state reset;
-- detachable EQ / visualiser / playlist panes, windowshade mode and a bounded
-  skin-token system;
 - Mix rename, duplicate, import/export or sharing;
-- stereo vectorscope and a WebGL feedback/MilkDrop-like mode;
-- gapless playback and crossfade, which require a measured audio-graph design
-  rather than overlapping the current single media element by accident;
+- stereo vectorscope and user-authored/imported skins;
+- sample-accurate gapless playback. The dual streaming decks make transitions
+  substantially smoother, but do not claim decoder-level gaplessness;
+- a compact player-specific windowshade layout (ordinary OS window shade already
+  works and remains the supported roll-up interaction);
 - deciding whether the compact garden player or a dedicated music subdomain
   should expose this queue editor. The OS implementation is the reference model,
   not permission to maintain three diverging queue implementations.

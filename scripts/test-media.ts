@@ -3,11 +3,40 @@ import { musicAssetUrl } from "../src/lib/musicAsset"
 import { handleMusicAsset } from "../src/worker/media"
 import { addSecurityHeaders } from "../src/worker/security"
 import type { RouteCtx } from "../src/worker/types"
+import {
+  DEFAULT_MUSIC_EFFECTS,
+  equalPowerCurves,
+  normalizeMusicEffects,
+} from "../src/components/ui/music/musicEffects"
 
 const r2 = "https://pub-1c8f47f651264c60ac3e99705b46795e.r2.dev"
 assert.equal(musicAssetUrl(`${r2}/audio/sunaku.mp3`), "/api/music/audio/sunaku.mp3")
 assert.equal(musicAssetUrl(`${r2}/covers/sunaku.webp`), "/api/music/covers/sunaku.webp")
 assert.equal(musicAssetUrl("https://example.com/elsewhere.mp3"), "https://example.com/elsewhere.mp3")
+
+assert.deepEqual(normalizeMusicEffects(null), DEFAULT_MUSIC_EFFECTS)
+assert.deepEqual(normalizeMusicEffects({
+  eqEnabled: true,
+  eqGains: [99, -99, 2, Number.NaN, 4],
+  highpassHz: 5_000,
+  lowpassHz: 100,
+  crossfadeSeconds: 99,
+}), {
+  eqEnabled: true,
+  eqGains: [12, -12, 2, 0, 4],
+  highpassHz: 2_000,
+  lowpassHz: 2_000,
+  crossfadeSeconds: 8,
+})
+const curves = equalPowerCurves(5)
+assert.equal(curves.fadeIn[0], 0)
+assert(Math.abs(curves.fadeIn[4] - 1) < 1e-6)
+assert(Math.abs(curves.fadeOut[0] - 1) < 1e-6)
+assert(Math.abs(curves.fadeOut[4]) < 1e-6)
+for (let index = 0; index < curves.fadeIn.length; index++) {
+  const combinedPower = curves.fadeIn[index] ** 2 + curves.fadeOut[index] ** 2
+  assert(Math.abs(combinedPower - 1) < 1e-6, "crossfade must preserve equal power")
+}
 
 const security = new Headers()
 addSecurityHeaders(security)

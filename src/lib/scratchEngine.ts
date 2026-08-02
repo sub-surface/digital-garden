@@ -64,18 +64,19 @@ export async function prewarmScratch(analyser: AnalyserNode | null, url: string 
 }
 
 /**
- * Begin a scratch. `analyser` is the live music analyser (we tap into its
- * context and route through it). `url` is the current track audio URL and
- * `startTime` the position to scratch from (seconds). Returns a session, or
- * null if Web Audio / the worklet aren't available (caller falls back).
+ * Begin a scratch. `effectsInput` is the live music graph's shared entry point,
+ * so the worklet inherits its EQ, analyser and master gain. `url` is the
+ * current track audio URL and `startTime` the position to scratch from
+ * (seconds). Returns a session, or null if Web Audio / the worklet aren't
+ * available (caller falls back).
  */
 export async function startScratch(
-  analyser: AnalyserNode,
+  effectsInput: AudioNode,
   url: string,
   startTime: number,
   volume = 1,
 ): Promise<ScratchSession | null> {
-  const ctx = analyser.context as AudioContext
+  const ctx = effectsInput.context as AudioContext
   if (!ctx || !("audioWorklet" in ctx)) return null
   try {
     if (!moduleAdded) {
@@ -103,7 +104,9 @@ export async function startScratch(
       startPos: startTime * buffer.sampleRate,
     })
 
-    node.connect(analyser)   // through the analyser → destination (visualiser sees it)
+    // Join at the same effects entry as the streaming decks so scratching gets
+    // the user's EQ/filter settings and still reaches the shared analyser.
+    node.connect(effectsInput)
 
     const velParam = node.parameters.get("velocity")!
     const gainParam = node.parameters.get("gain")!

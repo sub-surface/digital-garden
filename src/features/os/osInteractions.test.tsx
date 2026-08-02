@@ -3,7 +3,8 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ProgramBoundary } from "./Desktop"
-import { MediaPlayerApp, TaskManagerApp } from "./apps"
+import { MediaPaneApp, MediaPlayerApp, TaskManagerApp } from "./apps"
+import { MediaVisualizer } from "./media/MediaVisualizer"
 import { useOS, useOSMedia, useOSSettings } from "./osStore"
 import { MenuRow } from "./Taskbar"
 import { useOSLinks } from "./useOSLinks"
@@ -62,12 +63,26 @@ describe("OS interactions", () => {
       seek: vi.fn(),
       setVolume: vi.fn(),
       analyser: null,
+      effectsInput: null,
       repeatMode: "all",
       setRepeatMode: vi.fn(),
       queue: ["alpha", "alpha"],
       setQueue: vi.fn(),
       queueIndex: 0,
       setQueueIndex: vi.fn(),
+      eqEnabled: false,
+      setEqEnabled: vi.fn(),
+      eqGains: [0, 0, 0, 0, 0],
+      setEqGain: vi.fn(),
+      setEqGains: vi.fn(),
+      highpassHz: 20,
+      setHighpassHz: vi.fn(),
+      lowpassHz: 20_000,
+      setLowpassHz: vi.fn(),
+      resetEqualizer: vi.fn(),
+      crossfadeSeconds: 4,
+      setCrossfadeSeconds: vi.fn(),
+      isCrossfading: false,
     })
   })
 
@@ -151,5 +166,43 @@ describe("OS interactions", () => {
     await userEvent.click(screen.getByRole("tab", { name: "MIXES 0" }))
     await userEvent.click(screen.getByRole("button", { name: "SAVE QUEUE" }))
     expect(useOSMedia.getState().savedPlaylists.Mixtape).toEqual(["alpha", "alpha"])
+  })
+
+  it("opens one synchronized auxiliary window for each media pane", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
+    render(<MediaPlayerApp />)
+
+    await userEvent.click(screen.getByTitle("Open detachable equalizer"))
+    await userEvent.click(screen.getByTitle("Open detachable visualizer"))
+    await userEvent.click(screen.getByTitle("Open detachable playlist"))
+    await userEvent.click(screen.getByTitle("Open detachable equalizer"))
+
+    expect(useOS.getState().windows.map((win) => win.args.pane)).toEqual([
+      "equalizer",
+      "visualizer",
+      "playlist",
+    ])
+  })
+
+  it("drives shared EQ, crossfade, and skin state from the detached rack", async () => {
+    const music = useMusicMock()
+    render(<MediaPaneApp args={{ pane: "equalizer" }} windowId="eq-test" />)
+
+    await userEvent.click(screen.getByRole("button", { name: "BYPASS" }))
+    await userEvent.selectOptions(screen.getByLabelText("Equalizer preset"), "Bass lift")
+    fireEvent.change(screen.getByLabelText("Crossfade seconds"), { target: { value: "6" } })
+    await userEvent.selectOptions(screen.getByLabelText("Detached pane skin"), "amber")
+
+    expect(music.setEqEnabled).toHaveBeenCalledWith(true)
+    expect(music.setEqGains).toHaveBeenCalledWith([6, 4, 1, -1, -2])
+    expect(music.setCrossfadeSeconds).toHaveBeenCalledWith(6)
+    expect(useOSMedia.getState().skin).toBe("amber")
+  })
+
+  it("loads the WebGL visual engine only when a WebGL mode is selected", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
+    render(<MediaVisualizer analyser={null} mode="feedback" skin="classic" />)
+
+    expect(await screen.findByText("WEBGL2 UNAVAILABLE")).toBeInTheDocument()
   })
 })

@@ -207,3 +207,30 @@ register is deliberately authored caricature. Raw transcripts are not stored.
 The terminal now calls every interlocutor a scripted persona so those authored
 lines cannot be mistaken for self-reported profile claims. The broader cited
 wiki/news chronicle work remains open in ROADMAP §29.15.
+
+## Turning Media Player into a little workstation
+
+The remaining Winamp-inspired ideas now share one audio architecture instead of
+being decorative controls. `MusicProvider` owns two permanent streaming decks
+and one graph: deck gains feed a click-safe dry bypass or five-band EQ and
+HPF/LPF, then the shared analyser and existing master volume. The standby deck
+preloads one adjacent track (metadata-only while crossfade is off), enabling
+optional 0–8 second equal-power crossfades without adding a second playback
+context. Repeat-one, end-of-queue and rapid-skip behavior are explicit, and the
+scratch worklet now enters the same effects chain.
+
+EQ, visualiser and playlist controls detach into deduplicated OS windows while
+remaining synchronized with the main deck. Four bounded token skins travel
+across those surfaces. The existing spectrum/scope engine gained waterfall and
+radial modes; `MELT` and `WARP` are real WebGL2 feedback shaders behind a nested
+dynamic import. Both rendering paths cap DPR and cadence, pause when hidden and
+honour reduced motion. A visible detached visualiser replaces rather than
+duplicates the main render loop. WebGL/shader/context failure stays inside the
+pane.
+
+Media preferences migrate under `subsurfaces95-media` version 2, while effects,
+crossfade and queue remain part of the shared `music-session`. Hostile or stale
+persisted parameters are clamped before touching the graph. Interaction coverage
+checks pane deduplication, synchronized EQ/crossfade/skin controls and on-demand
+WebGL loading; the pure media check covers parameter normalization and the
+equal-power curve.

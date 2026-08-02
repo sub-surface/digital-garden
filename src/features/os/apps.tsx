@@ -14,6 +14,7 @@ import { SYSTEM_PAGES } from "@/config/system-pages"
 import { PROGRAMS } from "@/features/terminal/commands"
 import type { NoteMetadata } from "@/types/content"
 import { useMusic } from "@/components/ui/music/MusicContext"
+import { EQ_BANDS, EQ_PRESETS, type EqGains } from "@/components/ui/music/musicEffects"
 import { useAuth } from "@/hooks/useAuth"
 import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
 import type { ChatRoom as ChatRoomType } from "@/types/chat"
@@ -40,6 +41,14 @@ import {
   queueIndexAfterRemoval,
   shuffleQueue,
 } from "@/components/ui/music/musicQueue"
+import { MediaVisualizer } from "./media/MediaVisualizer"
+import {
+  MEDIA_SKINS,
+  MEDIA_VIZ_MODES,
+  type MediaPane,
+  type MediaSkin,
+  type MediaView,
+} from "./media/mediaTheme"
 import styles from "./OS.module.scss"
 import explorer from "./Explorer.module.scss"
 
@@ -1618,210 +1627,10 @@ function AboutTab() {
   )
 }
 
-type MediaVizMode = "spectrum" | "scope" | "waterfall" | "radial"
-type MediaView = "library" | "queue" | "mixes"
-
-const MEDIA_VIZ_MODES: ReadonlyArray<{ id: MediaVizMode; label: string }> = [
-  { id: "spectrum", label: "SPEC" },
-  { id: "scope", label: "SCOPE" },
-  { id: "waterfall", label: "FALL" },
-  { id: "radial", label: "RAD" },
-]
-
 function mediaTime(seconds: number) {
   if (!Number.isFinite(seconds)) return "0:00"
   const absolute = Math.max(0, Math.floor(Math.abs(seconds)))
   return `${Math.floor(absolute / 60)}:${String(absolute % 60).padStart(2, "0")}`
-}
-
-function MediaVisualizer({ analyser, mode }: { analyser: AnalyserNode | null; mode: MediaVizMode }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    const context = canvas?.getContext("2d")
-    if (!canvas || !context) return
-
-    const frequency = analyser ? new Uint8Array(analyser.frequencyBinCount) : null
-    const waveform = analyser ? new Uint8Array(analyser.fftSize) : null
-    const peaks = new Float32Array(64)
-    const edges = new Uint16Array(65)
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
-    let width = 1
-    let height = 1
-    let dpr = 1
-    let bars = 32
-    let frame = 0
-    let running = false
-    let pageVisible = document.visibilityState === "visible"
-    let elementVisible = true
-    let previousFrame = 0
-
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect()
-      width = Math.max(1, rect.width)
-      height = Math.max(1, rect.height)
-      dpr = Math.min(2, window.devicePixelRatio || 1)
-      const pixelWidth = Math.max(1, Math.round(width * dpr))
-      const pixelHeight = Math.max(1, Math.round(height * dpr))
-      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
-        canvas.width = pixelWidth
-        canvas.height = pixelHeight
-      }
-      bars = Math.max(20, Math.min(64, Math.floor(width / 7)))
-      const maxBin = Math.max(2, (analyser?.frequencyBinCount ?? 2) - 1)
-      for (let index = 0; index <= bars; index++) {
-        edges[index] = Math.min(maxBin, Math.floor(Math.exp(Math.log(maxBin) * index / bars)))
-      }
-      peaks.fill(0)
-    }
-
-    const drawGrid = (fade = false) => {
-      context.setTransform(dpr, 0, 0, dpr, 0, 0)
-      context.fillStyle = fade ? "rgba(8,10,8,.2)" : "#080a08"
-      context.fillRect(0, 0, width, height)
-      context.strokeStyle = "rgba(155,208,107,.12)"
-      context.lineWidth = 1
-      for (let x = 0; x < width; x += 20) {
-        context.beginPath(); context.moveTo(x, 0); context.lineTo(x, height); context.stroke()
-      }
-      for (let y = 0; y < height; y += 16) {
-        context.beginPath(); context.moveTo(0, y); context.lineTo(width, y); context.stroke()
-      }
-    }
-
-    const bandLevel = (index: number) => {
-      if (!frequency) return 0
-      const start = edges[index]
-      const end = Math.max(start + 1, edges[index + 1])
-      let total = 0
-      for (let bin = start; bin < end; bin++) total += frequency[bin]
-      return total / (end - start) / 255
-    }
-
-    const draw = (now: number) => {
-      if (!running) return
-      frame = requestAnimationFrame(draw)
-      const interval = reducedMotion ? 120 : 1000 / 30
-      if (now - previousFrame < interval) return
-      previousFrame = now
-
-      if (!analyser || !frequency || !waveform) {
-        drawGrid()
-        context.fillStyle = "rgba(155,208,107,.55)"
-        context.textAlign = "center"
-        context.font = "10px monospace"
-        context.fillText("AUDIO ANALYSER STANDBY", width / 2, height / 2 + 3)
-        return
-      }
-
-      if (mode === "scope") {
-        analyser.getByteTimeDomainData(waveform)
-        drawGrid(true)
-        context.beginPath()
-        for (let index = 0; index < waveform.length; index++) {
-          const x = index / (waveform.length - 1) * width
-          const y = waveform[index] / 255 * height
-          if (index === 0) context.moveTo(x, y)
-          else context.lineTo(x, y)
-        }
-        context.strokeStyle = "#b9ff72"
-        context.shadowColor = "#76dc38"
-        context.shadowBlur = 5
-        context.lineWidth = 1.25
-        context.stroke()
-        context.shadowBlur = 0
-        return
-      }
-
-      analyser.getByteFrequencyData(frequency)
-      if (mode === "waterfall") {
-        context.setTransform(1, 0, 0, 1, 0, 0)
-        context.drawImage(canvas, 0, -Math.max(1, Math.round(2 * dpr)))
-        context.setTransform(dpr, 0, 0, dpr, 0, 0)
-        const stripHeight = Math.max(1.5, 2 * dpr)
-        for (let index = 0; index < bars; index++) {
-          const level = bandLevel(index)
-          context.fillStyle = level > .72 ? "#ffc85a" : level > .38 ? "#9bd06b" : "#315b2e"
-          context.fillRect(index / bars * width, height - stripHeight, width / bars + .5, stripHeight)
-        }
-        return
-      }
-
-      drawGrid()
-      if (mode === "radial") {
-        const centerX = width / 2
-        const centerY = height / 2
-        const radius = Math.min(width, height) * .16
-        context.lineWidth = Math.max(1, width / bars - 1)
-        for (let index = 0; index < bars; index++) {
-          const angle = index / bars * Math.PI * 2 - Math.PI / 2
-          const level = bandLevel(index)
-          const reach = radius + level * Math.min(width, height) * .31
-          context.beginPath()
-          context.moveTo(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius)
-          context.lineTo(centerX + Math.cos(angle) * reach, centerY + Math.sin(angle) * reach)
-          context.strokeStyle = level > .68 ? "#ffc85a" : "#9bd06b"
-          context.stroke()
-        }
-        context.beginPath()
-        context.arc(centerX, centerY, radius - 3, 0, Math.PI * 2)
-        context.strokeStyle = "rgba(185,255,114,.65)"
-        context.lineWidth = 1
-        context.stroke()
-        return
-      }
-
-      const barWidth = width / bars
-      for (let index = 0; index < bars; index++) {
-        const level = bandLevel(index)
-        const barHeight = level * (height - 5)
-        peaks[index] = Math.max(barHeight, peaks[index] - (reducedMotion ? 4 : 1.5))
-        context.fillStyle = level > .72 ? "#ffc85a" : level > .42 ? "#9bd06b" : "#4d8439"
-        context.fillRect(index * barWidth, height - barHeight, Math.max(1, barWidth - 1), barHeight)
-        context.fillStyle = "#d8ffac"
-        context.fillRect(index * barWidth, height - peaks[index] - 1, Math.max(1, barWidth - 1), 1)
-      }
-    }
-
-    const start = () => {
-      if (running || !pageVisible || !elementVisible) return
-      running = true
-      frame = requestAnimationFrame(draw)
-    }
-    const stopDrawing = () => {
-      running = false
-      cancelAnimationFrame(frame)
-    }
-    const onVisibility = () => {
-      pageVisible = document.visibilityState === "visible"
-      if (pageVisible) start()
-      else stopDrawing()
-    }
-
-    resize()
-    const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize)
-    resizeObserver?.observe(canvas)
-    const intersectionObserver = typeof IntersectionObserver === "undefined"
-      ? null
-      : new IntersectionObserver(([entry]) => {
-        elementVisible = entry.isIntersecting
-        if (elementVisible) start()
-        else stopDrawing()
-      })
-    intersectionObserver?.observe(canvas)
-    document.addEventListener("visibilitychange", onVisibility)
-    start()
-
-    return () => {
-      stopDrawing()
-      resizeObserver?.disconnect()
-      intersectionObserver?.disconnect()
-      document.removeEventListener("visibilitychange", onVisibility)
-    }
-  }, [analyser, mode])
-
-  return <canvas ref={canvasRef} className={styles.mediaVisual} aria-label={`${mode} visualisation`} />
 }
 
 export function MediaPlayerApp() {
@@ -1829,11 +1638,22 @@ export function MediaPlayerApp() {
     tracks, currentTrackIndex, currentTrack, isPlaying, currentTime, duration, volume,
     playTrack, togglePlay, stop, nextTrack, prevTrack, seek, setVolume, analyser,
     repeatMode, setRepeatMode, queue, setQueue, queueIndex, setQueueIndex,
+    eqEnabled, crossfadeSeconds, isCrossfading,
   } = useMusic()
+  const openWindow = useOS((state) => state.openWindow)
+  const visualizerDetached = useOS((state) => state.windows.some((win) =>
+    win.appId === "media-pane"
+    && win.args.pane === "visualizer"
+    && win.state !== "minimized"
+    && win.state !== "shaded",
+  ))
   const savedPlaylists = useOSMedia((state) => state.savedPlaylists)
   const savePlaylist = useOSMedia((state) => state.savePlaylist)
   const deletePlaylist = useOSMedia((state) => state.deletePlaylist)
-  const [mode, setMode] = useState<MediaVizMode>("spectrum")
+  const mode = useOSMedia((state) => state.visualizerMode)
+  const setMode = useOSMedia((state) => state.setVisualizerMode)
+  const skin = useOSMedia((state) => state.skin)
+  const setSkin = useOSMedia((state) => state.setSkin)
   const [view, setView] = useState<MediaView>("library")
   const [playlistName, setPlaylistName] = useState("Mixtape")
   const [query, setQuery] = useState("")
@@ -1891,13 +1711,21 @@ export function MediaPlayerApp() {
   const cycleRepeat = () => {
     setRepeatMode(repeatMode === "off" ? "all" : repeatMode === "all" ? "track" : "off")
   }
+  const openPane = (pane: MediaPane) => {
+    const paneMeta = {
+      equalizer: { title: "Media Player - Equalizer", w: 420, h: 390 },
+      visualizer: { title: "Media Player - Visualizer", w: 560, h: 400 },
+      playlist: { title: "Media Player - Playlist", w: 500, h: 470 },
+    }[pane]
+    openWindow({ appId: "media-pane", args: { pane }, ...paneMeta })
+  }
   const shownTime = showRemaining && duration > 0 ? duration - currentTime : currentTime
 
   return (
-    <div className={styles.mediaPlayer}>
+    <div className={styles.mediaPlayer} data-media-skin={skin}>
       <div className={styles.mediaDeck}>
         <div className={styles.mediaScreen} aria-live="polite">
-          <span className={styles.mediaStatus}>{isPlaying ? "PLAY" : currentTrack ? "PAUSE" : "READY"}</span>
+          <span className={styles.mediaStatus}>{isCrossfading ? "XFADE" : isPlaying ? "PLAY" : currentTrack ? "PAUSE" : "READY"}</span>
           <button
             className={styles.mediaMarquee}
             onClick={() => setShowRemaining((remaining) => !remaining)}
@@ -1913,7 +1741,9 @@ export function MediaPlayerApp() {
           </span>
         </div>
         <div className={styles.mediaVizPanel}>
-          <MediaVisualizer analyser={analyser} mode={mode} />
+          {visualizerDetached
+            ? <div className={`${styles.mediaVisual} ${styles.mediaVisualDetached}`}>VISUALIZER DETACHED</div>
+            : <MediaVisualizer analyser={analyser} mode={mode} skin={skin} />}
           <div className={styles.mediaVizModes} aria-label="Visualiser mode">
             {MEDIA_VIZ_MODES.map((candidate) => (
               <button key={candidate.id} data-active={candidate.id === mode} onClick={() => setMode(candidate.id)}>
@@ -1942,9 +1772,16 @@ export function MediaPlayerApp() {
           <button onClick={cycleRepeat} title={`Repeat: ${repeatMode}`} aria-label={`Repeat mode: ${repeatMode}`}>
             R:{repeatMode === "track" ? "1" : repeatMode === "all" ? "A" : "-"}
           </button>
+          <button data-active={eqEnabled} onClick={() => openPane("equalizer")} title="Open detachable equalizer">EQ</button>
+          <button onClick={() => openPane("visualizer")} title="Open detachable visualizer">VIS</button>
+          <button onClick={() => openPane("playlist")} title="Open detachable playlist">PL</button>
+          <span className={styles.mediaCrossfade} title="Crossfade duration">XF {crossfadeSeconds}s</span>
           <label>VOL
             <input type="range" min={0} max={100} value={Math.round(volume * 100)} onChange={(event) => setVolume(Number(event.target.value) / 100)} />
           </label>
+          <select value={skin} onChange={(event) => setSkin(event.target.value as MediaSkin)} aria-label="Player skin">
+            {Object.entries(MEDIA_SKINS).map(([id, candidate]) => <option key={id} value={id}>{candidate.label}</option>)}
+          </select>
         </div>
       </div>
 
@@ -2046,6 +1883,214 @@ export function MediaPlayerApp() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function MediaEqualizerPanel() {
+  const {
+    eqEnabled,
+    setEqEnabled,
+    eqGains,
+    setEqGain,
+    setEqGains,
+    highpassHz,
+    setHighpassHz,
+    lowpassHz,
+    setLowpassHz,
+    resetEqualizer,
+    crossfadeSeconds,
+    setCrossfadeSeconds,
+    isCrossfading,
+  } = useMusic()
+  const preset = highpassHz === 20 && lowpassHz === 20_000
+    ? Object.entries(EQ_PRESETS).find(([, gains]) =>
+      gains.every((gain, index) => gain === eqGains[index]),
+    )?.[0] ?? "Custom"
+    : "Custom"
+
+  return (
+    <div className={styles.mediaEqualizer}>
+      <div className={styles.mediaEqHeader}>
+        <button data-active={eqEnabled} onClick={() => setEqEnabled(!eqEnabled)}>
+          {eqEnabled ? "EQ ON" : "BYPASS"}
+        </button>
+        <select
+          value={preset}
+          aria-label="Equalizer preset"
+          onChange={(event) => {
+            const name = event.target.value
+            setEqGains([...(EQ_PRESETS[name] ?? EQ_PRESETS.Flat)] as EqGains)
+            setHighpassHz(20)
+            setLowpassHz(20_000)
+            setEqEnabled(true)
+          }}
+        >
+          <option value="Custom" disabled>Custom</option>
+          {Object.keys(EQ_PRESETS).map((name) => <option key={name}>{name}</option>)}
+        </select>
+        <button onClick={resetEqualizer}>RESET</button>
+      </div>
+      <div className={styles.mediaEqBands}>
+        {EQ_BANDS.map((band, index) => (
+          <label key={band.frequency}>
+            <output>{eqGains[index] > 0 ? "+" : ""}{eqGains[index]}</output>
+            <input
+              type="range"
+              min={-12}
+              max={12}
+              step={1}
+              value={eqGains[index]}
+              onChange={(event) => { setEqEnabled(true); setEqGain(index, Number(event.target.value)) }}
+              aria-label={`${band.frequency} hertz gain`}
+            />
+            <span>{band.label}</span>
+          </label>
+        ))}
+      </div>
+      <div className={styles.mediaFilters}>
+        <label>
+          <span>HPF</span>
+          <input type="range" min={20} max={2_000} step={10} value={highpassHz} onChange={(event) => { setEqEnabled(true); setHighpassHz(Number(event.target.value)) }} />
+          <output>{highpassHz} Hz</output>
+        </label>
+        <label>
+          <span>LPF</span>
+          <input type="range" min={2_000} max={20_000} step={100} value={lowpassHz} onChange={(event) => { setEqEnabled(true); setLowpassHz(Number(event.target.value)) }} />
+          <output>{lowpassHz >= 20_000 ? "OPEN" : `${(lowpassHz / 1_000).toFixed(1)} kHz`}</output>
+        </label>
+      </div>
+      <div className={styles.mediaCrossfadeControl} data-active={isCrossfading || undefined}>
+        <label>
+          <span>CROSSFADE</span>
+          <input
+            type="range"
+            min={0}
+            max={8}
+            step={1}
+            value={crossfadeSeconds}
+            onChange={(event) => setCrossfadeSeconds(Number(event.target.value))}
+            aria-label="Crossfade seconds"
+          />
+          <output>{crossfadeSeconds === 0 ? "OFF" : `${crossfadeSeconds}s`}</output>
+        </label>
+        <small>{isCrossfading ? "DECK A/B OVERLAP ACTIVE" : "EQUAL-POWER TRANSITION"}</small>
+      </div>
+    </div>
+  )
+}
+
+function MediaDetachedPlaylist() {
+  const {
+    tracks,
+    currentTrack,
+    isPlaying,
+    playTrack,
+    togglePlay,
+    seek,
+    queue,
+    setQueue,
+    queueIndex,
+    setQueueIndex,
+  } = useMusic()
+  const savedPlaylists = useOSMedia((state) => state.savedPlaylists)
+  const savePlaylist = useOSMedia((state) => state.savePlaylist)
+  const [mixName, setMixName] = useState("Mixtape")
+  const trackBySlug = useMemo(() => new Map(tracks.map((track) => [track.slug, track])), [tracks])
+
+  const begin = (slug: string, index: number) => {
+    if (currentTrack?.slug === slug) {
+      setQueueIndex(index)
+      seek(0)
+      if (!isPlaying) togglePlay()
+    } else playTrack(slug, index)
+  }
+  const move = (from: number, to: number) => {
+    setQueue(moveQueueItem(queue, from, to))
+    setQueueIndex(queueIndexAfterMove(queueIndex, from, to))
+  }
+  const remove = (index: number) => {
+    setQueue(queue.filter((_, candidate) => candidate !== index))
+    setQueueIndex(queueIndexAfterRemoval(queueIndex, index))
+  }
+
+  return (
+    <div className={styles.mediaDetachedPlaylist}>
+      <div className={styles.mediaMixEditor}>
+        <input value={mixName} maxLength={40} onChange={(event) => setMixName(event.target.value)} aria-label="Detached mix name" />
+        <button onClick={() => savePlaylist(mixName, queue)} disabled={!queue.length}>SAVE</button>
+        <select
+          value=""
+          aria-label="Load saved mix"
+          onChange={(event) => {
+            const name = event.target.value
+            const next = (savedPlaylists[name] ?? []).filter((slug) => trackBySlug.has(slug))
+            setMixName(name)
+            setQueue(next)
+            setQueueIndex(-1)
+          }}
+        >
+          <option value="" disabled>LOAD MIX...</option>
+          {Object.keys(savedPlaylists).sort().map((name) => <option key={name}>{name}</option>)}
+        </select>
+        <button onClick={() => { setQueue([]); setQueueIndex(-1) }} disabled={!queue.length}>CLEAR</button>
+      </div>
+      <div className={styles.mediaPlaylist}>
+        {queue.length === 0 && <p className={styles.mediaEmpty}>The queue is empty. Add tracks in the main player.</p>}
+        {queue.map((slug, index) => {
+          const track = trackBySlug.get(slug)
+          if (!track) return null
+          return (
+            <div className={`${styles.mediaTrack} ${styles.mediaQueueTrack}`} key={`${slug}-${index}`} data-active={index === queueIndex}>
+              <span className={styles.mediaQueueNumber}>{String(index + 1).padStart(2, "0")}</span>
+              <button className={styles.mediaTrackMain} onClick={() => begin(slug, index)}>
+                <span><strong>{track.title}</strong><small>{track.artist}</small></span>
+                <time>{track.duration ? mediaTime(track.duration) : "--:--"}</time>
+              </button>
+              <span className={styles.mediaMoveButtons}>
+                <button onClick={() => move(index, index - 1)} disabled={index === 0} aria-label={`Move ${track.title} up`}>^</button>
+                <button onClick={() => move(index, index + 1)} disabled={index === queue.length - 1} aria-label={`Move ${track.title} down`}>v</button>
+              </span>
+              <button onClick={() => remove(index)} aria-label={`Remove ${track.title}`}>x</button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+export function MediaPaneApp({ args }: AppProps) {
+  const { analyser, currentTrack } = useMusic()
+  const mode = useOSMedia((state) => state.visualizerMode)
+  const setMode = useOSMedia((state) => state.setVisualizerMode)
+  const skin = useOSMedia((state) => state.skin)
+  const setSkin = useOSMedia((state) => state.setSkin)
+  const pane: MediaPane = args.pane === "equalizer" || args.pane === "playlist" ? args.pane : "visualizer"
+
+  return (
+    <div className={styles.mediaPane} data-media-skin={skin}>
+      <div className={styles.mediaPaneToolbar}>
+        <span>{currentTrack ? `${currentTrack.artist} - ${currentTrack.title}` : "NO TRACK"}</span>
+        <select value={skin} onChange={(event) => setSkin(event.target.value as MediaSkin)} aria-label="Detached pane skin">
+          {Object.entries(MEDIA_SKINS).map(([id, candidate]) => <option key={id} value={id}>{candidate.label}</option>)}
+        </select>
+      </div>
+      {pane === "equalizer" && <MediaEqualizerPanel />}
+      {pane === "playlist" && <MediaDetachedPlaylist />}
+      {pane === "visualizer" && (
+        <div className={styles.mediaDetachedVisual}>
+          <MediaVisualizer analyser={analyser} mode={mode} skin={skin} large />
+          <div className={styles.mediaDetachedModes}>
+            {MEDIA_VIZ_MODES.map((candidate) => (
+              <button key={candidate.id} data-active={mode === candidate.id} onClick={() => setMode(candidate.id)}>
+                {candidate.label}{candidate.webgl ? "*" : ""}
+              </button>
+            ))}
+          </div>
+          <small>* lazy WebGL feedback engine</small>
+        </div>
+      )}
     </div>
   )
 }

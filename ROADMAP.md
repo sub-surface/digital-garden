@@ -1422,11 +1422,15 @@ What remains is deliberately ordered by value and architectural dependency:
     spectrum, phosphor scope, waterfall and radial visualisers; searchable
     Library / Queue / Mixes views; explicit Play Next/Add; duplicate-preserving
     drag reorder; shuffle/repeat/stop; and named mixes. Sessions and queues use
-    stable slugs with legacy numeric-playlist migration. Rendering pauses when
-    hidden and caps DPR/frame rate. Gapless/crossfade, filters, detachable panes,
-    skins and WebGL feedback remain explicitly deferred in the OS spec; editing
-    metadata or uploading audio remains an owner workflow inheriting item 3's
-    audit/preview requirements.
+    stable slugs with legacy numeric-playlist migration. The second workstation
+    layer adds a shared five-band EQ with HPF/LPF and bypass, 0–8 second
+    equal-power crossfade over two coordinated decks, four bounded skins,
+    synchronized detachable EQ/visualiser/playlist windows, and lazy WebGL2
+    `MELT`/`WARP` feedback modes. Rendering pauses when hidden, caps DPR/frame
+    rate, and avoids running both main and detached visualisers. Mix interchange,
+    stereo vectorscope, imported skins and sample-accurate gapless playback remain
+    explicit follow-ons in the OS spec; editing metadata or uploading audio stays
+    an owner workflow inheriting item 3's audit/preview requirements.
 11. [x] **Messenger window.** The adapter owns room selection,
     session/token state and a useful logged-out view around the shared `ChatRoom`.
 12. [x] **Sound set and ARG ambience.** The synthesized cues now have a
