@@ -28,7 +28,8 @@ export const PERSONAS: Record<PersonaId, Persona> = {
       "No, it’s fucking not.",
       "This is incoherent. A relation is itself an entity, a distinct thing from any of its members.",
       "It's not about what it *is*, it's about what it *does*.",
-      "A thing isn’t there because of its identity. It’s present by something else, its difference.",
+      "I know… you are mistaken about that.",
+      "I’m afraid you had one too many ellipses…",
       "You are booting the material states to replace them with different material states.",
       "We only have a thing if it is there. We only have an identity if it is there."
     ],
@@ -72,6 +73,23 @@ export const PERSONAS: Record<PersonaId, Persona> = {
           "Oh lol, imagine Trump does Iran deals with Anthropic.", 
           "Only if there is an ought truth in relation to it.", 
           "That’s incoherent because an agent’s evaluative stances are not an ought truth."
+        ]
+      },
+      {
+        keywords: ["fact", "true", "truth", "know", "belief", "believe", "observe"],
+        responses: [
+          "The facts are still there and true when nobody has any information about them.",
+          "Every single one. Each fact is its own entity, given of reality whether or not anyone thinks of it.",
+          "The state of belief has never made what the belief is about true or not.",
+          "…then you don’t get it. It’s an outright metaphysical/ontological commitment."
+        ]
+      },
+      {
+        keywords: ["travel", "music", "taste", "favourite", "favorite", "everything"],
+        responses: [
+          "Ah yes, the 'I listen to all music' answer for travel.",
+          "You don’t need an imaginary world for that. You could live in Tromsø from the twenty-seventh of May to the nineteenth of July.",
+          "That answer is doing no work at all."
         ]
       }
     ]
@@ -257,10 +275,9 @@ export const PERSONAS: Record<PersonaId, Persona> = {
       "Brb work stuff",
       "He’s a chud",
       "Laughing when you should cry is a powerful transgression",
-      "Get off the ledge",
-      "We play cricket, and we won the World Cup in it, y’all’s claim to fame is football and. . .",
-      "You can have 10 perfect families if you’re rich enough",
-      "Money is the end all be all"
+      "Thanks chat",
+      "You think too small",
+      "I actually will be doing more things"
     ],
     rules: [
       {
@@ -306,6 +323,31 @@ export const PERSONAS: Record<PersonaId, Persona> = {
           "That’s a billion and a half viewers right there", 
           "Need to piss on them"
         ]
+      },
+      {
+        keywords: ["tiger", "conservation", "wildlife", "animal", "extinct", "poaching", "habitat", "forest"],
+        responses: [
+          "Do you know how few wild tigers are actually left",
+          "Project Tiger worked. Nobody wants to hear that it worked.",
+          "Habitat corridors matter more than headcounts",
+          "I could talk about tigers all day and not one of you would stop me"
+        ]
+      },
+      {
+        keywords: ["modi", "nationalism", "nation", "election", "government", "politics"],
+        responses: [
+          "Modi understood something you people refuse to",
+          "A billion and a half of us and you want to lecture me on governance",
+          "I’d be a great petty dictator. Obsessively oppress everyone equally."
+        ]
+      },
+      {
+        keywords: ["read", "reading", "book", "philosophy", "study", "text"],
+        responses: [
+          "Nobody will read it with me. The group has one member. It’s me.",
+          "I’ll pay you. Genuinely. Name a number.",
+          "Read the Indian stuff, it’s right there"
+        ]
       }
     ]
   },
@@ -323,7 +365,60 @@ export const PERSONAS: Record<PersonaId, Persona> = {
       "what...",
       "lol you're upset"
     ],
-    rules: []
+    rules: [
+      {
+        keywords: ["disagree", "wrong", "unfair", "rude", "mean", "annoying", "hostile"],
+        responses: [
+          "You can be upset with that.",
+          "I think you're taking this personally.",
+          "This makes me sad.",
+          "you're starting to be annoying"
+        ]
+      },
+      {
+        keywords: ["sure", "neat", "cool", "crazy", "interesting", "fine"],
+        responses: [
+          "'Sure' might be the most disrespectful term in the English language",
+          "Neat is worse than sure.",
+          "Then very cool. Then crazy.",
+          "That's the ladder. It only goes down."
+        ]
+      },
+      {
+        keywords: ["example", "evidence", "explain", "specific", "clarify", "vague", "evasive", "argument", "debate", "point", "claim"],
+        responses: [
+          "There are many lines. Zero in for me.",
+          "Do you think you're being evasive?",
+          "Mind reading is an essential part of communication. Do some reading.",
+          "I said the framing was bad. Read up."
+        ]
+      },
+      {
+        keywords: ["rate", "rating", "best", "worst", "good", "bad", "tier", "score"],
+        responses: [
+          "6.5. Maybe a 6.4.",
+          "I have the only readable take on this.",
+          "It's fine. It's a 7.",
+          "Solid 4. Possibly a 3.5 on a rewatch."
+        ]
+      },
+      {
+        keywords: ["vc", "voice", "call"],
+        responses: [
+          "This is why I refuse to have these sorts of conversations outside of voice chat.",
+          "We'd probably be finished by now if we'd done this in voice.",
+          "I can't vc bc I'm at work, btw."
+        ]
+      },
+      {
+        keywords: ["stop", "enough", "leave", "quit"],
+        responses: [
+          "Please stop talking to me.",
+          "Ok.",
+          "I'm not doing this."
+        ]
+      }
+    ]
   },
   terry: {
     id: "terry",
@@ -586,26 +681,23 @@ export const PERSONAS: Record<PersonaId, Persona> = {
     name: "Ape",
     color: "muted",
     generics: [
-      "millenials are retarded",
-      "What can I tell you man my sperm are that dumb",
-      "I cannot present a counter-argument, as you have not presented an argument",
-      "yknow im happy that willow's found somebody with an equal capacity to just assert their metaphysics as though it were a substantive response",
       "lmao",
       "truuuuuu",
-      "so i assume you are using a bot",
-      "also idk if you are a bot yourself, but your messages are very botty, and you seem to be copy pasting them into chat",
-      "so generally i find circularity very pestering",
-      "arguments but then the paraphraser just turns it into assertionslop",
       "Easier said than done for some of us",
-      "(Y'know how hard it is to find someone as retarded as I am?)"
+      "neat",
+      "epic",
+      "yeah i know im a comedy genius",
+      "maybe",
+      "we just kiss a little"
     ],
     rules: [
       {
-        keywords: ["smart", "intelligence", "dumb", "stupid", "retard"],
+        keywords: ["smart", "intelligence", "dumb", "stupid", "retard", "autistic", "weird", "insane"],
         responses: [
           "millenials are retarded",
           "What can I tell you man my sperm are that dumb",
           "(Y'know how hard it is to find someone as retarded as I am?)",
+          "what gives you that impression?",
           "Low intelligence people are prone to having money issue, planning issue, etc., which will be a bothersome in the long run."
         ]
       },
@@ -619,7 +711,7 @@ export const PERSONAS: Record<PersonaId, Persona> = {
         ]
       },
       {
-        keywords: ["bot", "ai", "chatgpt", "gpt"],
+        keywords: ["bot", "chatgpt", "gpt", "llm", "chatbot"],
         responses: [
           "so i assume you are using a bot",
           "also idk if you are a bot yourself, but your messages are very botty, and you seem to be copy pasting them into chat",
@@ -639,71 +731,158 @@ export const PERSONAS: Record<PersonaId, Persona> = {
           "Well it's annoying to compute the jacobians i need to convert to polar coordinates when evaluating a surface integral",
           "though hed probably say something like \"Do you mean sphereical coordinates?\""
         ]
+      },
+      {
+        keywords: ["example", "evidence", "model", "source", "paper", "cite", "specific"],
+        responses: [
+          "Where might I see an example of these models?",
+          "extra points if they diverge from classical econ, extra extra points if they diverge and are right",
+          "I mean it's okay if you dont have a specific paper or whatever that i could take a look at now",
+          "that's a sentence, and it isn't a model"
+        ]
+      },
+      {
+        keywords: ["gun", "firearm", "policy", "opinion", "position", "side"],
+        responses: [
+          "firearms regulation is one of those issues ive decided to be dogmatically ambivalent on",
+          "I neither agree nor disagree",
+          "clearly, im ambivalent towards them"
+        ]
+      },
+      {
+        keywords: ["clearly", "obviously", "literally", "meant", "imply"],
+        responses: [
+          "In this context, it serves to signal that a fact is highly salient given prior information in the conversation",
+          "It was intended as a correction",
+          "Maybe under an adequately broad understanding of the term"
+        ]
       }
     ]
   }
 }
 
-/**
- * Basic Eliza-style string reflection
- * Swaps "I" with "you", "my" with "your", etc.
- */
-function reflect(text: string): string {
-  const map: Record<string, string> = {
-    "i": "you",
-    "i am": "you are",
-    "i'm": "you're",
-    "my": "your",
-    "mine": "yours",
-    "you": "I",
-    "you are": "I am",
-    "you're": "I'm",
-    "your": "my",
-    "yours": "mine",
-    "me": "you"
+// ---------------------------------------------------------------------------
+// Matching
+//
+// Keywords match on word boundaries. This replaced a bare `input.includes(kw)`,
+// which fired constantly on ordinary prose: "ai" matched again/said/explain/
+// against, "bot" matched both, "cause" matched because, and "code" matched
+// Deleuze's own "decoded" and "overcoding". Measured over this file's own reply
+// strings, 21 of 23 "ai" hits were false positives. `debate` feeds every reply
+// back in as the next input, so the error compounded each turn and made rules
+// that were written correctly read as free association.
+//
+// Patterns are compiled once — ~147 distinct keywords, tested on every turn.
+// ---------------------------------------------------------------------------
+
+const KEYWORD_PATTERNS = new Map<string, RegExp>()
+
+function patternFor(keyword: string): RegExp {
+  let pattern = KEYWORD_PATTERNS.get(keyword)
+  if (!pattern) {
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    // A trailing plural is allowed — "tigers" must hit the "tiger" rule, and a
+    // debate topic is as likely to arrive plural as not. The leading boundary
+    // is what does the real work, so this stays safe: "ai(e?s)?" still cannot
+    // reach "again", and "bot" still cannot reach "both".
+    pattern = new RegExp(`\\b${escaped}(?:e?s)?\\b`, "i")
+    KEYWORD_PATTERNS.set(keyword, pattern)
   }
-  
-  const tokens = text.split(/\b/);
-  const reflected = tokens.map(token => {
-    const lower = token.toLowerCase();
-    return map[lower] ? map[lower] : token;
-  });
-  return reflected.join("");
+  return pattern
 }
 
-export function generateReply(personaId: PersonaId, input: string): string {
+for (const persona of Object.values(PERSONAS)) {
+  for (const rule of persona.rules) {
+    for (const keyword of rule.keywords) patternFor(keyword)
+  }
+}
+
+/** How many of a rule's keywords appear in `text`. */
+function scoreRule(rule: Rule, text: string): number {
+  let score = 0
+  for (const keyword of rule.keywords) {
+    if (patternFor(keyword).test(text)) score++
+  }
+  return score
+}
+
+/**
+ * Best-scoring rule, ties broken by declaration order. Previously the first
+ * rule with any single keyword hit won outright, so a rule matching one weak
+ * keyword beat a later rule matching three.
+ */
+function bestRule(rules: readonly Rule[], text: string): Rule | undefined {
+  let best: Rule | undefined
+  let bestScore = 0
+  for (const rule of rules) {
+    const score = scoreRule(rule, text)
+    if (score > bestScore) {
+      best = rule
+      bestScore = score
+    }
+  }
+  return best
+}
+
+/** Random choice, preferring lines not already used in this exchange. */
+function pick(candidates: readonly string[], recent: readonly string[]): string | undefined {
+  if (!candidates.length) return undefined
+  const fresh = candidates.filter((c) => !recent.includes(c))
+  const pool = fresh.length ? fresh : candidates
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
+/** Stock deflections for "are you…" / "do you…", which no rule handles well. */
+const QUESTION_DEFLECTIONS: Record<PersonaId, string> = {
+  willow: "Not quite... why do you ask?",
+  deleuze: "We are all multiplicities, do not try to fix me into an identity.",
+  spinoza: "I am a mode of Nature.",
+  trump: "I am the best at it, everyone knows it.",
+  jeh: "Right?",
+  hpcr: "what",
+  terry: "God told me I am.",
+  nick: "It's a cybernetic inevitability.",
+  mark: "It's easier to imagine the end of the world than answering that.",
+  zizek: "Ah, but the question is pure ideology! *sniff*",
+  diogenes: "I am a dog.",
+  bostrom: "In the vast majority of simulated realities, the answer is yes.",
+  ape: "also idk if you are a bot yourself, but your messages are very botty",
+}
+
+export interface ReplyOptions {
+  /** Lines already spoken this exchange. Avoided while an alternative exists. */
+  recent?: readonly string[]
+  /** Standing subject, matched when the input itself hits nothing. */
+  topic?: string
+}
+
+export function generateReply(
+  personaId: PersonaId,
+  input: string,
+  options: ReplyOptions = {},
+): string {
   const p = PERSONAS[personaId]
   if (!p) return "..."
 
-  const lowerInput = input.toLowerCase()
-  
-  // 1. Try to find a matching rule
-  for (const rule of p.rules) {
-    for (const kw of rule.keywords) {
-      if (lowerInput.includes(kw)) {
-        const reply = rule.responses[Math.floor(Math.random() * rule.responses.length)]
-        return reply.replace(/\*/g, "") // clean up, can expand logic here
-      }
-    }
+  const recent = options.recent ?? []
+
+  // 1. Rules — against the input first, then the standing topic. Without the
+  //    topic pass a debate abandons its subject on turn two, because each reply
+  //    overwrites the last as the next input.
+  for (const text of [input, options.topic]) {
+    if (!text) continue
+    const rule = bestRule(p.rules, text)
+    if (!rule) continue
+    const reply = pick(rule.responses, recent)
+    if (reply) return reply.replace(/\*/g, "")
   }
 
-  // 2. If no rule matched, maybe reflect a question back?
-  if (lowerInput.includes("are you") || lowerInput.includes("do you")) {
-    if (personaId === "willow") return "Not quite... why do you ask?"
-    if (personaId === "trump") return "I am the best at it, everyone knows it."
-    if (personaId === "deleuze") return "We are all multiplicities, do not try to fix me into an identity."
-    if (personaId === "spinoza") return "I am a mode of Nature."
-    if (personaId === "jeh") return "Right?"
-    if (personaId === "hpcr") return "what"
-    if (personaId === "terry") return "God told me I am."
-    if (personaId === "nick") return "It's a cybernetic inevitability."
-    if (personaId === "mark") return "It's easier to imagine the end of the world than answering that."
-    if (personaId === "zizek") return "Ah, but the question is pure ideology! *sniff*"
-    if (personaId === "diogenes") return "I am a dog."
-    if (personaId === "bostrom") return "In the vast majority of simulated realities, the answer is yes."
-    if (personaId === "ape") return "also idk if you are a bot yourself, but your messages are very botty"
+  // 2. Direct questions, which no rule handles well.
+  if (/\b(?:are|do) you\b/i.test(input)) {
+    const deflection = QUESTION_DEFLECTIONS[personaId]
+    if (deflection && !recent.includes(deflection)) return deflection
   }
 
-  // 3. Generic fallback
-  return p.generics[Math.floor(Math.random() * p.generics.length)]
+  // 3. Generic fallback.
+  return pick(p.generics, recent) ?? "..."
 }

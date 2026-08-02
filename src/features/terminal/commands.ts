@@ -722,7 +722,7 @@ const toys: TerminalCommand[] = [
 // Interlocutors — the boot chatbot, restored as a proper session.
 //
 // `chat <who>` takes over the prompt until you `exit`. `debate <a> <b>` puts two
-// personas in a room and feeds each one's reply to the other, which is a use the
+// scripted personas in a room and feeds each one's reply to the other, a use the
 // original never had and is much funnier than talking to them one at a time.
 // ---------------------------------------------------------------------------
 
@@ -731,7 +731,7 @@ const people2: TerminalCommand[] = [
     name: "chat",
     aliases: ["talk", "sysop"],
     group: "people",
-    help: { usage: "chat [who]", description: "Talk to somebody. `exit` to leave." },
+    help: { usage: "chat [who]", description: "Talk to a scripted persona. `exit` to leave." },
     run: async (ctx, args) => {
       const { PERSONAS, generateReply } = await import("@/features/boot/chatbot")
       const ids = Object.keys(PERSONAS) as (keyof typeof PERSONAS)[]
@@ -755,7 +755,7 @@ const people2: TerminalCommand[] = [
 
       const persona = PERSONAS[id]
       ctx.print("")
-      ctx.print(`— ${persona.name} is listening. \`exit\` to leave. —`, "muted")
+      ctx.print(`— ${persona.name} [scripted persona] is listening. \`exit\` to leave. —`, "muted")
       ctx.startSession({
         prompt: `${persona.name.toLowerCase()}>`,
         onInput: (line, c) => {
@@ -767,7 +767,7 @@ const people2: TerminalCommand[] = [
   {
     name: "debate",
     group: "people",
-    help: { usage: "debate <a> <b> [topic]", description: "Put two of them in a room" },
+    help: { usage: "debate <a> <b> [topic]", description: "Put two scripted personas in a room" },
     run: async (ctx, args) => {
       const { PERSONAS, generateReply } = await import("@/features/boot/chatbot")
       const ids = Object.keys(PERSONAS) as (keyof typeof PERSONAS)[]
@@ -788,15 +788,24 @@ const people2: TerminalCommand[] = [
 
       const topic = args.slice(2).join(" ") || "the difference between things"
       ctx.print("")
-      ctx.print(`— ${PERSONAS[a].name} vs ${PERSONAS[b].name}: ${topic} —`, "accent")
+      ctx.print(`— scripted: ${PERSONAS[a].name} vs ${PERSONAS[b].name}: ${topic} —`, "accent")
       ctx.print("")
 
       // Each reply becomes the other's next input. Six exchanges is enough to
       // be funny and short enough to stay funny.
+      //
+      // The topic is passed on every turn, not just the first: the reply chain
+      // overwrites `utterance` immediately, so without it the pair wander off
+      // the subject by turn two. Each speaker's own lines are fed back as
+      // `recent` so nobody repeats himself inside one debate.
+      const saidByA: string[] = []
+      const saidByB: string[] = []
       let utterance = topic
-      let speaker = a
+      let speaker = Math.random() < 0.5 ? a : b
       for (let turn = 0; turn < 6; turn++) {
-        const reply = generateReply(speaker, utterance)
+        const recent = speaker === a ? saidByA : saidByB
+        const reply = generateReply(speaker, utterance, { topic, recent })
+        recent.push(reply)
         ctx.print(`${PERSONAS[speaker].name}: ${reply}`, PERSONAS[speaker].color)
         utterance = reply
         speaker = speaker === a ? b : a

@@ -34,4 +34,10 @@ assert.match(
   "test should include the Vitest interaction suite",
 )
 
-console.log("Package verification scripts cover build, Worker typecheck, and UI interactions.")
+assert.match(
+  scripts.test ?? "",
+  /scripts\/test-chatbot\.ts/,
+  "test should include the chatbot regression suite",
+)
+
+console.log("Package verification scripts cover build, Worker typecheck, UI interactions, and chatbot matching.")
