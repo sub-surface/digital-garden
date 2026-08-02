@@ -793,10 +793,19 @@ const people2: TerminalCommand[] = [
 
       // Each reply becomes the other's next input. Six exchanges is enough to
       // be funny and short enough to stay funny.
+      //
+      // The topic is passed on every turn, not just the first: the reply chain
+      // overwrites `utterance` immediately, so without it the pair wander off
+      // the subject by turn two. Each speaker's own lines are fed back as
+      // `recent` so nobody repeats himself inside one debate.
+      const saidByA: string[] = []
+      const saidByB: string[] = []
       let utterance = topic
-      let speaker = a
+      let speaker = Math.random() < 0.5 ? a : b
       for (let turn = 0; turn < 6; turn++) {
-        const reply = generateReply(speaker, utterance)
+        const recent = speaker === a ? saidByA : saidByB
+        const reply = generateReply(speaker, utterance, { topic, recent })
+        recent.push(reply)
         ctx.print(`${PERSONAS[speaker].name}: ${reply}`, PERSONAS[speaker].color)
         utterance = reply
         speaker = speaker === a ? b : a
