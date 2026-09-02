@@ -1482,6 +1482,14 @@ What remains is deliberately ordered by value and architectural dependency:
     accessories/mini-games/desktop roaming for Petri remain bounded follow-ons
     in the OS spec; cloud sync requires an explicit revisions/merge design.
     (2026-08-02)
+18. [ ] **FILAMENT: Celestrium simulation bridge.** Export bridge between Celestrium
+    (`../astro-theory/`) and FILAMENT (`src/features/filament/`). Ingests real
+    observational sky survey queries (Gaia DR3 stellar stream gaps like GD-1,
+    CatWISE/DESI quasar number-count dipole candidates), converts 3D celestial coordinates
+    into comoving particle coordinates, and renders an interactive diagnostic overlay over
+    the evolving $\Lambda\text{CDM}$ dark matter web to measure real cosmic variance and
+    test theoretical density signatures against live cosmological simulation.
+
 
 Verification note: Leon browser-verified the 2026-08-01 OS pass and the taller
 main-site terminal. The 2026-08-02 stabilization adds component-level interaction

@@ -116,6 +116,12 @@ design pass**, and note that `stonk_ledger`/`stonk_balance`/`stonk_config` no lo
 
 ---
 
+## Scientific Simulation & Astro Bridge
+
+- [ ] **FILAMENT: Celestrium Observational Data Bridge**: Ingest real astrophysical survey slices (Gaia DR3 stellar streams, CatWISE/DESI quasar number-count dipole candidates) exported from Celestrium (`astro-theory`). Project observational coordinates into comoving simulation particle buffers and provide an interactive diagnostic overlay to compare real overdensity signatures directly against simulated $\Lambda\text{CDM}$ cosmic web evolution.
+
+---
+
 ## Infrastructure & Legal
 
 - [ ] **Trusted Types**: evaluate `require-trusted-types-for 'script'` — audit PixiJS/D3 compatibility first
