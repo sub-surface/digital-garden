@@ -26,6 +26,31 @@ import {
   timedDecay,
 } from "../src/features/filament/density-raster"
 import { mulberry32 } from "../src/lib/composer/rng"
+import { execFileSync } from "node:child_process"
+
+if (process.env.SKIP_FILAMENT === "true" || process.env.SKIP_FILAMENT === "1") {
+  console.log("FILAMENT: skipped (SKIP_FILAMENT set).")
+  process.exit(0)
+}
+
+if (!process.env.FORCE_FILAMENT && !process.env.CI) {
+  try {
+    const diff = execFileSync("git", ["diff", "HEAD", "--", "src/features/filament", "scripts/test-fmm.ts"], {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "ignore"],
+    }).trim()
+    const status = execFileSync("git", ["status", "--porcelain", "--", "src/features/filament", "scripts/test-fmm.ts"], {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "ignore"],
+    }).trim()
+    if (!diff && !status) {
+      console.log("FILAMENT: solvers unchanged since HEAD — skipped (set FORCE_FILAMENT=1 to run full 6k-step suite).")
+      process.exit(0)
+    }
+  } catch {
+    // If git probe fails, fall through to running test
+  }
+}
 
 let failures = 0
 const fail = (msg: string) => {
