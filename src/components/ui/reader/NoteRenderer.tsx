@@ -19,6 +19,7 @@ interface Props {
 
 const WikiEditButton = lazy(() => import("../WikiEditButton").then((m) => ({ default: m.WikiEditButton })))
 const BookmarkButton = lazy(() => import("../BookmarkButton").then((m) => ({ default: m.BookmarkButton })))
+const CopyWikilinkButton = lazy(() => import("../CopyWikilinkButton").then((m) => ({ default: m.CopyWikilinkButton })))
 
 /** Top-level collection folders whose breadcrumb crumb routes to a shelf page
  * instead of a (non-existent) /Folder page. Keyed lowercase. */
@@ -125,6 +126,7 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
             <div className="note-header__tools">
               <Suspense fallback={null}>
                 {editableWikiSlugs && <WikiEditButton slug={slug} />}
+                <CopyWikilinkButton slug={slug} title={title} />
                 <BookmarkButton slug={slug} title={title} />
               </Suspense>
             </div>

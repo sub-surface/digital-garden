@@ -9,6 +9,8 @@
     - src/components/layout/WikiShell.module.scss
     - src/components/ui/wiki/WikiHeader.tsx
     - src/components/ui/wiki/WikiHeader.module.scss
+    - src/components/ui/CopyWikilinkButton.tsx
+    - src/components/ui/reader/NoteRenderer.tsx
     - src/components/layout/QuickControls.tsx
     - src/components/layout/AppShell.tsx
     - src/components/layout/CornerMenu.tsx
@@ -25,8 +27,12 @@
     - "Bound reader mode click action in ReaderToggle and CornerMenu to open the theme/typography backslash menu directly, exposing text size scale, line height, and reading measure controls."
     - "Optimised content search with instant synchronous in-memory indexing fallback, global slash key trigger, and category badge annotations (Chatter, Concept, Event, Philosopher, Wiki, Book, Movie, Music, Daily)."
     - "Equipped WikiShell with Wikipedia-style persistent header, quick embedded search with instant dropdown, random article button, and breadcrumb navigation."
+    - "Redesigned search overlay and wiki header to be minimal, seamless, and free of blur and heavy strokes, with unified spotlight modal and keyboard scroll anchoring."
+    - "Removed all emoji from UI components, headers, and prose."
+    - "Added CopyWikilinkButton to wiki article headers for instant clipboard copying of canonical [[Note|Title]] links."
   decisions:
     - "Philchat orientation is placed at the top of the Wiki index to serve as the narrative onboarding anchor for all subsequent articles, chronicles, and surveys."
     - "Music bar is suppressed on both wiki shell and any /wiki/ route to honour the request for a dedicated, uninterrupted wiki reading environment."
     - "Reader mode icon opens the backslash ThemePanel where typography, scale, and reader mode settings live, solving the discoverability problem for non-keyboard users."
+    - "Search overlay was streamlined into a single unified container without glassmorphism blur or heavy borders, providing a lightweight, unobtrusive experience."
   next: "Review deployed wiki surfaces for visual balance and explore further arcade / simulation tie-ins (e.g. HegelBot)."

@@ -66,9 +66,18 @@ export function SearchOverlay() {
     setActiveIndex(0)
   }, [results])
 
+  const resultsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (resultsRef.current) {
+      const activeEl = resultsRef.current.querySelector(`.${styles.active}`) as HTMLElement | null
+      activeEl?.scrollIntoView({ block: "nearest" })
+    }
+  }, [activeIndex])
+
   const handleSelect = (result: ContentSearchResult) => {
     if (isWiki) {
-      navigate({ to: `/${result.target}` })
+      navigate({ to: `/${result.target}` as any })
     } else {
       pushCard(
         { url: `/${result.target}`, slug: result.target, title: result.title, html: `<div class="note-loading">Loading...</div>` },
@@ -107,7 +116,7 @@ export function SearchOverlay() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.searchBox}>
-          <svg className={styles.searchIcon} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className={styles.searchIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
           </svg>
@@ -123,7 +132,7 @@ export function SearchOverlay() {
           <div className={styles.shortcut}>ESC</div>
         </div>
 
-        <div className={styles.results}>
+        <div className={styles.results} ref={resultsRef}>
           {results.length > 0 ? (
             results.map((res, i) => {
               const category = getCategoryLabel(res.target)
@@ -145,7 +154,7 @@ export function SearchOverlay() {
           ) : query ? (
             <div className={styles.noResults}>No matches found.</div>
           ) : (
-            <div className={styles.emptyState}>Type to search the garden...</div>
+            <div className={styles.emptyState}>Type to search...</div>
           )}
         </div>
       </div>

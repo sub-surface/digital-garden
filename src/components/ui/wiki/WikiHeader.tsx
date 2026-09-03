@@ -115,7 +115,6 @@ export function WikiHeader() {
     <header className={styles.wikiHeader} data-testid="wiki-header">
       <div className={styles.leftGroup}>
         <a href="/wiki" className={styles.brand}>
-          <span className={styles.brandGlyph}>Ω</span>
           <span>Philchat Wiki</span>
         </a>
 
@@ -138,7 +137,7 @@ export function WikiHeader() {
 
       <div className={styles.centerGroup} ref={containerRef}>
         <div className={styles.searchBox}>
-          <svg className={styles.searchIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className={styles.searchIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
           </svg>
@@ -146,7 +145,7 @@ export function WikiHeader() {
             ref={inputRef}
             type="text"
             className={styles.searchInput}
-            placeholder="Search wiki articles... (Press /)"
+            placeholder="Search wiki articles... (/)"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value)
@@ -188,17 +187,14 @@ export function WikiHeader() {
           title="Jump to a random Wiki article"
           aria-label="Random Wiki Article"
         >
-          <span>🎲</span>
           <span>Random</span>
         </button>
 
         <a href="/tags/wiki" className={styles.actionBtn} title="View all Wiki articles">
-          <span>📋</span>
           <span>Index</span>
         </a>
 
         <a href="/wiki/submit" className={styles.actionBtn} title="Submit or claim your Philsurvey profile">
-          <span>✍️</span>
           <span>Submit</span>
         </a>
       </div>
