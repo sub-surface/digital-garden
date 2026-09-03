@@ -17,7 +17,6 @@ import * as path from "path"
 import { fileURLToPath } from "url"
 import matter from "gray-matter"
 import { execFileSync } from "child_process"
-import { imageSize } from "image-size"
 import { slugifyPath, buildSlugResolver, normalizeSlug } from "../src/lib/slug"
 import { SYSTEM_PAGE_META } from "../src/config/system-pages-meta"
 
@@ -432,6 +431,85 @@ function emitMediaAndDimensions() {
   // Emit intrinsic image dimensions so <img> tags can reserve layout space
   // (fixes Cumulative Layout Shift). Keyed by the same /content/Media/... path
   // that rehype-image-paths produces at runtime.
+  // Zero-dependency native image header parser for PNG, JPEG, GIF, WebP, and SVG.
+  // Eliminates external image-size dependency and its parser CVEs.
+  function getNativeImageDimensions(buf: Buffer): { width: number; height: number } | null {
+    if (buf.length < 8) return null
+
+    // PNG: IHDR width at byte 16, height at byte 20
+    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+      if (buf.length >= 24) {
+        return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
+      }
+    }
+
+    // GIF: width at byte 6, height at byte 8
+    if (buf.toString("ascii", 0, 3) === "GIF") {
+      if (buf.length >= 10) {
+        return { width: buf.readUInt16LE(6), height: buf.readUInt16LE(8) }
+      }
+    }
+
+    // WebP: RIFF...WEBP
+    if (buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP") {
+      const chunk = buf.toString("ascii", 12, 16)
+      if (chunk === "VP8X" && buf.length >= 30) {
+        const width = 1 + buf[24] + (buf[25] << 8) + (buf[26] << 16)
+        const height = 1 + buf[27] + (buf[28] << 8) + (buf[29] << 16)
+        return { width, height }
+      }
+      if (chunk === "VP8 " && buf.length >= 30) {
+        const width = buf.readUInt16LE(26) & 0x3fff
+        const height = buf.readUInt16LE(28) & 0x3fff
+        return { width, height }
+      }
+      if (chunk === "VP8L" && buf.length >= 25) {
+        const b1 = buf[21], b2 = buf[22], b3 = buf[23], b4 = buf[24]
+        const width = 1 + (((b2 & 0x3f) << 8) | b1)
+        const height = 1 + (((b4 & 0xf) << 10) | (b3 << 2) | ((b2 & 0xc0) >> 6))
+        return { width, height }
+      }
+    }
+
+    // JPEG: scan markers for SOF0-SOF3, SOF5-SOF7, SOF9-SOF11, SOF13-SOF15
+    if (buf[0] === 0xff && buf[1] === 0xd8) {
+      let offset = 2
+      while (offset < buf.length - 1) {
+        if (buf[offset] !== 0xff) {
+          offset++
+          continue
+        }
+        const marker = buf[offset + 1]
+        if (marker === 0xd9 || marker === 0xda) break
+        if (offset + 4 > buf.length) break
+        const len = buf.readUInt16BE(offset + 2)
+        if (
+          (marker >= 0xc0 && marker <= 0xc3) ||
+          (marker >= 0xc5 && marker <= 0xc7) ||
+          (marker >= 0xc9 && marker <= 0xcb) ||
+          (marker >= 0xcd && marker <= 0xcf)
+        ) {
+          if (offset + 9 <= buf.length) {
+            return { height: buf.readUInt16BE(offset + 5), width: buf.readUInt16BE(offset + 7) }
+          }
+        }
+        offset += 2 + len
+      }
+    }
+
+    // SVG: viewBox or width/height attributes
+    const text = buf.toString("utf8", 0, Math.min(buf.length, 4096))
+    if (text.includes("<svg")) {
+      const vb = text.match(/viewBox=["']\s*[\d.-]+\s+[\d.-]+\s+([\d.-]+)\s+([\d.-]+)/i)
+      if (vb) return { width: Math.round(parseFloat(vb[1])), height: Math.round(parseFloat(vb[2])) }
+      const w = text.match(/width=["']([\d.]+)/i)
+      const h = text.match(/height=["']([\d.]+)/i)
+      if (w && h) return { width: Math.round(parseFloat(w[1])), height: Math.round(parseFloat(h[1])) }
+    }
+
+    return null
+  }
+
   const DIMENSION_EXTS = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif", ".svg"])
   const dimensions: Record<string, { width: number; height: number }> = {}
 
@@ -443,9 +521,9 @@ function emitMediaAndDimensions() {
         scanDimensions(abs, rel)
       } else if (DIMENSION_EXTS.has(path.extname(entry.name).toLowerCase())) {
         try {
-          const { width, height } = imageSize(fs.readFileSync(abs))
-          if (width && height) {
-            dimensions[`/content/Media/${rel}`] = { width, height }
+          const dims = getNativeImageDimensions(fs.readFileSync(abs))
+          if (dims && dims.width && dims.height) {
+            dimensions[`/content/Media/${rel}`] = { width: dims.width, height: dims.height }
           }
         } catch {
           // Unreadable/corrupt image — skip; the <img> simply won't reserve space.
