@@ -32,6 +32,7 @@ All submissions are reviewed before publishing. See the [[Wiki/Style-Guide|Style
 |---|---|
 | [Philosophers](/tags/philosopher) | Survey profiles, positions, and influences |
 | [Chatters](/tags/chatter) | Community member profiles — positions, influences, Philsurvey answers |
+| [Events](/tags/event) | Sagas, bouts, and chronicle records from The Phil Chat Times |
 | [Concepts](/tags/concept) | Definitions, distinctions, and debates |
 | [Movements](/tags/movement) | Traditions, schools, and intellectual lineages |
 
