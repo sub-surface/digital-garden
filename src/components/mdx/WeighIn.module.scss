@@ -1,0 +1,76 @@
+.card {
+  margin: 1.6rem auto;
+  max-width: 34rem;
+  border: 1px solid var(--color-border);
+  border-top: 4px double var(--color-text);
+  background: var(--color-bg-surface);
+  padding: 0.9rem 1rem 1rem;
+  font-family: var(--font-code);
+}
+
+.corners {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+}
+
+.corner {
+  font-family: var(--font-header);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  color: var(--color-heading);
+
+  &.right {
+    text-align: right;
+  }
+}
+
+.vs {
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.attr {
+  width: 30%;
+  text-align: center;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.66rem;
+  color: var(--color-text-muted);
+  padding: 0.28rem 0.4rem;
+  border-top: 1px solid var(--color-border-light);
+  white-space: nowrap;
+}
+
+.val {
+  color: var(--color-text);
+  padding: 0.28rem 0.4rem;
+  border-top: 1px solid var(--color-border-light);
+  vertical-align: top;
+
+  &.right {
+    text-align: right;
+  }
+}
+
+.verdict {
+  margin-top: 0.7rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
