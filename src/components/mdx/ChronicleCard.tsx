@@ -1,5 +1,7 @@
 import React from "react"
 import { Link } from "@tanstack/react-router"
+import { useStore } from "@/store"
+import { resolveSlug } from "@/lib/content-loader"
 import styles from "./ChronicleCard.module.scss"
 
 interface ChronicleCardProps {
@@ -12,6 +14,10 @@ interface ChronicleCardProps {
 }
 
 export function ChronicleCard({ title, slug, epoch, dispute, outcome, badge }: ChronicleCardProps) {
+  const contentIndex = useStore((s) => s.contentIndex)
+  const resolved = contentIndex ? (resolveSlug(slug, contentIndex) ?? slug) : slug
+  const targetHref = `/${resolved.replace(/^\//, "").replace(/\s+/g, "-")}`
+
   return (
     <article className={styles.card}>
       <header className={styles.header}>
@@ -20,7 +26,7 @@ export function ChronicleCard({ title, slug, epoch, dispute, outcome, badge }: C
           {badge && <span className={styles.badge}>{badge}</span>}
         </div>
         <h4 className={styles.title}>
-          <Link to={`/${slug}` as any} className={styles.titleLink}>
+          <Link to={targetHref as any} className={styles.titleLink}>
             {title}
           </Link>
         </h4>
@@ -40,7 +46,7 @@ export function ChronicleCard({ title, slug, epoch, dispute, outcome, badge }: C
       </div>
 
       <footer className={styles.footer}>
-        <Link to={`/${slug}` as any} className={styles.readLink}>
+        <Link to={targetHref as any} className={styles.readLink}>
           Read dispatch →
         </Link>
       </footer>

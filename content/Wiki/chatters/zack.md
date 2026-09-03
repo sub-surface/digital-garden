@@ -28,14 +28,15 @@ draft: true
 ## Known for
 
 - **[[The Moggening]].** The defining saga of Vol I No 8. Defended the volume of his *tibialis anterior* using an upside-down plastic ruler against FenceJumper's Porsche key fob (`41mm × 2 = 81mm = 8.2 cm. Mogged.`).
-- **The Scientific Control.** Shaved his right leg smooth to the knee with a manual razor (taking approximately one hour) while leaving his left leg hairy as an experimental control, explaining that hair had been *skin-mogging* his muscle definition.
+- **The Shaved Leg Control.** Shaved his right leg smooth to the knee with a manual razor and no trimmer (taking approximately one hour) while leaving his left leg hairy as an experimental control. His own caption: *"shaving turns you Aryan."* He had assumed until that moment that he was simply sunburned.
 - **[[Spawnpill|The Spawnpill]].** Coined the concept during an evening discussion on bicycles, physical baseline genetics, and economic starting conditions.
-- **The Pearl Rules.** Recipient of Phil Chat's most famous disciplinary intervention: asked which rule he was violating after being warned by [[pearl|Pearl]], received Rules 5 and 11, and was muted before dinner.
+- **The Pearl Rules.** Recipient of Phil Chat's most famous disciplinary intervention: asked which rule he was violating after being told to *"chill on the leg fight"* by [[pearl|Pearl]], received Rules 5 and 11, and was silenced for two days. On Tuesday afternoon, [[myname1|My Name]] addressed the silence: *"@zack you can talk about legs now."*
 
 ## Positions on record
 
-* **Gender & State Power:** Argued at length that modern state monopoly on legitimate violence renders male physical strength economically obsolete, making it structural advantageous to be a woman.
+* **Gender & State Power:** Argued on Sunday in numbered paragraphs that *"since the government has the monopoly on force and mens physical strength plays no role in modern society, it is more advantageous to be a woman."* This prompted [[janne|Janne]] to ask *"if it's so great why don't you just do it???"* and [[Quigley]] to remark: *"I feel like I'm part of his daily journal, ngl."*
 * **Fitness Empiricism:** Believes photographic evidence and physical calipers trump abstract medical opinions: *"1 of my thighs can break both of yours in half if we stacked them."*
+* **The Thigh Photo:** At 5:05 PM Sunday, posted a hairy thigh on a wooden floor with a tape measure across it and the top of the frame scribbled out in blue marker, captioned: *"Commit this."*
 
 ## Voice
 

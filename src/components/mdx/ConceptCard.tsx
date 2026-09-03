@@ -1,5 +1,7 @@
 import React from "react"
 import { Link } from "@tanstack/react-router"
+import { useStore } from "@/store"
+import { resolveSlug } from "@/lib/content-loader"
 import styles from "./ConceptCard.module.scss"
 
 interface ConceptCardProps {
@@ -11,6 +13,10 @@ interface ConceptCardProps {
 }
 
 export function ConceptCard({ term, slug, category, origin, definition }: ConceptCardProps) {
+  const contentIndex = useStore((s) => s.contentIndex)
+  const resolved = contentIndex ? (resolveSlug(slug, contentIndex) ?? slug) : slug
+  const targetHref = `/${resolved.replace(/^\//, "").replace(/\s+/g, "-")}`
+
   return (
     <article className={styles.card}>
       <header className={styles.header}>
@@ -18,13 +24,13 @@ export function ConceptCard({ term, slug, category, origin, definition }: Concep
         {origin && <span className={styles.origin}>{origin}</span>}
       </header>
       <h4 className={styles.term}>
-        <Link to={`/${slug}` as any} className={styles.termLink}>
+        <Link to={targetHref as any} className={styles.termLink}>
           {term}
         </Link>
       </h4>
       <p className={styles.definition}>{definition}</p>
       <footer className={styles.footer}>
-        <Link to={`/${slug}` as any} className={styles.exploreLink}>
+        <Link to={targetHref as any} className={styles.exploreLink}>
           Explication →
         </Link>
       </footer>

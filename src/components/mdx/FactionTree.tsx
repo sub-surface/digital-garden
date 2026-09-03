@@ -1,4 +1,6 @@
 import { Link } from "@tanstack/react-router"
+import { useStore } from "@/store"
+import { resolveSlug } from "@/lib/content-loader"
 import styles from "./FactionTree.module.scss"
 
 interface FactionItem {
@@ -21,7 +23,7 @@ const FACTIONS: FactionItem[] = [
     members: [
       { name: "Hugh Chungus", slug: "hughchungus", role: "Realist Corner · Biophile" },
       { name: "Zack", slug: "zack", role: "Caliper Theorist · Spawnpill" },
-      { name: "FenceJumper", slug: "hughchungus", role: "Material Baseline" },
+      { name: "FenceJumper", slug: "The Moggening", role: "Material Baseline" },
     ],
     keyArtifacts: [
       { name: "The Moggening", slug: "The Moggening" },
@@ -51,6 +53,7 @@ const FACTIONS: FactionItem[] = [
     members: [
       { name: "Charlie (Willow)", slug: "Charlie(Willow)", role: "System Builder · HegelBot" },
       { name: "Ape", slug: "Ape", role: "Foundherentist Epistemology" },
+      { name: "dot", slug: "dot", role: "Spinozist Wing · DeLanda Envoy" },
       { name: "Lizzie", slug: "lizzie", role: "Messiah of the Covenant" },
     ],
     keyArtifacts: [
@@ -77,6 +80,13 @@ const FACTIONS: FactionItem[] = [
 ]
 
 export function FactionTree() {
+  const contentIndex = useStore((s) => s.contentIndex)
+
+  const getHref = (rawSlug: string) => {
+    const resolved = contentIndex ? (resolveSlug(rawSlug, contentIndex) ?? rawSlug) : rawSlug
+    return `/${resolved.replace(/^\//, "").replace(/\s+/g, "-")}`
+  }
+
   return (
     <div className={styles.treeContainer} role="region" aria-label="Phil Chat Faction Alignment Map">
       {/* Root Node */}
@@ -126,7 +136,7 @@ export function FactionTree() {
               <ul className={styles.memberList}>
                 {faction.members.map((m) => (
                   <li key={m.slug} className={styles.memberItem}>
-                    <Link to={`/${m.slug}` as any} className={styles.memberLink}>
+                    <Link to={getHref(m.slug) as any} className={styles.memberLink}>
                       {m.name}
                     </Link>
                     {m.role && <span className={styles.memberRole}>{m.role}</span>}
@@ -139,7 +149,7 @@ export function FactionTree() {
               <span className={styles.sectionLabel}>Key Engagements</span>
               <div className={styles.artifactTags}>
                 {faction.keyArtifacts.map((a) => (
-                  <Link key={a.slug} to={`/${a.slug}` as any} className={styles.artifactPill}>
+                  <Link key={a.slug} to={getHref(a.slug) as any} className={styles.artifactPill}>
                     {a.name}
                   </Link>
                 ))}

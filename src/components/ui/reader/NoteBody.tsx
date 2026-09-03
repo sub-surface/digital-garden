@@ -8,6 +8,7 @@ import { TagPage } from "./TagPage"
 import { FolderPage } from "./FolderPage"
 import { SYSTEM_PAGES } from "@/config/system-pages"
 import { normalizeSlug } from "@/lib/slug"
+import { resolveSlug } from "@/lib/content-loader"
 
 // `music` is an alias for the music-library system page used in older links.
 const SYSTEM_ALIASES: Record<string, string> = { music: "music-library" }
@@ -18,9 +19,17 @@ interface Props {
 }
 
 export function NoteBody({ slug: rawSlug, onLoad }: Props) {
+  const contentIndex = useStore((s) => s.contentIndex)
+  const resolvedSlug = React.useMemo(() => {
+    if (contentIndex) {
+      return resolveSlug(rawSlug, contentIndex) ?? rawSlug
+    }
+    return rawSlug
+  }, [rawSlug, contentIndex])
+
   const slug = React.useMemo(
-    () => normalizeSlug(rawSlug.replace(/\.mdx?$/, "")),
-    [rawSlug]
+    () => normalizeSlug(resolvedSlug.replace(/\.mdx?$/, "")),
+    [resolvedSlug]
   )
   const [loading, setLoading] = useState(true)
   const [MDXComponent, setMDXComponent] = useState<React.ComponentType<any> | null>(null)
@@ -110,6 +119,18 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
           if (paths.includes(p.toLowerCase())) {
             match = p
             break
+          }
+        }
+
+        // Basename fallback match across all content notes (e.g. bare "Quigley" or "The-Evolution-Deliberation")
+        if (!match) {
+          const baseTarget = slug.split("/").pop()!.toLowerCase()
+          for (const p of Object.keys(notes)) {
+            const noteBase = p.replace(/\.mdx?$/, "").split("/").pop()!.toLowerCase()
+            if (noteBase === baseTarget) {
+              match = p
+              break
+            }
           }
         }
 

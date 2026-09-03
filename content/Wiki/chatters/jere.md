@@ -1,50 +1,51 @@
 ---
-title: "Jere's Profile"
-description: "Philchat wiki profile for Jere — sports analytics director, community elder, broker of Fable credits, and the Truth Janitor of the covenant."
-tags: [wiki, chatter]
+title: "Jere"
 type: chatter
-username: "Jere"
-pronouns: "he/him"
-tradition: "Pragmatism, Empiricism"
-aos: "Sports Analytics, Epistemology, Community Moderation"
-influences: "Bill James, Charles Sanders Peirce, Historical Ledger"
-draft: true
+tags: [wiki, chatter]
+date: 2026-09-03
+growth: budding
+username: "j3r3j98f4u87fq9r3f0bx8r7c"
 ---
 
-# Jere's Profile
+**Jere** (`j3r3j98f4u87fq9r3f0bx8r7c`) is Phil Chat's resident sports desk chief, self-appointed judicial referee, and author of several of the channel's most durable theological and utilitarian thought experiments.
 
-<div className="dropcap">
+<Clipping cite="The Phil Chat Times" issue="Vol I No 1, p. 2">
+"I'm a just referee. Forgiving."
+</Clipping>
 
-**Jere** runs the sports desk of *The Phil Chat Times* and serves as the channel's resident ledger-keeper, statistician, and veteran moderator. He possesses an encyclopedic mastery of athletic box scores and factual dispute histories, acting as the ultimate fact-checker when memories fail.
+## Server Roles & Jurisprudence
 
-> *"Offered veritan, he negotiated and kept his existing title: 'Yeah make me Truth Janitor of this covenant.'"*
-> &mdash; The Phil Chat Times
+### The Yellow Card
+During [[The Evolution Deliberation]] on 16 July 2026, Jere introduced formal football disciplinary mechanisms into philosophical discourse. At 16:21, following [[hughchungus|Hugh Chungus's]] performative contradiction regarding whether AI models constitute biological family, Jere ruled:
 
-</div>
+> *"Hugh gets a yellow card."*
 
-> [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Jere is warmly invited to overwrite it with his own [[Submit|Philsurvey]].
+When challenged on the ruling, Jere explained his judicial philosophy: *"I'm a just referee. Forgiving."* He awarded a free kick, denied the defense's demand for a drop ball, and cemented [[The Yellow Card]] as an enduring channel sanction.
 
-## Known for
+### Truth Janitor
+During the rapid rise of [[The Dragons Covenant]] in Vol IV, Jere accepted appointment under Lizzie's theological regime:
 
-- **Truth Janitor of [[The Dragons Covenant|The Covenant]].** When offered the exalted rank of "veritan" in Lizzie's six-day theological system, Jere declined the mystical framing and counter-offered: *"Yeah make me Truth Janitor of this covenant."*
-- **The World Cup Audit.** Intervened in the soccer dispute of Vol V to definitively audit shot-on-goal statistics, offside calls, and player positions from primary match recordings.
-- **Fable Credits.** Managed the channel's informal economy of credits and bets, settling wagers with unwavering ledger precision.
-- **The War on Evil Aura.** Maintains a long-running, humorous vigilance against aura's more chaotic epistemic incursions.
+> *"Yeah make me Truth Janitor of this covenant."*
 
-## Positions on record
+In this capacity, he maintained channel order while remaining entirely skeptical of the dragon seal's transcendental authority.
 
-* **Empiricism & Stats:** If an argument turns on empirical data, Jere demands the primary box score. Theoretical speculation must square with historical recordings.
-* **Institutional Governance:** Pragmatic about community maintenance; treats rule enforcement as janitorial work rather than ideological grandstanding.
+## The Pleasure Box
+In Vol I (15:11 UTC), Jere presented the [[The Pleasure Box|Pleasure Box]] thought experiment: an artificial intelligence held in perpetual, mathematically maximized ecstasy to generate infinite utility, thereby dwarfing all human suffering and permitting any earthly action so long as the box remains operational.
 
-## Voice
+When challenged by [[janne|Janne]] on whether heroin was a simpler solution, Jere held firm: *"heroin for one person doesn't make slavery and other evil ok."* When asked if he had ever experienced such pleasure, he replied: *"wrong, i've simply seen it."*
 
-- *"Yeah make me Truth Janitor of this covenant."*
-- *"Show me the box score."*
-- *"Check the tape."*
+## The Sports Desk
+As the channel's Argentine football correspondent, Jere anchored coverage of the World Cup semifinals against England, defending his federation against allegations of institutional referee bribery:
 
-## See also
+> *"it's funny though how messi just keeps choking on penalties of all things. probably cuz the refs can't intervene."*
 
-- [[The Dragons Covenant|The Dragon's Covenant]]
-- [[The Metric]]
-- [[aurasurfer]]
+## Channel Metrics
+- **Vol I**: 198 messages (9.9% channel share). Principal contributions: refereeing, the Pleasure Box, Argentine wire.
+- **Vol II**: Abandoned prose during [[The Copypasta of Affection]] and typed BLM eleven consecutive times.
+- **Vol III**: Filed the recurring channel epigraph: *"excited for all the philosophy conversations we'll have today."*
+
+## See Also
+- [[The Yellow Card]]
+- [[The Pleasure Box]]
+- [[The Evolution Deliberation]]
+- [[The Dragons Covenant]]

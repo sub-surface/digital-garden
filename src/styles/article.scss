@@ -16,6 +16,34 @@
     minmax(2rem, 1fr);           // right spacer
   width: 100%;
   padding: 4rem 0;
+
+  // Wiki index portal: expansive broadsheet stage spanning wide screens
+  &.wiki-index-layout {
+    grid-template-columns: minmax(1.5rem, 1fr) minmax(0, 1260px) minmax(1.5rem, 1fr);
+    padding: 2rem 0 5rem;
+
+    .article-body {
+      grid-column: 2;
+      max-width: 100%;
+      text-align: left;
+      hyphens: manual;
+
+      // Keep opening introductory copy at comfortable reading measure
+      .dropcap,
+      .wiki-index-intro,
+      > p:first-of-type,
+      > blockquote {
+        max-width: 80ch;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 1.6;
+      }
+    }
+
+    .body-side-group {
+      display: none;
+    }
+  }
 }
 
 .article-body {
@@ -54,6 +82,19 @@
     // border-box no longer flows beneath the float). `---`/<hr> dodge this by
     // being 60%-wide & centered; headings span the measure, so they need the BFC.
     overflow: hidden;
+  }
+
+  // Wide element breakouts inside standard article layouts
+  .breakout-wide,
+  .wide-element,
+  [data-breakout="wide"] {
+    width: 100%;
+    box-sizing: border-box;
+
+    @media (min-width: 1280px) {
+      width: calc(100% + 160px);
+      margin-left: -80px;
+    }
   }
 }
 

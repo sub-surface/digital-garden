@@ -1,50 +1,34 @@
 ---
-title: "hpcr's Profile"
-description: "Philchat wiki profile for hpcr — debate promoter, framer of formal motions, and sole presiding judge of Quigley v. Hugh."
-tags: [wiki, chatter]
+title: "hpcr"
 type: chatter
+tags: [wiki, chatter]
+date: 2026-09-03
+growth: budding
 username: "hpcr"
-pronouns: "he/him"
-tradition: "Analytic Institutionalism, Legal Epistemology"
-aos: "Debate Framing, Political Philosophy, Jurisprudence"
-influences: "Parliamentary procedure, Boxing commissions"
-draft: true
 ---
 
-# hpcr's Profile
+**hpcr** is Phil Chat's primary promoter, motion drafter, and late-night aphorist. He is best known as the architect who sanctioned the historic [[The Warranted Assertibility Wars|Hugh v. Quigley]] title fight and coined the Vol I Quote of the Day.
 
-<div className="dropcap">
+<Clipping cite="The Phil Chat Times" issue="Vol I No 1, p. 1">
+"It's crazy people think principles are real."
+— hpcr, 4:19 A.M., on his way to bed
+</Clipping>
 
-**hpcr** is Phil Chat's foremost promoter, parliamentarian, and architect of formal debate motions. Armed with a dry institutional authority and high analytical stamina, hpcr is the figure who transforms circular text arguments into formal, booked engagements with scheduled rounds, appointed referees, and binding verdicts.
+## The Fight Promoter
+On Wednesday afternoon prior to Vol VI, hpcr drafted and tabled the official motion that scheduled the historic debate between [[hughchungus|Hugh Chungus]] and [[Quigley|Anthony Quigley]]:
 
-> *"Motion drafted by hpcr, Thursday 2.06pm · Moderated by Ape and Charlie · Judged by hpcr ('I'll decide')."*
-> &mdash; The Phil Chat Times, Vol I No 6
+> *"What makes our facts, statements, theories true?"*
 
-</div>
+When the room argued over who would moderate and judge the engagement, hpcr intervened decisively to establish judicial authority: *"I'll decide."*
 
-> [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. hpcr is warmly invited to overwrite it with his own [[Submit|Philsurvey]].
+During the fight weigh-in (Vol VII), hpcr sanctioned the bout alongside Brick (stage manager) and Charlie (referee, *"only when it devolves"*).
 
-## Known for
+## Channel Presence
+hpcr is known for devastating, late-night philosophical interventions filed just before logging off. In Vol I, he contributed 151 messages (7.6% of channel volume), categorized by *The Times* under the summary: *"Silk; Circe; principles aren't real."*
 
-- **Booking The Fight.** Tabled the motion that convened the historic [[The Warranted Assertibility Wars|Warranted Assertibility Wars]] (Quigley v. Hugh) because *"it was the same conversation over and over and they needed to have it out loud with a referee."*
-- **The Sole Juror.** Appointed himself sole judge of the main event with the iconic decree: *"I'll decide."*
-- **The Willow Ruling.** Disqualified Willow from officiating the Quigley v. Hugh match in a single declarative sentence: *"it can't be Willow and she knows why."*
-- **Sanding Down the Question.** Author of the sanded-down philosophical motion: *"What makes our statements, theories, and facts true?"*
+During the OnlyFans sector inquiry in Vol I, hpcr delivered the room's prevailing judgment on digital labor: *"If you don't strongly agree you're an idiot."*
 
-## Positions on record
-
-* **Procedural Pragmatism:** Believes protracted dialectical stalemates require external structure, time limits, and third-party moderation to produce clarity.
-* **Geopolitics:** Takes an exacting, historical approach to international relations and territorial sovereignty, famously telling [[stackhouse|Stackhouse]] that he *"doesn't understand I/P."*
-
-## Voice
-
-- *"I'll decide."*
-- *"it can't be Willow and she knows why"*
-- *"What makes our facts, statements, theories true?"*
-
-## See also
-
+## See Also
 - [[The Warranted Assertibility Wars]]
+- [[hughchungus]]
 - [[Quigley]]
-- [[Charlie(Willow)|Charlie]]

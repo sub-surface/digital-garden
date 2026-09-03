@@ -1,5 +1,7 @@
 import React from "react"
 import { Link } from "@tanstack/react-router"
+import { useStore } from "@/store"
+import { resolveSlug } from "@/lib/content-loader"
 import styles from "./ChatterCard.module.scss"
 
 interface ChatterCardProps {
@@ -21,6 +23,10 @@ const FACTION_COLORS: Record<string, string> = {
 }
 
 export function ChatterCard({ name, handle, slug, faction = "editorial", stat, quote, bio }: ChatterCardProps) {
+  const contentIndex = useStore((s) => s.contentIndex)
+  const resolved = contentIndex ? (resolveSlug(slug, contentIndex) ?? slug) : slug
+  const targetHref = `/${resolved.replace(/^\//, "").replace(/\s+/g, "-")}`
+
   const accent = FACTION_COLORS[faction] || "var(--color-accent, #b8681a)"
   const initials = name
     .split(" ")
@@ -38,7 +44,7 @@ export function ChatterCard({ name, handle, slug, faction = "editorial", stat, q
         </div>
         <div className={styles.ident}>
           <h4 className={styles.name}>
-            <Link to={`/${slug}` as any} className={styles.nameLink}>
+            <Link to={targetHref as any} className={styles.nameLink}>
               {name}
             </Link>
           </h4>
@@ -57,7 +63,7 @@ export function ChatterCard({ name, handle, slug, faction = "editorial", stat, q
 
       <footer className={styles.footer}>
         <span className={styles.factionLabel}>{faction} faction</span>
-        <Link to={`/${slug}` as any} className={styles.profileLink}>
+        <Link to={targetHref as any} className={styles.profileLink}>
           Profile →
         </Link>
       </footer>

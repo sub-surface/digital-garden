@@ -30,7 +30,18 @@ draft: true
 
 - **[[Warranted Assertibility|Warranted assertibility]].** The position he has defended, daily, across most of the paper's run — deflationary about "truth" as correspondence, pragmatic about what replaces it. His summary, delivered after a four-day bout: *"I've been arguing for Warranted Assertibility the whole time."* See [[The Warranted Assertibility Wars|the bout]].
 - **[[The Six Criteria of Warrant|The six criteria of warrant]].** His working test for when an assertion is warranted, posted mid-bout and cited as precedent since.
-- **[[Quigley Derangement Syndrome]].** The room's documented condition about him: he is answered more carefully than anyone and rewarded less. Vol VI: answered 78.4 times per hundred messages, the highest figure in the room; reaction percentile 26. *"Everybody answers him. Nobody laughs."*
+- **[[Quigley Derangement Syndrome]].** The room's documented condition about him: he is answered more carefully than anyone and rewarded less. *The Times* audit observed: *"The man everybody says they ignore is the man everybody answers."* Vol VI Tale of the Tape verified his answer rate at 78.4% — the highest figure in the room — with 804 messages, 93 average character reach, zero uses of "cope", and an 8.7% hit rate.
+- **The Voice Schedule.** In Vol III, Quigley published his weekly voice channel availability unprompted. An audit of all 8,972 messages confirmed that zero voice conversations occurred.
+
+## The Bout & The Can of Alani
+
+During the four-hour title bout against [[hughchungus|Hugh]] on Saturday, 22 August 2026, Quigley held the pragmatist corner fueled by a single can of Alani pink slush. When the StrawPoll closed 9–3 in Hugh's favor at 4:33 PM, Quigley conceded nothing:
+
+> *"I recognize the distinction that this is incorrect... Except I won."*
+
+On Monday, when asked how the debate went, Quigley commissioned and circulated a custom poster recasting the final knife fight from *Dune: Part Two*:
+
+> *"We need to crop Hugh and me unto the final fight in Dune part 2."*
 
 ## Positions on record
 
@@ -42,15 +53,19 @@ draft: true
 
 ## The god machine
 
-His signature move, and the paper's, is the appeal to an adjudicator. In Vol IV he addressed a numbered summary of a disagreement *to* a language model — "To sum up our disagreement, God Machine" — named it Omnius, and submitted to its jurisdiction. When the transcript was fed back with an instruction to declare a winner, it ruled against him. By Saturday he had annexed the court: **"I am the new Omnius."**
+His signature move, and the paper's, is the appeal to an adjudicator. In Vol III he set out the editorial philosophy:
+
+> *"As long as the God Machine rules in my favor, I can live without y'all's support."*
+
+In Vol IV he addressed a numbered summary of a disagreement *to* a language model — "To sum up our disagreement, God Machine" — named it Omnius, and submitted to its jurisdiction. When the transcript was fed back with an instruction to declare a winner, it ruled against him. By Saturday he had annexed the court: **"I am the new Omnius."**
 
 ## Voice
 
 - "I recognize the distinction that you are wrong." (Five times in three hours, one Saturday; 23 of the week's 27 uses were his.)
 - "It's a shame you're unable to eat a cheeseburger without first knowing if it runs parallel to reality."
 - "You must not be familiar with my Ethnocentrism."
-- On the whole affair, in two words: **"Except I won."**
+- "Except I won."
 
 ## See also
 
-[[Warranted Assertibility]] · [[John Dewey|Dewey]] · [[Richard Rorty|Rorty]] · [[The Warranted Assertibility Wars|The bout]] · [[Quigley Derangement Syndrome|QDS]]
+[[Warranted Assertibility]] · [[John Dewey|Dewey]] · [[Richard Rorty|Rorty]] · [[The Warranted Assertibility Wars]] · [[Quigley Derangement Syndrome|QDS]] · [[The Six Criteria of Warrant]]

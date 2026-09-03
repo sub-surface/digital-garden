@@ -27,6 +27,22 @@ draft: true
 
 </div>
 
+## Server Lore & Chronicles
+
+### The Evolution Deliberation & The Yellow Card
+In Vol I No 1, Hugh (operating as *Theophantism*) advanced the thesis that neural networks are biologically descended from humanity through economic selection pressures: *"They are part of our family bro they're our children. But they will have their own soon enough."* When an LLM was summoned as an expert witness, Hugh promptly impeached the machine for agreeing with the opposition: *"It conceded too easily smh."* At 16:21 UTC, referee [[jere|Jere]] booked him with the server's inaugural [[The Yellow Card|Yellow Card]] for performative self-contradiction.
+
+### Fight Night: The Realist Corner
+During the historic four-hour engagement against [[Quigley]] in [[The Warranted Assertibility Wars]] (Vol VII), Hugh anchored the realist corner from Wales:
+- Took his shirt off at 2:30 PM Eastern to eat a bowl of hotdogs while defending correspondence theory.
+- At 2:45 PM, [[chair|Chair]] famously discovered his nationality: *"oh my god hugh is british."*
+- His cat is Japanese, and he will thank you not to say otherwise.
+- Hugh prevailed in the public StrawPoll 9–3, prompting [[stackhouse|Stackhouse]] to investigate allegations that Hugh deployed twenty background subagents to rig the tally.
+
+### Channel Statistics
+- **Vol I**: 525 messages (26.3% channel share, #1 volume). Principal contributions: family, cuteness, one yellow card.
+- **Vol VI Tale of the Tape**: 1,468 messages, 77 average characters, 48.3% answered rate, 255 reactions drawn, 11.9% hit rate, 9 uses of "cope", zero users blocked.
+
 ## Chung Enterprises
 
 Hey! I made this site, I also make music, take photos and occasionally write about philosophy and technology. 

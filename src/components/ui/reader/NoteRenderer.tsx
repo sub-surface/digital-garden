@@ -65,15 +65,15 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
 
   const resolvedKey = contentIndex ? (resolveSlug(slug, contentIndex) ?? slug) : slug
   const meta = contentIndex?.[resolvedKey]
-  const override = sessionOverrides[slug] || {}
+  const override = sessionOverrides[resolvedKey] || sessionOverrides[slug] || {}
   const fm = { ...data.frontmatter, ...override }
   
-  const title = (fm.title as string) ?? meta?.title ?? slug.split("/").pop()
+  const title = (fm.title as string) ?? meta?.title ?? resolvedKey.split("/").pop()
   const growth = (fm.growth as string) ?? meta?.growth
   const date = (fm.date as string) ?? meta?.date
   const tags = meta?.tags ?? []
   const readingTime = meta?.readingTime
-  const layout = resolveLayout(fm, meta, slug)
+  const layout = resolveLayout(fm, meta, resolvedKey)
   const type = (fm.type as string) ?? meta?.type
   const isWiki = useIsWiki()
 
@@ -85,8 +85,8 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
   const quoteAuthor = (fm as Record<string, any>)["quote-author"] as string | undefined
 
   // Show edit button on wiki article pages (not index, about, submit, admin, style-guide)
-  const editableWikiSlugs = isWiki && layout === "article" && slug.toLowerCase().startsWith("wiki/")
-    && !["wiki", "wiki/about", "wiki/submit", "wiki/style-guide"].includes(slug.toLowerCase())
+  const editableWikiSlugs = isWiki && layout === "article" && resolvedKey.toLowerCase().startsWith("wiki/")
+    && !["wiki", "wiki/about", "wiki/submit", "wiki/style-guide"].includes(resolvedKey.toLowerCase())
 
   // Update global layout state
   const setActiveLayout = useStore((s) => s.setActiveLayout)
@@ -96,7 +96,7 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
 
   // System Page Fallback Logic
   const renderContent = () => {
-    const s = slug.toLowerCase()
+    const s = resolvedKey.toLowerCase()
     // photography is no longer a system page — Photography.md renders normally with <PhotoAlbums />
     const sysPage = SYSTEM_PAGES[s]
     if (sysPage) {
@@ -106,7 +106,7 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
 
     // The poster for movie/book notes is rendered inside NoteBody (so panel
     // cards / note-mode views get it too).
-    return <NoteBody slug={slug} onLoad={handleLoad} />
+    return <NoteBody slug={resolvedKey} onLoad={handleLoad} />
   }
 
   const infobox = (type === "chatter" || type === "philosopher") ? (
@@ -114,8 +114,8 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
   ) : null
 
   // Breadcrumb: derive from slug parts
-  const breadcrumbParts = slug.includes("/")
-    ? slug.split("/").slice(0, -1)
+  const breadcrumbParts = resolvedKey.includes("/")
+    ? resolvedKey.split("/").slice(0, -1)
     : []
 
   const header = (
@@ -125,9 +125,9 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
           <div className="note-header__bar">
             <div className="note-header__tools">
               <Suspense fallback={null}>
-                {editableWikiSlugs && <WikiEditButton slug={slug} />}
-                <CopyWikilinkButton slug={slug} title={title} />
-                <BookmarkButton slug={slug} title={title} />
+                {editableWikiSlugs && <WikiEditButton slug={resolvedKey} />}
+                <CopyWikilinkButton slug={resolvedKey} title={title} />
+                <BookmarkButton slug={resolvedKey} title={title} />
               </Suspense>
             </div>
             <div className="note-header__crumbs">
@@ -193,10 +193,13 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
         ? "wiki"
         : "essay"
 
+  const isWikiIndex = resolvedKey.toLowerCase() === "wiki" || resolvedKey.toLowerCase() === "wiki/index"
+
   return (
     <article
-      className={`${layout}-layout`}
+      className={`${layout}-layout ${isWikiIndex ? "wiki-index-layout" : ""}`}
       data-article-kind={layout === "article" ? articleKind : undefined}
+      data-wiki-index={isWikiIndex ? "true" : undefined}
     >
       {/* Layout-wrapped content (Header is passed inside to align with grid column 2) */}
       {layout === "article" ? (
@@ -210,7 +213,7 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
       )}
 
       {/* Shared footer: backlinks + local graph */}
-      <NoteFooter slug={slug} meta={meta} />
+      <NoteFooter slug={resolvedKey} meta={meta} />
     </article>
   )
 }

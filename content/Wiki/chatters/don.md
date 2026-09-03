@@ -1,51 +1,35 @@
 ---
-title: "Don's Profile"
-description: "Philchat wiki profile for Don (El Don) — author of the foundational 64-word copypasta of affection, speech bingo contributor, and champion of abrupt beginnings."
-tags: [wiki, chatter]
+title: "Don (El Don)"
 type: chatter
-username: "Don"
-pronouns: "he/him"
-tradition: "Existential Sincerity, Direct Action"
-aos: "Interpersonal Ethics, Loneliness Studies, Presidential Speech Bingo"
-influences: "Antiphonal liturgies, Direct speech"
-draft: true
+tags: [wiki, chatter]
+date: 2026-09-03
+growth: budding
+username: "El Don"
 ---
 
-# Don's Profile
+**Don** (known in transcripts as **El Don**) is the author of Phil Chat's foundational liturgical text, the 64-word confession of friendship that sparked [[The Copypasta of Affection]].
 
-<div className="dropcap">
+<Clipping cite="The Phil Chat Times" issue="Vol II No 2, p. 1">
+"Only the Faithful Kept the Typo: Don wrote 'I have no appreciated you enough.' It is the single error in the message and he never fixed it."
+</Clipping>
 
-**Don** (frequently known as *El Don*) is a longtime participant in Phil Chat, famous for unvarnished, unexpected declarations of sincerity inserted into the middle of high-stakes philosophical arguments. He is the author of the defining 64-word text that became the channel's most celebrated liturgical moment.
+## The Prayer of Friendship
+Shortly after midday on Thursday, 23 July 2026 (Vol II), in the middle of a heated argument about whether academic philosophers are lonelier than ordinary men, Don posted an undefended declaration of friendship:
 
-> *"There is no polite way for a man in this channel to say that he is fond of the other men in it, and shortly after midday on Thursday one of them tried anyway."*
-> &mdash; The Phil Chat Times, Vol I No 2
+> Sixty-four words long, it stated in substance that the people in Phil Chat were his only friends, that he had not appreciated them enough, and that he hoped the community would last.
 
-</div>
+The message contained a single uncorrected typo: *"I have no appreciated you enough."* 
 
-> [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Don is warmly invited to overwrite it with his own [[Submit|Philsurvey]].
+Within seconds, the channel engaged in liturgical antiphony: [[Charlie(Willow)|Charlie]] pasted it back verbatim, followed by [[ice_chicken|Jeh]], [[stackhouse|Stackhouse]], [[hughchungus|Hugh]], and [[sizzurp1|Sizzurp]]. All five men preserved the missing 't' in *"no appreciated"*, canonizing the text into permanent channel lore.
 
-## Known for
+## Political & Historical Commentary
+Don is renowned for bold classical analogies:
+- During [[The Bingo Night]] (Vol I), Don declared: *"Trump is more impressive than Sulla or Caesar."* When invited by Stackhouse to reconsider (*"you don't mean that"*), Don reflected and conceded: *"You're right. But also maybe."*
+- When speech bingo vocabulary was solicited, Don submitted *"Raggedy ass bitch"*, later clarifying that he had misunderstood the assignment.
+- When the bingo cards were released at 01:01, Don announced that to spite the cardmaker, he would decline to use them.
 
-- **[[The Copypasta of Affection]].** On Thursday 23 July 2026, in the middle of a debate about whether philosophers are lonelier than other men, Don posted a 64-word message admitting that the room contained his only friends, that he had *"no appreciated you enough"*, and that he hoped it would last. Copied verbatim by five men within fifteen minutes, creating a rare moment of communal antiphony.
-- **The Sacred Typo.** By leaving *"I have no appreciated you enough"* uncorrected, Don created the textual fingerprint of the faith: as *The Times* noted, *"reverence transmits a text intact; wit cannot leave one alone."*
-- **Speech Bingo.** When speech bingo was organized for a presidential address in Vol I No 1, Don submitted *"Raggedy ass bitch"*, then clarified that he had not understood the assignment.
-- **Instant Adjudication.** During the booking of the Quigley v. Hugh bout in Vol I No 6, while others negotiated time zones, Don posted: *"It's now. Begin."*
-
-## Positions on record
-
-* **Friendship & Community:** Disdains ironic detachment when human connection is at stake; insists that informal online spaces carry real moral obligation.
-* **Debate Protocol:** Prefers immediate verbal engagement over prolonged scheduling disputes.
-
-## Voice
-
-- *"I have no appreciated you enough."*
-- *"It's now. Begin."*
-- *"Raggedy ass bitch"* (on presidential vocabulary)
-
-## See also
-
+## See Also
 - [[The Copypasta of Affection]]
 - [[Antiphonal Copypasta]]
-- [[Charlie(Willow)|Charlie]]
-- [[stackhouse|Stackhouse]]
+- [[Shut the fuck up Don]]
+- [[The Bingo Night]]
