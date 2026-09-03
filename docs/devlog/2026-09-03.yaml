@@ -1,0 +1,32 @@
+- date: 2026-09-03
+  area: wiki
+  title: "Philchat Times archive intake, wiki reorganisation, and Wikipedia-standard navigation"
+  status: done
+  files:
+    - content/Wiki/philchat.mdx
+    - content/Wiki/index.md
+    - src/components/layout/WikiShell.tsx
+    - src/components/layout/WikiShell.module.scss
+    - src/components/ui/wiki/WikiHeader.tsx
+    - src/components/ui/wiki/WikiHeader.module.scss
+    - src/components/layout/QuickControls.tsx
+    - src/components/layout/AppShell.tsx
+    - src/components/layout/CornerMenu.tsx
+    - src/components/ui/ReaderToggle.tsx
+    - src/components/ui/overlays/SearchOverlay.tsx
+    - src/components/ui/overlays/SearchOverlay.module.scss
+    - src/hooks/useContentSearch.ts
+    - src/hooks/useHotkeys.ts
+    - ROADMAP.md
+  changes:
+    - "Authored the definitive orientation chronicle content/Wiki/philchat.mdx synthesising culture, factions, dramatis personae, liturgical rituals, and historical sagas across all 8 editions of The Phil Chat Times."
+    - "Reorganised content/Wiki/index.md to feature philchat prominently at the top, grouping articles into curated directories (The Great Sagas & Chronicles, Community Profiles, Concepts & Channel Folklore, Canonical Philosophers, Contribute & Guidelines)."
+    - "Suppressed music playback and dock interfaces on all Wiki surfaces (QuickControls, AppShell, and MobileMusicBar) so the wiki remains an unpolluted scholarly reading environment."
+    - "Bound reader mode click action in ReaderToggle and CornerMenu to open the theme/typography backslash menu directly, exposing text size scale, line height, and reading measure controls."
+    - "Optimised content search with instant synchronous in-memory indexing fallback, global slash key trigger, and category badge annotations (Chatter, Concept, Event, Philosopher, Wiki, Book, Movie, Music, Daily)."
+    - "Equipped WikiShell with Wikipedia-style persistent header, quick embedded search with instant dropdown, random article button, and breadcrumb navigation."
+  decisions:
+    - "Philchat orientation is placed at the top of the Wiki index to serve as the narrative onboarding anchor for all subsequent articles, chronicles, and surveys."
+    - "Music bar is suppressed on both wiki shell and any /wiki/ route to honour the request for a dedicated, uninterrupted wiki reading environment."
+    - "Reader mode icon opens the backslash ThemePanel where typography, scale, and reader mode settings live, solving the discoverability problem for non-keyboard users."
+  next: "Review deployed wiki surfaces for visual balance and explore further arcade / simulation tie-ins (e.g. HegelBot)."

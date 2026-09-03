@@ -7,16 +7,17 @@ import { useStore } from "@/store"
  */
 export function ReaderToggle() {
   const isReaderMode = useStore((s) => s.isReaderMode)
-  const toggleReaderMode = useStore((s) => s.toggleReaderMode)
+  const isThemePanelOpen = useStore((s) => s.isThemePanelOpen)
+  const toggleThemePanel = useStore((s) => s.toggleThemePanel)
 
   return (
     <button
       className="quick-icon-btn"
-      onClick={toggleReaderMode}
-      title={isReaderMode ? "Exit reader mode" : "Reader mode"}
-      aria-label="Toggle reader mode"
+      onClick={toggleThemePanel}
+      title="Theme & reader settings (\)"
+      aria-label="Open theme and reader settings"
       aria-pressed={isReaderMode}
-      data-active={isReaderMode || undefined}
+      data-active={isReaderMode || isThemePanelOpen || undefined}
       data-panel-ignore
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

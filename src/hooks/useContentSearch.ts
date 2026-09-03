@@ -135,30 +135,100 @@ export function useContentSearch({
 
   useEffect(() => {
     const term = query.trim()
-    if (!enabled || !ready || !term || !indexRef.current) {
+    if (!enabled || !term) {
       setResults([])
       return
     }
 
-    const grouped = indexRef.current.search(term, {
-      enrich: true,
-      limit,
-    }) as unknown as EnrichedSearchGroup[]
+    const q = term.toLowerCase()
+    const restored = new Set(restoredSlugs)
     const found: ContentSearchResult[] = []
     const seen = new Set<string>()
 
-    grouped.forEach((field) => {
-      field.result.forEach((entry) => {
-        const id = String(entry.id)
-        if (seen.has(id)) return
-        seen.add(id)
-        // FlexSearch returns the document id beside the stored fields rather
-        // than inside `doc`; restore it so callers have a stable row key.
-        found.push({ ...entry.doc, id })
-      })
+    // 1. Extra documents match (local files, etc.)
+    extraDocuments.forEach((doc) => {
+      if (
+        doc.title.toLowerCase().includes(q) ||
+        doc.excerpt.toLowerCase().includes(q) ||
+        doc.target.toLowerCase().includes(q)
+      ) {
+        if (!seen.has(doc.id)) {
+          seen.add(doc.id)
+          found.push(doc)
+        }
+      }
     })
-    setResults(found)
-  }, [enabled, indexVersion, limit, query, ready])
+
+    // 2. Instant in-memory match from contentIndex
+    if (contentIndex) {
+      const exactTitle: ContentSearchResult[] = []
+      const prefixTitle: ContentSearchResult[] = []
+      const subTitle: ContentSearchResult[] = []
+      const bodyMatches: ContentSearchResult[] = []
+
+      Object.entries(contentIndex).forEach(([slug, meta]) => {
+        if (meta.draft && !restored.has(slug)) return
+        if (meta.private) return
+
+        const id = `garden:${slug}`
+        if (seen.has(id)) return
+
+        const title = String(meta.title ?? "")
+        const excerpt = String(meta.excerpt ?? "")
+        const titleLower = title.toLowerCase()
+        const slugLower = slug.toLowerCase()
+        const excerptLower = excerpt.toLowerCase()
+        const tags = Array.isArray(meta.tags) ? meta.tags.map((t) => String(t).toLowerCase()) : []
+
+        const doc: ContentSearchResult = {
+          id,
+          title,
+          excerpt,
+          kind: "garden",
+          target: slug,
+        }
+
+        if (titleLower === q || slugLower === q) {
+          seen.add(id)
+          exactTitle.push(doc)
+        } else if (titleLower.startsWith(q) || slugLower.startsWith(q)) {
+          seen.add(id)
+          prefixTitle.push(doc)
+        } else if (titleLower.includes(q) || slugLower.includes(q) || tags.some((t) => t.includes(q))) {
+          seen.add(id)
+          subTitle.push(doc)
+        } else if (excerptLower.includes(q)) {
+          seen.add(id)
+          bodyMatches.push(doc)
+        }
+      })
+
+      found.push(...exactTitle, ...prefixTitle, ...subTitle, ...bodyMatches)
+    }
+
+    // 3. Supplement with FlexSearch deep tokenised matches if index is ready
+    if (ready && indexRef.current) {
+      try {
+        const grouped = indexRef.current.search(term, {
+          enrich: true,
+          limit,
+        }) as unknown as EnrichedSearchGroup[]
+
+        grouped.forEach((field) => {
+          field.result.forEach((entry) => {
+            const id = String(entry.id)
+            if (seen.has(id)) return
+            seen.add(id)
+            found.push({ ...entry.doc, id })
+          })
+        })
+      } catch {
+        // Fallback silently if query syntax is irregular
+      }
+    }
+
+    setResults(found.slice(0, limit))
+  }, [contentIndex, enabled, extraDocuments, indexVersion, limit, query, ready, restoredSlugs])
 
   return { results, ready, error }
 }

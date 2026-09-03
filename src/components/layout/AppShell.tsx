@@ -98,6 +98,10 @@ export function AppShell() {
   // the first render, which would briefly mount the title and heavy LocalGraph
   // chunk on a direct /filament visit.
   const isImmersive = slugFromPathname(location.pathname).toLowerCase() === "filament"
+  const isWikiRoute =
+    slugFromPathname(location.pathname).toLowerCase().startsWith("wiki") ||
+    activeSlug.toLowerCase().startsWith("wiki") ||
+    location.pathname.toLowerCase().startsWith("/wiki")
 
   return (
     <MDXProvider>
@@ -120,8 +124,8 @@ export function AppShell() {
         <BgCanvas />
         <ThemePanel />
         <LinkPreview />
-        <MusicPlayer />
-        {!isImmersive && <MobileMusicBar />}
+        {!isWikiRoute && <MusicPlayer />}
+        {!isImmersive && !isWikiRoute && <MobileMusicBar />}
         <QuickControls immersive={isImmersive} />
         <SearchOverlay />
         <GraphOverlay />

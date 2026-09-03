@@ -63,6 +63,10 @@ export function useHotkeys() {
       if (isCheatSheetOpen) return
 
       switch (e.key.toLowerCase()) {
+        case "/":
+          e.preventDefault()
+          useStore.getState().setSearchOpen(true)
+          break
         case "\\":
           e.preventDefault()
           toggleThemePanel()

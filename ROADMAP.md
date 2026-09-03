@@ -1489,6 +1489,13 @@ What remains is deliberately ordered by value and architectural dependency:
     into comoving particle coordinates, and renders an interactive diagnostic overlay over
     the evolving $\Lambda\text{CDM}$ dark matter web to measure real cosmic variance and
     test theoretical density signatures against live cosmological simulation.
+19. [x] **Wiki reorganisation, Philchat orientation, and Wikipedia-standard QoL.**
+    - Definitive orientation article (`content/Wiki/philchat.mdx`): full history, culture, dramatis personae, factions, and rituals across all 8 editions of The Phil Chat Times.
+    - Wiki Index re-architecture (`content/Wiki/index.md`): curated directory with section highlights and rapid onboarding.
+    - Music player suppression on Wiki surfaces (`useIsWiki` and `/wiki` route guards).
+    - Reader mode quick-control binding: clicking Reader opens the `\` typography/system settings panel.
+    - Seamless lightweight search: instant in-memory fallback, `/` global search trigger, category badge annotations.
+    - Wikipedia-standard navigational features: persistent Wiki header with embedded instant search, random article jump, and article table of contents.
 
 
 Verification note: Leon browser-verified the 2026-08-01 OS pass and the taller

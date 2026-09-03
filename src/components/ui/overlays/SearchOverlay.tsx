@@ -6,6 +6,20 @@ import { useContentSearch, type ContentSearchResult } from "@/hooks/useContentSe
 import { useNavigate } from "@tanstack/react-router"
 import styles from "./SearchOverlay.module.scss"
 
+function getCategoryLabel(target: string): string | null {
+  const t = target.toLowerCase()
+  if (t.startsWith("wiki/chatters/")) return "Chatter"
+  if (t.startsWith("wiki/concepts/")) return "Concept"
+  if (t.startsWith("wiki/events/")) return "Event"
+  if (t.startsWith("wiki/philosophers/")) return "Philosopher"
+  if (t.startsWith("wiki/")) return "Wiki"
+  if (t.startsWith("books/")) return "Book"
+  if (t.startsWith("movies/")) return "Movie"
+  if (t.startsWith("music/")) return "Music"
+  if (t.startsWith("daily/")) return "Daily"
+  return null
+}
+
 export function SearchOverlay() {
   const isOpen = useStore((s) => s.isSearchOpen)
   const setIsOpen = useStore((s) => s.setSearchOpen)
@@ -111,17 +125,23 @@ export function SearchOverlay() {
 
         <div className={styles.results}>
           {results.length > 0 ? (
-            results.map((res, i) => (
-              <div
-                key={res.id}
-                className={`${styles.resultItem} ${i === activeIndex ? styles.active : ""}`}
-                onClick={() => handleSelect(res)}
-                onMouseEnter={() => setActiveIndex(i)}
-              >
-                <div className={styles.resultTitle}>{res.title}</div>
-                <div className={styles.resultExcerpt}>{res.excerpt}</div>
-              </div>
-            ))
+            results.map((res, i) => {
+              const category = getCategoryLabel(res.target)
+              return (
+                <div
+                  key={res.id}
+                  className={`${styles.resultItem} ${i === activeIndex ? styles.active : ""}`}
+                  onClick={() => handleSelect(res)}
+                  onMouseEnter={() => setActiveIndex(i)}
+                >
+                  <div className={styles.resultHeader}>
+                    <div className={styles.resultTitle}>{res.title}</div>
+                    {category && <span className={styles.categoryBadge}>{category}</span>}
+                  </div>
+                  <div className={styles.resultExcerpt}>{res.excerpt}</div>
+                </div>
+              )
+            })
           ) : query ? (
             <div className={styles.noResults}>No matches found.</div>
           ) : (

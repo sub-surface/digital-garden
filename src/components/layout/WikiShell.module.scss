@@ -24,60 +24,11 @@
 }
 
 .mainContent {
-  padding: 2rem 3rem;
-  // Give space for fixed TerminalTitle at top
-  padding-top: 4rem;
-
-  // When NotificationBanner is visible (28px), push content down further
-  :global(body[data-banner]) & {
-    padding-top: calc(4rem + 1.75rem);
-  }
+  padding: 1.5rem 2.5rem 3rem;
 
   @media (max-width: $bp-phone) {
-    padding: 1.5rem;
-    padding-top: 3.5rem;
-
-    :global(body[data-banner]) & {
-      padding-top: calc(3.5rem + 1.75rem);
-    }
+    padding: 1rem 1rem 2rem;
   }
-}
-
-.breadcrumb {
-  position: fixed;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 199;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-family: var(--font-code);
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-  opacity: 0.5;
-  pointer-events: none;
-  user-select: none;
-  transition: top 0.15s ease;
-
-  :global(body[data-banner]) & {
-    top: calc(12px + 28px);
-  }
-
-  @media (max-width: $bp-phone) {
-    display: none;
-  }
-}
-
-.breadcrumbSegment {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.breadcrumbSep {
-  opacity: 0.4;
-  margin: 0 0.1rem;
 }
 
 

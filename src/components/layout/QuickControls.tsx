@@ -139,6 +139,10 @@ export function QuickControls({ variant = "full", immersive }: QuickControlsProp
   const activeSlug = useStore((s) => s.activeGraphSlug)
   const isImmersive =
     immersive ?? (activeLayout === "game" && activeSlug.toLowerCase() === "filament")
+  const isWiki =
+    shell === "wiki" ||
+    activeSlug.toLowerCase().startsWith("wiki") ||
+    (typeof window !== "undefined" && window.location.pathname.toLowerCase().startsWith("/wiki"))
 
   useEffect(() => {
     const id = setInterval(() => setTime(formatDateTime()), 1000)
@@ -158,7 +162,7 @@ export function QuickControls({ variant = "full", immersive }: QuickControlsProp
     >
       <ArcadeBackButton />
 
-      {variant === "full" && <MusicBar />}
+      {variant === "full" && !isWiki && <MusicBar />}
 
       {variant === "full" && <SearchButton />}
 

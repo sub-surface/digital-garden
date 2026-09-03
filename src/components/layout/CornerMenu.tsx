@@ -41,7 +41,7 @@ export function CornerMenu({ variant = "default" }: CornerMenuProps = {}) {
         { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },
         { label: "Palette", onClick: () => { cycleAccent(); setOpen(false); } },
         { label: "Bg", onClick: () => { cycleBgMode(); setOpen(false); } },
-        { label: "Reader", active: isReaderMode, onClick: () => { toggleReaderMode(); setOpen(false); } },
+        { label: "Reader", active: isReaderMode, onClick: () => { toggleThemePanel(); setOpen(false); } },
         { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
         { label: "⬡ Garden", href: "https://subsurfaces.net" },
       ]
@@ -53,7 +53,7 @@ export function CornerMenu({ variant = "default" }: CornerMenuProps = {}) {
         { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },
         { label: "Palette", onClick: () => { cycleAccent(); setOpen(false); } },
         { label: "Bg", onClick: () => { cycleBgMode(); setOpen(false); } },
-        { label: "Reader", active: isReaderMode, onClick: () => { toggleReaderMode(); setOpen(false); } },
+        { label: "Reader", active: isReaderMode, onClick: () => { toggleThemePanel(); setOpen(false); } },
         { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
         ...(import.meta.env.DEV ? [{ label: "Dev", to: "/__dev", devOnly: true }] : []),
       ]
