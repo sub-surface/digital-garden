@@ -11,7 +11,8 @@ interface PreviewState {
   image: string       // first image URL found in the note, or ""
   tags: string[]
   x: number
-  y: number
+  y?: number
+  bottom?: number
   pos: "above" | "below"
   isFootnote?: boolean
   footnoteHtml?: string
@@ -38,24 +39,26 @@ function extractSlug(href: string): string | null {
 function computePosition(
   rect: DOMRect,
   depth: number,
-): { x: number; y: number; pos: "above" | "below" } {
+): { x: number; y?: number; bottom?: number; pos: "above" | "below" } {
   const GAP = 10
   const PADDING = 12
+  // When showing above, add a line's height buffer (~26px) so the preview card
+  // never overlays or obscures the link itself.
+  const LINE_HEIGHT_BUFFER = 26
+
   // Cascade each depth level rightward so cards don't stack exactly
   const offset = depth * 20
   let x = rect.left + rect.width / 2 - PREVIEW_W / 2 + offset
   x = Math.max(PADDING, Math.min(x, window.innerWidth - PREVIEW_W - PADDING))
 
-  let y = rect.bottom + GAP
-  let pos: "above" | "below" = "below"
-
-  if (y + PREVIEW_H > window.innerHeight - PADDING) {
-    y = rect.top - GAP - PREVIEW_H
-    pos = "above"
-    if (y < PADDING) y = PADDING
+  if (rect.bottom + GAP + PREVIEW_H > window.innerHeight - PADDING) {
+    // Anchor to the bottom of the viewport so the card expands upwards and
+    // remains securely above the link by GAP + LINE_HEIGHT_BUFFER.
+    const bottom = Math.max(PADDING, window.innerHeight - rect.top + GAP + LINE_HEIGHT_BUFFER)
+    return { x, bottom, pos: "above" }
   }
 
-  return { x, y, pos }
+  return { x, y: rect.bottom + GAP, pos: "below" }
 }
 
 // Extract the first image URL (external http or internal /content/) from markdown
@@ -165,7 +168,7 @@ export function LinkPreview() {
 
     const meta = contentIndex?.[slug]
     const rect = anchor.getBoundingClientRect()
-    const { x, y, pos } = computePosition(rect, depth)
+    const { x, y, bottom, pos } = computePosition(rect, depth)
     const id = Math.random().toString(36).slice(2)
 
     let footnoteHtml: string | undefined
@@ -189,7 +192,7 @@ export function LinkPreview() {
       bodyHtml: "",
       image: "",
       tags: meta?.tags ?? [],
-      x, y, pos,
+      x, y, bottom, pos,
     }
 
     setStack(prev => [...prev, initial])
@@ -296,6 +299,9 @@ function PreviewCard({ state, onOpen, onEnter }: {
   onEnter: () => void
 }) {
   const dims = useStore((s) => state.image ? s.imageDimensions?.[state.image] : undefined)
+  const maxHeight = state.bottom && typeof window !== "undefined"
+    ? Math.min(420, Math.max(160, window.innerHeight - state.bottom - 12))
+    : 420
 
   return (
     <div
@@ -303,6 +309,8 @@ function PreviewCard({ state, onOpen, onEnter }: {
       style={{
         left: state.x,
         top: state.y,
+        bottom: state.bottom,
+        maxHeight,
         zIndex: 1000 + state.depth,
         boxShadow: `0 ${4 + state.depth * 2}px ${12 + state.depth * 4}px rgba(0,0,0,0.25)`
       }}

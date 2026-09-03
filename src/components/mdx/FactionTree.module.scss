@@ -9,10 +9,12 @@
   box-sizing: border-box;
   width: 100%;
 
-  // Gracefully expand wider than prose measure on wide viewports for spatial freedom
-  @media (min-width: 1280px) {
-    width: calc(100% + 160px);
-    margin-left: -80px;
+  // Symmetrical horizontal extension beyond standard 80ch body measure
+  @media (min-width: 960px) {
+    width: min(calc(100% + 320px), min(100vw - 3rem, 1120px));
+    margin-left: calc(50% - min(calc(100% + 320px), min(100vw - 3rem, 1120px)) / 2);
+    margin-right: calc(50% - min(calc(100% + 320px), min(100vw - 3rem, 1120px)) / 2);
+    max-width: none;
   }
 }
 

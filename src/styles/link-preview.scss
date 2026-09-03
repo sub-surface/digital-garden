@@ -27,13 +27,13 @@
   }
 
   &[data-pos="above"] {
-    margin-bottom: 20px;
+    margin-bottom: 0;
     &::before {
       content: "";
       position: absolute;
       left: 0; right: 0;
-      height: 20px;
-      bottom: -20px;
+      height: 38px;
+      bottom: -38px;
       background: transparent;
     }
   }

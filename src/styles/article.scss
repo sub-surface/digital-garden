@@ -17,27 +17,17 @@
   width: 100%;
   padding: 4rem 0;
 
-  // Wiki index portal: expansive broadsheet stage spanning wide screens
+  // Wiki index portal: centered single-column layout at canonical article width (80ch)
+  // Cards and visual components break out symmetrically beyond the 80ch measure.
   &.wiki-index-layout {
-    grid-template-columns: minmax(1.5rem, 1fr) minmax(0, 1260px) minmax(1.5rem, 1fr);
-    padding: 2rem 0 5rem;
+    grid-template-columns: minmax(1.5rem, 1fr) minmax(0, 80ch) minmax(1.5rem, 1fr);
+    padding: 2.5rem 0 5rem;
 
     .article-body {
       grid-column: 2;
-      max-width: 100%;
-      text-align: left;
-      hyphens: manual;
-
-      // Keep opening introductory copy at comfortable reading measure
-      .dropcap,
-      .wiki-index-intro,
-      > p:first-of-type,
-      > blockquote {
-        max-width: 80ch;
-        margin-left: auto;
-        margin-right: auto;
-        line-height: 1.6;
-      }
+      width: 100%;
+      max-width: 80ch;
+      margin: 0 auto;
     }
 
     .body-side-group {
@@ -342,6 +332,17 @@
 
   .article-body {
     grid-column: 1;
+  }
+}
+
+// Symmetrical horizontal breakout beyond standard 80ch article measure for wide elements
+.breakout-wide {
+  @media (min-width: 960px) {
+    width: min(calc(100% + 320px), min(100vw - 3rem, 1120px));
+    margin-left: calc(50% - min(calc(100% + 320px), min(100vw - 3rem, 1120px)) / 2);
+    margin-right: calc(50% - min(calc(100% + 320px), min(100vw - 3rem, 1120px)) / 2);
+    max-width: none;
+    box-sizing: border-box;
   }
 }
 

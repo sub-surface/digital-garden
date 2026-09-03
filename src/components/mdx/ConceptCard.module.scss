@@ -3,6 +3,15 @@
   gap: 1rem;
   margin: 1.5rem 0;
 
+  // Symmetrical horizontal extension beyond standard 80ch body measure
+  @media (min-width: 960px) {
+    width: min(calc(100% + 320px), min(100vw - 3rem, 1120px));
+    margin-left: calc(50% - min(calc(100% + 320px), min(100vw - 3rem, 1120px)) / 2);
+    margin-right: calc(50% - min(calc(100% + 320px), min(100vw - 3rem, 1120px)) / 2);
+    max-width: none;
+    box-sizing: border-box;
+  }
+
   &.cols3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 
