@@ -9,6 +9,9 @@ import { OnThisDay } from "./OnThisDay"
 import { GameOfLife } from "./GameOfLife"
 import { AsciiAvatar } from "./AsciiAvatar"
 import { Epigraph } from "./Epigraph"
+import { Tape } from "./Tape"
+import { WeighIn } from "./WeighIn"
+import { Clipping } from "./Clipping"
 import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
 
 const LazyWikiSubmitForm = lazy(() => import("@/components/ui/wiki/WikiSubmitPage").then((m) => ({ default: m.WikiSubmitForm })))
@@ -70,6 +73,9 @@ export const mdxComponents = {
   PhotoAlbums,
   MachineGod,
   Epigraph,
+  Tape,
+  WeighIn,
+  Clipping,
   // Add more custom components here
   img: MDXImage,
   a: (props: any) => {

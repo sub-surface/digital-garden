@@ -159,6 +159,46 @@ Use the Philsurvey format. The submit form generates this structure automaticall
 
 ---
 
+## Events
+
+Running stories — the room's bouts, sagas and capers, as reported by *The Phil Chat Times* — live in `Wiki/Events/`, tagged `[wiki, event]`. They render as articles automatically (any `wiki/` slug does). Cite the paper by volume and page, document from the public archive rather than the private logs, and quote any claim that rests on a single line. See [[Wiki/Events/The Moggening]] for the house style.
+
+## Phil Chat Widgets
+
+Three MDX components echo the paper's own furniture. They are registered globally, so any `.md` or `.mdx` article can use them with no import.
+
+### `<Tape>`
+The masthead measuring-strip, reused as a divider.
+```mdx
+<Tape />
+<Tape label="Sunday afternoon" />
+<Tape tone="ink" />
+```
+
+### `<Clipping>`
+A line from the room, set apart in the paper's broadsheet voice.
+```mdx
+<Clipping cite="Stackhouse" issue="Vol I No 8">
+The fun police have shown up.
+</Clipping>
+```
+
+### `<WeighIn>`
+The "tale of the tape" for bouts and mog-offs. `rows` is a list of `[attribute, left, right]`.
+```mdx
+<WeighIn
+  left="Quigley" right="Hugh"
+  rows={[
+    ["Truth", "Warranted assertibility", "Correspondence"],
+    ["Messages", "804", "1,468"],
+  ]}
+  verdict="Hugh by decision, Quigley by his own account."
+/>
+```
+
+> [!tip] JSX, not HTML
+> Content files are compiled as JSX. Inside raw HTML use `className`, not `class`. `<WeighIn>`'s `rows` prop is a JS expression, so the file should be `.mdx` when you pass it (a plain `<Tape />` or `<Clipping>` works in `.md` too).
+
 ## What Not To Do
 
 - Don't use HTML unless absolutely necessary (MDX supports it, but markdown is preferred).
