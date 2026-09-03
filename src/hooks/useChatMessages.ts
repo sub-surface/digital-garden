@@ -86,15 +86,15 @@ export function useChatMessages({
         async (payload) => {
           const newMsg = payload.new as ChatMessage & { username?: string | null; name_color?: string | null; avatar_url?: string | null }
           let enriched: ChatMessage
-          if (newMsg.user_id === currentUserId) {
-            enriched = { ...newMsg, profiles: { username: currentUsername ?? "unknown", avatar_url: currentAvatarUrl }, reactions: [] }
-          } else if (newMsg.username) {
-            // Denormalized identity rides the broadcast payload — no fetch needed.
+          if (newMsg.username) {
+            // Denormalized identity rides the broadcast payload (including bot personas).
             enriched = {
               ...newMsg,
               profiles: { username: newMsg.username, avatar_url: newMsg.avatar_url ?? null, name_color: newMsg.name_color ?? null },
               reactions: [],
             }
+          } else if (newMsg.user_id === currentUserId) {
+            enriched = { ...newMsg, profiles: { username: currentUsername ?? "unknown", avatar_url: currentAvatarUrl }, reactions: [] }
           } else {
             // Pre-migration row: fetch just this message (not the whole list).
             try {

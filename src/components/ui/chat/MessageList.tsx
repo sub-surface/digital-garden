@@ -20,9 +20,12 @@ interface Props {
   loadingMore?: boolean
 }
 
-// Two messages are in the same group if same user_id and within 5 minutes
+// Two messages are in the same group if same user_id and username, and within 5 minutes
 function isSameGroup(a: ChatMessage, b: ChatMessage): boolean {
   if (a.user_id !== b.user_id) return false
+  const nameA = a.profiles?.username ?? a.username
+  const nameB = b.profiles?.username ?? b.username
+  if (nameA !== nameB) return false
   const diff = Math.abs(new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   return diff < 5 * 60 * 1000
 }
@@ -98,7 +101,7 @@ export const MessageList = forwardRef<HTMLDivElement, Props>(function MessageLis
         onEdit={onEdit}
         onPin={onPin}
         isAdmin={isAdmin}
-        isOwn={currentUserId ? msg.user_id === currentUserId : false}
+        isOwn={currentUserId ? msg.user_id === currentUserId && (!(msg.profiles?.username ?? msg.username)?.includes("[")) : false}
         isEditing={editingMessageId === msg.id}
         onCancelEdit={onCancelEdit}
         reactions={msg.reactions}

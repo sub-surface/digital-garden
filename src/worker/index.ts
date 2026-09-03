@@ -8,6 +8,7 @@ import {
   handleChatReactions, handleChatSearch, handleChatUserMini, handleChatClaim, handleChatBan,
   handleGifSearch, handleChessGif, handleUserClaim, handleClaimBySlug,
 } from "./chat"
+import { handleChatCommand } from "./chatBot"
 import { handleApiKeys } from "./keys"
 import { handleAdmin } from "./admin"
 import { addSecurityHeaders } from "./security"
@@ -53,6 +54,7 @@ const routes: Route[] = [
   { method: "POST", pattern: /^\/api\/chat\/(ban|unban)$/, auth: "admin", handler: handleChatBan },
   { method: "GET", pattern: /^\/api\/chat\/gif-search$/, auth: "user", handler: handleGifSearch },
   { method: "POST", pattern: /^\/api\/chess\/gif$/, handler: handleChessGif },
+  { method: "POST", pattern: /^\/api\/chat\/command$/, auth: "user", handler: handleChatCommand },
 
   { method: "POST", pattern: /^\/api\/submit$/, handler: handleSubmit },
   { method: "GET", pattern: /^\/api\/auth\/me$/, auth: "user", handler: handleAuthMe },

@@ -35,4 +35,27 @@
     - "Music bar is suppressed on both wiki shell and any /wiki/ route to honour the request for a dedicated, uninterrupted wiki reading environment."
     - "Reader mode icon opens the backslash ThemePanel where typography, scale, and reader mode settings live, solving the discoverability problem for non-keyboard users."
     - "Search overlay was streamlined into a single unified container without glassmorphism blur or heavy borders, providing a lightweight, unobtrusive experience."
-  next: "Review deployed wiki surfaces for visual balance and explore further arcade / simulation tie-ins (e.g. HegelBot)."
+  next: "Bring interactive terminal personas and spectator debate commands to the chat surfaces."
+
+- date: 2026-09-03
+  area: chat
+  title: "Server-side bot command dispatcher and interactive personas for chat surfaces"
+  status: done
+  files:
+    - src/worker/chatBot.ts
+    - src/worker/index.ts
+    - src/components/ui/chat/ChatRoom.tsx
+    - src/components/ui/chat/ChatAutocomplete.tsx
+    - src/components/ui/chat/MessageList.tsx
+    - src/components/ui/chat/TerminalChatView.tsx
+    - src/hooks/useChatMessages.ts
+    - src/types/chat.ts
+  changes:
+    - "Implemented POST /api/chat/command in Cloudflare Worker with support for /debate, /ask, /yellowcard, /tape, /philquote, and /bothelp."
+    - "Equipped /debate with room concurrency locks, a 35-second cooldown, 6-turn scripted exchange with topic continuity, and authentic bot usernames and colors."
+    - "Wired chat autocomplete and terminal chat view dispatchers across Wiki SideChat and ChatRoom surfaces."
+    - "Fixed real-time message enrichment in useChatMessages to prioritize denormalized bot usernames so that bot messages render with authentic personas for all room participants."
+  decisions:
+    - "Option B (server-side worker bot dispatch) was chosen to ensure authentic bot identities (name, color, and avatar) rather than user-attributed brackets."
+    - "Debate turns are dispatched sequentially via waitUntil with realistic pacing intervals (1.8s-2.0s) so participants experience real-time dialogue in the room."
+  next: "Monitor room debate pacing and evaluate spectator voting or live reactions during debate rounds."

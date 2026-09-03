@@ -378,6 +378,29 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       return
     }
 
+    // Bot commands: /debate, /ask, /chat, /yellowcard, /tape, /philquote, /bothelp
+    const botCmd = cmd.startsWith("/") ? cmd.slice(1).toLowerCase() : cmd.toLowerCase()
+    if (
+      ["debate", "ask", "chat", "yellowcard", "tape", "philquote", "bothelp"].includes(botCmd) ||
+      (botCmd === "quote" && (args.length === 0 || isNaN(parseInt(args[0] ?? "", 10))))
+    ) {
+      const serverCommand = botCmd === "philquote" ? "quote" : botCmd
+      try {
+        const res = await apiPost<{ error?: string; ok?: boolean }>(
+          "/api/chat/command",
+          { room_id: roomId, command: serverCommand, args },
+          { token: accessToken }
+        )
+        if (res && res.error) {
+          showToast(res.error)
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Bot command failed"
+        showToast(msg)
+      }
+      return
+    }
+
     // /color
     if (cmd === "/color") {
       const hex = args[0]?.trim()
@@ -580,7 +603,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       showCommandOutput(`Kicked ${username}: deleted ${deleted} message${deleted === 1 ? "" : "s"}`)
       return
     }
-  }, [messages, currentUsername, isAdmin, accessToken, handleDelete, handleEdit, handlePin, handleReact, handleSend, setReplyTo, showToast, setSearchQuery, setSearchOpen])
+  }, [roomId, messages, currentUsername, isAdmin, accessToken, handleDelete, handleEdit, handlePin, handleReact, handleSend, setReplyTo, showToast, setSearchQuery, setSearchOpen])
 
   const hasRoomSelector = rooms && rooms.length > 0 && onRoomChange
 

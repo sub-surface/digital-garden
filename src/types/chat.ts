@@ -14,7 +14,9 @@ export interface ChatMessage {
   deleted_at: string | null
   edited_at: string | null
   pinned_at: string | null
-  pinned_by: string | null
+  username?: string | null
+  name_color?: string | null
+  avatar_url?: string | null
   profiles: { username: string; avatar_url: string | null; name_color?: string | null } | null
   reply_to_message?: { id: string; body: string; profiles: { username: string } | null } | null
   reactions?: ChatReaction[]

@@ -64,6 +64,12 @@ const COMMAND_DEFS: Record<string, string> = {
   "/unpin":      "/unpin <n> — unpin message #n  [admin]",
   "/pinned":     "show pinned messages in view",
   "/quote":      "/quote <n> — re-post message #n as a quote  (alias: /q)",
+  "/debate":     "/debate <a> <b> [topic] — pit two scripted personas in a room",
+  "/ask":        "/ask <who> <question> — ask a philosopher a question",
+  "/yellowcard": "/yellowcard <username> [reason] — referee booking notice",
+  "/tape":       "/tape <a> <b> — Tale of the Tape matchup card",
+  "/philquote":  "/philquote [author] — broadcast canonical philosophy quote",
+  "/bothelp":    "list available bot commands and personas",
   "/goto":       "/goto <username> — scroll to last message from user",
   "/search":     "/search <term> — search full message history  (alias: /s)",
   "/log":        "/log <n> — dump last N messages as plain text (default 20)",
@@ -756,6 +762,30 @@ export function TerminalChatView({
           try { await onDelete?.(m.id); deleted++ } catch { /* continue */ }
         }
         appendLocalLine(`-- kicked ${username}: deleted ${deleted} message${deleted === 1 ? "" : "s"} --`)
+        return
+      }
+
+      const botCmd = cmd.slice(1).toLowerCase()
+      if (
+        ["debate", "ask", "chat", "yellowcard", "tape", "philquote", "bothelp"].includes(botCmd) ||
+        (botCmd === "quote" && (parts.length === 1 || isNaN(parseInt(parts[1] ?? "", 10))))
+      ) {
+        const serverCommand = botCmd === "philquote" ? "quote" : botCmd
+        try {
+          const res = await apiPost<{ error?: string; ok?: boolean }>(
+            "/api/chat/command",
+            { room_id: roomId, command: serverCommand, args: parts.slice(1) },
+            { token: accessToken }
+          )
+          if (res && res.error) {
+            appendLocalLine(`-- ${res.error} --`)
+          } else {
+            appendLocalLine(`-- bot command /${serverCommand} initiated --`)
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "Bot command failed"
+          appendLocalLine(`-- ${msg} --`)
+        }
         return
       }
 
