@@ -1,0 +1,112 @@
+.grid {
+  display: grid;
+  gap: 1rem;
+  margin: 1.5rem 0;
+
+  &.cols3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+
+    @media (max-width: 960px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &.cols2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.card {
+  background: var(--color-bg-surface, #141518);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  border-top: 2px solid var(--color-accent-base, #b8681a);
+  padding: 0.9rem 1rem;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-color: var(--color-border-light, rgba(255, 255, 255, 0.18));
+  }
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.category {
+  font-family: var(--font-code);
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-accent, #b8681a);
+  font-weight: 700;
+}
+
+.origin {
+  font-family: var(--font-code);
+  font-size: 0.58rem;
+  color: var(--color-text-muted);
+  opacity: 0.75;
+}
+
+.term {
+  font-family: var(--font-header);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.4rem;
+  line-height: 1.25;
+}
+
+.termLink {
+  color: var(--color-heading);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+}
+
+.definition {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--color-text);
+  margin: 0 0 0.6rem;
+  flex: 1;
+}
+
+.footer {
+  margin-top: auto;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.07));
+  display: flex;
+  justify-content: flex-end;
+}
+
+.exploreLink {
+  font-family: var(--font-code);
+  font-size: 0.64rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+}

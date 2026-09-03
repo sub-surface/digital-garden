@@ -82,4 +82,33 @@
   decisions:
     - "WikiSearchBox floats at fixed top: 12px, left: 50% without a background banner, preserving the original visual hierarchy while retaining instant search."
     - "Markdown tables cannot contain bare pipes inside wikilinks without breaking column layout; using bare basename links [[The Evolution Deliberation]] natively resolves this without fragile escaping."
-  next: "Monitor user feedback on search interactions and link resolution."
+  next: "Design bespoke editorial components for broadsheet cards and replace codeblock diagrams."
+
+- date: 2026-09-03
+  area: wiki
+  title: "Broadsheet editorial design system, FactionTree vector diagram, and modular chronicle cards"
+  status: done
+  files:
+    - src/components/mdx/FactionTree.tsx
+    - src/components/mdx/FactionTree.module.scss
+    - src/components/mdx/ChronicleCard.tsx
+    - src/components/mdx/ChronicleCard.module.scss
+    - src/components/mdx/ChatterCard.tsx
+    - src/components/mdx/ChatterCard.module.scss
+    - src/components/mdx/ConceptCard.tsx
+    - src/components/mdx/ConceptCard.module.scss
+    - src/components/mdx/BroadsheetColumns.tsx
+    - src/components/mdx/BroadsheetColumns.module.scss
+    - src/components/mdx/MDXProvider.tsx
+    - content/Wiki/index.mdx
+    - content/Wiki/philchat.mdx
+  changes:
+    - "Authored bespoke FactionTree vector component replacing the broken monospace ASCII diagram in philchat.mdx with crisp SVG distribution bus, responsive faction cards, thesis quotes, and interactive chatter links."
+    - "Built ChronicleCard and ChronicleGrid for showcasing historical sagas with epoch badges, dispute vs settlement contrasts, and broadsheet ruler trim."
+    - "Built ChatterCard and ChatterGrid for community member profiles with monogram avatars, faction color indicators, server roles, and hit-rate stats."
+    - "Built ConceptCard and ConceptGrid for channel folklore and terminology."
+    - "Upgraded content/Wiki/index.md to MDX (index.mdx) with structured modular cards, prominent start-here orientation, and Tape dividers."
+  decisions:
+    - "Custom React/SVG components for diagrams completely avoid font-rendering fallback, line-height discrepancies, and code syntax token gaps."
+    - "Modular cards and broadsheet tape dividers provide visual rhythm and hierarchy, transforming flat link lists into an inviting, newspaper-inspired experience."
+  next: "Monitor user feedback on broadsheet reading experience and explore further archival features."

@@ -14,6 +14,11 @@ import { WeighIn } from "./WeighIn"
 import { Clipping } from "./Clipping"
 import { Classifieds, Classified } from "./Classifieds"
 import { ChuckleRating } from "./ChuckleRating"
+import { FactionTree } from "./FactionTree"
+import { ChronicleCard, ChronicleGrid } from "./ChronicleCard"
+import { ChatterCard, ChatterGrid } from "./ChatterCard"
+import { ConceptCard, ConceptGrid } from "./ConceptCard"
+import { BroadsheetColumns } from "./BroadsheetColumns"
 import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
 
 const LazyWikiSubmitForm = lazy(() => import("@/components/ui/wiki/WikiSubmitPage").then((m) => ({ default: m.WikiSubmitForm })))
@@ -81,6 +86,14 @@ export const mdxComponents = {
   Classifieds,
   Classified,
   ChuckleRating,
+  FactionTree,
+  ChronicleCard,
+  ChronicleGrid,
+  ChatterCard,
+  ChatterGrid,
+  ConceptCard,
+  ConceptGrid,
+  BroadsheetColumns,
   // Add more custom components here
   img: MDXImage,
   a: (props: any) => {
