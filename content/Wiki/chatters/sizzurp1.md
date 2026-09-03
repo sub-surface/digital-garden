@@ -1,29 +1,22 @@
 ---
-title: "monkey's Profile"
-description: "Philchat wiki profile for monkey"
+title: "Sizzurp's Profile"
+description: "Prolific Marxist poster. Writes at length, and denies at greater length."
 tags: [wiki, chatter]
 type: chatter
-username: "papagaio"
-pronouns: "reta/rd"
-image: "/content/Media/Wiki/chatters/papagaio.png"
-tradition: "Prefer not to say"
-aos: "Intuition"
-influences: "Mom and dad"
+username: "sizzurp1"
+pronouns: "he/him"
+tradition: "Continental"
+aos: "Marxist Economics, Value Theory, Political Economy"
+influences: "Karl Marx, G.W.F. Hegel, V.I. Lenin, Andrew Kliman, Ernest Mandel, Michael Roberts"
 draft: true
 ---
 
-# monkey's Profile
+# Sizzurp's Profile
 
-> *its nothing. it just is. who cares. only the thinking machines find meaning in it.*
-> **—monkey**
+> *How could I possibly be gay if I am not gay. Like there's a possible world in which I'm gay sure. But since you know I'm not gay it's not epistemically possible for me to be gay. At least not in this world.*
+> **—Sizzurp**
 
-**monkey** works in film, and would like you to know that he works in film. His case against Christopher Nolan runs to aspect ratios, VFX shot counts and the unconvincing size of the bomb in *Oppenheimer*, before arriving at his actual position — that the man is a pretentious cunt. The technical material is offered in support.
-
-![Monkey](https://i.imgur.com/GMnciqP.png)
-
-Nothing you think know matters, it's all a simulation and aliens are interested into us because of our jokes and music that they don't have because of the shared consciousness and lack of individualization we have.
-
-Earth is a PHD in being.
+**Sizzurp** is the most gay-coded straight man in the channel, and would rather rebut the charge formally than deny it outright. Writes in paragraphs where a sentence would do: roughly five times the word density for about a fifth of the content. Holds that liking femboys and trans women isn't gay, and that a woman is whoever he feels like calling one. Says "no homo" unprompted, and is reacted to accordingly. Saves his real contempt for other online Marxists, whom he regards as a disgrace to the reading list, and longs for a return to Marxists in business casual.
 
 ---
 

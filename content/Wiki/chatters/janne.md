@@ -1,29 +1,19 @@
 ---
-title: "monkey's Profile"
-description: "Philchat wiki profile for monkey"
+title: "Janne's Profile"
+description: "Norwegian programmer. Terse, contrarian, and unimpressed."
 tags: [wiki, chatter]
 type: chatter
-username: "papagaio"
-pronouns: "reta/rd"
-image: "/content/Media/Wiki/chatters/papagaio.png"
-tradition: "Prefer not to say"
-aos: "Intuition"
-influences: "Mom and dad"
+username: "_janne"
+pronouns: "she/her"
 draft: true
 ---
 
-# monkey's Profile
+# Janne's Profile
 
-> *its nothing. it just is. who cares. only the thinking machines find meaning in it.*
-> **—monkey**
+> "**Janne**" is a Discord user known for being "*so woke that blonde people throw her off, but when everyone's black she doesn't bat an eye*"
+> **—Telhar.**
 
-**monkey** works in film, and would like you to know that he works in film. His case against Christopher Nolan runs to aspect ratios, VFX shot counts and the unconvincing size of the bomb in *Oppenheimer*, before arriving at his actual position — that the man is a pretentious cunt. The technical material is offered in support.
-
-![Monkey](https://i.imgur.com/GMnciqP.png)
-
-Nothing you think know matters, it's all a simulation and aliens are interested into us because of our jokes and music that they don't have because of the shared consciousness and lack of individualization we have.
-
-Earth is a PHD in being.
+**Janne** prosecutes on honour rather than merit: largely uninterested in whether you are right, extremely interested in whether you will stand behind it. Argues by flat contradiction — *he hasn't*, *you didn't*, *nope* — and will sustain that for hours against men writing paragraphs. Norwegian, and attributes the harshness to it. Holds that programming is more art than logic, and that this is the only reason she learned it. Declares that she loves everyone here, usually while sentencing one of them.
 
 ---
 

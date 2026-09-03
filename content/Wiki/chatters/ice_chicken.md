@@ -14,7 +14,12 @@ draft: true
 
 # Jeh's Profile
 
+> *I'd be a great petty dictator. Obsessively oppress everyone equally.*
+> **—Jeh**
+
 Jeh is a well-known phil-chatter with a big heart for all things India; he's a big fan of the Indian band Ravi Shankar, and is known for his love of indian food. Jeh is also a big fan of Indian philosophy, and has a particular interest in the works of Shankaracharya, Nagarjuna, and Ramanuja. He is also influenced by the works of Bataille and Heidegger.
+
+**Jeh** is a Modi enthusiast and an Indian nationalist of the extremely online variety, as well as a nepo baby — a fact the channel raises at intervals and which he bears with considerably more grace than the channel manages. His real subject is tigers: conservation, habitat, numbers, on which he is sincere, well informed and genuinely worth listening to, and which nobody has yet reconciled with the rest of him. Reads Indian and Japanese philosophy largely alone, and has offered cash to anyone willing to take it up with him. Membership of the reading group stands at one.
 
 ![superpower](https://res.cloudinary.com/jerrick/image/upload/v1613368675/602a0d63df1d24001d35b1ea.png)
 

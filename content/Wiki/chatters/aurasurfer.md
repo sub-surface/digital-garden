@@ -1,29 +1,22 @@
 ---
-title: "monkey's Profile"
-description: "Philchat wiki profile for monkey"
+title: "aura's Profile"
+description: "American software developer, ethnically Brazilian. Has read Plato; writes code with a chatbot."
 tags: [wiki, chatter]
 type: chatter
-username: "papagaio"
-pronouns: "reta/rd"
-image: "/content/Media/Wiki/chatters/papagaio.png"
-tradition: "Prefer not to say"
-aos: "Intuition"
-influences: "Mom and dad"
+username: "aurasurfer"
+pronouns: "he/him"
+tradition: "Platonism"
+aos: "Ancient Philosophy, Platonism, Political Philosophy"
+influences: "Plato"
 draft: true
 ---
 
-# monkey's Profile
+# aura's Profile
 
-> *its nothing. it just is. who cares. only the thinking machines find meaning in it.*
-> **—monkey**
+> *i exclusively use claudius maximus 5th of his name lord of the realm of AI and soon of men*
+> **—aura**
 
-**monkey** works in film, and would like you to know that he works in film. His case against Christopher Nolan runs to aspect ratios, VFX shot counts and the unconvincing size of the bomb in *Oppenheimer*, before arriving at his actual position — that the man is a pretentious cunt. The technical material is offered in support.
-
-![Monkey](https://i.imgur.com/GMnciqP.png)
-
-Nothing you think know matters, it's all a simulation and aliens are interested into us because of our jokes and music that they don't have because of the shared consciousness and lack of individualization we have.
-
-Earth is a PHD in being.
+**aura** has read most of Plato's complete works and writes his software by prompting a machine that supplies the appearance of wisdom without any of the substance — which is, more or less exactly, Plato's objection in the *Phaedrus*. He sees no tension. Holds a personal grudge against Justinian for closing the Platonic academy at Athens, which he considers cringe. Declines to hold positions of his own: he doesn't care, and you are forcing him into a conversation about it. Somewhere in politics chat there is a different man using his profile picture, known as Evil Aura, who spends his time sliming the level ones — the channel discusses him as a separate being, and Jere has gone on record as hating him. American, ethnically Brazilian.
 
 ---
 
