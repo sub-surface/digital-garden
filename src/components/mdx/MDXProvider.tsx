@@ -12,6 +12,8 @@ import { Epigraph } from "./Epigraph"
 import { Tape } from "./Tape"
 import { WeighIn } from "./WeighIn"
 import { Clipping } from "./Clipping"
+import { Classifieds, Classified } from "./Classifieds"
+import { ChuckleRating } from "./ChuckleRating"
 import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
 
 const LazyWikiSubmitForm = lazy(() => import("@/components/ui/wiki/WikiSubmitPage").then((m) => ({ default: m.WikiSubmitForm })))
@@ -76,6 +78,9 @@ export const mdxComponents = {
   Tape,
   WeighIn,
   Clipping,
+  Classifieds,
+  Classified,
+  ChuckleRating,
   // Add more custom components here
   img: MDXImage,
   a: (props: any) => {

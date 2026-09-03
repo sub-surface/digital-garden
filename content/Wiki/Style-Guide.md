@@ -196,8 +196,25 @@ The "tale of the tape" for bouts and mog-offs. `rows` is a list of `[attribute, 
 />
 ```
 
+### `<Classifieds>` & `<Classified>`
+Vintage newsprint classified advertisements column for notices, bounties, lost & found, and room disputes.
+```mdx
+<Classifieds rate="2 Cents Per Word">
+  <Classified category="LOST & FOUND" title="10 Gallons of Lye" contact="Box 4">
+    Found in plastic storage tub. Slightly hygroscopic.
+  </Classified>
+</Classifieds>
+```
+
+### `<ChuckleRating>`
+The aura reaction scale badge (sizes 1 to 5) for somatic laugh measurement.
+```mdx
+<ChuckleRating size={2} react=":KEKW: × 4" />
+<ChuckleRating size={4} label="Channel Meltdown" react=":OMEGALUL: × 14" />
+```
+
 > [!tip] JSX, not HTML
-> Content files are compiled as JSX. Inside raw HTML use `className`, not `class`. `<WeighIn>`'s `rows` prop is a JS expression, so the file should be `.mdx` when you pass it (a plain `<Tape />` or `<Clipping>` works in `.md` too).
+> Content files are compiled as JSX. Inside raw HTML use `className`, not `class`. `<WeighIn>`'s `rows` prop is a JS expression, so the file should be `.mdx` when you pass it (plain `<Tape />`, `<Clipping>`, `<Classifieds>`, or `<ChuckleRating>` works in `.md` too).
 
 ## What Not To Do
 

@@ -1,0 +1,43 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.65rem;
+  margin: 0.5rem 0;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  border-radius: 4px;
+  font-family: var(--font-code);
+  font-size: 0.78rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.meter {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.pip {
+  width: 7px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--color-border-light);
+  transition: background 0.2s ease;
+
+  &.active {
+    background: var(--color-accent, #e9c94a);
+  }
+}
+
+.label {
+  font-weight: 600;
+  color: var(--color-heading);
+  letter-spacing: 0.03em;
+}
+
+.react {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  border-left: 1px solid var(--color-border-light);
+  padding-left: 0.5rem;
+}
