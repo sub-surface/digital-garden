@@ -34,7 +34,7 @@ John Dewey was an American philosopher, psychologist and educational reformer, a
 ## Key Philosophical Contributions
 
 ### Warranted Assertibility
-Dewey's alternative to truth-as-correspondence. Rather than ask whether a belief mirrors a mind-independent reality, he asks whether it is the settled outcome of competent inquiry — a claim is *warrantedly assertible* when inquiry has resolved the problem that prompted it and the result survives testing. See [[Wiki/Concepts/Warranted Assertibility|Warranted Assertibility]].
+Dewey's alternative to truth-as-correspondence. Rather than ask whether a belief mirrors a mind-independent reality, he asks whether it is the settled outcome of competent inquiry — a claim is *warrantedly assertible* when inquiry has resolved the problem that prompted it and the result survives testing. See [[Warranted Assertibility]].
 
 ### Inquiry
 Dewey treats inquiry as the controlled transformation of an "indeterminate situation" into a determinate one. Logic, on this account, is not a set of eternal forms but the study of how successful inquiry actually proceeds — which is why *Logic: The Theory of Inquiry* is a book about method, not metaphysics.
@@ -62,5 +62,5 @@ Dewey treats inquiry as the controlled transformation of an "indeterminate situa
 
 ## Influence & Legacy
 * **Influenced by:** Hegel, Darwin, Peirce, William James
-* **Followers/School:** Instrumentalism; [[Wiki/Philosophers/Richard Rorty|Richard Rorty]] and the neo-pragmatists
-* **In Phil Chat:** the room's most-cited living programme. Dewey is [[Quigley]]'s standing authority — "if you don't know, I go for the Deweyan pragmatist stuff" — and the footnote to a Dewey passage became its own small [[Wiki/Events/The Warranted Assertibility Wars|episode]] when **Jere** quoted part of one from Wikipedia and Quigley downloaded the book to check it.
+* **Followers/School:** Instrumentalism; [[Richard Rorty]] and the neo-pragmatists
+* **In Phil Chat:** the room's most-cited living programme. Dewey is [[Quigley]]'s standing authority — "if you don't know, I go for the Deweyan pragmatist stuff" — and the footnote to a Dewey passage became its own small [[The Warranted Assertibility Wars|episode]] when **Jere** quoted part of one from Wikipedia and Quigley downloaded the book to check it.

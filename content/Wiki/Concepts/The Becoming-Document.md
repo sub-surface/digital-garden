@@ -43,7 +43,7 @@ If the image is a weapon, then **decay** is a form of pacifism.
 Digital images are fragile. Bit rot and compression artifacts — *digital rot* — may be the only thing that strips the operative image of its power.[^2]
 
 ## Related Concepts
-*   [[Wiki/Concepts/Newcombs Problem]]
+*   [[Newcombs Problem]]
 
 [^1]: Farocki, H. (2004). *Phantom Images*. Public, No. 5, p. 14.
 [^2]: ![[Media/ESA-Gaia.gif]] *The operative gaze of the Gaia satellite, mapping the stars into data.*

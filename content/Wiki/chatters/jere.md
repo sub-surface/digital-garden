@@ -23,11 +23,11 @@ draft: true
 </div>
 
 > [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Jere is warmly invited to overwrite it with his own [[Wiki/Submit|Philsurvey]].
+> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Jere is warmly invited to overwrite it with his own [[Submit|Philsurvey]].
 
 ## Known for
 
-- **Truth Janitor of [[Wiki/Events/The Dragons Covenant|The Covenant]].** When offered the exalted rank of "veritan" in Lizzie's six-day theological system, Jere declined the mystical framing and counter-offered: *"Yeah make me Truth Janitor of this covenant."*
+- **Truth Janitor of [[The Dragons Covenant|The Covenant]].** When offered the exalted rank of "veritan" in Lizzie's six-day theological system, Jere declined the mystical framing and counter-offered: *"Yeah make me Truth Janitor of this covenant."*
 - **The World Cup Audit.** Intervened in the soccer dispute of Vol V to definitively audit shot-on-goal statistics, offside calls, and player positions from primary match recordings.
 - **Fable Credits.** Managed the channel's informal economy of credits and bets, settling wagers with unwavering ledger precision.
 - **The War on Evil Aura.** Maintains a long-running, humorous vigilance against aura's more chaotic epistemic incursions.
@@ -45,6 +45,6 @@ draft: true
 
 ## See also
 
-- [[Wiki/Events/The Dragons Covenant|The Dragon's Covenant]]
-- [[Wiki/Events/The Metric|The Metric]]
-- [[Wiki/chatters/aurasurfer|aurasurfer]]
+- [[The Dragons Covenant|The Dragon's Covenant]]
+- [[The Metric]]
+- [[aurasurfer]]

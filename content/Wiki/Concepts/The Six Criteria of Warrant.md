@@ -7,7 +7,7 @@ type: concept
 
 # The Six Criteria of Warrant
 
-A six-part test [[Quigley]] posted during the [[Wiki/Events/The Warranted Assertibility Wars|warranted-assertibility bout]] (Monday, 8.52 am) and has treated as precedent since. It is his operational answer to the obvious follow-up question to [[Wiki/Concepts/Warranted Assertibility|warranted assertibility]]: if truth is not correspondence, then *warranted by what?* He holds the same six apply to all inquiry alike — the sciences, philosophy, everyday belief — differing only in how they are weighted.
+A six-part test [[Quigley]] posted during the [[The Warranted Assertibility Wars|warranted-assertibility bout]] (Monday, 8.52 am) and has treated as precedent since. It is his operational answer to the obvious follow-up question to [[Warranted Assertibility|warranted assertibility]]: if truth is not correspondence, then *warranted by what?* He holds the same six apply to all inquiry alike — the sciences, philosophy, everyday belief — differing only in how they are weighted.
 
 ## The criteria
 
@@ -20,13 +20,13 @@ A six-part test [[Quigley]] posted during the [[Wiki/Events/The Warranted Assert
 
 ## The Nazi problem
 
-The criteria's most-tested moment came in the "harm wars" the day after the bout. Asked to run a hard case through the test, [[Wiki/chatters/hughchungus|Hugh]] answered the criteria point by point and noted, with a disclaimer, that a monstrous regime can satisfy criterion six — inquiry *could* continue after an atrocity — which is exactly the kind of result a coherence-and-survival account has to be able to absorb without endorsing. The exchange is the clearest illustration of the test's design: it measures whether an inquiry is *in good standing*, not whether its object is good.
+The criteria's most-tested moment came in the "harm wars" the day after the bout. Asked to run a hard case through the test, [[hughchungus|Hugh]] answered the criteria point by point and noted, with a disclaimer, that a monstrous regime can satisfy criterion six — inquiry *could* continue after an atrocity — which is exactly the kind of result a coherence-and-survival account has to be able to absorb without endorsing. The exchange is the clearest illustration of the test's design: it measures whether an inquiry is *in good standing*, not whether its object is good.
 
 > [!note] Not a theory of truth
 > Quigley is insistent on this point — "This. Is. Not. A. Theory. Of. Truth." The criteria describe when an assertion is *warranted*, which on his Deweyan view is the property that was doing all the work the word "true" was supposed to do.
 
 ## See also
 
-- [[Wiki/Concepts/Warranted Assertibility|Warranted Assertibility]]
-- [[Wiki/Philosophers/John Dewey|John Dewey]]
-- [[Wiki/Events/The Warranted Assertibility Wars|The Warranted Assertibility Wars]]
+- [[Warranted Assertibility]]
+- [[John Dewey]]
+- [[The Warranted Assertibility Wars]]

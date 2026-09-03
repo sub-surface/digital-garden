@@ -15,7 +15,7 @@ draft: true
 
 <div className="dropcap">
 
-**Simon** is a resident textual critic, political observer, and careful reader in Phil Chat. While participating across political economy and ontology threads, Simon earned a permanent place in the channel's literary lore during Vol I No 2 through his editorial treatment of [[Wiki/chatters/don|Don]]'s declaration of affection.
+**Simon** is a resident textual critic, political observer, and careful reader in Phil Chat. While participating across political economy and ontology threads, Simon earned a permanent place in the channel's literary lore during Vol I No 2 through his editorial treatment of [[don|Don]]'s declaration of affection.
 
 > *"Simon repaired the word to 'not,' while My Name deleted it outright... Reverence transmits a text intact; wit cannot leave one alone, even when it cannot decide what is wrong with it."*
 > &mdash; The Phil Chat Times, Vol I No 2
@@ -23,7 +23,7 @@ draft: true
 </div>
 
 > [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Simon is warmly invited to overwrite it with his own [[Wiki/Submit|Philsurvey]].
+> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Simon is warmly invited to overwrite it with his own [[Submit|Philsurvey]].
 
 ## Known for
 
@@ -42,6 +42,6 @@ draft: true
 
 ## See also
 
-- [[Wiki/chatters/don|Don]]
-- [[Wiki/Events/The Copypasta of Affection|The Copypasta of Affection]]
-- [[Wiki/Concepts/Antiphonal Copypasta|Antiphonal Copypasta]]
+- [[don|Don]]
+- [[The Copypasta of Affection]]
+- [[Antiphonal Copypasta]]

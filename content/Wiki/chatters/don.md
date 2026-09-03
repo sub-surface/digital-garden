@@ -23,11 +23,11 @@ draft: true
 </div>
 
 > [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Don is warmly invited to overwrite it with his own [[Wiki/Submit|Philsurvey]].
+> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Don is warmly invited to overwrite it with his own [[Submit|Philsurvey]].
 
 ## Known for
 
-- **[[Wiki/Events/The Copypasta of Affection|The Copypasta of Affection]].** On Thursday 23 July 2026, in the middle of a debate about whether philosophers are lonelier than other men, Don posted a 64-word message admitting that the room contained his only friends, that he had *"no appreciated you enough"*, and that he hoped it would last. Copied verbatim by five men within fifteen minutes, creating a rare moment of communal antiphony.
+- **[[The Copypasta of Affection]].** On Thursday 23 July 2026, in the middle of a debate about whether philosophers are lonelier than other men, Don posted a 64-word message admitting that the room contained his only friends, that he had *"no appreciated you enough"*, and that he hoped it would last. Copied verbatim by five men within fifteen minutes, creating a rare moment of communal antiphony.
 - **The Sacred Typo.** By leaving *"I have no appreciated you enough"* uncorrected, Don created the textual fingerprint of the faith: as *The Times* noted, *"reverence transmits a text intact; wit cannot leave one alone."*
 - **Speech Bingo.** When speech bingo was organized for a presidential address in Vol I No 1, Don submitted *"Raggedy ass bitch"*, then clarified that he had not understood the assignment.
 - **Instant Adjudication.** During the booking of the Quigley v. Hugh bout in Vol I No 6, while others negotiated time zones, Don posted: *"It's now. Begin."*
@@ -45,7 +45,7 @@ draft: true
 
 ## See also
 
-- [[Wiki/Events/The Copypasta of Affection|The Copypasta of Affection]]
-- [[Wiki/Concepts/Antiphonal Copypasta|Antiphonal Copypasta]]
-- [[Wiki/chatters/Charlie(Willow)|Charlie]]
-- [[Wiki/chatters/stackhouse|Stackhouse]]
+- [[The Copypasta of Affection]]
+- [[Antiphonal Copypasta]]
+- [[Charlie(Willow)|Charlie]]
+- [[stackhouse|Stackhouse]]

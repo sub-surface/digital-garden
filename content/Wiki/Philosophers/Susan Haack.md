@@ -52,7 +52,7 @@ Haack vigorously defends science and truth against vulgar pragmatists (such as R
 
 ## Significance in Phil Chat
 
-Haack is the primary epistemological influence cited by [[Wiki/chatters/Ape|Ape]] in his survey. Whenever disputes erupt over whether truth is merely social consensus (as [[Wiki/chatters/Quigley|Quigley]] and Rorty are accused of arguing) or whether empirical observation can anchor theory, Haack's crossword metaphor is invoked as the cleanest resolution to the regress problem.
+Haack is the primary epistemological influence cited by [[Ape]] in his survey. Whenever disputes erupt over whether truth is merely social consensus (as [[Quigley]] and Rorty are accused of arguing) or whether empirical observation can anchor theory, Haack's crossword metaphor is invoked as the cleanest resolution to the regress problem.
 
 ## Major Works
 
@@ -63,6 +63,6 @@ Haack is the primary epistemological influence cited by [[Wiki/chatters/Ape|Ape]
 
 ## See also
 
-- [[Wiki/chatters/Ape|Ape]]
-- [[Wiki/Philosophers/Richard Rorty|Richard Rorty]]
-- [[Wiki/Concepts/The Six Criteria of Warrant|The Six Criteria of Warrant]]
+- [[Ape]]
+- [[Richard Rorty]]
+- [[The Six Criteria of Warrant]]

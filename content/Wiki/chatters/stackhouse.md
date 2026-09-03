@@ -23,13 +23,13 @@ draft: true
 </div>
 
 > [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Stackhouse is warmly invited to overwrite it with his own [[Wiki/Submit|Philsurvey]].
+> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Stackhouse is warmly invited to overwrite it with his own [[Submit|Philsurvey]].
 
 ## Known for
 
 - **Corporate Realism.** Treating the chat as a labour market to be managed: *"The beatings of AI are continuing until quality improves (its working on it)."*
-- **[[Wiki/Events/The Metric|The Metric]] Enforcer.** Responded to Ape's payroll complaints about reaction rates with ruthless managerial certainty: *"First rule of Corporate America: The Metric is never wrong, you are."*
-- **[[Wiki/Events/The RuneScape Renaissance|OSRS Conversion]].** Renounced all video games in favour of Old School RuneScape: declared *"runescape is my new 9-5"*, created `StackhouseOS`, and chanted *"I will get level 60 agility"* into a political debate at 4 AM.
+- **[[The Metric]] Enforcer.** Responded to Ape's payroll complaints about reaction rates with ruthless managerial certainty: *"First rule of Corporate America: The Metric is never wrong, you are."*
+- **[[The RuneScape Renaissance|OSRS Conversion]].** Renounced all video games in favour of Old School RuneScape: declared *"runescape is my new 9-5"*, created `StackhouseOS`, and chanted *"I will get level 60 agility"* into a political debate at 4 AM.
 - **Therapy Critique.** Read an extensive shelf of self-help and psychological literature and concluded: *"Therapy is meant to turn you into a good little capitalist worker bee. Snipping off your wings in your line of flight."*
 
 ## Positions on record
@@ -47,6 +47,6 @@ draft: true
 
 ## See also
 
-- [[Wiki/Events/The Metric|The Metric]]
-- [[Wiki/Events/The RuneScape Renaissance|The RuneScape Renaissance]]
-- [[Wiki/Philosophers/Nick Land|Nick Land]]
+- [[The Metric]]
+- [[The RuneScape Renaissance]]
+- [[Nick Land]]

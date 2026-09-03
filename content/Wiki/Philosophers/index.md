@@ -12,7 +12,7 @@ Survey profiles of canonical philosophers — positions, influences, and key wor
 
 ## Submit a Profile
 
-Know a philosopher not yet in the wiki? [[Wiki/Submit|Submit a philosopher profile →]]
+Know a philosopher not yet in the wiki? [[Submit|Submit a philosopher profile →]]
 
 ---
 

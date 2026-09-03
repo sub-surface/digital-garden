@@ -12,4 +12,4 @@ The running stories of Phil Chat, as reported by [The Phil Chat Times](https://p
 
 ---
 
-Events cite the paper by volume and page. They are documented from the public archive, not the private logs; where a claim rests on a single line, it is quoted. See the [[Wiki/Style-Guide|style guide]] for the widgets these pages use — `<Clipping>`, `<WeighIn>` and `<Tape>`.
+Events cite the paper by volume and page. They are documented from the public archive, not the private logs; where a claim rests on a single line, it is quoted. See the [[Style-Guide|style guide]] for the widgets these pages use — `<Clipping>`, `<WeighIn>` and `<Tape>`.

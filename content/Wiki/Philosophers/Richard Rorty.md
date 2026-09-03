@@ -34,7 +34,7 @@ Richard Rorty was an American philosopher who began inside the analytic traditio
 ## Key Philosophical Contributions
 
 ### Anti-representationalism
-*Philosophy and the Mirror of Nature* (1979) argues that the whole project of epistemology-as-foundations rests on a metaphor — mind mirroring world — that we can and should abandon. Knowledge is a matter of social justification, not accurate representation. This is the pragmatist line [[Wiki/chatters/hughchungus|Hugh]] reaches for when he calls warranted assertibility a change of subject, and the one [[Quigley]] is standing on when he denies that "corresponds to reality" names any test anyone can run.
+*Philosophy and the Mirror of Nature* (1979) argues that the whole project of epistemology-as-foundations rests on a metaphor — mind mirroring world — that we can and should abandon. Knowledge is a matter of social justification, not accurate representation. This is the pragmatist line [[hughchungus|Hugh]] reaches for when he calls warranted assertibility a change of subject, and the one [[Quigley]] is standing on when he denies that "corresponds to reality" names any test anyone can run.
 
 ### The contingency of language
 Vocabularies are tools, not discoveries; they are made, not found. Progress is the replacement of vocabularies that have stopped being useful, not convergence on The Truth.
@@ -57,4 +57,4 @@ Vocabularies are tools, not discoveries; they are made, not found. Progress is t
 
 ## Influence & Legacy
 * **Influenced by:** Dewey, Wittgenstein, Wilfrid Sellars, Quine
-* **In Phil Chat:** the room's shorthand for the anti-correspondence camp. Quigley asked the paper to photoshop Rorty's face over his own "when you deliver my victory" during [[Wiki/Events/The Warranted Assertibility Wars|the bout]] — the neo-pragmatist as patron saint of a fight fought to a poll and a self-declared win.
+* **In Phil Chat:** the room's shorthand for the anti-correspondence camp. Quigley asked the paper to photoshop Rorty's face over his own "when you deliver my victory" during [[The Warranted Assertibility Wars|the bout]] — the neo-pragmatist as patron saint of a fight fought to a poll and a self-declared win.

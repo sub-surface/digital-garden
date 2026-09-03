@@ -27,7 +27,7 @@ The editorial staff of *The Phil Chat Times* initially treated Exhibit A as an e
 > *"We are no longer confident the two facts are unrelated."*
 > &mdash; Vol IV, Police Blotter, p. 14
 
-Repeated inquiries directed at Brutus during subsequent editions yielded only vague references to "homesteading", "lye soap", and "meat preservation". When pressed by [[Wiki/chatters/stackhouse|Stackhouse]] on whether the basement setup met local municipal hazardous waste codes, the conversation was abruptly redirected toward the ontological status of p-zombies.
+Repeated inquiries directed at Brutus during subsequent editions yielded only vague references to "homesteading", "lye soap", and "meat preservation". When pressed by [[stackhouse|Stackhouse]] on whether the basement setup met local municipal hazardous waste codes, the conversation was abruptly redirected toward the ontological status of p-zombies.
 
 In Vol VII's Classifieds section, the tub received its final public notice:
 
@@ -39,5 +39,5 @@ In Vol VII's Classifieds section, the tub received its final public notice:
 
 ## See also
 
-- [[Wiki/Events/The Moggening|The Moggening]]
-- [[Wiki/Concepts/Mogging|Mogging]]
+- [[The Moggening]]
+- [[Mogging]]

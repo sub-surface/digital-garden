@@ -23,7 +23,7 @@ draft: true
 </div>
 
 > [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Chair is warmly invited to overwrite it with his own [[Wiki/Submit|Philsurvey]].
+> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Chair is warmly invited to overwrite it with his own [[Submit|Philsurvey]].
 
 ## Known for
 
@@ -44,6 +44,6 @@ draft: true
 
 ## See also
 
-- [[Wiki/Philosophers/Nick Land|Nick Land]]
-- [[Wiki/Concepts/Warranted Assertibility|Warranted Assertibility]]
-- [[Wiki/chatters/Quigley|Quigley]]
+- [[Nick Land]]
+- [[Warranted Assertibility]]
+- [[Quigley]]

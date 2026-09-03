@@ -77,7 +77,7 @@ tags: [wiki]
 Link to other wiki pages with double brackets:
 ```
 [[Spinoza]]
-[[Wiki/Concepts/Substance Monism|Substance Monism]]
+[[Substance Monism]]
 ```
 
 ### External
@@ -161,7 +161,7 @@ Use the Philsurvey format. The submit form generates this structure automaticall
 
 ## Events
 
-Running stories — the room's bouts, sagas and capers, as reported by *The Phil Chat Times* — live in `Wiki/Events/`, tagged `[wiki, event]`. They render as articles automatically (any `wiki/` slug does). Cite the paper by volume and page, document from the public archive rather than the private logs, and quote any claim that rests on a single line. See [[Wiki/Events/The Moggening]] for the house style.
+Running stories — the room's bouts, sagas and capers, as reported by *The Phil Chat Times* — live in `Wiki/Events/`, tagged `[wiki, event]`. They render as articles automatically (any `wiki/` slug does). Cite the paper by volume and page, document from the public archive rather than the private logs, and quote any claim that rests on a single line. See [[The Moggening]] for the house style.
 
 ## Phil Chat Widgets
 

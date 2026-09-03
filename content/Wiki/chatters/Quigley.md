@@ -24,13 +24,13 @@ draft: true
 </div>
 
 > [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. The positions below are the ones Quigley has stated on the record, quoted where they are contested. He is warmly invited to overwrite it with his own [[Wiki/Submit|Philsurvey]].
+> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. The positions below are the ones Quigley has stated on the record, quoted where they are contested. He is warmly invited to overwrite it with his own [[Submit|Philsurvey]].
 
 ## Known for
 
-- **[[Wiki/Concepts/Warranted Assertibility|Warranted assertibility]].** The position he has defended, daily, across most of the paper's run — deflationary about "truth" as correspondence, pragmatic about what replaces it. His summary, delivered after a four-day bout: *"I've been arguing for Warranted Assertibility the whole time."* See [[Wiki/Events/The Warranted Assertibility Wars|the bout]].
-- **[[Wiki/Concepts/The Six Criteria of Warrant|The six criteria of warrant]].** His working test for when an assertion is warranted, posted mid-bout and cited as precedent since.
-- **[[Wiki/Concepts/Quigley Derangement Syndrome|Quigley Derangement Syndrome]].** The room's documented condition about him: he is answered more carefully than anyone and rewarded less. Vol VI: answered 78.4 times per hundred messages, the highest figure in the room; reaction percentile 26. *"Everybody answers him. Nobody laughs."*
+- **[[Warranted Assertibility|Warranted assertibility]].** The position he has defended, daily, across most of the paper's run — deflationary about "truth" as correspondence, pragmatic about what replaces it. His summary, delivered after a four-day bout: *"I've been arguing for Warranted Assertibility the whole time."* See [[The Warranted Assertibility Wars|the bout]].
+- **[[The Six Criteria of Warrant|The six criteria of warrant]].** His working test for when an assertion is warranted, posted mid-bout and cited as precedent since.
+- **[[Quigley Derangement Syndrome]].** The room's documented condition about him: he is answered more carefully than anyone and rewarded less. Vol VI: answered 78.4 times per hundred messages, the highest figure in the room; reaction percentile 26. *"Everybody answers him. Nobody laughs."*
 
 ## Positions on record
 
@@ -53,4 +53,4 @@ His signature move, and the paper's, is the appeal to an adjudicator. In Vol IV 
 
 ## See also
 
-[[Wiki/Concepts/Warranted Assertibility|Warranted Assertibility]] · [[Wiki/Philosophers/John Dewey|Dewey]] · [[Wiki/Philosophers/Richard Rorty|Rorty]] · [[Wiki/Events/The Warranted Assertibility Wars|The bout]] · [[Wiki/Concepts/Quigley Derangement Syndrome|QDS]]
+[[Warranted Assertibility]] · [[John Dewey|Dewey]] · [[Richard Rorty|Rorty]] · [[The Warranted Assertibility Wars|The bout]] · [[Quigley Derangement Syndrome|QDS]]

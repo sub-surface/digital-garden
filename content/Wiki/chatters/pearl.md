@@ -23,12 +23,12 @@ draft: true
 </div>
 
 > [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Pearl is warmly invited to overwrite it with her own [[Wiki/Submit|Philsurvey]].
+> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Pearl is warmly invited to overwrite it with her own [[Submit|Philsurvey]].
 
 ## Known for
 
 - **Liturgical Rulings.** Rules in one to six words, drops an animated frog saying *"nuh uh"*, and departs. No appeal against her decisions has ever succeeded, and the room knows better than to drag them out.
-- **Halting [[Wiki/Events/The Moggening|The Moggening]].** When zack's leg-shaving dispute crossed the thirty-hour threshold, Pearl intervened with two rules, noted he was breaking the second by asking about the first, and muted him before going to her hospital shift.
+- **Halting [[The Moggening]].** When zack's leg-shaving dispute crossed the thirty-hour threshold, Pearl intervened with two rules, noted he was breaking the second by asking about the first, and muted him before going to her hospital shift.
 - **Primary Source Policy Analysis.** Unlike the theoretical debates of the room, Pearl frequently posts and quotes 40-page federal HUD/HHS policy releases on homelessness, housing-first initiatives, and entry-level labour disruption.
 - **"The Book of Survival."** Authoring a pragmatic guide (*"how to adult"*) containing the practical generational knowledge not everyone receives (buy secondhand, not mattresses; rehome pets through personal networks rather than shelters).
 
@@ -47,6 +47,6 @@ draft: true
 
 ## See also
 
-- [[Wiki/Events/The Moggening|The Moggening]]
-- [[Wiki/chatters/Quigley|Quigley]]
-- [[Wiki/chatters/stackhouse|Stackhouse]]
+- [[The Moggening]]
+- [[Quigley]]
+- [[stackhouse|Stackhouse]]

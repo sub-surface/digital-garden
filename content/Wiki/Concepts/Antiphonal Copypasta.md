@@ -21,16 +21,16 @@ A copypasta is ordinarily a humiliation — the internet’s method of pinning a
 
 In digital subcultures, reproducing another participant's unironic expression of emotion is almost universally used to deride the speaker as vulnerable, naive, or cringeworthy. 
 
-However, during [[Wiki/Events/The Copypasta of Affection|The Copypasta of Affection]], when [[Wiki/chatters/don|Don]] posted his 64-word declaration of friendship, five men in the channel—men who habitually converse exclusively in sarcastic barbs and theoretical disputes—copied the paragraph character-for-character, leaving its typographical error uncorrected.
+However, during [[The Copypasta of Affection]], when [[don|Don]] posted his 64-word declaration of friendship, five men in the channel—men who habitually converse exclusively in sarcastic barbs and theoretical disputes—copied the paragraph character-for-character, leaving its typographical error uncorrected.
 
 *The Times* established the structural criteria for antiphony:
 
-1. **No Linguistic Alteration:** Reverence transmits a sacred text intact. Modifying the text (such as [[Wiki/chatters/simon|Simon]] repairing *"no"* to *"not"*, or [[Wiki/chatters/myname1|My Name]] inverting the sentiment into enmity) breaks the liturgical spell and returns the text to irony.
-2. **Scarcity of Voice:** The most significant participants were those who spoke least: [[Wiki/chatters/stackhouse|Stackhouse]] and [[Wiki/chatters/ice_chicken|Jeh]] each spoke exactly once across 866 lines of chat on that Thursday, and that single utterance was the unedited repetition of Don's prayer.
+1. **No Linguistic Alteration:** Reverence transmits a sacred text intact. Modifying the text (such as [[simon|Simon]] repairing *"no"* to *"not"*, or [[myname1|My Name]] inverting the sentiment into enmity) breaks the liturgical spell and returns the text to irony.
+2. **Scarcity of Voice:** The most significant participants were those who spoke least: [[stackhouse|Stackhouse]] and [[ice_chicken|Jeh]] each spoke exactly once across 866 lines of chat on that Thursday, and that single utterance was the unedited repetition of Don's prayer.
 3. **Absence of Vocabulary:** When men in an aggressive intellectual subculture are presented with a sentiment they possess no customary vocabulary to return, they return the sentiment in the only currency available: the sentiment itself.
 
 ## See also
 
-- [[Wiki/Events/The Copypasta of Affection|The Copypasta of Affection]]
-- [[Wiki/chatters/don|Don]]
-- [[Wiki/chatters/stackhouse|Stackhouse]]
+- [[The Copypasta of Affection]]
+- [[don|Don]]
+- [[stackhouse|Stackhouse]]

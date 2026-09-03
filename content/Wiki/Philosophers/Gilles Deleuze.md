@@ -48,9 +48,9 @@ In *A Thousand Plateaus*, Deleuze and Guattari propose the *rhizome* as an open,
 
 Deleuze is the ubiquitous mascot and recurring debate token of Phil Chat. Whenever a debate between analytic pragmatism and continental materialism reaches an impasse, participants invariably summon Deleuze:
 
-- During the four-day Warranted Assertibility bout between [[Wiki/chatters/Quigley|Quigley]] and Hugh, Hugh replied to Quigley's demands for correspondence criteria by typing *"you have not demonstrated"* seventeen times in a row and attaching three identical pictures of Deleuze.
-- [[Wiki/chatters/stackhouse|Stackhouse]]'s anti-therapy critique directly adapts Deleuze and Guattari: *"Therapy is meant to turn you into a good little capitalist worker bee. Snipping off your wings in your line of flight."*
-- Excerpts from *Logic of Sense* and Nick Land's Deleuzo-Guattarian essay *Meltdown* are regularly traded between [[Wiki/chatters/Charlie(Willow)|Charlie]] and Stackhouse.
+- During the four-day Warranted Assertibility bout between [[Quigley]] and Hugh, Hugh replied to Quigley's demands for correspondence criteria by typing *"you have not demonstrated"* seventeen times in a row and attaching three identical pictures of Deleuze.
+- [[stackhouse|Stackhouse]]'s anti-therapy critique directly adapts Deleuze and Guattari: *"Therapy is meant to turn you into a good little capitalist worker bee. Snipping off your wings in your line of flight."*
+- Excerpts from *Logic of Sense* and Nick Land's Deleuzo-Guattarian essay *Meltdown* are regularly traded between [[Charlie(Willow)|Charlie]] and Stackhouse.
 
 ## Major Works
 
@@ -63,7 +63,7 @@ Deleuze is the ubiquitous mascot and recurring debate token of Phil Chat. Whenev
 
 ## See also
 
-- [[Wiki/Philosophers/Baruch Spinoza|Baruch Spinoza]]
-- [[Wiki/Philosophers/Nick Land|Nick Land]]
-- [[Wiki/Events/The Warranted Assertibility Wars|The Warranted Assertibility Wars]]
-- [[Wiki/chatters/stackhouse|Stackhouse]]
+- [[Baruch Spinoza]]
+- [[Nick Land]]
+- [[The Warranted Assertibility Wars]]
+- [[stackhouse|Stackhouse]]

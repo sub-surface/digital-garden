@@ -20,7 +20,7 @@ The paper calls that gap "the closest thing to a clinical measurement of Quigley
 
 ## Aetiology
 
-The paper's reading locates the cause not in the sincerity — which it defends — but in the procedure. In a channel whose entire social technology is the retreat into irony, Quigley arrives every day with an earnest position, states his profession, location and political programme unprompted, does the reading, and cites it inside sixty seconds of being asked. The room has developed a condition about exactly that. When he loses an argument he goes and gets an adjudicator (see the god machine, in [[Wiki/chatters/Quigley|his profile]]); when the adjudicator rules against him he annexes it.
+The paper's reading locates the cause not in the sincerity — which it defends — but in the procedure. In a channel whose entire social technology is the retreat into irony, Quigley arrives every day with an earnest position, states his profession, location and political programme unprompted, does the reading, and cites it inside sixty seconds of being asked. The room has developed a condition about exactly that. When he loses an argument he goes and gets an adjudicator (see the god machine, in [[Quigley|his profile]]); when the adjudicator rules against him he annexes it.
 
 ## Prognosis
 
@@ -28,4 +28,4 @@ Documented as recurrent and self-limiting. When Quigley left in Vol II — cover
 
 ## See also
 
-[[Wiki/chatters/Quigley|Quigley]] · [[Wiki/Events/The Warranted Assertibility Wars|The Warranted Assertibility Wars]] · [[Wiki/Concepts/Warranted Assertibility|Warranted Assertibility]]
+[[Quigley]] · [[The Warranted Assertibility Wars]] · [[Warranted Assertibility]]

@@ -34,7 +34,7 @@ Nick Land is a British philosopher whose early-1990s work at Warwick — and in 
 ## Key Philosophical Contributions
 
 ### Accelerationism
-The thesis, in its Landian form, that capitalism is best understood not as a system humans run but as a runaway feedback loop that leaves intelligence in its wake — and that the process, rather than being resisted, tends to intensify. Left and right variants disagree about what to do with the diagnosis. In Phil Chat, [[Wiki/chatters/hughchungus|Hugh]]'s "cute accelerationism" is a deliberate answer to Land's "grungy techno-dystopia" — the same recognition of an autonomous process, redirected onto cuteness rather than dread.
+The thesis, in its Landian form, that capitalism is best understood not as a system humans run but as a runaway feedback loop that leaves intelligence in its wake — and that the process, rather than being resisted, tends to intensify. Left and right variants disagree about what to do with the diagnosis. In Phil Chat, [[hughchungus|Hugh]]'s "cute accelerationism" is a deliberate answer to Land's "grungy techno-dystopia" — the same recognition of an autonomous process, redirected onto cuteness rather than dread.
 
 ### Hyperstition
 Fictions that make themselves real: ideas which, by being circulated and acted upon, bring about the future they describe. A CCRU coinage that has outlived its origin.

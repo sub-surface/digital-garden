@@ -46,7 +46,7 @@ Every mode of substance possesses an inherent drive to persist in its own being 
 
 ## Significance in Phil Chat
 
-Spinoza is the patron metaphysical authority for the server's Continental and Deleuzian wing (represented by [[Wiki/chatters/Charlie(Willow)|Charlie]] and [[Wiki/chatters/Ape|Ape]]). When arguments over physicalism, agency, and panpsychism arise, Spinoza is repeatedly invoked as the counter to both Cartesian ghost-in-the-machine dualism and reductive mechanical physicalism:
+Spinoza is the patron metaphysical authority for the server's Continental and Deleuzian wing (represented by [[Charlie(Willow)|Charlie]] and [[Ape]]). When arguments over physicalism, agency, and panpsychism arise, Spinoza is repeatedly invoked as the counter to both Cartesian ghost-in-the-machine dualism and reductive mechanical physicalism:
 
 > *"Spinoza is the prince of philosophers — the only philosopher who never compromised with transcendence."*
 > &mdash; Gilles Deleuze, cited by Charlie
@@ -59,6 +59,6 @@ Spinoza is the patron metaphysical authority for the server's Continental and De
 
 ## See also
 
-- [[Wiki/Philosophers/Gilles Deleuze|Gilles Deleuze]]
-- [[Wiki/Concepts/Warranted Assertibility|Warranted Assertibility]]
-- [[Wiki/chatters/Charlie(Willow)|Charlie]]
+- [[Gilles Deleuze]]
+- [[Warranted Assertibility]]
+- [[Charlie(Willow)|Charlie]]

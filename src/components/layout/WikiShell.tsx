@@ -3,11 +3,12 @@ import { useStore } from "@/store"
 import { ThemePanel } from "./ThemePanel"
 import { BgCanvas } from "./BgCanvas"
 import { QuickControls } from "./QuickControls"
+import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
 import { LinkPreview } from "@/components/ui/reader/LinkPreview"
 import { SearchOverlay } from "@/components/ui/overlays/SearchOverlay"
 import { MDXProvider } from "@/components/mdx/MDXProvider"
-import { WikiHeader } from "@/components/ui/wiki/WikiHeader"
+import { WikiSearchBox } from "@/components/ui/wiki/WikiSearchBox"
 import { SideChat } from "@/components/ui/chat/SideChat"
 import { NotificationBanner } from "@/components/ui/NotificationBanner"
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
@@ -48,6 +49,8 @@ export function WikiShell() {
         <SearchOverlay />
 
         <NotificationBanner />
+        <TerminalTitle context="wiki" />
+        <WikiSearchBox />
 
         <div className={styles.dockedLayout}>
           <main
@@ -57,7 +60,6 @@ export function WikiShell() {
             data-testid="main-pane"
             style={isSideChatOpen ? { width: `calc(100% - ${sideChatWidth}px)` } : undefined}
           >
-            <WikiHeader />
             <div className={styles.mainContent}>
               <ErrorBoundary label="page" resetKeys={[location.pathname]}>
                 <Outlet />

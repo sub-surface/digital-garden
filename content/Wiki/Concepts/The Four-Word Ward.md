@@ -9,7 +9,7 @@ type: concept
 
 <div className="dropcap">
 
-**The Four-Word Ward** is a conversational maneuver documented in Vol IV and Vol V of *The Phil Chat Times*, associated principally with [[Wiki/chatters/lizzie|Lizzie]]. It consists of typing the exact four-word string:
+**The Four-Word Ward** is a conversational maneuver documented in Vol IV and Vol V of *The Phil Chat Times*, associated principally with [[lizzie|Lizzie]]. It consists of typing the exact four-word string:
 
 > **"what does this mean"**
 
@@ -41,6 +41,6 @@ In every single instance, the target stopped whatever they were doing, dropped t
 
 ## See also
 
-- [[Wiki/chatters/lizzie|lizzie]]
-- [[Wiki/Concepts/Quigley Derangement Syndrome|Quigley Derangement Syndrome]]
-- [[Wiki/Events/The Warranted Assertibility Wars|The Warranted Assertibility Wars]]
+- [[lizzie]]
+- [[Quigley Derangement Syndrome]]
+- [[The Warranted Assertibility Wars]]

@@ -7,8 +7,6 @@
     - content/Wiki/index.md
     - src/components/layout/WikiShell.tsx
     - src/components/layout/WikiShell.module.scss
-    - src/components/ui/wiki/WikiHeader.tsx
-    - src/components/ui/wiki/WikiHeader.module.scss
     - src/components/ui/CopyWikilinkButton.tsx
     - src/components/ui/reader/NoteRenderer.tsx
     - src/components/layout/QuickControls.tsx
@@ -26,8 +24,7 @@
     - "Suppressed music playback and dock interfaces on all Wiki surfaces (QuickControls, AppShell, and MobileMusicBar) so the wiki remains an unpolluted scholarly reading environment."
     - "Bound reader mode click action in ReaderToggle and CornerMenu to open the theme/typography backslash menu directly, exposing text size scale, line height, and reading measure controls."
     - "Optimised content search with instant synchronous in-memory indexing fallback, global slash key trigger, and category badge annotations (Chatter, Concept, Event, Philosopher, Wiki, Book, Movie, Music, Daily)."
-    - "Equipped WikiShell with Wikipedia-style persistent header, quick embedded search with instant dropdown, random article button, and breadcrumb navigation."
-    - "Redesigned search overlay and wiki header to be minimal, seamless, and free of blur and heavy strokes, with unified spotlight modal and keyboard scroll anchoring."
+    - "Redesigned search overlay to be minimal, seamless, and free of blur and heavy strokes, with unified spotlight modal and keyboard scroll anchoring."
     - "Removed all emoji from UI components, headers, and prose."
     - "Added CopyWikilinkButton to wiki article headers for instant clipboard copying of canonical [[Note|Title]] links."
   decisions:
@@ -58,4 +55,31 @@
   decisions:
     - "Option B (server-side worker bot dispatch) was chosen to ensure authentic bot identities (name, color, and avatar) rather than user-attributed brackets."
     - "Debate turns are dispatched sequentially via waitUntil with realistic pacing intervals (1.8s-2.0s) so participants experience real-time dialogue in the room."
-  next: "Monitor room debate pacing and evaluate spectator voting or live reactions during debate rounds."
+  next: "Restore classic Wiki top-bar layout while preserving floating center search, and clean up wikilink basenames."
+
+- date: 2026-09-03
+  area: wiki
+  title: "Restoration of classic top bar controls, floating center search, and wikilink syntax cleanup"
+  status: done
+  files:
+    - src/components/layout/WikiShell.tsx
+    - src/components/layout/WikiShell.module.scss
+    - src/components/ui/wiki/WikiSearchBox.tsx
+    - src/components/ui/wiki/WikiSearchBox.module.scss
+    - content/Wiki/index.md
+    - content/Wiki/philchat.mdx
+    - content/Wiki/About.md
+    - content/Wiki/Concepts/
+    - content/Wiki/Events/
+    - content/Wiki/Philosophers/
+    - content/Wiki/chatters/
+  changes:
+    - "Restored classic TerminalTitle ('Philchat Wiki' and 'notes | chat' nav) at top left and QuickControls at top right on WikiShell."
+    - "Extracted center search box into floating WikiSearchBox component positioned between left and right controls with instant dropdown and slash shortcut."
+    - "Removed redundant top banner (WikiHeader) and top-bar breadcrumbs since NoteRenderer already renders page breadcrumbs in note headers."
+    - "Fixed 'The Great Sagas & Chronicles' table on content/Wiki/index.md by removing column-splitting pipe characters from wikilinks."
+    - "Converted all full 'Wiki/...' link paths across all wiki notes into clean, bare basename wikilinks ([[Note Title]]), preserving explicit qualification only for true collisions."
+  decisions:
+    - "WikiSearchBox floats at fixed top: 12px, left: 50% without a background banner, preserving the original visual hierarchy while retaining instant search."
+    - "Markdown tables cannot contain bare pipes inside wikilinks without breaking column layout; using bare basename links [[The Evolution Deliberation]] natively resolves this without fragile escaping."
+  next: "Monitor user feedback on search interactions and link resolution."

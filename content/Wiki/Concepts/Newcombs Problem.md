@@ -49,7 +49,7 @@ We are now living in a Newcomb's Problem at scale. The algorithm (YouTube, TikTo
 > *The illusion of free choice in a deterministic system, visualized through modern algorithmic architecture.*
 
 ## Related Concepts
-*   [[Wiki/Concepts/The Becoming-Document|The Becoming-Document]]
+*   [[The Becoming-Document]]
 
 [^1]: Spinoza, B. (1677). *Ethics*, Part I, Appendix. (Curley, E. Trans., 1994, Penguin Classics, p. 27).
 [^2]: ![[Media/pepe-wave.gif]] *Wave goodbye to the illusion of choice.*

@@ -15,7 +15,7 @@ draft: true
 
 <div className="dropcap">
 
-**Zack** is an amateur cyclist, anatomical disputant, and the central figure of Vol I No 8 (*[[Wiki/Events/The Moggening|The Moggening]]*). Known for unbending persistence in physical measurement, he earned legendary status by defending his fitness against a two-word medical diagnosis from FenceJumper across thirty consecutive hours.
+**Zack** is an amateur cyclist, anatomical disputant, and the central figure of Vol I No 8 (*[[The Moggening]]*). Known for unbending persistence in physical measurement, he earned legendary status by defending his fitness against a two-word medical diagnosis from FenceJumper across thirty consecutive hours.
 
 > *"A man was called obese on Sunday afternoon. By Monday night he had measured a shin with a Porsche key, shaved one of his own legs, been served two rules, and lost the right to speak. The leg was rock solid throughout."*
 > &mdash; The Phil Chat Times, Vol I No 8
@@ -23,14 +23,14 @@ draft: true
 </div>
 
 > [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Zack is warmly invited to overwrite it with his own [[Wiki/Submit|Philsurvey]].
+> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Zack is warmly invited to overwrite it with his own [[Submit|Philsurvey]].
 
 ## Known for
 
-- **[[Wiki/Events/The Moggening|The Moggening]].** The defining saga of Vol I No 8. Defended the volume of his *tibialis anterior* using an upside-down plastic ruler against FenceJumper's Porsche key fob (`41mm × 2 = 81mm = 8.2 cm. Mogged.`).
+- **[[The Moggening]].** The defining saga of Vol I No 8. Defended the volume of his *tibialis anterior* using an upside-down plastic ruler against FenceJumper's Porsche key fob (`41mm × 2 = 81mm = 8.2 cm. Mogged.`).
 - **The Scientific Control.** Shaved his right leg smooth to the knee with a manual razor (taking approximately one hour) while leaving his left leg hairy as an experimental control, explaining that hair had been *skin-mogging* his muscle definition.
-- **[[Wiki/Concepts/Spawnpill|The Spawnpill]].** Coined the concept during an evening discussion on bicycles, physical baseline genetics, and economic starting conditions.
-- **The Pearl Rules.** Recipient of Phil Chat's most famous disciplinary intervention: asked which rule he was violating after being warned by [[Wiki/chatters/pearl|Pearl]], received Rules 5 and 11, and was muted before dinner.
+- **[[Spawnpill|The Spawnpill]].** Coined the concept during an evening discussion on bicycles, physical baseline genetics, and economic starting conditions.
+- **The Pearl Rules.** Recipient of Phil Chat's most famous disciplinary intervention: asked which rule he was violating after being warned by [[pearl|Pearl]], received Rules 5 and 11, and was muted before dinner.
 
 ## Positions on record
 
@@ -46,7 +46,7 @@ draft: true
 
 ## See also
 
-- [[Wiki/Events/The Moggening|The Moggening]]
-- [[Wiki/Concepts/Mogging|Mogging]]
-- [[Wiki/Concepts/Spawnpill|Spawnpill]]
-- [[Wiki/chatters/pearl|Pearl]]
+- [[The Moggening]]
+- [[Mogging]]
+- [[Spawnpill]]
+- [[pearl|Pearl]]

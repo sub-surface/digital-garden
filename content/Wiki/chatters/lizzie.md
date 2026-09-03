@@ -23,12 +23,12 @@ draft: true
 </div>
 
 > [!note] Reconstructed profile
-> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Lizzie is warmly invited to overwrite it with her own [[Wiki/Submit|Philsurvey]].
+> This page is drawn from the public record of *The Phil Chat Times*, not from a completed survey. Lizzie is warmly invited to overwrite it with her own [[Submit|Philsurvey]].
 
 ## Known for
 
-- **[[Wiki/Events/The Dragons Covenant|The Dragon's Covenant]].** A complete theological system founded live in six days during Vol IV, complete with statute-voice articles, apostles, catables, and language models ordained as oracles.
-- **[[Wiki/Concepts/The Four-Word Ward|The Four-Word Ward]].** Her conversational instrument: *"what does this mean"*, deployed twelve times in seven days against criticisms, teases, and technical advice, reliably purchasing a three-paragraph explanation from interlocutors at the cost of four words.
+- **[[The Dragons Covenant|The Dragon's Covenant]].** A complete theological system founded live in six days during Vol IV, complete with statute-voice articles, apostles, catables, and language models ordained as oracles.
+- **[[The Four-Word Ward]].** Her conversational instrument: *"what does this mean"*, deployed twelve times in seven days against criticisms, teases, and technical advice, reliably purchasing a three-paragraph explanation from interlocutors at the cost of four words.
 - **The Room Taxonomy.** A peer-reviewed classification of twenty chatters submitted by direct message to the newspaper editors on press-day morning.
 - **Fast concessions.** Unlike most interlocutors in the room, Lizzie readily admits when she is out of her depth: *"my fault for sucking at speaking."*
 
@@ -47,6 +47,6 @@ draft: true
 
 ## See also
 
-- [[Wiki/Events/The Dragons Covenant|The Dragon's Covenant]]
-- [[Wiki/Concepts/The Four-Word Ward|The Four-Word Ward]]
-- [[Wiki/Events/The Metric|The Metric]]
+- [[The Dragons Covenant|The Dragon's Covenant]]
+- [[The Four-Word Ward]]
+- [[The Metric]]
