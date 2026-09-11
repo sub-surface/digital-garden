@@ -1,0 +1,35 @@
+- date: 2026-09-11
+  area: wiki
+  title: "Obsidian physics constellation graph, extensive canonical philosophy expansion, and handoff specification"
+  status: in-progress
+  files:
+    - src/components/ui/graph/ConstellationPage.tsx
+    - src/components/ui/graph/ConstellationPage.module.scss
+    - ROADMAP.md
+    - content/Wiki/Bibliography.md
+    - content/Wiki/Proposed Articles.md
+    - content/Wiki/Philosophers/Frank Jackson.md
+    - content/Wiki/Philosophers/John Searle.md
+    - content/Wiki/Philosophers/Robert Nozick.md
+    - content/Wiki/Philosophers/Philippa Foot.md
+    - content/Wiki/Philosophers/John Locke.md
+    - content/Wiki/Philosophers/G.W.F. Hegel.md
+    - content/Wiki/Philosophers/Martin Heidegger.md
+    - content/Wiki/Philosophers/Laozi.md
+    - content/Wiki/Concepts/Substance Monism.md
+    - content/Wiki/Concepts/The Mind-Body Problem.md
+    - Handoff.md
+  changes:
+    - "Completed Roadmap Item 20 by re-architecting ConstellationPage onto a hardware-accelerated Canvas 2D and D3 force simulation with click-and-draggable physics, multi-center cluster gravitational wells, and depth-aware edge highlighting."
+    - "Fixed broken wikilinks across the entire knowledge graph, authoring canonical articles for Frank Jackson, John Searle, Robert Nozick, Philippa Foot, John Locke, G.W.F. Hegel, Martin Heidegger, Laozi, Substance Monism, and The Mind-Body Problem."
+    - "Expanded Master Bibliography with critical academic editions (Diels-Kranz, Spinoza Gebhardt/Curley, Locke Nidditch, Kant, Ross, Foot, Searle, Jackson, Ayer, Carnap)."
+    - "Extended Proposed Articles roadmap across four new frontiers: Philosophy of AI & Computation, Philosophy of Biology & Cognitive Science, Global Metaphysics, and Speculative Realism & Aesthetics."
+    - "Grew the knowledge graph from 225 nodes / 390 links to 275 nodes / 993 links."
+    - "Diagnosed WikiGraph Pixi.js unsafe-eval CSP browser crash on the Map of Philosophy page, planning replacement with the zero-eval Canvas 2D engine."
+    - "Diagnosed ASCII diagram CSS highlight bug caused by base.scss code:not([class]) matching code elements inside pre containers."
+    - "Diagnosed citation bracket parsing issues and synthesized comprehensive Handoff.md specification for continuation."
+  decisions:
+    - "ConstellationPage uses Canvas 2D instead of WebGL/Pixi.js to guarantee 60fps performance without dynamic code generation or Content Security Policy eval restrictions."
+    - "Wikilink section targets adhere to standard Obsidian format [[Note#Heading]] to avoid bracket collision with markdown parser tokens."
+    - "Handoff.md created at repository root to serve as the unified, unambiguous blueprint for the next context session."
+  next: "Execute Handoff.md: replace WikiGraph with Canvas 2D, fix pre code CSS, restructure wiki index, and build out Thought Experiments and Canonical Texts directories."
