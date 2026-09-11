@@ -25,7 +25,7 @@ Place the footnote identifier directly following the punctuation of the asserted
 ```markdown
 Dewey preferred the term warranted assertibility over classical truth.[^dewey1938]
 
-[^dewey1938]: Dewey, *Logic: The Theory of Inquiry* (1938), p. 9. See [[Bibliography#[Dewey-Logic-1938]]].
+[^dewey1938]: Dewey, *Logic: The Theory of Inquiry* (1938), p. 9. See [[Bibliography#Dewey-Logic-1938]].
 ```
 
 > [!note] Formatting Law
@@ -52,7 +52,7 @@ Used to anchor claims in canonical editions, translations, or historical transcr
 ```markdown
 Kant insists that concepts without intuitions remain empty.[^kant-cpr]
 
-[^kant-cpr]: Kant, *Critique of Pure Reason*, A51/B75. See [[Bibliography#[Kant-CPR]]].
+[^kant-cpr]: Kant, *Critique of Pure Reason*, A51/B75. See [[Bibliography#Kant-CPR]].
 ```
 
 ---
@@ -99,5 +99,5 @@ Whenever possible, anchor citations against canonical entries listed in **[[Bibl
 To link to a master entry, format the reference with an internal anchor:
 
 ```markdown
-[^spinoza-monism]: Spinoza, *Ethics* Ip14. See [[Bibliography#[Spinoza-Curley]]].
+[^spinoza-monism]: Spinoza, *Ethics* Ip14. See [[Bibliography#Spinoza-Curley]].
 ```

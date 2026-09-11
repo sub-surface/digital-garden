@@ -99,6 +99,8 @@ In *The Right and the Good* (1930)[^ross-ref], Scottish philosopher **W.D. Ross*
 
 When duties collide (such as the duty of truth-telling versus the duty of non-maleficence when shielding a friend from a murderer), practical judgment (*phronesis*) determines one's **actual duty** (*duty proper*) in the concrete situation.
 
+[^kant-gmm-ref]: Immanuel Kant, *Groundwork of the Metaphysics of Morals* (1785), Ak. 4:421. See [[Bibliography#Kant-GMM]].
+
 [^ross-ref]: W.D. Ross, *The Right and the Good* (Oxford: Clarendon Press, 1930). See [[Bibliography#Ross-Right-1930]].
 
 ---
@@ -130,5 +132,5 @@ Deontological commitments are tested directly in contemporary normative ethics t
 
 * **Traditions**: [[Utilitarianism]], [[Virtue Ethics]], [[Continental Rationalism]], [[Map of Philosophy]]
 * **Philosophers**: [[Immanuel Kant]], [[John Rawls]], [[Aristotle]], [[David Hume]]
-* **Core Concepts**: [[The Trolley Problem]], [[The Veil of Ignorance]], [[The Is-Ought Problem]]
+* **Core Concepts**: [[The Trolley Problem]], [[The Veil of Ignorance]], [[Humes Guillotine|Hume's Guillotine]]
 * **Bibliography**: [[Bibliography#Kant-GMM]], [[Bibliography#Ross-Right-1930]], [[Bibliography#Foot-Trolley-1967]]

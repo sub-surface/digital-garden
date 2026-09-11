@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
-import { loadGraphData } from "@/lib/content-loader"
-import { usePhoneViewport } from "@/hooks/usePhoneViewport"
-import * as PIXI from "pixi.js"
 import * as d3 from "d3"
+import { loadGraphData } from "@/lib/content-loader"
 import styles from "./WikiGraph.module.scss"
+
+export interface WikiGraphProps {
+  cluster?: string
+  tag?: string
+  height?: number
+}
 
 interface RawNode {
   id: string
@@ -15,20 +19,25 @@ interface RawNode {
 interface GraphNode extends d3.SimulationNodeDatum {
   id: string
   title: string
-  category: "philosophers" | "concepts" | "movements" | "events" | "chatters" | "general"
+  category: "philosophers" | "concepts" | "movements" | "texts" | "events" | "chatters" | "general"
   degree: number
-  radius: number
-  color: number
-  gfx?: PIXI.Graphics
-  label?: PIXI.Text
-  isHovered?: boolean
+  r: number
+  color: string
+  clusterKey: string
+  clusterTargetX: number
+  clusterTargetY: number
+  twinkle: number
+  x: number
+  y: number
+  vx?: number
+  vy?: number
   fx?: number | null
   fy?: number | null
 }
 
 interface GraphLink extends d3.SimulationLinkDatum<GraphNode> {
-  source: string | GraphNode
-  target: string | GraphNode
+  source: GraphNode | string
+  target: GraphNode | string
 }
 
 function getNodeCategory(slug: string): GraphNode["category"] {
@@ -36,400 +45,503 @@ function getNodeCategory(slug: string): GraphNode["category"] {
   if (s.startsWith("wiki/philosophers/")) return "philosophers"
   if (s.startsWith("wiki/concepts/")) return "concepts"
   if (s.startsWith("wiki/movements/")) return "movements"
+  if (s.startsWith("wiki/texts/")) return "texts"
   if (s.startsWith("wiki/events/")) return "events"
   if (s.startsWith("wiki/chatters/")) return "chatters"
   return "general"
 }
 
-const CATEGORY_COLORS: Record<GraphNode["category"], { hex: number; css: string; label: string }> = {
-  philosophers: { hex: 0x60a5fa, css: "#60a5fa", label: "Philosophers" },
-  concepts: { hex: 0x34d399, css: "#34d399", label: "Concepts" },
-  movements: { hex: 0xfbbf24, css: "#fbbf24", label: "Movements" },
-  events: { hex: 0xf87171, css: "#f87171", label: "Events & Chronicles" },
-  chatters: { hex: 0xc084fc, css: "#c084fc", label: "Chatters" },
-  general: { hex: 0x94a3b8, css: "#94a3b8", label: "Overviews & Hubs" },
+const CATEGORY_COLORS: Record<GraphNode["category"], { hex: string; label: string }> = {
+  philosophers: { hex: "#60a5fa", label: "Philosophers" },
+  concepts: { hex: "#34d399", label: "Concepts" },
+  movements: { hex: "#fbbf24", label: "Movements" },
+  texts: { hex: "#38bdf8", label: "Canonical Texts" },
+  events: { hex: "#f87171", label: "Events & Chronicles" },
+  chatters: { hex: "#c084fc", label: "Chatters" },
+  general: { hex: "#94a3b8", label: "Overviews & Hubs" },
 }
 
-export function WikiGraph() {
+export function WikiGraph({ cluster, tag, height = 520 }: WikiGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const appRef = useRef<PIXI.Application | null>(null)
-  const isMobile = usePhoneViewport()
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const navigate = useNavigate()
 
   const [stats, setStats] = useState<{ nodes: number; links: number } | null>(null)
   const [hoveredNode, setHoveredNode] = useState<{ title: string; category: string; degree: number } | null>(null)
 
-  const resetViewRef = useRef<() => void>(() => {})
-  const zoomInRef = useRef<() => void>(() => {})
-  const zoomOutRef = useRef<() => void>(() => {})
+  const view = useRef({ x: 0, y: 0, zoom: 0.95 })
+  const nodesRef = useRef<GraphNode[]>([])
+  const linksRef = useRef<GraphLink[]>([])
+  const adj1Ref = useRef<Map<string, Set<string>>>(new Map())
+  const hoveredIdRef = useRef<string | null>(null)
+
+  const isDraggingNode = useRef<GraphNode | null>(null)
+  const isPanning = useRef(false)
+  const panStart = useRef({ x: 0, y: 0, viewX: 0, viewY: 0 })
+  const dragDistance = useRef(0)
+
+  const resetView = useCallback(() => {
+    view.current = { x: 0, y: 0, zoom: 0.95 }
+  }, [])
+
+  const zoomIn = useCallback(() => {
+    view.current.zoom = Math.min(3.5, view.current.zoom * 1.3)
+  }, [])
+
+  const zoomOut = useCallback(() => {
+    view.current.zoom = Math.max(0.2, view.current.zoom / 1.3)
+  }, [])
 
   useEffect(() => {
-    if (!containerRef.current) return
-
+    let cancelled = false
+    let animId: number
     let simulation: d3.Simulation<GraphNode, GraphLink> | null = null
-    let mounted = true
-    const currentContainer = containerRef.current
 
     async function init() {
       const data = await loadGraphData()
-      if (!data || !mounted) return
+      if (!data || cancelled) return
 
-      // Filter exclusively to Wiki notes
       const isWikiSlug = (s: string) => {
         const lower = s.toLowerCase()
         return lower.startsWith("wiki/") || lower === "wiki"
       }
 
-      const wikiRawNodes = data.nodes.filter(n => isWikiSlug(n.id))
-      const wikiNodeIds = new Set(wikiRawNodes.map(n => n.id))
+      let filteredNodes = (data.nodes as RawNode[]).filter(n => isWikiSlug(n.id))
 
-      // Keep links where both source and target are in the wiki
-      const wikiLinks: GraphLink[] = data.links
-        .filter(l => wikiNodeIds.has(l.source) && wikiNodeIds.has(l.target))
+      if (cluster) {
+        const cLower = cluster.toLowerCase()
+        filteredNodes = filteredNodes.filter(n => {
+          const cat = getNodeCategory(n.id)
+          return cat === cLower || n.id.toLowerCase().includes(cLower)
+        })
+      }
+
+      if (tag) {
+        const tLower = tag.toLowerCase()
+        filteredNodes = filteredNodes.filter(n =>
+          n.tags?.some(t => t.toLowerCase().includes(tLower))
+        )
+      }
+
+      const nodeIds = new Set(filteredNodes.map(n => n.id))
+      const filteredLinks: GraphLink[] = data.links
+        .filter(l => nodeIds.has(l.source) && nodeIds.has(l.target))
         .map(l => ({ source: l.source, target: l.target }))
 
-      // Calculate degrees
-      const degrees = new Map<string, number>()
-      wikiLinks.forEach(l => {
+      const degreeMap = new Map<string, number>()
+      const adj1 = new Map<string, Set<string>>()
+
+      for (const l of filteredLinks) {
         const s = typeof l.source === "string" ? l.source : l.source.id
         const t = typeof l.target === "string" ? l.target : l.target.id
-        degrees.set(s, (degrees.get(s) || 0) + 1)
-        degrees.set(t, (degrees.get(t) || 0) + 1)
+        degreeMap.set(s, (degreeMap.get(s) ?? 0) + 1)
+        degreeMap.set(t, (degreeMap.get(t) ?? 0) + 1)
+
+        if (!adj1.has(s)) adj1.set(s, new Set())
+        if (!adj1.has(t)) adj1.set(t, new Set())
+        adj1.get(s)!.add(t)
+        adj1.get(t)!.add(s)
+      }
+
+      adj1Ref.current = adj1
+
+      const categories = Object.keys(CATEGORY_COLORS) as Array<GraphNode["category"]>
+      const clusterCenters = new Map<string, { x: number; y: number }>()
+      const clusterRadius = Math.min(380, 160 + filteredNodes.length * 1.2)
+
+      categories.forEach((cat, idx) => {
+        const angle = (idx / categories.length) * Math.PI * 2
+        clusterCenters.set(cat, {
+          x: Math.cos(angle) * clusterRadius,
+          y: Math.sin(angle) * clusterRadius,
+        })
       })
 
-      const graphNodes: GraphNode[] = wikiRawNodes.map(n => {
-        const category = getNodeCategory(n.id)
-        const degree = degrees.get(n.id) || 0
-        const radius = Math.min(16, Math.max(5, 5 + Math.sqrt(degree) * 2.6))
+      const graphNodes: GraphNode[] = filteredNodes.map(n => {
+        const cat = getNodeCategory(n.id)
+        const center = clusterCenters.get(cat) ?? { x: 0, y: 0 }
+        const deg = degreeMap.get(n.id) ?? 0
+        const jitterR = 50 + Math.random() * 120
+        const jitterA = Math.random() * Math.PI * 2
+
         return {
           id: n.id,
           title: n.title || n.id.split("/").pop() || n.id,
-          category,
-          degree,
-          radius,
-          color: CATEGORY_COLORS[category].hex,
+          category: cat,
+          degree: deg,
+          clusterKey: cat,
+          clusterTargetX: center.x,
+          clusterTargetY: center.y,
+          r: 3.0 + Math.min(14, Math.log2(deg + 1) * 2.4),
+          color: CATEGORY_COLORS[cat].hex,
+          twinkle: Math.random() * Math.PI * 2,
+          x: center.x + Math.cos(jitterA) * jitterR,
+          y: center.y + Math.sin(jitterA) * jitterR,
         }
       })
 
-      setStats({ nodes: graphNodes.length, links: wikiLinks.length })
+      nodesRef.current = graphNodes
+      linksRef.current = filteredLinks
 
-      // Wait for DOM sizing
-      await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())))
-      if (!mounted || !currentContainer) return
+      setStats({ nodes: graphNodes.length, links: filteredLinks.length })
 
-      const width = currentContainer.clientWidth || 700
-      const height = currentContainer.clientHeight || 500
+      simulation = d3
+        .forceSimulation<GraphNode>(graphNodes)
+        .force(
+          "link",
+          d3
+            .forceLink<GraphNode, GraphLink>(filteredLinks)
+            .id(d => d.id)
+            .distance(l => {
+              const sDeg = (l.source as GraphNode).degree ?? 1
+              const tDeg = (l.target as GraphNode).degree ?? 1
+              return 40 + Math.min(60, Math.sqrt(sDeg + tDeg) * 6)
+            })
+            .strength(0.3)
+        )
+        .force(
+          "charge",
+          d3
+            .forceManyBody<GraphNode>()
+            .strength(d => -45 - d.degree * 8)
+            .distanceMax(450)
+        )
+        .force(
+          "collide",
+          d3
+            .forceCollide<GraphNode>()
+            .radius(d => d.r + 6)
+            .iterations(2)
+        )
+        .force(
+          "clusterX",
+          d3.forceX<GraphNode>(d => d.clusterTargetX).strength(0.04)
+        )
+        .force(
+          "clusterY",
+          d3.forceY<GraphNode>(d => d.clusterTargetY).strength(0.04)
+        )
+        .alphaDecay(0.02)
 
-      const app = new PIXI.Application()
-      appRef.current = app
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext("2d", { alpha: true })
+      if (!ctx) return
 
-      await app.init({
-        width,
-        height,
-        backgroundAlpha: 0,
-        antialias: true,
-        resolution: window.devicePixelRatio || 1,
-        autoDensity: true,
-        eventMode: "static",
-      })
+      let lastTime = performance.now()
 
-      if (!mounted || !currentContainer) {
-        app.destroy(true, { children: true, texture: false })
-        appRef.current = null
-        return
-      }
+      function render(time: number) {
+        if (cancelled || !canvas || !ctx) return
+        const dt = (time - lastTime) / 1000
+        lastTime = time
 
-      currentContainer.innerHTML = ""
-      currentContainer.appendChild(app.canvas)
+        const dpr = window.devicePixelRatio || 1
+        const w = canvas.clientWidth
+        const h = canvas.clientHeight
 
-      const stage = new PIXI.Container()
-      app.stage.addChild(stage)
-      stage.x = width / 2
-      stage.y = height / 2
+        if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
+          canvas.width = Math.floor(w * dpr)
+          canvas.height = Math.floor(h * dpr)
+        }
 
-      // D3 Force Simulation
-      simulation = d3.forceSimulation<GraphNode>(graphNodes)
-        .force("link", d3.forceLink<GraphNode, GraphLink>(wikiLinks).id((d: any) => d.id).distance(isMobile ? 50 : 80))
-        .force("charge", d3.forceManyBody().strength(-240))
-        .force("center", d3.forceCenter(0, 0))
-        .force("collision", d3.forceCollide<GraphNode>().radius(d => d.radius + (isMobile ? 6 : 10)))
+        ctx.save()
+        ctx.scale(dpr, dpr)
+        ctx.clearRect(0, 0, w, h)
 
-      const linkLayer = new PIXI.Graphics()
-      stage.addChild(linkLayer)
+        const cx = w / 2 + view.current.x
+        const cy = h / 2 + view.current.y
+        const zoom = view.current.zoom
 
-      const nodeLayer = new PIXI.Container()
-      stage.addChild(nodeLayer)
+        ctx.translate(cx, cy)
+        ctx.scale(zoom, zoom)
 
-      // Interaction state
-      let dragTarget: GraphNode | null = null
-      let isPanning = false
-      let lastPos = { x: 0, y: 0 }
-      let hasDragged = false
-      let currentScale = 1
-      let activeHoveredId: string | null = null
+        const hoveredId = hoveredIdRef.current
+        const adj1 = adj1Ref.current
+        const hAdj = hoveredId ? adj1.get(hoveredId) : null
 
-      resetViewRef.current = () => {
-        stage.x = width / 2
-        stage.y = height / 2
-        currentScale = 1
-        stage.scale.set(1)
-        simulation?.alpha(0.3).restart()
-      }
-
-      zoomInRef.current = () => {
-        currentScale = Math.min(3, currentScale * 1.25)
-        stage.scale.set(currentScale)
-      }
-
-      zoomOutRef.current = () => {
-        currentScale = Math.max(0.25, currentScale / 1.25)
-        stage.scale.set(currentScale)
-      }
-
-      // Adjacency map for hover highlighting
-      const adjacentMap = new Map<string, Set<string>>()
-      wikiLinks.forEach(l => {
-        const s = typeof l.source === "string" ? l.source : (l.source as GraphNode).id
-        const t = typeof l.target === "string" ? l.target : (l.target as GraphNode).id
-        if (!adjacentMap.has(s)) adjacentMap.set(s, new Set())
-        if (!adjacentMap.has(t)) adjacentMap.set(t, new Set())
-        adjacentMap.get(s)!.add(t)
-        adjacentMap.get(t)!.add(s)
-      })
-
-      // Draw nodes
-      graphNodes.forEach(node => {
-        const gfx = new PIXI.Graphics()
-        gfx.circle(0, 0, node.radius).fill(node.color)
-
-        gfx.interactive = true
-        gfx.cursor = "pointer"
-
-        gfx.on("pointerdown", (e) => {
-          e.stopPropagation()
-          dragTarget = node
-          node.fx = node.x
-          node.fy = node.y
-          simulation?.alphaTarget(0.3).restart()
-          hasDragged = false
-        })
-
-        gfx.on("pointerover", () => {
-          activeHoveredId = node.id
-          node.isHovered = true
-          setHoveredNode({
-            title: node.title,
-            category: CATEGORY_COLORS[node.category].label,
-            degree: node.degree,
-          })
-          renderHighlight(node)
-        })
-
-        gfx.on("pointerout", () => {
-          activeHoveredId = null
-          node.isHovered = false
-          setHoveredNode(null)
-          clearHighlight()
-        })
-
-        gfx.on("pointerup", () => {
-          if (!hasDragged) {
-            navigate({ to: `/${node.id}` as any })
-          }
-        })
-
-        const label = new PIXI.Text({
-          text: node.title,
-          style: {
-            fontFamily: "var(--font-code), monospace",
-            fontSize: node.degree > 3 ? 10 : 8,
-            fill: 0xe2e8f0,
-            align: "center",
-          },
-          resolution: 2,
-        })
-        label.anchor.set(0.5, -0.6)
-        label.alpha = node.degree > 2 ? 0.8 : 0.45
-
-        node.gfx = gfx
-        node.label = label
-        nodeLayer.addChild(gfx)
-        nodeLayer.addChild(label)
-      })
-
-      function renderHighlight(activeNode: GraphNode) {
-        const neighbors = adjacentMap.get(activeNode.id) || new Set()
-        graphNodes.forEach(n => {
-          const isNeighbor = n.id === activeNode.id || neighbors.has(n.id)
-          if (n.gfx) n.gfx.alpha = isNeighbor ? 1 : 0.2
-          if (n.label) n.label.alpha = isNeighbor ? 1 : 0.1
-        })
-        drawLinks(activeNode.id)
-      }
-
-      function clearHighlight() {
-        graphNodes.forEach(n => {
-          if (n.gfx) n.gfx.alpha = 1
-          if (n.label) n.label.alpha = n.degree > 2 ? 0.8 : 0.45
-        })
-        drawLinks()
-      }
-
-      function drawLinks(highlightedNodeId?: string) {
-        linkLayer.clear()
-        wikiLinks.forEach(l => {
+        // 1. Draw links
+        const links = linksRef.current
+        for (let i = 0; i < links.length; i++) {
+          const l = links[i]
           const s = l.source as GraphNode
           const t = l.target as GraphNode
-          if (s.x == null || s.y == null || t.x == null || t.y == null) return
+          if (s.x === undefined || s.y === undefined || t.x === undefined || t.y === undefined) continue
 
-          const isConnected = highlightedNodeId && (s.id === highlightedNodeId || t.id === highlightedNodeId)
-          const alpha = highlightedNodeId ? (isConnected ? 0.7 : 0.04) : 0.18
-          const strokeColor = isConnected ? 0x60a5fa : 0x718096
-          const strokeWidth = isConnected ? 1.5 : 0.75
+          const isConnected = hoveredId ? (s.id === hoveredId || t.id === hoveredId) : false
+          const isDimmed = hoveredId ? !isConnected : false
 
-          linkLayer
-            .moveTo(s.x, s.y)
-            .lineTo(t.x, t.y)
-            .stroke({ width: strokeWidth, color: strokeColor, alpha })
-        })
-      }
+          ctx.beginPath()
+          ctx.moveTo(s.x, s.y)
+          ctx.lineTo(t.x, t.y)
 
-      app.stage.interactive = true
-      app.stage.hitArea = new PIXI.Rectangle(-10000, -10000, 20000, 20000)
-
-      app.stage.on("pointerdown", (e) => {
-        if (!dragTarget) {
-          isPanning = true
-          lastPos = { x: e.global.x, y: e.global.y }
-        }
-      })
-
-      app.stage.on("pointermove", (e) => {
-        if (!mounted || !appRef.current) return
-        if (dragTarget) {
-          const pos = e.getLocalPosition(stage)
-          dragTarget.fx = pos.x
-          dragTarget.fy = pos.y
-          hasDragged = true
-        } else if (isPanning) {
-          const dx = e.global.x - lastPos.x
-          const dy = e.global.y - lastPos.y
-          stage.x += dx
-          stage.y += dy
-          lastPos = { x: e.global.x, y: e.global.y }
-        }
-      })
-
-      const endDrag = () => {
-        if (dragTarget) {
-          dragTarget.fx = null
-          dragTarget.fy = null
-          dragTarget = null
-          simulation?.alphaTarget(0)
-        }
-        isPanning = false
-      }
-
-      app.stage.on("pointerup", endDrag)
-      app.stage.on("pointerupoutside", endDrag)
-
-      // Wheel Zoom
-      const onWheel = (e: WheelEvent) => {
-        e.preventDefault()
-        const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89
-        const newScale = Math.min(3, Math.max(0.25, currentScale * zoomFactor))
-        if (newScale !== currentScale) {
-          currentScale = newScale
-          stage.scale.set(currentScale)
-        }
-      }
-      currentContainer.addEventListener("wheel", onWheel, { passive: false })
-
-      // Simulation Tick
-      simulation.on("tick", () => {
-        graphNodes.forEach(n => {
-          if (n.gfx && n.x != null && n.y != null) {
-            n.gfx.x = n.x
-            n.gfx.y = n.y
+          if (isConnected) {
+            ctx.strokeStyle = "rgba(180, 220, 255, 0.75)"
+            ctx.lineWidth = 1.6 / zoom
+          } else if (isDimmed) {
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.04)"
+            ctx.lineWidth = 0.5 / zoom
+          } else {
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.12)"
+            ctx.lineWidth = 0.8 / zoom
           }
-          if (n.label && n.x != null && n.y != null) {
-            n.label.x = n.x
-            n.label.y = n.y
-          }
-        })
-        drawLinks(activeHoveredId || undefined)
-      })
+          ctx.stroke()
+        }
 
-      // Resize observer
-      const resizeObserver = new ResizeObserver(entries => {
-        if (!mounted || !appRef.current) return
-        const { width: w, height: h } = entries[0].contentRect
-        if (w < 2 || h < 2) return
-        appRef.current.renderer.resize(w, h)
-        stage.x = w / 2
-        stage.y = h / 2
-        simulation?.alpha(0.2).restart()
-      })
-      resizeObserver.observe(currentContainer)
+        // 2. Draw nodes
+        const nodes = nodesRef.current
+        for (let i = 0; i < nodes.length; i++) {
+          const n = nodes[i]
+          if (n.x === undefined || n.y === undefined) continue
+
+          n.twinkle = (n.twinkle + dt * 1.8) % (Math.PI * 2)
+          const pulse = 0.85 + 0.15 * Math.sin(n.twinkle)
+
+          const isHovered = n.id === hoveredId
+          const isNeighbor = hAdj ? hAdj.has(n.id) : false
+          const isDimmed = hoveredId ? !isHovered && !isNeighbor : false
+
+          const effectiveR = (isHovered ? n.r * 1.4 : isNeighbor ? n.r * 1.15 : n.r) * (hoveredId ? 1 : pulse)
+
+          // Radial glow for hovered or major hubs
+          if (isHovered || (isNeighbor && n.degree >= 4)) {
+            const glowR = effectiveR * 3
+            const grad = ctx.createRadialGradient(n.x, n.y, effectiveR * 0.5, n.x, n.y, glowR)
+            grad.addColorStop(0, n.color)
+            grad.addColorStop(1, "rgba(0, 0, 0, 0)")
+            ctx.fillStyle = grad
+            ctx.beginPath()
+            ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2)
+            ctx.fill()
+          }
+
+          // Main star core
+          ctx.beginPath()
+          ctx.arc(n.x, n.y, effectiveR, 0, Math.PI * 2)
+          if (isHovered) {
+            ctx.fillStyle = "#ffffff"
+          } else if (isDimmed) {
+            ctx.fillStyle = "rgba(160, 160, 175, 0.2)"
+          } else {
+            ctx.fillStyle = n.color
+          }
+          ctx.fill()
+
+          // Labels: draw for hovered node, 1-hop neighbors, or top hubs when zoomed in
+          const showLabel = isHovered || isNeighbor || (zoom >= 1.2 && n.degree >= 5) || (zoom >= 1.8 && n.degree >= 2)
+          if (showLabel && !isDimmed) {
+            ctx.font = `${Math.max(10, Math.min(13, 11 / zoom))}px "IBM Plex Sans", -apple-system, sans-serif`
+            ctx.textAlign = "center"
+            ctx.textBaseline = "middle"
+
+            const text = n.title
+            const textY = n.y + effectiveR + 10 / zoom
+
+            // Pill backing
+            const textMetrics = ctx.measureText(text)
+            const padX = 4 / zoom
+            const padY = 2 / zoom
+            ctx.fillStyle = isHovered ? "rgba(12, 12, 16, 0.88)" : "rgba(10, 10, 12, 0.65)"
+            ctx.fillRect(
+              n.x - textMetrics.width / 2 - padX,
+              textY - 6 / zoom - padY,
+              textMetrics.width + padX * 2,
+              12 / zoom + padY * 2
+            )
+
+            ctx.fillStyle = isHovered ? "#ffffff" : isNeighbor ? "rgba(240, 240, 250, 0.95)" : "rgba(210, 210, 220, 0.75)"
+            ctx.fillText(text, n.x, textY)
+          }
+        }
+
+        ctx.restore()
+        animId = requestAnimationFrame(render)
+      }
+
+      animId = requestAnimationFrame(render)
     }
 
     init()
 
     return () => {
-      mounted = false
-      simulation?.stop()
-      if (appRef.current) {
-        appRef.current.destroy(true, { children: true, texture: false })
-        appRef.current = null
+      cancelled = true
+      if (simulation) simulation.stop()
+      if (animId) cancelAnimationFrame(animId)
+    }
+  }, [cluster, tag])
+
+  // Mouse / Pointer Interaction handlers
+  const screenToWorld = useCallback((clientX: number, clientY: number) => {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+    const rect = canvas.getBoundingClientRect()
+    const x = (clientX - rect.left - rect.width / 2 - view.current.x) / view.current.zoom
+    const y = (clientY - rect.top - rect.height / 2 - view.current.y) / view.current.zoom
+    return { x, y }
+  }, [])
+
+  const findNodeAt = useCallback((worldX: number, worldY: number): GraphNode | null => {
+    const nodes = nodesRef.current
+    const hitPadding = 10 / view.current.zoom
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n = nodes[i]
+      const dx = n.x - worldX
+      const dy = n.y - worldY
+      const r = n.r + hitPadding
+      if (dx * dx + dy * dy <= r * r) {
+        return n
       }
     }
-  }, [isMobile, navigate])
+    return null
+  }, [])
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    const { x, y } = screenToWorld(e.clientX, e.clientY)
+    const node = findNodeAt(x, y)
+    dragDistance.current = 0
+
+    if (node) {
+      isDraggingNode.current = node
+      node.fx = node.x
+      node.fy = node.y
+    } else {
+      isPanning.current = true
+      panStart.current = {
+        x: e.clientX,
+        y: e.clientY,
+        viewX: view.current.x,
+        viewY: view.current.y,
+      }
+    }
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }, [screenToWorld, findNodeAt])
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    const { x, y } = screenToWorld(e.clientX, e.clientY)
+
+    if (isDraggingNode.current) {
+      const node = isDraggingNode.current
+      node.fx = x
+      node.fy = y
+      dragDistance.current += Math.hypot(e.movementX, e.movementY)
+      return
+    }
+
+    if (isPanning.current) {
+      const dx = e.clientX - panStart.current.x
+      const dy = e.clientY - panStart.current.y
+      view.current.x = panStart.current.viewX + dx
+      view.current.y = panStart.current.viewY + dy
+      dragDistance.current += Math.hypot(e.movementX, e.movementY)
+      return
+    }
+
+    // Hover check
+    const hovered = findNodeAt(x, y)
+    if (hovered) {
+      hoveredIdRef.current = hovered.id
+      setHoveredNode({
+        title: hovered.title,
+        category: CATEGORY_COLORS[hovered.category].label,
+        degree: hovered.degree,
+      })
+    } else {
+      hoveredIdRef.current = null
+      setHoveredNode(null)
+    }
+  }, [screenToWorld, findNodeAt])
+
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isDraggingNode.current) {
+      const node = isDraggingNode.current
+      if (dragDistance.current < 5) {
+        navigate({ to: `/${node.id}` })
+      }
+      node.fx = null
+      node.fy = null
+      isDraggingNode.current = null
+    }
+
+    isPanning.current = false
+    try {
+      ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+    } catch {
+      // Ignored
+    }
+  }, [navigate])
+
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
+    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9
+    const newZoom = Math.max(0.2, Math.min(3.5, view.current.zoom * zoomFactor))
+
+    // Anchor zoom to cursor
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const mouseX = e.clientX - rect.left - rect.width / 2
+    const mouseY = e.clientY - rect.top - rect.height / 2
+
+    view.current.x -= (mouseX - view.current.x) * (zoomFactor - 1)
+    view.current.y -= (mouseY - view.current.y) * (zoomFactor - 1)
+    view.current.zoom = newZoom
+  }, [])
 
   return (
-    <div className={styles.wikiGraph} data-testid="wiki-graph">
+    <div
+      ref={containerRef}
+      className={styles.wikiGraph}
+      style={{ height }}
+    >
       <div className={styles.header}>
         <div className={styles.titleGroup}>
-          <h3 className={styles.title}>Wiki Constellation</h3>
+          <h3 className={styles.title}>
+            {cluster ? `${cluster.toUpperCase()} CONSTELLATION` : tag ? `#${tag.toUpperCase()} MAP` : "PHILOSOPHICAL CONSTELLATION"}
+          </h3>
           {stats && (
             <span className={styles.stats}>
-              {stats.nodes} entries · {stats.links} relations
+              {stats.nodes} nodes · {stats.links} links
             </span>
           )}
         </div>
         <div className={styles.controls}>
-          <button type="button" className={styles.controlBtn} onClick={() => zoomInRef.current()} title="Zoom In">
+          <button className={styles.controlBtn} onClick={zoomIn} title="Zoom in">
             +
           </button>
-          <button type="button" className={styles.controlBtn} onClick={() => zoomOutRef.current()} title="Zoom Out">
+          <button className={styles.controlBtn} onClick={zoomOut} title="Zoom out">
             −
           </button>
-          <button type="button" className={styles.controlBtn} onClick={() => resetViewRef.current()} title="Reset View">
-            Reset
+          <button className={styles.controlBtn} onClick={resetView} title="Reset view">
+            ⟲
           </button>
         </div>
       </div>
 
-      <div ref={containerRef} className={styles.canvasWrapper} />
+      <canvas
+        ref={canvasRef}
+        className={styles.canvasWrapper}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onWheel={handleWheel}
+      />
 
       {hoveredNode && (
         <div className={styles.tooltip}>
           <div className={styles.tooltipTitle}>{hoveredNode.title}</div>
           <div className={styles.tooltipMeta}>
             <span>{hoveredNode.category}</span>
-            <span>{hoveredNode.degree} links</span>
+            <span>{hoveredNode.degree} connections</span>
           </div>
         </div>
       )}
 
       <div className={styles.legend}>
-        {(Object.entries(CATEGORY_COLORS) as [GraphNode["category"], { css: string; label: string }][]).map(
-          ([cat, meta]) => (
-            <span key={cat} className={styles.legendItem}>
-              <span className={styles.legendDot} style={{ backgroundColor: meta.css }} />
-              {meta.label}
-            </span>
-          )
-        )}
+        {Object.entries(CATEGORY_COLORS).map(([key, cat]) => (
+          <div key={key} className={styles.legendItem}>
+            <span className={styles.legendDot} style={{ background: cat.hex }} />
+            <span>{cat.label}</span>
+          </div>
+        ))}
       </div>
     </div>
   )

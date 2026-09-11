@@ -60,9 +60,9 @@ When participants such as [[zack|Zack]] or [[hughchungus|Hugh]] attempt to expla
 
 ## References
 
-[^husserl-ideas]: Husserl, Edmund. *Ideas Pertaining to a Pure Phenomenology and to a Phenomenological Philosophy* (1913). See [[Bibliography#[Husserl-Ideas-1913]]].
-* Heidegger, Martin. *Being and Time* (1927). See [[Bibliography#[Heidegger-BT-1927]]].
-* Sartre, Jean-Paul. *Being and Nothingness* (1943). See [[Bibliography#[Sartre-BN-1943]]].
+[^husserl-ideas]: Husserl, Edmund. *Ideas Pertaining to a Pure Phenomenology and to a Phenomenological Philosophy* (1913). See [[Bibliography#Husserl-Ideas-1913]].
+* Heidegger, Martin. *Being and Time* (1927). See [[Bibliography#Heidegger-BT-1927]].
+* Sartre, Jean-Paul. *Being and Nothingness* (1943). See [[Bibliography#Sartre-BN-1943]].
 
 ## See Also
 

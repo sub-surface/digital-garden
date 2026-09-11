@@ -153,5 +153,5 @@ Foundherentism demonstrates that experiential evidence can directly modulate bel
 
 * **Traditions**: [[British Empiricism]], [[Continental Rationalism]], [[Logical Positivism]], [[Pragmatism]]
 * **Philosophers**: [[René Descartes]], [[David Hume]], [[Gottlob Frege]], [[Ludwig Wittgenstein]], [[Immanuel Kant]]
-* **Core Concepts**: [[The Problem of Induction]], [[The Is-Ought Problem]], [[The Ship of Theseus]]
+* **Core Concepts**: [[The Problem of Induction]], [[Humes Guillotine|Hume's Guillotine]], [[The Ship of Theseus]]
 * **Bibliography**: [[Bibliography#Haack-Evidence-1993]], [[Bibliography#Quine-Dogmas-1951]], [[Bibliography#Descartes-CSM]]

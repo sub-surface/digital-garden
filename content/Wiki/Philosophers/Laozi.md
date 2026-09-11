@@ -106,5 +106,5 @@ For Laozi, the best ruler is an invisible shepherd:
 
 * **Philosophers**: [[Zhuangzi]], [[Heraclitus of Ephesus]], [[Thales of Miletus]], [[Baruch Spinoza]], [[Friedrich Nietzsche]]
 * **Traditions**: [[Madhyamaka]], [[Advaita Vedanta]], [[Map of Philosophy]]
-* **Concepts**: [[The Ship of Theseus]], [[The Experience Machine]], [[The Is-Ought Problem]]
+* **Concepts**: [[The Ship of Theseus]], [[The Experience Machine]], [[Humes Guillotine|Hume's Guillotine]]
 * **Bibliography**: [[Bibliography#Laozi-Daodejing]], [[Bibliography#Zhuangzi-Watson]]

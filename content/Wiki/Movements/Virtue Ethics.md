@@ -128,5 +128,5 @@ In the 1980s, feminist philosophers (Carol Gilligan, *In a Different Voice*, 198
 
 * **Traditions**: [[Deontology]], [[Utilitarianism]], [[Map of Philosophy]]
 * **Philosophers**: [[Aristotle]], [[Plato]], [[Immanuel Kant]], [[David Hume]], [[Friedrich Nietzsche]]
-* **Core Concepts**: [[The Trolley Problem]], [[The Is-Ought Problem]], [[The Experience Machine]]
+* **Core Concepts**: [[The Trolley Problem]], [[Humes Guillotine|Hume's Guillotine]], [[The Experience Machine]]
 * **Bibliography**: [[Bibliography#Aristotle-NE]], [[Bibliography#Anscombe-MMP-1958]], [[Bibliography#MacIntyre-AfterVirtue-1981]]

@@ -149,5 +149,5 @@ Skeptical theists (such as Stephen Wykstra and Peter van Inwagen) attack Premise
 
 * **Traditions**: [[Map of Philosophy]], [[Continental Rationalism]], [[British Empiricism]]
 * **Philosophers**: [[David Hume]], [[Immanuel Kant]], [[G.W.F. Hegel]], [[Baruch Spinoza]], [[Friedrich Nietzsche]]
-* **Core Concepts**: [[The Trolley Problem]], [[The Is-Ought Problem]], [[Foundationalism vs Coherentism]]
+* **Core Concepts**: [[The Trolley Problem]], [[Humes Guillotine|Hume's Guillotine]], [[Foundationalism vs Coherentism]]
 * **Bibliography**: [[Bibliography#Mackie-Evil-1955]], [[Bibliography#Plantinga-God-1974]], [[Bibliography#Rowe-Evil-1979]]

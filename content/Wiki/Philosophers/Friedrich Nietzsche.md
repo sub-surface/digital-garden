@@ -87,7 +87,7 @@ Nietzsche is an enduring intellectual and cultural presence in Phil Chat:
 
 ## References
 
-[^nietzsche-gm]: Nietzsche, Friedrich. *On the Genealogy of Morality*, Essay I. See [[Bibliography#[Nietzsche-Genealogy]]].
+[^nietzsche-gm]: Nietzsche, Friedrich. *On the Genealogy of Morality*, Essay I. See [[Bibliography#Nietzsche-Genealogy]].
 
 ## See Also
 

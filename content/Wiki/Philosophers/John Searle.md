@@ -103,9 +103,40 @@ $$\text{Constitutive Rule: "X counts as Y in context C"}$$
 
 ---
 
+## PhilPapers Survey Profile
+
+*Projected stance based on Searle's corpus:*
+
+### Metaphysics & Mind
+* **Chinese room:** Artificial intelligence cannot understand (formal syntax is neither constitutive of nor sufficient for semantics)
+* **External world:** Direct Realism / Perceptual Realism (we directly perceive mind-independent objects, refuting phenomenalist and representationalist intermediaries)
+* **Free will:** Libertarianism / "The Gap" (*Rationality in Action*; the psychological reality of the gap between reasons and decisions requires non-deterministic neurobiology)
+* **Mind:** Biological Naturalism (consciousness is an emergent biological feature of the brain possessing an irreducible first-person ontology, $1P \neq 3P$)
+* **Zombies:** Impossible / Inconceivable (phenomenal consciousness is biologically caused and causally efficacious)
+
+### Epistemology
+* **Epistemic justification:** Perceptual Direct Realism / Non-skeptical Realism
+* **Knowledge:** Fallibilist Realism (intentionality provides direct, biologically grounded cognitive access to the world)
+
+### Value Theory
+* **Is-ought:** Derivation affirmed (*"How to Derive 'Ought' from 'Is'"*, 1964; institutional facts and constitutive rules generate binding moral obligations from descriptive premises)
+* **Meta-ethics:** Naturalism / Institutional Realism
+* **Moral judgment:** Cognitivism (deontic powers created by speech acts generate genuine objective obligations)
+
+### Logic, Language, & Science
+* **Language:** Speech Act Theory (illocutionary force, intentionality, direction of fit: word-to-world vs. world-to-word)
+* **Science:** Scientific Realism (the universe consists entirely of physical particles in fields of force, within which biological consciousness has evolved)
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** Remedying intellectual pathology; dismantling Cartesian dualism, behaviorism, and computationalism to restore biological reality
+* **God:** Atheism / Methodological Naturalism
+* **Philosophical methods:** Conceptual analysis of intentionality and speech acts, ordinary language reflection, biological realism
+
+---
+
 ## Related Notes & Concepts
 
 * **Philosophers**: [[David Chalmers]], [[Frank Jackson]], [[Ludwig Wittgenstein]], [[René Descartes]]
-* **Concepts**: [[The Chinese Room]], [[The Hard Problem of Consciousness]], [[Philosophical Zombies]], [[The Is-Ought Problem]], [[The Mind-Body Problem]]
+* **Concepts**: [[The Chinese Room]], [[The Hard Problem of Consciousness]], [[Philosophical Zombies]], [[Humes Guillotine|Hume's Guillotine]], [[The Mind-Body Problem]]
 * **Traditions**: [[British Empiricism]], [[Map of Philosophy]]
 * **Bibliography**: [[Bibliography#Searle-MBI-1980]], [[Bibliography#Searle-Social-1995]]

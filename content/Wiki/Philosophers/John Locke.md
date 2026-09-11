@@ -122,6 +122,41 @@ In the *Second Treatise of Government* (1689)[^locke-treatises-ref], Locke provi
 
 ---
 
+## PhilPapers Survey Profile
+
+*Projected stance based on Locke's corpus:*
+
+### Metaphysics & Mind
+* **Abstract objects:** Conceptualism / Nominalism (universals and abstract ideas are creatures of the understanding; only particulars exist in nature)
+* **External world:** Representative Realism / Indirect Realism (ideas in the mind mediate our contact with corpuscular physical objects)
+* **Free will:** Compatibilism (liberty is the power to act or forbear acting according to one's volition; the will itself is not free, for freedom belongs to agents)
+* **Mind:** Agnosticism / Thinking Matter hypothesis (*Essay* IV.iii.6; God could superadd the power of thought to a material system)
+* **Personal identity:** Psychological Continuity / Consciousness (*"Consciousness alone makes self"*, *Essay* II.xxvii; the Prince and the Cobbler)
+* **Time:** Relational (duration is abstracted from the succession of ideas passing across the mind)
+
+### Epistemology
+* **Epistemic justification:** Empiricist Foundationalism (simple ideas of sensation and reflection form the foundational bedrock)
+* **Knowledge:** Empiricism (*tabula rasa*; perception of the connection and agreement, or disagreement and repugnancy, of our ideas)
+* **Innate ideas:** Rejection (Book I of *Essay*; no ideas or principles are imprinted on the soul at birth)
+
+### Value Theory
+* **Meta-ethics:** Theological Natural Law / Moral Rationalism (moral rules are discoverable by reason, grounded in divine will and hedonistic sanctions)
+* **Moral judgment:** Cognitivism (moral assertions possess objective truth-values capable of mathematical demonstration)
+* **Normative ethics:** Deontological Natural Law / Rule-Utilitarian tendencies (natural duties to preserve oneself and mankind)
+* **Political philosophy:** Classical Liberalism / Constitutional Contractarianism (inalienable rights to life, liberty, and property; government by consent)
+
+### Logic, Language, & Science
+* **Language:** Ideational theory of meaning (words signify the private ideas within the mind of the speaker)
+* **Laws of nature:** Regularities established by Divine decree; unknown real essences prevent complete deductive mechanics
+* **Science:** Corpuscularian realism regarding primary qualities; fallibilist modesty regarding the real internal constitution of substances
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** Under-labourer clearing the rubbish from the path of knowledge to assist master-builders like Boyle, Sydenham, and Newton
+* **God:** Theism (cosmological demonstration of an eternal, all-knowing Being in *Essay* IV.x)
+* **Philosophical methods:** "Historical, plain method" (psychological introspection and empirical taxonomy of concepts)
+
+---
+
 ## Related Notes & Concepts
 
 * **Traditions**: [[British Empiricism]], [[Continental Rationalism]], [[Map of Philosophy]]

@@ -58,7 +58,7 @@ The school subsequently divided over philosophical methodology:
 
 ## References
 
-* Garfield, Jay L., trans. *The Fundamental Wisdom of the Middle Way: Nagarjuna's Mulamadhyamakakarika* (1995). See [[Bibliography#[Garfield-Nagarjuna]]].
+* Garfield, Jay L., trans. *The Fundamental Wisdom of the Middle Way: Nagarjuna's Mulamadhyamakakarika* (1995). See [[Bibliography#Garfield-Nagarjuna]].
 
 ## See Also
 

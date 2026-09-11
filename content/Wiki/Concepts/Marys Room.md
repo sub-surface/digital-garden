@@ -28,52 +28,75 @@ Jackson poses the fundamental question: **Does Mary learn anything new when she 
 
 ---
 
-## 2. The Knowledge Argument
+## 2. The Formal Knowledge Argument
 
-Jackson's deduction proceeds through a simple syllogism:
+Jackson formulated the argument in *"Epiphenomenal Qualia"* (1982) and expanded it in *"What Mary Didn't Know"* (1986):
 
-1. Prior to her release, Mary possesses **all the physical information** about human color vision.
-2. Upon seeing the red tomato, Mary learns something new—namely, **what it is like** to experience red (*the phenomenal quale of redness*).
-3. Therefore, there is knowledge and information about the world that is not physical information.
-4. Therefore: **Physicalism is false.**
+> "It seems just obvious that she will learn something about the world and our visual experience of it. But then it is inescapable that her previous knowledge was incomplete. But she had all the physical information. Ergo, physicalism is false."[^jackson-qualia-82]
 
-$$\text{Complete Physical Knowledge} \not\equiv \text{Complete Phenomenal Knowledge}$$
+Formally, the deduction proceeds as follows:
+
+$$\begin{aligned}
+\text{\textbf{P1 (Completeness):}} & \quad \text{Prior to release, Mary knows every physical truth } \phi \in \Phi. \\
+\text{\textbf{P2 (Ignorance):}} & \quad \text{Prior to release, Mary does not know what it is like to experience red } (\psi_{\text{red}} \notin K_{\text{Mary}}). \\
+\text{\textbf{P3 (Epistemic Gap):}} & \quad \text{Therefore, } \Phi \not\vdash \psi_{\text{red}} \text{ (Phenomenal truths are not deducible from physical truths).} \\
+\text{\textbf{P4 (Necessitation):}} & \quad \text{If physicalism is true, complete physical truth metaphysically necessitates all truths } (\Phi \implies_{\square} \Psi). \\
+\hline
+\text{\textbf{Conclusion:}} & \quad \text{\textbf{Physicalism is false:}} \text{ the universe contains irreducible phenomenal properties (qualia).}
+\end{aligned}$$
 
 ---
 
-## 3. Major Physicalist Counter-Arguments
+## 3. Major Physicalist Counter-Strategies
 
-Physicalist philosophers have advanced several influential strategies to defuse the argument:
+Physicalists divide into two broad camps (Chalmers' **Type-A** and **Type-B** physicalism):
 
-### 1. The Ability Hypothesis (David Lewis & Laurence Nemirow)
-* **Argument**: Upon release, Mary does not acquire new *factual* or propositional knowledge (*knowing-that*). Rather, she acquires new practical abilities (*knowing-how*): the ability to recognize, remember, and imagine the color red.
-* **Analogy**: Learning to ride a bicycle or play the violin after reading every physics textbook on mechanics is acquiring a skill, not discovering a non-physical metaphysical fact.
+### 1. The Ability Hypothesis (Type-A: Lewis, Nemirow)
+* **Argument**: David Lewis (1988)[^lewis-1988] and Laurence Nemirow argue that Jackson equivocates on the word *"know"*:
+  * *Knowing-that* (propositional factual knowledge) versus *knowing-how* (practical abilities and skills).
+  * Inside the room, Mary knew all propositional facts. When she steps outside and sees the tomato, she does not learn a new fact about the universe; she acquires new neuro-motor abilities: the skill to recognize, imagine, and remember the color red.
+* **Critique**: Can Mary wonder whether other people's experience of red is the same as hers? If she can entertain hypotheses about qualia, her new state is propositional, not purely procedural.
 
-### 2. The Acquaintance Hypothesis (Earl Conee)
-* **Argument**: Mary does not discover new propositions; she becomes directly acquainted with a physical property she previously only knew by description, analogous to knowing everything about the city of Tokyo from maps before visiting in person.
+### 2. The Acquaintance Hypothesis (Conee, 1994)
+* **Argument**: Earl Conee argues that Mary gains **Knowledge by Acquaintance** (Russell's distinction) rather than knowledge of new facts.
+* Mary becomes directly acquainted with an old, familiar physical property (wavelength processing in V4) under a new direct experiential relation, without discovering non-physical metaphysical entities.
 
-### 3. The Phenomenal Concept Strategy (Brian Loar)
-* **Argument**: Mary gains a new, first-person **phenomenal concept** that refers directly to an old, familiar physical brain state. There is one physical reality viewed under two distinct conceptual modes of presentation (a Fregean distinction between *Sinn* and *Bedeutung*), meaning physicalism remains intact.
+### 3. The Phenomenal Concept Strategy (Type-B: Loar, Sturgeon)
+* **Argument**: Brian Loar (1990)[^loar-1990] formulated the most influential modern defense:
+  * Physicalism does not require that all truths be *a priori* deducible from physics; it requires only that all entities be *ontologically identical* with physical entities (*a posteriori* identity, like $\text{Water} = \text{H}_2\text{O}$).
+  * Mary acquires a new **phenomenal concept** ($C_{\text{phen}}$) that refers directly to the very same physical brain state ($P_{\text{neuro}}$) that she previously grasped via a physical-functional concept ($C_{\text{phys}}$).
+  * There is an epistemic dualism of concepts, but an ontological monism of properties ($1 \text{ Reality}, 2 \text{ Modes of Presentation}$).
 
 ### 4. Daniel Dennett's Verificationist Rebuttal
-* **Argument**: Dennett contends in *Consciousness Explained* (1991) that the thought experiment relies on a failure of imagination. If Mary *truly* possessed all physical knowledge, she could deduce how an unpainted blue banana presented as a trick would affect her nervous system, recognizing the trick instantly.
+* **Argument**: In *Consciousness Explained* (1991), Dennett contends that thought experiments like Mary's rely on a radical failure of imagination:
+  * We cannot genuinely imagine what it is to possess *all* physical knowledge down to the subatomic state of billions of neural circuits.
+  * If Mary truly knew everything, she could predict precisely what internal neural activations an unripe, blue-painted banana would induce, calmly remarking *"You tricked me; this banana is blue."*
 
 ---
 
-## 4. Jackson's Eventual Retraction
+## 4. Jackson's Reversal: From Epiphenomenalism to Physicalism
 
-In an unusual philosophical development, Frank Jackson later retracted the Knowledge Argument, embracing physicalism. Jackson concluded that phenomenal qualia cannot be epiphenomenal (causally inert); if qualia were non-physical and causally detached from the physical brain, Mary's physical vocal cords could never be caused to exclaim *"Wow, red is incredible!"* by a non-physical quale.
+In 1998, Frank Jackson famously repudiated his own thought experiment, converting to physicalism:
+* Jackson realized that to maintain the Knowledge Argument, one must endorse **Epiphenomenalism** (the doctrine that qualia are causally inert side-effects of neural activity).
+* But if qualia have zero causal influence on the physical world, Mary's subjective experience of red could never causally trigger her physical vocal cords to say *"What an amazing color!"*
+* Because our utterances about qualia are undeniably caused by our mental states, phenomenal properties must be causally efficacious physical states of the brain.
 
 ---
 
 ## References
 
-* Jackson, Frank. "Epiphenomenal Qualia" (1982), *The Philosophical Quarterly* 32: 127–136. See [[Bibliography#[Jackson-Qualia-1982]]].
-* Nagel, Thomas. "What Is It Like to Be a Bat?" (1974). See [[Bibliography#[Nagel-Bat-1974]]].
+[^jackson-qualia-82]: Jackson, Frank. "Epiphenomenal Qualia." *The Philosophical Quarterly* 32, no. 127 (1982): 127–136. See [[Bibliography#Jackson-Qualia-1982]].
+[^lewis-1988]: Lewis, David. "What Experience Teaches." *Proceedings of the Russellian Society* 13 (1988): 29–57.
+[^loar-1990]: Loar, Brian. "Phenomenal States." *Philosophical Perspectives* 4 (1990): 81–108.
+
+* Jackson, Frank. "What Mary Didn't Know." *The Journal of Philosophy* 83, no. 5 (1986): 291–295.
+* Nagel, Thomas. "What Is It Like to Be a Bat?" *The Philosophical Review* 83, no. 4 (1974): 435–450. See [[Bibliography#Nagel-Bat-1974]].
 
 ## See Also
 
+* [[Frank Jackson]]
+* [[David Chalmers]]
 * [[The Hard Problem of Consciousness]]
 * [[The Chinese Room]]
 * [[Philosophical Zombies]]
-* [[Continental Rationalism]]
+* [[The Brain in a Vat]]

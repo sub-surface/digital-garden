@@ -93,7 +93,7 @@ export function remarkSidenotes() {
       const supHtml = `<sup class="footnote-marker" data-content="${content
         .replace(/<[^>]*>/g, "")
         .replace(/"/g, "&quot;")
-        .trim()}"><a href="#fn-${id}">${displayLabel}</a></sup>`
+        .trim()}"><a href="#fn-${id}" data-footnote-ref="true">${displayLabel}</a></sup>`
       parent.children.splice(index, 1, { type: "html", value: supHtml } as any)
 
       // Block-level: walk up through inline wrappers (emphasis/strong/link/...)

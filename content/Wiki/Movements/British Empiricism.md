@@ -63,14 +63,14 @@ During the Volume VIII saga of [[The Moggening]], empiricism was stripped of aca
 
 ## References
 
-[^locke-essay]: Locke, John. *An Essay Concerning Human Understanding* (1690), II.i.2. See [[Bibliography#[Locke-Essay]]].
-[^hume-treatise]: Hume, David. *A Treatise of Human Nature* (1739), 1.1.1.7. See [[Bibliography#[Hume-Treatise]]].
-[^hume-induction]: Hume, David. *An Enquiry Concerning Human Understanding* (1748), Section IV. See [[Bibliography#[Hume-Enquiry]]].
+[^locke-essay]: Locke, John. *An Essay Concerning Human Understanding* (1690), II.i.2. See [[Bibliography#Locke-Essay]].
+[^hume-treatise]: Hume, David. *A Treatise of Human Nature* (1739), 1.1.1.7. See [[Bibliography#Hume-Treatise]].
+[^hume-induction]: Hume, David. *An Enquiry Concerning Human Understanding* (1748), Section IV. See [[Bibliography#Hume-Enquiry]].
 
 ## See Also
 
 * [[David Hume]]
 * [[The Problem of Induction]]
 * [[Continental Rationalism]]
-* [[The Is-Ought Problem]]
+* [[Humes Guillotine|Hume's Guillotine]]
 * [[The Moggening]]

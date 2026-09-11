@@ -64,11 +64,35 @@ He formulated the fundamental laws of logic: the Law of Identity ($A = A$), the 
 
 *Projected stance based on Aristotle's corpus:*
 
-* **Mind:** Hylomorphic non-reductionism (the soul is the formal organization of an organic living body)
-* **Meta-ethics:** Moral realism / Naturalist virtue ethics
-* **Knowledge:** Empiricism / Induction (*epagoge*) paired with rational demonstration (*nous*)
-* **Science:** Teleological realism
-* **Free Will:** Compatibilist voluntary agency (*hekousion*)
+### Metaphysics & Mind
+* **Abstract objects:** Moderate Realism / Immanent Realism (universals exist only instantiated in concrete particulars, *in re*; firmly rejecting Platonic transcendent Forms)
+* **External world:** Direct Realism (perceptual faculties receive the sensible forms of mind-independent physical objects without matter)
+* **Free will:** Voluntary Agency (*hekousion*; action originating within the agent under the guidance of deliberation, *bouleusis*)
+* **Mind:** Hylomorphic Non-Reductionism (*De Anima*; the soul is the substantial form and primary actuality of an organic body possessing life potentially)
+* **Personal identity:** Hylomorphic Composite of Form and Matter (individual personal survival ceases upon biological death, though active intellect, *nous poietikos*, may be transpersonal)
+* **Time:** Relational (*Physics* IV; time is the number and measure of motion according to the before and after)
+
+### Epistemology
+* **Epistemic justification:** Demonstrative Foundationalism (*Posterior Analytics*; scientific demonstration rests upon indemonstrable first principles grasped by *nous*)
+* **Knowledge:** Empirical Induction (*epagoge*) ascending from sensible particulars to universal definitions, completed by rational intellectual grasp
+* **Truth:** Classical Correspondence (*Metaphysics* IV; truth is asserting of what is that it is, and of what is not that it is not)
+
+### Value Theory
+* **Aesthetic value:** Objective Realism (*Poetics*; beauty consists in order, symmetry, and definite magnitude, producing catharsis)
+* **Meta-ethics:** Ethical Naturalism / Teleological Realism (the human good is objectively determined by our species-defining function, *ergon*)
+* **Moral judgment:** Cognitivism (practical wisdom, *phronesis*, delivers objective truths about virtuous action in concrete situations)
+* **Moral motivation:** Internalism (moral habituation harmonizes appetitive desires with right reason, *orthos logos*)
+* **Normative ethics:** Virtue Ethics (the doctrine of the mean, *mesotes*; *eudaimonia* as activity of soul in accord with complete virtue)
+* **Political philosophy:** Civic Republicanism (*Politics*; the *polis* exists by nature and is prior to the individual; humanity is by nature a political animal, *zoon politikon*)
+
+### Logic, Language, & Science
+* **Logic:** Classical Syllogistic Deductive Logic (*Organon*; formulated the square of opposition and axiomatic term logic)
+* **Science:** Teleological Realism (complete explanation requires the four causes: material, formal, efficient, and final)
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** Theoretical Contemplation (*theoria*; the divine exercise of philosophical contemplation is the highest form of human flourishing)
+* **God:** Deism / The Prime Mover (*Metaphysics* XII; pure actuality, uncaused first cause, thought thinking itself, *noesis noeseos*)
+* **Philosophical methods:** Surveying reputable opinions (*endoxa*), dialectical resolution of puzzles (*aporiai*), biological taxonomy and empirical dissection
 
 ---
 
@@ -92,9 +116,9 @@ Aristotle serves as the patron philosophical authority for the channel's biologi
 
 ## References
 
-[^aristotle-ne]: Aristotle. *Nicomachean Ethics*, 1097b22–1098a20. See [[Bibliography#[Aristotle-NE]]].
-* Aristotle. *Metaphysics*, 1005b19. See [[Bibliography#[Aristotle-Metaphysics]]].
-* Aristotle. *De Anima*, 412a27. See [[Bibliography#[Aristotle-DeAnima]]].
+[^aristotle-ne]: Aristotle. *Nicomachean Ethics*, 1097b22–1098a20. See [[Bibliography#Aristotle-NE]].
+* Aristotle. *Metaphysics*, 1005b19. See [[Bibliography#Aristotle-Metaphysics]].
+* Aristotle. *De Anima*, 412a27. See [[Bibliography#Aristotle-DeAnima]].
 
 ## See Also
 

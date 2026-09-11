@@ -144,5 +144,5 @@ By the 1950s, logical positivism had largely collapsed under the weight of formi
 
 * **Traditions**: [[British Empiricism]], [[Pragmatism]], [[Map of Philosophy]]
 * **Philosophers**: [[Gottlob Frege]], [[Ludwig Wittgenstein]], [[David Hume]], [[Immanuel Kant]]
-* **Core Concepts**: [[The Problem of Induction]], [[Foundationalism vs Coherentism]], [[The Is-Ought Problem]]
+* **Core Concepts**: [[The Problem of Induction]], [[Foundationalism vs Coherentism]], [[Humes Guillotine|Hume's Guillotine]]
 * **Bibliography**: [[Bibliography#Ayer-LTL-1936]], [[Bibliography#Carnap-Metaphysics-1932]], [[Bibliography#Quine-Dogmas-1951]]

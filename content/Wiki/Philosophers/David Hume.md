@@ -63,11 +63,37 @@ The mind is simply a bundle or theatre of fleeting, perpetually shifting percept
 
 *Projected stance based on Hume's philosophical writings:*
 
-* **Knowledge:** Empiricism
-* **Mind:** Physicalist / Naturalist bundle theory
-* **Free Will:** Compatibilism (liberty as absence of external constraint)
-* **Meta-ethics:** Moral anti-realism / Expressivist sentimentalism
-* **God:** Atheism / Radical agnosticism (*Dialogues Concerning Natural Religion*)
+### Metaphysics & Epistemology
+* **A priori knowledge:** Yes (limited strictly to "Relations of Ideas"—geometry, algebra, arithmetic; *EHU* IV.1)
+* **Abstract objects:** Nominalism (all general ideas are particular images annexed to a custom term; *THN* 1.1.7)
+* **Analytic-synthetic distinction:** Yes (Hume's Fork: Relations of Ideas vs. Matters of Fact)
+* **Epistemic justification:** Naturalist Skepticism / Foundationalism of sensory impressions
+* **External world:** Skepticism / Naturalist realism (belief in external bodies cannot be demonstrated by reason, but is compelled by nature and custom)
+* **Free will:** Compatibilism (liberty is the power of acting or not acting according to the determinations of the will; *EHU* VIII)
+* **Knowledge:** Radical Empiricism (The Copy Principle: every simple idea is a causal copy of an antecedent impression)
+* **Mind:** Bundle theory / Non-substantial naturalism (the mind is a bundle or collection of different perceptions in perpetual flux, *THN* 1.4.6)
+* **Personal identity:** No continuous metaphysical self; an illusion produced by the associative relations of resemblance and causation
+* **Time:** Relational (time cannot be conceived without a succession of changeable objects)
+* **Truth:** Pragmatic correspondence regarding matters of fact
+
+### Value Theory
+* **Aesthetic value:** Intersubjective / Sentiment-based (*"Of the Standard of Taste"*; beauty is no quality in things themselves, but exists in the mind)
+* **Meta-ethics:** Moral anti-realism / Sentimentalist Expressivism (morality is felt rather than cognitively deduced; [[Humes Guillotine|Hume's Guillotine]])
+* **Moral judgment:** Non-cognitivism (*"Reason is, and ought only to be the slave of the passions"*, *THN* 2.3.3)
+* **Moral motivation:** Internalism (passions alone can motivate action; reason alone is completely inert)
+* **Normative ethics:** Sentimentalist virtue ethics grounded in universal sympathy and utility
+* **Political philosophy:** Utilitarian convention / Moderate constitutionalism (government arises to stabilize property and enforce justice)
+
+### Logic, Language, & Science
+* **Laws of nature:** Humean regularity (laws are constant conjunctions observed in experience; no metaphysical necessary connection in the objects)
+* **Logic:** Inductive skepticism (the [[The Problem of Induction|Problem of Induction]]: inductive inferences have zero rational justification)
+* **Science:** Instrumentalism / Empirical regularity
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** Anatomist of human nature; liberating the mind from superstitious dogmatism
+* **God:** Radical Agnosticism / De facto Atheism (*Dialogues Concerning Natural Religion*; critiques of design argument and miracles)
+* **Philosophical methods:** Experimental empirical observation applied to moral subjects, mitigated skepticism
+* **Philosophical progress:** A lot (destroying rationalist dogmatism and metaphysical illusions)
 
 ---
 
@@ -90,12 +116,12 @@ Hume is a central reference point in channel disputes regarding determinism, sta
 
 ## References
 
-[^hume-ehu]: Hume, David. *An Enquiry Concerning Human Understanding* (1748), Section IV. See [[Bibliography#[Hume-Enquiry]]].
-[^hume-thn]: Hume, David. *A Treatise of Human Nature* (1739), 1.4.6.3. See [[Bibliography#[Hume-Treatise]]].
+[^hume-ehu]: Hume, David. *An Enquiry Concerning Human Understanding* (1748), Section IV. See [[Bibliography#Hume-Enquiry]].
+[^hume-thn]: Hume, David. *A Treatise of Human Nature* (1739), 1.4.6.3. See [[Bibliography#Hume-Treatise]].
 
 ## See Also
 
 * [[British Empiricism]]
 * [[The Problem of Induction]]
-* [[The Is-Ought Problem]]
+* [[Humes Guillotine|Hume's Guillotine]]
 * [[Immanuel Kant]]

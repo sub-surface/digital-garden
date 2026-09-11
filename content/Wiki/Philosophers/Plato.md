@@ -89,9 +89,9 @@ Plato is frequently summoned in channel debates over the nature of mathematics, 
 
 ## References
 
-[^plato-republic]: Plato. *The Republic*, 514a–520a. See [[Bibliography#[Plato-Republic]]].
-* Plato. *Theaetetus*, 201c–210d. See [[Bibliography#[Plato-Theaetetus]]].
-* Cooper, John M., ed. *Plato: Complete Works* (1997). See [[Bibliography#[Plato-Complete]]].
+[^plato-republic]: Plato. *The Republic*, 514a–520a. See [[Bibliography#Plato-Republic]].
+* Plato. *Theaetetus*, 201c–210d. See [[Bibliography#Plato-Theaetetus]].
+* Cooper, John M., ed. *Plato: Complete Works* (1997). See [[Bibliography#Plato-Complete]].
 
 ## See Also
 

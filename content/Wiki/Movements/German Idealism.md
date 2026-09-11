@@ -70,8 +70,8 @@ Whenever arguments between Quigley and Hugh stall, Charlie regularly demands the
 
 ## References
 
-* Hegel, G.W.F. *Phenomenology of Spirit* (1807). Translated by Terry Pinkard. See [[Bibliography#[Hegel-Phenomenology]]].
-* Kant, Immanuel. *Critique of Pure Reason* (1781/1787). See [[Bibliography#[Kant-CPR]]].
+* Hegel, G.W.F. *Phenomenology of Spirit* (1807). Translated by Terry Pinkard. See [[Bibliography#Hegel-Phenomenology]].
+* Kant, Immanuel. *Critique of Pure Reason* (1781/1787). See [[Bibliography#Kant-CPR]].
 
 ## See Also
 

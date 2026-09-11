@@ -71,7 +71,7 @@ Philosophers of science have proposed several responses to Hume's challenge:
 
 ## References
 
-* Hume, David. *An Enquiry Concerning Human Understanding* (1748), Section IV. See [[Bibliography#[Hume-Enquiry]]].
+* Hume, David. *An Enquiry Concerning Human Understanding* (1748), Section IV. See [[Bibliography#Hume-Enquiry]].
 * Goodman, Nelson. *Fact, Fiction, and Forecast*. Cambridge, MA: Harvard University Press, 1955.
 
 ## See Also

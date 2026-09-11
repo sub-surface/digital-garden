@@ -1,7 +1,7 @@
 - date: 2026-09-11
   area: wiki
   title: "Obsidian physics constellation graph, extensive canonical philosophy expansion, and handoff specification"
-  status: in-progress
+  status: complete
   files:
     - src/components/ui/graph/ConstellationPage.tsx
     - src/components/ui/graph/ConstellationPage.module.scss
@@ -33,3 +33,98 @@
     - "Wikilink section targets adhere to standard Obsidian format [[Note#Heading]] to avoid bracket collision with markdown parser tokens."
     - "Handoff.md created at repository root to serve as the unified, unambiguous blueprint for the next context session."
   next: "Execute Handoff.md: replace WikiGraph with Canvas 2D, fix pre code CSS, restructure wiki index, and build out Thought Experiments and Canonical Texts directories."
+
+- date: 2026-09-11
+  area: wiki
+  title: "Philchat Wiki academic elevation, Canvas 2D WikiGraph engine, bi-directional citations, and canonical corpus expansion"
+  status: complete
+  files:
+    - src/components/mdx/WikiGraph.tsx
+    - src/components/mdx/MDXProvider.tsx
+    - src/styles/base.scss
+    - src/lib/remark-sidenotes.ts
+    - src/components/ui/reader/LinkPreview.tsx
+    - content/Wiki/Bibliography.md
+    - content/Wiki/index.mdx
+    - content/Wiki/Map of Philosophy.mdx
+    - content/Wiki/About.md
+    - content/Wiki/Style-Guide.md
+    - content/Wiki/Texts/index.md
+    - content/Wiki/Texts/Ethics (Spinoza).md
+    - content/Wiki/Texts/Critique of Pure Reason (Kant).md
+    - content/Wiki/Texts/Tractatus Logico-Philosophicus (Wittgenstein).md
+    - content/Wiki/Texts/Being and Time (Heidegger).md
+    - content/Wiki/Texts/A Theory of Justice (Rawls).md
+    - content/Wiki/Concepts/index.md
+    - content/Wiki/Concepts/The Teletransporter.md
+    - content/Wiki/Concepts/The Violinist.md
+    - content/Wiki/Concepts/The Brain in a Vat.md
+    - content/Wiki/Concepts/Molyneuxs Problem.md
+    - content/Wiki/Movements/Deontology.md
+    - ROADMAP.md
+  changes:
+    - "Replaced Pixi.js in WikiGraph.tsx with a zero-eval pure Canvas 2D + D3 force simulation engine featuring hover halos, cluster coloring, dynamic physics, and category filtering, eliminating CSP unsafe-eval crashes on Cloudflare Workers."
+    - "Scoped unclassed inline code styling in src/styles/base.scss to :not(pre) > code:not([class]) and reset pre code rules, eliminating patchy grey background pills behind words in ASCII diagrams."
+    - "Standardized 50+ bibliographic anchors with semantic <span id=\"Key\" className=\"citation-key\"> tags, resolving all [[Bibliography#[Key]]] and [[Bibliography#Key]] links across 25+ files to standard Obsidian wikilinks."
+    - "Enhanced LinkPreview.tsx with targeted anchor resolution and footnote hover detection (via data-footnote-ref), powering bi-directional popup previews for citations and footnotes."
+    - "Re-architected content/Wiki/index.mdx into a rigorous academic portal, placing The Architecture of Philosophy, Traditions & Movements, Canonical Thinkers, Thought Experiments, and Canonical Text Analyses at the top while cleanly archiving community chronicles below."
+    - "Authored five proposition-by-proposition structural analyses of foundational treatises in content/Wiki/Texts/: Spinoza's Ethics, Kant's Critique of Pure Reason, Wittgenstein's Tractatus Logico-Philosophicus, Heidegger's Being and Time, and Rawls' A Theory of Justice."
+    - "Authored four rigorous analytical thought experiments in content/Wiki/Concepts/: The Teletransporter (Parfit), The Violinist (Thomson), The Brain in a Vat (Putnam/Nozick), and Molyneux's Problem (Locke/Project Prakash), adhering to strict anti-duplication rules."
+    - "Created Map of Content directory at content/Wiki/Texts/index.md and enriched content/Wiki/Map of Philosophy.mdx with cross-links to all canonical texts, thought experiments, and category mappings."
+    - "Updated About.md and Style-Guide.md with standards for canonical texts, thought experiments, zero-emoji policy, and citation anchors."
+    - "Logged low-urgency browser diagnostics and CSP audit item under Item 21 in ROADMAP.md."
+  decisions:
+    - "Maintained strict zero-emoji convention across all newly authored articles, frontmatter, and UI elements to preserve scholarly tone."
+    - "Preserved root content/Wiki/Logic of Sense.md completely untouched in accordance with user constraints."
+    - "Placed new thought experiments in content/Wiki/Concepts/ to respect the established folder hierarchy and prevent concept duplication."
+  next: "Verification suite complete with 0 errors across TypeScript, Vitest, and Cloudflare Worker bundles."
+
+- date: 2026-09-11
+  area: wiki
+  title: "LocalGraph Canvas 2D re-architecture, Hume's Guillotine transition, philosophical razors, PhilPapers Survey standardization, and rigorous conceptual elevation"
+  status: complete
+  files:
+    - src/components/ui/graph/LocalGraph.tsx
+    - src/components/ui/graph/ConstellationPage.tsx
+    - src/components/mdx/WikiGraph.tsx
+    - content/Wiki/Concepts/Humes Guillotine.md
+    - content/Wiki/Concepts/Occams Razor.md
+    - content/Wiki/Concepts/Hanlons Razor.md
+    - content/Wiki/Concepts/Hitchens Razor.md
+    - content/Wiki/Concepts/Grices Maxims.md
+    - content/Wiki/Concepts/The Principle of Charity.md
+    - content/Wiki/Concepts/Poppers Demarcation Criterion.md
+    - content/Wiki/Concepts/The Trolley Problem.md
+    - content/Wiki/Concepts/The Experience Machine.md
+    - content/Wiki/Concepts/The Chinese Room.md
+    - content/Wiki/Concepts/Marys Room.md
+    - content/Wiki/Concepts/The Ship of Theseus.md
+    - content/Wiki/Texts/Logic of Sense (Deleuze).md
+    - content/Wiki/Philosophers/John Locke.md
+    - content/Wiki/Philosophers/René Descartes.md
+    - content/Wiki/Philosophers/John Rawls.md
+    - content/Wiki/Philosophers/Philippa Foot.md
+    - content/Wiki/Philosophers/Robert Nozick.md
+    - content/Wiki/Philosophers/John Searle.md
+    - content/Wiki/Philosophers/G.W.F. Hegel.md
+    - content/Wiki/Philosophers/Martin Heidegger.md
+    - content/Wiki/Philosophers/Aristotle.md
+    - content/Wiki/Philosophers/David Hume.md
+    - content/Wiki/Philosophers/Immanuel Kant.md
+    - content/Wiki/Philosophers/Baruch Spinoza.md
+    - content/Wiki/Proposed Articles.md
+    - content/Wiki/Bibliography.md
+  changes:
+    - "Re-architected LocalGraph.tsx from Pixi.js onto a pure Canvas 2D and D3 force simulation engine, eliminating ~570KB bundle overhead, texture leaks, and CSP unsafe-eval restrictions."
+    - "Implemented robust slug and basename normalization in LocalGraph, resolving the current note's 1st-degree neighborhood and extracting all inter-neighbor connections."
+    - "Replaced square root node radius scaling with continuous logarithmic scaling across LocalGraph.tsx, ConstellationPage.tsx, and WikiGraph.tsx."
+    - "Renamed 'The Is-Ought Problem' to 'Humes Guillotine' with aliases, formal logic, and updated canonical wikilinks across all concept, movement, and philosopher notes."
+    - "Relocated Logic of Sense from root wiki into content/Wiki/Texts/Logic of Sense (Deleuze).md with canonical frontmatter, preserving its propositional architecture."
+    - "Authored six high-rigor philosophical razors and communicative maxims: Occam's Razor, Hanlon's Razor, Hitchens's Razor, Grice's Maxims, The Principle of Charity, and Popper's Demarcation Criterion."
+    - "Standardized 5-domain PhilPapers Survey profiles across canonical philosophers (Locke, Descartes, Rawls, Foot, Nozick, Searle, Hegel, Heidegger, Aristotle, Hume, Kant, Spinoza) enabling direct comparative analysis."
+    - "Elevated core thought experiments (The Trolley Problem with Thomson's Loop and Kamm's PPH, The Experience Machine with De Brigard's reverse experiments, The Chinese Room with formal axioms, Mary's Room with Type-B physicalism, and The Ship of Theseus with formal mereology and 4D stage theory)."
+    - "Expanded Proposed Articles roadmap with historical turning points (May '68, Vienna Circle, Davos Disputation), canonical texts backlog (Foucault, Debord, Merleau-Ponty), and contemporary problems (Algorithmic Governmentality, Neuroexistentialism)."
+  decisions:
+    - "Maintained strict zero-emoji policy across all newly authored and updated notes."
+    - "Configured aliases: ['The Is-Ought Problem', 'Is-Ought Problem', 'Hume's Law'] in Humes Guillotine.md to maintain complete backward compatibility with any legacy routes or external bookmarks."
+

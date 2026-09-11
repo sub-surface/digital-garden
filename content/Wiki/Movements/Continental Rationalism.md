@@ -65,9 +65,9 @@ When debates between reductive physicalism and panpsychism emerge, Spinoza is co
 
 ## References
 
-[^descartes-med]: Descartes, René. *Meditations on First Philosophy* (1641). See [[Bibliography#[Descartes-CSM]]].
-[^spinoza-ethics]: Spinoza, Baruch. *Ethica, ordine geometrico demonstrata* (1677). See [[Bibliography#[Spinoza-Curley]]].
-[^leibniz-psr]: Leibniz, G.W. *Monadology* (1714), §§31–32. See [[Bibliography#[Leibniz-AG]]].
+[^descartes-med]: Descartes, René. *Meditations on First Philosophy* (1641). See [[Bibliography#Descartes-CSM]].
+[^spinoza-ethics]: Spinoza, Baruch. *Ethica, ordine geometrico demonstrata* (1677). See [[Bibliography#Spinoza-Curley]].
+[^leibniz-psr]: Leibniz, G.W. *Monadology* (1714), §§31–32. See [[Bibliography#Leibniz-AG]].
 
 ## See Also
 

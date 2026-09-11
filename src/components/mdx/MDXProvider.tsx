@@ -26,10 +26,10 @@ const LazyPhotoAlbums = lazy(() => import("@/components/ui/shelves/PhotographyPa
 const LazyMachineGod = lazy(() => import("./MachineGod").then((m) => ({ default: m.MachineGod })))
 const LazyWikiGraph = lazy(() => import("./WikiGraph").then((m) => ({ default: m.WikiGraph })))
 
-function WikiGraph() {
+function WikiGraph(props: any) {
   return (
-    <Suspense fallback={<div className="loading-shimmer" style={{ height: 480, margin: "24px 0" }}>Waking the constellation...</div>}>
-      <LazyWikiGraph />
+    <Suspense fallback={<div className="loading-shimmer" style={{ height: props?.height || 520, margin: "24px 0" }}>Waking the constellation...</div>}>
+      <LazyWikiGraph {...props} />
     </Suspense>
   )
 }

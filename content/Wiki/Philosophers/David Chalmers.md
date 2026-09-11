@@ -93,8 +93,8 @@ Chalmers is structurally interwoven into the Philchat Wiki:
 
 ## References
 
-* Chalmers, David J. *The Conscious Mind* (1996). See [[Bibliography#[Chalmers-Conscious-1996]]].
-* Bourget, David, and David J. Chalmers. "Philosophers on Philosophy: The 2020 PhilPapers Survey" (2023). See [[Bibliography#[PhilPapers-2020]]].
+* Chalmers, David J. *The Conscious Mind* (1996). See [[Bibliography#Chalmers-Conscious-1996]].
+* Bourget, David, and David J. Chalmers. "Philosophers on Philosophy: The 2020 PhilPapers Survey" (2023). See [[Bibliography#PhilPapers-2020]].
 
 ## See Also
 

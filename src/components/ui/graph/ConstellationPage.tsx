@@ -199,7 +199,7 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
             clusterKey,
             clusterTargetX: center.x,
             clusterTargetY: center.y,
-            r: 2.2 + Math.min(8, Math.sqrt(deg) * 2.2),
+            r: 2.5 + Math.min(14, Math.log2(deg + 1) * 2.5),
             twinkle: Math.random() * Math.PI * 2,
             degree: deg,
             hue: hueForTag(tag),

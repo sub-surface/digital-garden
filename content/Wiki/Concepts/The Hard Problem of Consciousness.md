@@ -74,8 +74,8 @@ In Philchat, the Hard Problem is the central touchstone of the server's long-run
 
 ## References
 
-[^chalmers-1995]: Chalmers, David J. "Facing Up to the Problem of Consciousness" (1995), *Journal of Consciousness Studies* 2: 200–219. See [[Bibliography#[Chalmers-Conscious-1996]]].
-* Nagel, Thomas. "What Is It Like to Be a Bat?" (1974). See [[Bibliography#[Nagel-Bat-1974]]].
+[^chalmers-1995]: Chalmers, David J. "Facing Up to the Problem of Consciousness" (1995), *Journal of Consciousness Studies* 2: 200–219. See [[Bibliography#Chalmers-Conscious-1996]].
+* Nagel, Thomas. "What Is It Like to Be a Bat?" (1974). See [[Bibliography#Nagel-Bat-1974]].
 
 ## See Also
 

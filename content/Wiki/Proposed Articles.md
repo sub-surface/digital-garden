@@ -133,9 +133,16 @@ Entries marked with an asterisk are actively prioritized for the immediate draft
 * **[[Theodor Adorno]]** — *Negative Dialectics*, *Dialectic of Enlightenment* (with Horkheimer), and critique of the culture industry.
 * **[[Emmanuel Levinas]]** — *Totality and Infinity*, the ethical face-to-face encounter, and ethics as first philosophy.
 * **[[Michel Foucault]]*** — *Discipline and Punish*, *The History of Sexuality*, archaeological/genealogical method, and biopolitics.
+* **[[Guy Debord]]*** — *The Society of the Spectacle*, Situationist International, detournement, psychogeography, and critique of consumer alienation.
 * **[[Jacques Derrida]]** — *Of Grammatology*, deconstruction, différance, and critique of the metaphysics of presence.
 * **[[Jean-François Lyotard]]** — *The Postmodern Condition*, incredulity toward metanarratives, and the differend.
 * **[[Slavoj Žižek]]** — *The Sublime Object of Ideology*, Lacanian psychoanalytic theory, and Hegelian political ontology.
+* **[[Byung-Chul Han]]*** — *The Burnout Society*, *Psychopolitics*, neoliberal self-exploitation, digital panopticism, and the expulsion of the other.
+* **[[Bernard Stiegler]]*** — *Technics and Time*, technogenesis, tertiary retention, grammatization, and systemic proletarianization of the mind.
+* **[[Donna Haraway]]*** — *A Cyborg Manifesto*, *Staying with the Trouble*, situated knowledges, companion species, and the Chthulucene.
+* **[[Catherine Malabou]]*** — *The Future of Hegel*, *Ontology of the Accident*, destructive plasticity, and the philosophical synthesis of neurology and psychoanalysis.
+* **[[Quentin Meillassoux]]*** — *After Finitude*, the critique of correlationism, the ancestral realm, and the radical hyper-contingency of physical laws.
+* **[[Yuk Hui]]*** — *The Question Concerning Technology in China*, *Recursivity and Contingency*, cosmotechnics, and pluralizing technological ontology.
 
 ---
 
@@ -172,7 +179,7 @@ Entries marked with an asterisk are actively prioritized for the immediate draft
 
 ---
 
-## 10. Foundational Concepts & Thought Experiments
+## 10. Foundational Concepts, Razors & Thought Experiments
 
 * **[[The Ship of Theseus]]*** — Persistence, material constitution, and criterion of numerical identity over time.
 * **[[The Chinese Room]]*** — Syntax versus semantics, computationalism, and the limits of strong artificial intelligence.
@@ -186,7 +193,13 @@ Entries marked with an asterisk are actively prioritized for the immediate draft
 * **[[Foundationalism vs Coherentism]]*** — Epistemic regress problem and rival architectures of empirical justification.
 * **[[The Mind-Body Problem]]*** — The ontological relation between conscious mental states and physical neurobiology.
 * **[[Substance Monism]]*** — The metaphysical doctrine of a singular, all-encompassing substance (Spinoza, Parmenides).
-* **[[The Is-Ought Problem]]*** — The gap between factual descriptive premises and evaluative prescriptive conclusions.
+* **[[Humes Guillotine]]*** — The logical gap between factual descriptive premises and evaluative normative conclusions.
+* **[[Occams Razor]]*** — Ontological parsimony, syntactic elegance, and the Bayesian penalty for superfluous entities.
+* **[[Hanlons Razor]]*** — Bounded rationality, error attribution, and the heuristic of cognitive over malfeasant explanations.
+* **[[Hitchens Razor]]*** — Epistemic evidentialism and the rejection of unevidenced assertions without evidential counter-proof.
+* **[[Grices Maxims]]*** — The Cooperative Principle, conversational implicature, and pragmatics of communicative intent.
+* **[[The Principle of Charity]]*** — Radical interpretation, maximizing interlocutor rationality, and epistemic steelmanning.
+* **[[Poppers Demarcation Criterion]]*** — Empirical falsifiability via *modus tollens* distinguishing genuine science from pseudoscience.
 * **[[The Problem of Evil]]*** — Logical and evidential challenges reconciling evil with an omnipotent, omnibenevolent deity.
 * **[[Moral Realism vs Anti-Realism]]** — The ontological status and truth-aptness of ethical statements.
 * **[[Compatibilism vs Incompatibilism]]** — Free will, causal determinism, moral responsibility, and alternative possibilities.
@@ -203,6 +216,7 @@ Entries marked with an asterisk are actively prioritized for the immediate draft
 * **[[The Lucas-Penrose Argument]]** — Gödelian anti-computationalism; claiming human mathematical insight cannot be reduced to a Turing machine algorithm.
 * **[[Artificial Qualia and Machine Sentience]]** — Ethical obligations to synthetic intelligences; criteria for attributing phenomenal consciousness to digital networks.
 * **[[The Teleoplexy of the Machine God]]** — Cybernetic runaway feedback and the theological dimensions of emergent synthetic superintelligence.
+* **[[Algorithmic Governmentality & Surveillance Capitalism]]*** — Shoshana Zuboff, Antoinette Rouvroy, and Thomas Berns; statistical profiling, pre-emptive nudging, and automated governance bypassing conscious agency.
 
 ---
 
@@ -215,6 +229,7 @@ Entries marked with an asterisk are actively prioritized for the immediate draft
 * **[[Panpsychism and Integrated Information Theory (IIT)]]** — Tononi and Koch; consciousness as an intrinsic property of all integrated causal networks ($\Phi$).
 * **[[Illusionism and Type-A Materialism]]** — Keith Frankish and Daniel Dennett; phenomenal qualia as an introspective user-illusion.
 * **[[Animal Minds and Interspecies Ethics]]** — Cephalopod consciousness, mammalian pain, and Peter Singer's challenge to speciesism.
+* **[[Neuroexistentialism]]*** — Owen Flanagan and Gregg Caruso; the contemporary existential crisis provoked by neuroscience's mechanistic reduction of selfhood, free will, and moral responsibility.
 
 ---
 
@@ -237,3 +252,26 @@ Entries marked with an asterisk are actively prioritized for the immediate draft
 * **[[Dark Deleuzianism and CCRU Cybernetics]]** — The Warwick school, Nick Land, and the unraveling of liberal humanism in the face of thermodynamic entropy.
 * **[[Mark Fisher and Hauntology]]** — The slow cancellation of the future, capitalist realism, and the persistence of unfulfilled modernities.
 * **[[The Philosophy of the Photographic Image]]** — Roland Barthes (*Camera Lucida*, stadium and punctum), Vilém Flusser (technical images and black boxes), and spectatorial attention.
+
+---
+
+## 15. Watershed Events & Political Turning Points
+
+* **[[May '68 and the Post-Structuralist Turn]]*** — The Paris general strike and student uprising, Situationist International (Guy Debord, Raoul Vaneigem), the occupation of the Sorbonne, and the intellectual genesis of post-structuralist thought (Foucault, Deleuze, Guattari, Lyotard, Baudrillard).
+* **[[The Vienna Circle and the Scientific World-Conception]]** — The 1929 Ernst Mach Society manifesto (*Wissenschaftliche Weltauffassung*); Moritz Schlick, Rudolf Carnap, and Otto Neurath's campaign for physicalism and the elimination of metaphysics.
+* **[[The Davos Disputation (1929)]]** — The legendary confrontation between Ernst Cassirer (Neo-Kantian humanism) and Martin Heidegger (existential fundamental ontology) on the destiny of Western philosophy.
+* **[[The Frankfurt School in Exile]]** — Horkheimer, Adorno, and Marcuse's relocation to New York and California; theorizing authoritarianism, instrumental reason, and the culture industry amidst European totalitarianism.
+
+---
+
+## 16. Canonical Philosophical Texts Backlog
+
+* **[[Discipline and Punish (Foucault)]]*** — *Surveiller et punir* (1975); the birth of the prison, panopticism, disciplinary power, and the micro-physics of political bodies.
+* **[[The Order of Things (Foucault)]]*** — *Les mots et les choses* (1966); the archaeology of the human sciences, classical representation, and the historical death of "Man."
+* **[[Anti-Oedipus (Deleuze & Guattari)]]*** — *Capitalisme et schizophrénie* (1972); schizoanalysis, desiring-production, critique of psychoanalytic familialism, and the political unconscious.
+* **[[The Society of the Spectacle (Debord)]]*** — *La société du spectacle* (1967); commodity fetishism elevated to total media mediation, separation perfected, and radical council communism.
+* **[[Phenomenology of Perception (Merleau-Ponty)]]*** — *Phénoménologie de la perception* (1945); the lived body (*corps propre*), intentional arc, and motor intentionality.
+* **[[Being and Time (Heidegger)]]*** — *Sein und Zeit* (1927); fundamental ontology of Dasein, ready-to-hand (*Zuhandenheit*), thrownness, care, and ecstatic temporality.
+* **[[Critique of Pure Reason (Kant)]]*** — *Kritik der reinen Vernunft* (1781/1787); the Copernican revolution, synthetic a priori judgments, transcendental deduction, and antinomies.
+* **[[Ethics (Spinoza)]]*** — *Ethica Ordine Geometrico Demonstrata* (1677); geometrical proof of substance monism (*Deus sive Natura*), parallel attributes, and the intellectual love of God.
+

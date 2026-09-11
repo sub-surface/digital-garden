@@ -68,8 +68,8 @@ Rawls' construct has been the focal point of debate in Anglo-American political 
 
 ## References
 
-* Rawls, John. *A Theory of Justice* (1971). See [[Bibliography#[Rawls-TJ-1971]]].
-* Nozick, Robert. *Anarchy, State, and Utopia* (1974). See [[Bibliography#[Nozick-ASU-1974]]].
+* Rawls, John. *A Theory of Justice* (1971). See [[Bibliography#Rawls-TJ-1971]].
+* Nozick, Robert. *Anarchy, State, and Utopia* (1974). See [[Bibliography#Nozick-ASU-1974]].
 
 ## See Also
 

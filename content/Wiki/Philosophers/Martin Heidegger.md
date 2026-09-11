@@ -126,6 +126,37 @@ In his prophetic 1954 lecture *"The Question Concerning Technology"* (*Die Frage
 
 ---
 
+## PhilPapers Survey Profile
+
+*Projected stance based on Heidegger's corpus:*
+
+### Metaphysics & Mind
+* **External world:** Beyond Realism/Idealism (the world is the pre-reflective clearing, *Lichtung*, within which entities disclose themselves to Dasein)
+* **Free will:** Resoluteness within Thrownness (*Geworfenheit*; freedom is authentic projection within historically conditioned facticity)
+* **Mind:** Anti-Cartesian / Embodied-Enactive (rejects the isolated *res cogitans*; Dasein is fundamentally Being-in-the-world, *In-der-Welt-sein*)
+* **Personal identity:** Temporal Care Structure (*Sorge*; selfhood is constituted through ecstatic temporality and Being-toward-Death, *Sein-zum-Tode*)
+* **Time:** Ecstatic-Horizonal Temporality (time is not a linear succession of point-like "nows," but the unified dimensional ecstasy of past thrownness, future projection, and present engagement)
+
+### Epistemology
+* **Epistemic justification:** Hermeneutic Circle (all interpretation is grounded in the fore-structure of understanding: *Vor-habe*, *Vor-sicht*, and *Vor-griff*)
+* **Knowledge:** Primacy of Practical Coping (*Zuhandenheit* precedes *Vorhandenheit*; theoretical knowledge derives from the breakdown of unreflective coping)
+* **Truth:** *Aletheia* / Unconcealment (truth is primordial disclosure and clearing rather than propositional correspondence between statement and object)
+
+### Value Theory
+* **Meta-ethics:** Anti-axiological (rejects abstract "values" as modern subjective reifications; grounds ethics in the original Greek sense of *ethos* as authentic dwelling)
+* **Normative stance:** Authenticity (*Eigentlichkeit*) versus fallen conformity to "The They" (*Das Man*)
+
+### Logic, Language, & Science
+* **Language:** "The House of Being" (*"Die Sprache ist das Haus des Seins"*; language speaks through humanity; poetic naming gathers world and thing)
+* **Science:** Derivative Ontic Inquiry (natural science investigates present-at-hand entities, made possible only by a prior ontological clearing)
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** Fundamental Ontology / The Question of Being (*Seinsfrage*; overcoming the 2,500-year Western Oblivion of Being, *Seinsvergessenheit*)
+* **God:** Post-theological / Epochal Clearing (*"Only a god can save us"*, *Der Spiegel*; awaiting a new historical advent of Being beyond onto-theology)
+* **Philosophical methods:** Phenomenological hermeneutics, destruction (*Destruktion*) of the history of ontology, poetic listening
+
+---
+
 ## Related Notes & Concepts
 
 * **Traditions**: [[Phenomenology]], [[Continental Rationalism]], [[Map of Philosophy]]

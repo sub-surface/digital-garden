@@ -70,9 +70,9 @@ Proposed by [[jere|Jere]], the Pleasure Box posited an artificial intelligence o
 
 ## References
 
-* Mill, John Stuart. *Utilitarianism* (1861). See [[Bibliography#[Mill-Utilitarianism]]].
-* Rawls, John. *A Theory of Justice* (1971). See [[Bibliography#[Rawls-TJ-1971]]].
-* Nozick, Robert. *Anarchy, State, and Utopia* (1974). See [[Bibliography#[Nozick-ASU-1974]]].
+* Mill, John Stuart. *Utilitarianism* (1861). See [[Bibliography#Mill-Utilitarianism]].
+* Rawls, John. *A Theory of Justice* (1971). See [[Bibliography#Rawls-TJ-1971]].
+* Nozick, Robert. *Anarchy, State, and Utopia* (1974). See [[Bibliography#Nozick-ASU-1974]].
 
 ## See Also
 

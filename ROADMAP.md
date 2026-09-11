@@ -1498,6 +1498,9 @@ What remains is deliberately ordered by value and architectural dependency:
     - Wikipedia-standard navigational features: persistent Wiki header with embedded instant search, random article jump, and article table of contents.
 20. [x] **Obsidian-style physics graph & constellation unification.**
     Synthesize the contemplative visual fidelity of `ConstellationPage` (twinkling star aesthetics, tag-based hue mapping, organic drift) with `LocalGraph`'s interactive D3 force simulation and draggable physics. Transition the site-wide `/graph` view and embedded graph surfaces into an Obsidian-like physics graph: click-and-draggable nodes, responsive collision bounds, depth-aware edge highlighting, cluster formation by tags/folders, and smooth viewport zoom/pan controls.
+21. [ ] **Browser console hygiene and CSP audit.** (Low urgency)
+    - **Form field autofill diagnostics**: Audit `<input>` elements across search modals, wiki filters, command palette, and interactive form components. Browser console flags: *"DOM input elements must have an id or name attribute to be identifiable for browser autofill"*. Ensure all interactive inputs have explicit `id` and `name` attributes for full a11y and autofill compatibility.
+    - **CSP `unsafe-eval` audit**: Audit vendor and client dependencies to ensure zero reliance on dynamic code generation (`eval()`, `new Function()`). Note: The Pixi.js CSP runtime crash on `/wiki/map-of-philosophy` has been resolved by migrating `WikiGraph.tsx` to a pure Canvas 2D and D3 force simulation engine. Keep future canvas/graph dependencies aligned with strict Cloudflare Workers CSP headers.
 
 
 Verification note: Leon browser-verified the 2026-08-01 OS pass and the taller

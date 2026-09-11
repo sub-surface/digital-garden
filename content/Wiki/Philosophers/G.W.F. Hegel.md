@@ -129,9 +129,42 @@ Individual historical heroes (Alexander the Great, Julius Caesar, Napoleon) beli
 
 ---
 
+## PhilPapers Survey Profile
+
+*Projected stance based on Hegel's corpus:*
+
+### Metaphysics & Mind
+* **Abstract objects:** Concrete Universals (abstract universals are dead fixtures; the true universal concretely instantiates and differentiates itself through particulars)
+* **External world:** Absolute Idealism (empirical nature is the externalization of Spirit; rejects Kant's unknowable thing-in-itself)
+* **Free will:** Rational Self-Determination (freedom is necessity understood and actualized in the rational institutions of *Sittlichkeit*)
+* **Mind:** Objective and Absolute Spirit (*Geist*; individual subjective mind participates in social objective mind and attains Absolute Knowing)
+* **Personal identity:** Intersubjective Self-Consciousness (identity is socially constituted through reciprocal recognition, *Anerkennung*, with other subjects)
+* **Time:** Historical Dialectical Becoming (time is the developmental medium through which Spirit progresses toward freedom)
+
+### Epistemology
+* **Epistemic justification:** Holistic Coherentism (*"The True is the whole"*, *PhG* §20; partial cognitive stages reveal internal contradictions and are sublated into the systematic whole)
+* **Knowledge:** Speculative Rationalism (identity of thought and being; reason knows the actual because the actual is inherently rational)
+
+### Value Theory
+* **Meta-ethics:** Ethical Life (*Sittlichkeit*) / Realist Institutional Rationalism (normativity is embodied in the living customs and institutions of Family, Civil Society, and State)
+* **Moral judgment:** Cognitivism (ethical claims express rational institutional determinations)
+* **Normative ethics:** Concrete Institutional Communitarianism (critiques Kant's formal *Moralität* as an empty, abstract ought; grounds ethics in social duties)
+* **Political philosophy:** Constitutional Rational State (an organic state reconciling subjective individual freedom with universal collective order)
+
+### Logic, Language, & Science
+* **Logic:** Speculative / Dialectical Logic (*Science of Logic*; surpassing formal aristotelian logic through dialectical contradiction and the movement of the Concept)
+* **Science:** Philosophy of Nature (*Naturphilosophie*; nature is Spirit in its state of otherness, evolving upward to organic life and consciousness)
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** Grasping one's epoch in thought (*"Die Philosophie ist ihre Zeit in Gedanken erfasst"*); reconciling reason to actuality
+* **God:** Panentheism / Absolute Spirit (God is not a distant transcendent creator, but the dynamic infinite totality realizing self-consciousness through human civilization)
+* **Philosophical progress:** Absolute (the history of philosophy is the teleological self-revelation of Spirit)
+
+---
+
 ## Related Notes & Concepts
 
 * **Traditions**: [[German Idealism]], [[Continental Rationalism]], [[Post-Structuralism]], [[Map of Philosophy]]
 * **Philosophers**: [[Immanuel Kant]], [[Baruch Spinoza]], [[Heraclitus of Ephesus]], [[Friedrich Nietzsche]], [[René Descartes]]
-* **Concepts**: [[The Is-Ought Problem]], [[The Problem of Evil]], [[Foundationalism vs Coherentism]]
+* **Concepts**: [[Humes Guillotine|Hume's Guillotine]], [[The Problem of Evil]], [[Foundationalism vs Coherentism]]
 * **Bibliography**: [[Bibliography#Hegel-Phenomenology]], [[Bibliography#Kant-CPR]]

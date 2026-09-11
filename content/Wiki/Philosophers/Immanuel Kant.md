@@ -63,10 +63,37 @@ In *Groundwork of the Metaphysics of Morals* (1785), Kant derived an uncompromis
 
 *Projected stance based on Kant's critical system:*
 
-* **Knowledge:** Transcendental Idealist synthesis (Empirical realism + Transcendental idealism)
-* **Ethics:** Deontology
-* **Free Will:** Transcendental freedom (noumenal freedom compatibilized with phenomenal physical determinism)
-* **Science:** Realism regarding phenomenal physics; rejection of transcendent speculative metaphysics
+### Metaphysics & Epistemology
+* **A priori knowledge:** Yes (Synthetic *a priori* judgments ground arithmetic, geometry, and pure natural science)
+* **Abstract objects:** Conceptualism (concepts of the understanding; mathematical entities are constructed in pure intuition)
+* **Analytic-synthetic distinction:** Yes (cardinal distinction of the First Critique, *CPR* Introduction)
+* **Epistemic justification:** Transcendental synthesis (categories of the understanding + forms of sensible intuition)
+* **External world:** Transcendental Idealism / Empirical Realism (phenomenal objects in space and time are empirically real; things-in-themselves are unknowable)
+* **Free will:** Transcendental Freedom (phenomenal physical determinism compatibilized with noumenal moral autonomy)
+* **Knowledge:** Critical synthesis (*"Thoughts without content are empty, intuitions without concepts are blind"*, *CPR* A51/B75)
+* **Mind:** Transcendental unity of apperception (rejects Cartesian soul-substance as a paralogism; mind is the formal unifying synthesis of experience)
+* **Time:** Transcendental idealism (pure form of inner sensible intuition, not a property of things-in-themselves)
+* **Truth:** Transcendental agreement of cognition with its phenomenal object
+
+### Value Theory
+* **Aesthetic value:** Objective / Universal Subjectivity (*Critique of Judgment*; judgment of taste demands universal assent without a concept)
+* **Experience machine:** Don't enter (violates duty to rational self-perfection; treats rational agency as an instrument of sensory gratification)
+* **Meta-ethics:** Moral realism / Rational Constructivism (moral laws are objectively valid requirements of pure practical reason)
+* **Moral judgment:** Cognitivism (moral claims are categorical imperatives possessing truth-value)
+* **Moral motivation:** Internalism (reverence for the moral law, *Achtung*, directly motivates without sensory inclination)
+* **Normative ethics:** Deontology (Categorical Imperative: Formula of Universal Law, Formula of Humanity)
+* **Political philosophy:** Republican constitutionalism / Perpetual Peace (cosmopolitan federation of free republics)
+
+### Logic, Language, & Science
+* **Laws of nature:** Synthetic *a priori* principles of pure understanding (Second Analogy: every event presupposes a causal rule of succession)
+* **Logic:** Classical formal logic (general logic abstracts from content; transcendental logic investigates cognition of objects)
+* **Science:** Scientific realism regarding phenomenal nature (mechanistic determinism in Newtonian physics)
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** Critical self-examination of reason; determining the scope and limits of human knowledge
+* **God:** Agnosticism in speculative reason (refutes Ontological, Cosmological, and Teleological proofs); Practical Postulate of pure reason
+* **Philosophical methods:** Transcendental deduction, conceptual analysis, antinomy diagnosis
+* **Philosophical progress:** A lot (the Copernican Revolution ending dogmatic metaphysical squabbling)
 
 ---
 
@@ -90,8 +117,8 @@ Kant is a prominent fixture in channel discussions:
 
 ## References
 
-[^kant-cpr]: Kant, Immanuel. *Critique of Pure Reason*, A51/B75. See [[Bibliography#[Kant-CPR]]].
-[^kant-gmm]: Kant, Immanuel. *Groundwork of the Metaphysics of Morals*, Ak. 4:421. See [[Bibliography#[Kant-GMM]]].
+[^kant-cpr]: Kant, Immanuel. *Critique of Pure Reason*, A51/B75. See [[Bibliography#Kant-CPR]].
+[^kant-gmm]: Kant, Immanuel. *Groundwork of the Metaphysics of Morals*, Ak. 4:421. See [[Bibliography#Kant-GMM]].
 
 ## See Also
 

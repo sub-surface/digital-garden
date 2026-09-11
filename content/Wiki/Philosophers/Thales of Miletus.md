@@ -78,7 +78,7 @@ Thales is invoked as the historical starting point of the philosophical enterpri
 
 ## References
 
-* Kirk, G.S., J.E. Raven, and M. Schofield. *The Presocratic Philosophers* (1983). See [[Bibliography#[KRS-Presocratics]]].
+* Kirk, G.S., J.E. Raven, and M. Schofield. *The Presocratic Philosophers* (1983). See [[Bibliography#KRS-Presocratics]].
 * Aristotle. *Metaphysics*, Book I, 983b6–984a2.
 
 ## See Also

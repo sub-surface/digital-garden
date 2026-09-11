@@ -164,7 +164,7 @@ blockquote {
 
 // ── Code ──
 
-code:not([class]) {
+:not(pre) > code:not([class]) {
   background: var(--color-highlight);
   padding: 0.2em 0.4em;
   border-radius: 3px;
@@ -181,6 +181,13 @@ pre {
   font-family: var(--font-code);
   font-size: 0.9em;
   line-height: 1.5;
+
+  code {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+  }
 }
 
 // ── Lists ──

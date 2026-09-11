@@ -150,6 +150,40 @@ Rawls's work sparked decades of fruitful debate that defined modern political ph
 
 ---
 
+## PhilPapers Survey Profile
+
+*Projected stance based on Rawls's corpus:*
+
+### Metaphysics & Mind
+* **Abstract objects:** Constructivism / Anti-realism (*"Political, not Metaphysical"*; normative concepts are constructed for public justification rather than discovered in an independent realm)
+* **Free will:** Compatibilism / Practical Autonomy (moral agents possess the reflective capacity to revise desires and act from principles of justice)
+* **Personal identity:** Moral Personality (defined by two moral powers: the capacity for a sense of justice and the capacity for a conception of the good)
+
+### Epistemology
+* **Epistemic justification:** Coherentism / Reflective Equilibrium (wide reflective equilibrium mutually adjusting considered judgments, theoretical principles, and social theories)
+* **External world:** Pragmatic Realism
+* **Knowledge:** Anti-foundationalist Constructivism (rejecting rational intuitionism and naturalistic reductions)
+
+### Value Theory
+* **Distributive justice:** Liberal Egalitarianism / Maximin Priority (the Difference Principle maximizes the life prospects of the least-advantaged socioeconomic stratum)
+* **Experience machine:** Don't enter (hedonism misrepresents human rational life-plans and autonomous agency)
+* **Meta-ethics:** Moral Constructivism (Kantian constructivism; objectivity is procedural rather than metaphysical)
+* **Moral judgment:** Cognitivism (principles of justice are objective public standards of right)
+* **Normative ethics:** Deontology / Contractarianism (priority of the Right over the Good; lexical priority of basic civil liberties)
+* **Political philosophy:** Egalitarian Liberalism / Property-Owning Democracy (rejects welfare-state capitalism in favor of structural dispersion of productive wealth)
+* **Trolley problem:** Deontological Side-Constraints (strictly prohibits sacrificing fundamental liberties or individual persons for aggregate social utility)
+
+### Logic, Language, & Science
+* **Rational choice:** Maximin decision rule under Knightian uncertainty (rejecting Bayesian expected utility maximization in the Original Position)
+* **Science:** Empirical Realism (general findings of sociology, psychology, and economics serve as background inputs under the Veil of Ignorance)
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** Realistic Utopia; providing a shared basis for public justification in a democratic society marked by reasonable pluralism
+* **God:** Agnosticism / Secular Public Reason (comprehensive religious doctrines belong to civil society; public reason governs constitutional essentials)
+* **Philosophical methods:** Ideal theory, modeling via hypothetical contract (*the Original Position*), reflective equilibrium
+
+---
+
 ## Related Notes & Concepts
 
 * **Traditions**: [[Map of Philosophy]], [[Utilitarianism]], [[Deontology]], [[Pragmatism]]

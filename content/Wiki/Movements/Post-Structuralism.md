@@ -66,9 +66,9 @@ Whenever arguments between analytic logicians and pragmatists reach exhaustion, 
 
 ## References
 
-* Deleuze, Gilles. *Difference and Repetition* (1968). See [[Bibliography#[Deleuze-DR-1968]]].
-* Deleuze, Gilles, and Félix Guattari. *A Thousand Plateaus* (1980). See [[Bibliography#[Deleuze-Guattari-TP-1980]]].
-* Foucault, Michel. *Discipline and Punish* (1975). See [[Bibliography#[Foucault-DP-1975]]].
+* Deleuze, Gilles. *Difference and Repetition* (1968). See [[Bibliography#Deleuze-DR-1968]].
+* Deleuze, Gilles, and Félix Guattari. *A Thousand Plateaus* (1980). See [[Bibliography#Deleuze-Guattari-TP-1980]].
+* Foucault, Michel. *Discipline and Punish* (1975). See [[Bibliography#Foucault-DP-1975]].
 
 ## See Also
 

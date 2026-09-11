@@ -65,11 +65,33 @@ This introduced the notorious **Mind-Body Interaction Problem**: how can an imma
 
 *Projected stance based on Descartes' writings:*
 
-* **Mind:** Non-physicalism (Substance dualism)
-* **Knowledge:** Rationalism (innate ideas, deduction over senses)
-* **God:** Theism (rational proofs of the Necessary Existent)
-* **Free Will:** Libertarianism (infinite capacity of the human will)
-* **Science:** Mechanistic mathematical reductionism
+### Metaphysics & Mind
+* **Abstract objects:** Platonism / Realism (eternal mathematical and geometrical truths created by divine sovereignty)
+* **External world:** Representative Realism (the existence of *res extensa* is rationally established through the benevolence and veracity of God in *Meditation VI*)
+* **Free will:** Libertarianism (*Meditation IV*; the human will is formally infinite, capable of assenting or refusing independently of deterministic compulsion)
+* **Mind:** Substance Dualism (*res cogitans* vs. *res extensa*; the immaterial, unextended thinking soul interacts causally with the physical brain via the pineal gland)
+* **Personal identity:** Immaterial Soul Substance (persistence of the indivisible, immaterial *ego*)
+* **Time:** Discrete / Continuous Creation (time consists of disjoint moments; God must continually conserve the world into being at every instant)
+
+### Epistemology
+* **Epistemic justification:** Rationalist Foundationalism (hyperbolic methodological doubt terminating in the indubitable bedrock of the *Cogito*)
+* **Knowledge:** Rationalism (innate ideas and intellectual intuition; the senses deceive, whereas clear and distinct ideas (*clara et distincta perceptio*) guarantee truth)
+* **Innate ideas:** Affirmed (the ideas of God, infinite substance, self, and Euclidean geometry are implanted by God in the rational intellect)
+
+### Value Theory
+* **Meta-ethics:** Theological Voluntarism / Moral Intellectualism (God's sovereign will establishes eternal moral truths; moral error arises when the human will outruns the intellect)
+* **Moral judgment:** Cognitivism
+* **Normative ethics:** Rationalist Virtue Ethics (*The Passions of the Soul*; governance of sensory passions through the supreme virtue of Generosity, *générosité*)
+
+### Logic, Language, & Science
+* **Language:** Creative linguistic competence (in the *Discourse*, the inability of mechanical automata to generate novel sentences serves as the definitive test for mind)
+* **Laws of nature:** Mathematical conservation laws (conservation of quantity of motion, rectilinear inertia)
+* **Science:** Mechanistic Mathematical Reductionism (matter is pure geometrical extension; all physical phenomena are explained by corpuscular collisions, rejecting scholastic forms)
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** The Unified Tree of Wisdom (metaphysics as roots, physics as trunk, and medicine, mechanics, and morals as branches)
+* **God:** Theism (rational demonstration via the Trademark Argument in *Meditation III* and the Ontological Argument in *Meditation V*)
+* **Philosophical methods:** Methodological doubt, conceptual analysis, mathematical analysis and synthesis
 
 ---
 
@@ -92,7 +114,7 @@ In Philchat, Descartes is frequently cited across debates on machine consciousne
 
 ## References
 
-* Descartes, René. *The Philosophical Writings of Descartes* (1985). See [[Bibliography#[Descartes-CSM]]].
+* Descartes, René. *The Philosophical Writings of Descartes* (1985). See [[Bibliography#Descartes-CSM]].
 
 ## See Also
 

@@ -31,6 +31,8 @@ The following table catalogs all analytical concepts and channel dialectical ter
 * **[[The Problem of Induction]]**: Hume's challenge to the rational justification of inferring unobserved regularities from past observation.
 * **[[Foundationalism vs Coherentism]]**: Competing architectures for the justification of empirical and inferential beliefs.
 * **[[Gettier Problems]]**: Counterexamples refuting the classical Justified True Belief (JTB) account of propositional knowledge.
+* **[[The Brain in a Vat]]**: Hilary Putnam's semantic externalist argument demonstrating the self-refuting nature of radical skeptical hypotheses.
+* **[[Molyneuxs Problem]]**: The classical inquiry into intermodal sensory transfer and perceptual space upon the surgical restoration of sight.
 
 ### Mind, Cognition & Perception
 * **[[The Hard Problem of Consciousness]]**: Explaining why and how physical computational processing generates phenomenal subjectivity (*qualia*).
@@ -41,6 +43,7 @@ The following table catalogs all analytical concepts and channel dialectical ter
 
 ### Metaphysics, Identity & Modality
 * **[[The Ship of Theseus]]**: The paradox of persistence, material replacement, and identity over time.
+* **[[The Teletransporter]]**: Derek Parfit's thought experiment exploring fission, branch-line survival, and the reductionist account of personal identity.
 * **[[Substance Monism]]**: Spinoza's metaphysics of a singular infinite substance (*Deus sive Natura*) expressing itself through infinite attributes.
 * **[[Radical Immanence]]**: The rejection of transcendent theological or metaphysical causes in favor of internal causality.
 * **[[The Becoming-Document]]**: Ontological tracking of reality as dynamic textual inscription and record.
@@ -48,9 +51,18 @@ The following table catalogs all analytical concepts and channel dialectical ter
 ### Ethics, Decision Theory & Value
 * **[[Newcombs Problem]]**: The decision-theoretic dilemma between Causal Decision Theory (two-boxing) and Evidential Decision Theory (one-boxing).
 * **[[The Trolley Problem]]**: Philippa Foot's classic scenario analyzing the distinction between killing and letting die.
+* **[[The Violinist]]**: Judith Jarvis Thomson's thought experiment establishing the right to bodily autonomy against extreme duty burdens.
 * **[[The Experience Machine]]**: Robert Nozick's thought experiment contesting hedonistic accounts of well-being.
 * **[[The Veil of Ignorance]]**: John Rawls' hypothetical contractarian device for determining impartial principles of justice.
-* **[[The Is-Ought Problem]]**: Hume's demonstration of the logical breach between descriptive facts and normative obligations.
+* **[[Humes Guillotine]]**: Hume's demonstration of the logical breach between descriptive facts and normative obligations (the is-ought problem).
+
+### Epistemic Razors, Maxims & Methodological Principles
+* **[[Occams Razor]]**: The principle of parsimony: entities must not be multiplied beyond necessity (*pluralitas non est ponenda sine necessitate*).
+* **[[Hanlons Razor]]**: Cognitive heuristic against paranoia: never attribute to malice that which is adequately explained by stupidity or bounded rationality.
+* **[[Hitchens Razor]]**: Dialectical burden of proof maxim: what can be asserted without evidence can also be dismissed without evidence (*quod gratis asseritur, gratis negatur*).
+* **[[Grices Maxims]]**: H.P. Grice's Cooperative Principle and the four conversational maxims (Quantity, Quality, Relation, Manner) governing pragmatic implicature.
+* **[[The Principle of Charity]]**: Hermeneutic imperative to interpret another's discourse so as to maximize rational coherence, plausibility, and truth (steelmanning).
+* **[[Poppers Demarcation Criterion]]**: Falsifiability via deductive *modus tollens* as the demarcation separating empirical science from metaphysics and pseudoscience.
 
 ---
 

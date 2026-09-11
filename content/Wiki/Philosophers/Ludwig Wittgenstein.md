@@ -85,8 +85,8 @@ Wittgenstein is cited across channel procedural arguments:
 
 ## References
 
-[^witt-tlp]: Wittgenstein, Ludwig. *Tractatus Logico-Philosophicus* (1921), Proposition 7. See [[Bibliography#[Wittgenstein-TLP-1921]]].
-[^witt-pi]: Wittgenstein, Ludwig. *Philosophical Investigations* (1953), §43. See [[Bibliography#[Wittgenstein-PI-1953]]].
+[^witt-tlp]: Wittgenstein, Ludwig. *Tractatus Logico-Philosophicus* (1921), Proposition 7. See [[Bibliography#Wittgenstein-TLP-1921]].
+[^witt-pi]: Wittgenstein, Ludwig. *Philosophical Investigations* (1953), §43. See [[Bibliography#Wittgenstein-PI-1953]].
 
 ## See Also
 

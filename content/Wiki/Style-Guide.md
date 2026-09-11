@@ -14,9 +14,11 @@ A reference for contributors writing or editing wiki articles. Follow these conv
 ## Tone & Standards
 
 - **Write clearly and charitably.** Steelman positions you disagree with.
-- **Cite sources** where claims are contested or non-obvious.
+- **Strict Academic Rigour.** Cite primary sources, state formal argument premises, and present counter-objections.
+- **Zero Emojis.** Never use emojis in titles, frontmatter, headings, or prose across wiki articles. Maintain a clean, encyclopedic aesthetic.
 - **Neutral point of view.** Present multiple perspectives fairly, especially on live debates.
 - **Be concise.** Say what needs to be said without padding.
+- **Obsidian Citation Anchors.** When linking to the bibliography, use `[[Bibliography#Key]]` (e.g. `[[Bibliography#Kant-CPR]]`). These anchors match `<span id="Key">` targets and automatically render rich popover previews.
 
 ---
 
@@ -37,12 +39,28 @@ main_interests: "Metaphysics, Ethics"
 notable_ideas: "Substance Monism, Conatus"
 ```
 
-### Concept
+### Canonical Text
 ```yaml
-title: "Substance Monism"
-description: "One-line summary."
-tags: [wiki, concept]
+title: "Critique of Pure Reason (Kant)"
+description: "Transcendental idealism, synthetic a priori knowledge, and the antinomies of pure reason."
+tags: [wiki, text, kant, idealism, epistemology, metaphysics]
+type: text
+author: "Immanuel Kant"
+original_title: "Kritik der reinen Vernunft"
+published: "1781 (A) / 1787 (B)"
+tradition: "German Idealism, Critical Philosophy"
+key_themes: ["Synthetic a priori", "Transcendental Deduction", "Antinomies"]
+```
+
+### Concept & Thought Experiment
+```yaml
+title: "The Teletransporter"
+description: "Derek Parfit's thought experiment probing fission, psychological continuity, and personal identity."
+tags: [wiki, concept, metaphysics, personal-identity, parfit]
 type: concept
+introduced_by: "Derek Parfit"
+key_works: "Reasons and Persons (1984)"
+domain: "Personal Identity, Philosophy of Mind"
 ```
 
 ### Movement
@@ -119,11 +137,13 @@ Available types: `note`, `tip`, `warning`, `callout`.
 
 GFM footnotes render as Tufte-style sidenotes in the right margin:
 
-```
+```markdown
 This claim needs a citation.[^1]
 
-[^1]: Source: Author, *Title*, Year. See [[Bibliography]].
+[^1]: Source: Author, *Title*, Year. See [[Bibliography#SourceKey]].
 ```
+
+Every footnote reference `[^tag]` must have an exact matching footnote definition `[^tag]: ...` at the bottom of the file. Link previews automatically intercept footnote markers on hover to display rich preview tooltips.
 
 Unverified or contested claims should be flagged with `[citation-needed]`. See the full **[[Citation-Guide|Citation & Style Standards]]** and the **[[Bibliography|Master Bibliography]]** for detailed citation keys and academic pagination rules.
 
@@ -136,6 +156,35 @@ Unverified or contested claims should be flagged with `[citation-needed]`. See t
 ```
 
 For images stored in the repo, use the `/content/Media/` path.
+
+---
+
+## Canonical Text Analyses
+
+Text analyses dissect historical treatises proposition by proposition. Follow this seven-part structure:
+1. **Overview & Historical Context**: Composition timeline, immediate polemical rivals, and foundational objectives.
+2. **Structural Architecture**: Formal textual divisions (parts, books, propositions, or meditations).
+3. **Core Axioms & Deductions**: Exact logical progressions with numbered propositions or demonstrations.
+4. **Key Arguments & Landmark Formulations**: The system's central conceptual innovations (e.g. conatus, synthetic *a priori*, picture theory).
+5. **Aporias, Paradoxes & Internal Tensions**: Textual friction, circularities, or unreconciled doctrines.
+6. **Critical Objections & Historical Reception**: Major historical rebuttals from competing traditions.
+7. **Bibliographic Apparatus**: Authoritative critical editions, standard pagination formats (e.g., Stephanus, Bekker, Gebhardt, Academy), and standard citation anchors linking to `[[Bibliography#Key]]`.
+
+See [[Ethics (Spinoza)]], [[Critique of Pure Reason (Kant)]], or [[Tractatus Logico-Philosophicus (Wittgenstein)]] for reference implementations.
+
+---
+
+## Thought Experiments & Analytical Concepts
+
+Follow the standard analytical philosophy format:
+1. **Overview & The Paradox / Dilemma**: Vivid presentation of the scenario and the intuition pump.
+2. **Historical Genesis & Context**: Originating thinker, seminal publication, and background philosophical problem.
+3. **Formal Argument & Logical Architecture**: Precise numbered premises, conclusion, and deduction rules (modus ponens, reductio, etc.).
+4. **Theoretical Responses & Intuition Divergence**: Tabular or structured breakdown of competing traditions (e.g. physicalist vs. dualist, compatibilist vs. libertarian).
+5. **Crucial Objections & Variations**: Branching variations (e.g. Parfit's Branch-Line case, Putnam's Twin Earth) and objections.
+6. **Related Concepts & Navigation**: Wikilinks to related paradoxes, thinkers, and movements.
+
+See [[The Teletransporter]], [[The Brain in a Vat]], [[The Violinist]], or [[Molyneuxs Problem]] for reference implementations.
 
 ---
 

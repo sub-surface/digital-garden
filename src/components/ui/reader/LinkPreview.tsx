@@ -119,8 +119,39 @@ function mdToPlain(md: string): string {
     .slice(0, 320)
 }
 
-interface FetchedBody { plain: string; html: string; image: string }
+interface FetchedBody { plain: string; html: string; image: string; rawMd: string }
 const bodyCache = new Map<string, FetchedBody>()
+
+function extractAnchorContent(rawMd: string, anchor: string): { title: string; html: string } | null {
+  const normKey = anchor.toLowerCase().replace(/^[#\[\]]+|[\[\]]+$/g, "").trim()
+  if (!normKey) return null
+
+  const lines = rawMd.split("\n")
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const lower = line.toLowerCase()
+
+    const hasId = lower.includes(`id="${normKey}"`) || lower.includes(`id='${normKey}'`)
+    const hasBracket = lower.includes(`[${normKey}]`) || lower.includes(`**[${normKey}]**`) || lower.includes(`**${normKey}**`)
+    const isHeading = line.startsWith("#") && lower.includes(normKey)
+
+    if (hasId || hasBracket || isHeading) {
+      const chunk: string[] = [line]
+      for (let j = i + 1; j < lines.length; j++) {
+        const next = lines[j]
+        if (next.trim().startsWith("*") || next.trim().startsWith("-") || next.startsWith("#")) break
+        if (next.trim().length === 0 && j + 1 < lines.length && (lines[j + 1].trim().startsWith("*") || lines[j + 1].startsWith("#"))) break
+        chunk.push(next)
+      }
+      const rawText = chunk.join("\n").replace(/<span[^>]*>/g, "").replace(/<\/span>/g, "").trim()
+      return {
+        title: `Citation: [${anchor.replace(/^[#\[\]]+|[\[\]]+$/g, "")}]`,
+        html: mdToBodyHtml(rawText),
+      }
+    }
+  }
+  return null
+}
 
 async function fetchBody(slug: string, contentPath?: string): Promise<FetchedBody> {
   if (bodyCache.has(slug)) return bodyCache.get(slug)!
@@ -136,13 +167,14 @@ async function fetchBody(slug: string, contentPath?: string): Promise<FetchedBod
           plain: mdToPlain(text),
           html: mdToBodyHtml(text),
           image: extractFirstImage(text),
+          rawMd: text,
         }
         bodyCache.set(slug, result)
         return result
       }
     } catch { /* ignore */ }
   }
-  return { plain: "", html: "", image: "" }
+  return { plain: "", html: "", image: "", rawMd: "" }
 }
 
 export function LinkPreview() {
@@ -161,8 +193,9 @@ export function LinkPreview() {
     })
   }, [])
 
-  const pushPreview = useCallback((slug: string, isFootnote: boolean, anchor: HTMLAnchorElement) => {
-    if (stack.some(p => p.slug === slug)) return
+  const pushPreview = useCallback((slug: string, isFootnote: boolean, anchor: HTMLAnchorElement, targetAnchor?: string) => {
+    const previewKey = targetAnchor ? `${slug}#${targetAnchor}` : slug
+    if (stack.some(p => p.slug === previewKey)) return
     const depth = stack.length
     if (depth >= MAX_DEPTH) return
 
@@ -181,29 +214,59 @@ export function LinkPreview() {
         const cloned = fnLi.cloneNode(true) as HTMLElement
         cloned.querySelectorAll("[data-footnote-backref]").forEach(el => el.remove())
         footnoteHtml = cloned.innerHTML
+      } else {
+        const parentSup = anchor.closest(".footnote-marker")
+        const supContent = parentSup?.getAttribute("data-content")
+        if (supContent) {
+          footnoteHtml = supContent
+        }
+      }
+    }
+
+    let localAnchorHtml: string | undefined
+    if (targetAnchor) {
+      const localEl = document.getElementById(targetAnchor)
+      if (localEl) {
+        const parentLi = localEl.closest("li") || localEl
+        const cloned = parentLi.cloneNode(true) as HTMLElement
+        localAnchorHtml = cloned.innerHTML.replace(/<span[^>]*id="[^"]*"[^>]*>/g, "").replace(/<\/span>/g, "")
       }
     }
 
     const initial: PreviewState = {
-      id, depth, slug, isFootnote, footnoteHtml,
-      title: isFootnote ? `Footnote ${anchor.textContent}` : (meta?.title ?? slug.split("/").pop() ?? ""),
+      id, depth, slug: previewKey, isFootnote,
+      footnoteHtml: footnoteHtml || localAnchorHtml,
+      title: isFootnote
+        ? `Footnote ${anchor.textContent}`
+        : targetAnchor
+        ? `Citation: [${targetAnchor}]`
+        : (meta?.title ?? slug.split("/").pop() ?? ""),
       excerpt: meta?.excerpt ?? "",
       body: "",
-      bodyHtml: "",
+      bodyHtml: localAnchorHtml || "",
       image: "",
       tags: meta?.tags ?? [],
       x, y, bottom, pos,
     }
 
     setStack(prev => [...prev, initial])
-    currentSlug.current = slug
+    currentSlug.current = previewKey
 
     // Fetch body content async and patch state — synthesized system-page
     // entries have no content file to fetch (see synthesizeSystemPages).
     if (!isFootnote && !meta?.system) {
-      fetchBody(slug, meta?.contentPath).then(({ plain, html, image }) => {
+      fetchBody(slug, meta?.contentPath).then(({ plain, html, image, rawMd }) => {
+        let finalHtml = html
+        let finalTitle = meta?.title ?? slug.split("/").pop() ?? ""
+        if (targetAnchor && rawMd) {
+          const extracted = extractAnchorContent(rawMd, targetAnchor)
+          if (extracted) {
+            finalHtml = extracted.html
+            finalTitle = extracted.title
+          }
+        }
         setStack(prev => prev.map(p =>
-          p.id === id ? { ...p, body: plain, bodyHtml: html, image } : p
+          p.id === id ? { ...p, title: finalTitle, body: plain, bodyHtml: finalHtml, image } : p
         ))
       })
     }
@@ -231,13 +294,15 @@ export function LinkPreview() {
 
       const isInternal = anchor.classList.contains("internal-link")
       const isFootnote = anchor.hasAttribute("data-footnote-ref")
-      const slug = isInternal ? extractSlug(anchor.href) : (isFootnote ? (anchor.getAttribute("href") ?? "").slice(1) : null)
+      const targetAnchor = anchor.hash ? anchor.hash.slice(1) : undefined
+      const baseSlug = isInternal ? extractSlug(anchor.href) : (isFootnote ? (anchor.getAttribute("href") ?? "").slice(1) : null)
+      const previewKey = targetAnchor && baseSlug ? `${baseSlug}#${targetAnchor}` : baseSlug
 
-      if (!slug || slug === currentSlug.current) return
+      if (!baseSlug || !previewKey || previewKey === currentSlug.current) return
 
       clearTimeout(timer.current)
       timer.current = setTimeout(() => {
-        pushPreview(slug, isFootnote, anchor)
+        pushPreview(baseSlug, isFootnote, anchor, targetAnchor)
       }, DELAY)
     }
 

@@ -94,9 +94,40 @@ $$\text{"Virtues are natural excellences necessary for human beings to achieve t
 
 ---
 
+## PhilPapers Survey Profile
+
+*Projected stance based on Foot's corpus:*
+
+### Metaphysics & Mind
+* **Life-forms & Teleology:** Aristotelian Naturalism (living species instantiate intrinsic natural norms; living things are evaluated teleologically according to species survival and reproduction)
+* **Free will:** Compatibilism / Moral Accountability (voluntary choice grounded in character and practical reasons)
+
+### Epistemology
+* **Epistemic justification:** Naturalistic Realism / Conceptual Analysis (evaluations of goodness are objective factual assessments of human flourishing)
+* **Moral knowledge:** Cognitivism (moral facts are knowable, natural truths about human defects and excellences)
+
+### Value Theory
+* **Experience machine:** Don't enter (hedonism is fundamentally flawed; *eudaimonia* consists in the active exercise of virtues within genuine reality)
+* **Meta-ethics:** Moral Realism / Ethical Naturalism (*Natural Goodness*; goodness is an objective biological-rational feature of human life-forms, dismantling Hume's fact-value divide)
+* **Moral judgment:** Cognitivism (moral assertions are objective truth-apt propositions)
+* **Moral motivation:** Naturalist Internalism (practical rationality requires acting in accordance with human virtue; vice is a defect of practical reason)
+* **Normative ethics:** Virtue Ethics (Neo-Aristotelian; rejects utilitarian calculus; grounds ethics in the four cardinal and theological virtues)
+* **Trolley problem:** Divert switch (permissible via conflict between competing negative duties); impermissible in footbridge / transplant (violating the negative duty of non-injury)
+
+### Logic, Language, & Science
+* **Language:** Ordinary Language Philosophy (Wittgensteinian analysis of thick ethical concepts such as courage, justice, and cruelty)
+* **Science:** Teleological Biology (natural history of species provides the objective frame for normative evaluation)
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** Dismantling emotivist and prescriptivist illusions; restoring moral philosophy to sound biological and human footing
+* **God:** Non-theistic Naturalism (virtue ethics requires zero divine command or supernatural metaphysics)
+* **Philosophical methods:** Conceptual investigation, subtle casuistical thought experiments (*the Runaway Tram*), ordinary language analysis
+
+---
+
 ## Related Notes & Concepts
 
 * **Traditions**: [[Virtue Ethics]], [[Deontology]], [[Utilitarianism]], [[Map of Philosophy]]
 * **Philosophers**: [[Aristotle]], [[Immanuel Kant]], [[John Stuart Mill]], [[David Hume]]
-* **Core Concepts**: [[The Trolley Problem]], [[The Is-Ought Problem]], [[The Experience Machine]]
+* **Core Concepts**: [[The Trolley Problem]], [[Humes Guillotine|Hume's Guillotine]], [[The Experience Machine]]
 * **Bibliography**: [[Bibliography#Foot-Trolley-1967]], [[Bibliography#Foot-Natural-2001]], [[Bibliography#Aristotle-NE]]

@@ -1,8 +1,15 @@
 ---
-title: The Logic of Sense
-description: An output made by claude and charlie after reading the logic of sense
+title: "The Logic of Sense"
+description: "Propositional architecture of Gilles Deleuze's 1969 treatise: the four dimensions of the proposition, the paradox of series, Stoic incorporeals, and the event."
+tags: [wiki, text, deleuze, post-structuralism, logic, language]
+type: text
+author: "Gilles Deleuze"
+original_title: "Logique du sens"
+published: 1969
+tradition: "Post-Structuralism, Continental Philosophy"
+key_themes: ["Sense and Paradox", "Stoic Incorporeals", "The Event", "Surface vs Depth", "Static Genesis"]
+aliases: ["Logic of Sense", "The Logic of Sense", "Logique du sens"]
 layout: article
-tags: [wiki, claude]
 ---
 
 <div className="dropcap">

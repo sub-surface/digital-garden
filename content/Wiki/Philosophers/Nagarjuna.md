@@ -92,7 +92,7 @@ Nagarjuna is frequently cited during the channel's foundationalist debates:
 
 ## References
 
-[^nagarjuna-mmk]: Nagarjuna. *Mulamadhyamakakarika*, Chapter XXIV, Verse 18. See [[Bibliography#[Garfield-Nagarjuna]]].
+[^nagarjuna-mmk]: Nagarjuna. *Mulamadhyamakakarika*, Chapter XXIV, Verse 18. See [[Bibliography#Garfield-Nagarjuna]].
 
 ## See Also
 

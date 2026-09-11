@@ -112,9 +112,39 @@ This counterfactual modal approach allowed Nozick to address radical Cartesian s
 
 ---
 
+## PhilPapers Survey Profile
+
+*Projected stance based on Nozick's corpus:*
+
+### Metaphysics & Mind
+* **Free will:** Libertarianism (*Philosophical Explanations*; indeterministic weighting of reasons; agents freely assign weights to competing reasons rather than being causally necessitated by prior states)
+* **Newcomb's problem:** Two-boxer (causal dominance; popularized the dilemma in analytic philosophy in 1969)
+* **Personal identity:** Closest Continuer Theory (identity across time is determined by which future entity is the closest continuer under a metric of psychological and physical continuity)
+
+### Epistemology
+* **Epistemic closure:** Denial (rejection of the classical closure principle; an agent can know $P$ without knowing $\neg SK$, where $SK$ is a skeptical hypothesis)
+* **Epistemic justification:** Modal Externalism / Tracking Theory (knowledge requires belief tracking truth via counterfactual Sensitivity and Adherence)
+* **Knowledge:** Externalism / Truth-Tracking
+
+### Value Theory
+* **Distributive justice:** Libertarian Entitlement Theory (historical non-patterned principles: justice in acquisition, transfer, and rectification)
+* **Experience machine:** Don't enter (hedonism is false; agents intrinsically value authentic action, character development, and contact with reality)
+* **Meta-ethics:** Value Realism / Organic Unity (value is the degree of organic unity uniting diverse parts into a coherent whole)
+* **Moral judgment:** Cognitivism
+* **Normative ethics:** Deontology / Moral Side-Constraints (Kantian inviolability of individuals reflecting the separateness of persons)
+* **Political philosophy:** Minarchism / The Minimal State (the night-watchman state limited strictly to protection against force, theft, and fraud)
+* **Trolley problem:** Rights as Side-Constraints (strictly prohibits violating personal bodily rights to minimize aggregate casualties)
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** Philosophical Explanation (seeking mutual understanding and conceptual illumination rather than coercive knockdown refutation)
+* **God:** Philosophical Theism / Speculative Metaphysics (*Philosophical Explanations*)
+* **Philosophical methods:** Playful thought experiments (*the Experience Machine*, *Wilt Chamberlain*), conditional modal semantics, non-coercive pluralism
+
+---
+
 ## Related Notes & Concepts
 
 * **Philosophers**: [[John Rawls]], [[Immanuel Kant]], [[David Hume]], [[John Stuart Mill]]
-* **Concepts**: [[The Experience Machine]], [[The Veil of Ignorance]], [[The Trolley Problem]], [[The Is-Ought Problem]]
+* **Concepts**: [[The Experience Machine]], [[The Veil of Ignorance]], [[The Trolley Problem]], [[Humes Guillotine|Hume's Guillotine]], [[Newcombs Problem]]
 * **Traditions**: [[Utilitarianism]], [[Deontology]], [[Map of Philosophy]]
 * **Bibliography**: [[Bibliography#Nozick-ASU-1974]], [[Bibliography#Rawls-TJ-1971]]

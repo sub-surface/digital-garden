@@ -70,10 +70,10 @@ During the [[The Warranted Assertibility Wars|Warranted Assertibility Wars]] (Vo
 
 ## References
 
-[^dewey-logic]: Dewey, John. *Logic: The Theory of Inquiry* (1938). See [[Bibliography#[Dewey-Logic-1938]]].
-[^peirce-cp]: Peirce, Charles Sanders. "How to Make Our Ideas Clear" (1878), *Popular Science Monthly* 12: 286–302. See [[Bibliography#[Peirce-CP]]].
-[^dewey-lti]: Dewey, John. *Experience and Nature* (1925). See [[Bibliography#[Dewey-Experience-1925]]].
-[^haack-evidence]: Haack, Susan. *Evidence and Inquiry: Towards Reconstruction in Epistemology* (1993). See [[Bibliography#[Haack-Evidence-1993]]].
+[^dewey-logic]: Dewey, John. *Logic: The Theory of Inquiry* (1938). See [[Bibliography#Dewey-Logic-1938]].
+[^peirce-cp]: Peirce, Charles Sanders. "How to Make Our Ideas Clear" (1878), *Popular Science Monthly* 12: 286–302. See [[Bibliography#Peirce-CP]].
+[^dewey-lti]: Dewey, John. *Experience and Nature* (1925). See [[Bibliography#Dewey-Experience-1925]].
+[^haack-evidence]: Haack, Susan. *Evidence and Inquiry: Towards Reconstruction in Epistemology* (1993). See [[Bibliography#Haack-Evidence-1993]].
 
 ## See Also
 

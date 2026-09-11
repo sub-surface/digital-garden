@@ -137,6 +137,43 @@ In his landmark 1670 *Tractatus Theologico-Politicus* (TTP), published anonymous
 
 ---
 
+## PhilPapers Survey Profile
+
+*Projected stance based on the geometrical system of the Ethics and political writings:*
+
+### Metaphysics & Epistemology
+* **A priori knowledge:** Yes (Rationalism; deduction from innate common notions)
+* **Abstract objects:** Nominalism / Conceptualism (universals are confused composite images in imagination)
+* **Analytic-synthetic distinction:** No (truth is grounded in the conceptual containment of essence and causal necessity)
+* **Epistemic justification:** Internalist Coherentism / Foundationalism of adequate ideas
+* **External world:** Non-skeptical realism (extension is an infinite attribute of Deus sive Natura)
+* **Free will:** No free will / Hard Determinism (human belief in free will is mere ignorance of causes, *Ethics* IIp35s)
+* **Knowledge:** Rationalism (Scientia Intuitiva and adequate ideas over empirical sensation)
+* **Mind:** Non-physicalist Monism (Substance Monism with Psychophysical Parallelism; mind is the idea of the body, IIp13)
+* **Personal identity:** Complex mode of substance; eternity of the mind through intellectual love of God (Vp23)
+* **Time:** B-theory (block universe; time is an imaginary measure of duration; reality is eternal *sub specie aeternitatis*)
+* **Truth:** Coherence / Rational adequacy (*veritas norma sui et falsi*)
+
+### Value Theory
+* **Aesthetic value:** Subjective (beauty is a relative imaginative projection based on sensory constitution)
+* **Meta-ethics:** Moral anti-realism / Naturalistic Relativism (good and evil are labels for what aids or obstructs conatus, *Ethics* IV Preface)
+* **Moral judgment:** Cognitivist naturalism
+* **Normative ethics:** Consequentialist virtue ethics of self-preservation (acting from reason is acting from conatus, IVp24)
+* **Political philosophy:** Democratic constitutionalism / Proto-liberal egalitarianism (the end of the state is freedom, TTP XX)
+
+### Logic, Language, & Science
+* **Laws of nature:** Non-Humean (absolute metaphysical necessity; nature could not have been produced in any other way, Ip33)
+* **Logic:** Classical deductive demonstration (geometric method)
+* **Science:** Scientific realism (nature is governed by invariant, immutable physical laws)
+
+### Metaphilosophy & Religion
+* **Aim of philosophy:** Wisdom, ethical blessedness (*beatitudo*), and freedom from affective bondage
+* **God:** Pantheism / Immanent Monism (*Deus sive Natura*—an impersonal, infinite substance)
+* **Philosophical methods:** Axiomatic-deductive demonstration (*more geometrico*), rational intuition
+* **Philosophical progress:** A lot (overcoming superstition through adequate understanding)
+
+---
+
 ## 7. Philosophical Legacy and Cross-References
 
 Spinoza was vilified throughout the late seventeenth and eighteenth centuries as an "atheist" and corrupter of youth. His rehabilitation occurred through the **Pantheismusstreit** (Pantheism Controversy) of the 1780s between Jacobi and Mendelssohn, which deeply influenced Goethe, Herder, and the emergence of [[German Idealism]] (particularly Schelling and Hegel, who proclaimed: *"To be a philosopher, one must first be a Spinozist"*).
