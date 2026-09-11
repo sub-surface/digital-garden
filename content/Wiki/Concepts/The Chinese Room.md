@@ -32,7 +32,8 @@ The rulebook is so sophisticated that the room's responses are indistinguishable
 
 In his 1984 Reith Lectures (*Minds, Brains and Science*) and 1990 *Scientific American* defense, Searle formalized the argument into four axioms and four conclusions:
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{\textbf{Axiom 1:}} & \quad \text{Computer programs are formal (syntactic).} \\
 \text{\textbf{Axiom 2:}} & \quad \text{Human minds have mental contents (semantics / intentionality).} \\
 \text{\textbf{Axiom 3:}} & \quad \text{Syntax by itself is neither constitutive of nor sufficient for semantics.} \\
@@ -43,7 +44,8 @@ $$\begin{aligned}
 \text{\textbf{Conclusion 2:}} & \quad \text{Any other system capable of causing minds must possess causal powers equivalent to brains.} \\
 \text{\textbf{Conclusion 3:}} & \quad \text{Any artifact that produces mental phenomena cannot do so solely by running a program.} \\
 \text{\textbf{Conclusion 4:}} & \quad \text{Formal symbol manipulation cannot explain how human brains produce intentionality.}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ---
 

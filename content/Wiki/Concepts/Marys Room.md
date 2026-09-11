@@ -36,14 +36,16 @@ Jackson formulated the argument in *"Epiphenomenal Qualia"* (1982) and expanded 
 
 Formally, the deduction proceeds as follows:
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{\textbf{P1 (Completeness):}} & \quad \text{Prior to release, Mary knows every physical truth } \phi \in \Phi. \\
 \text{\textbf{P2 (Ignorance):}} & \quad \text{Prior to release, Mary does not know what it is like to experience red } (\psi_{\text{red}} \notin K_{\text{Mary}}). \\
 \text{\textbf{P3 (Epistemic Gap):}} & \quad \text{Therefore, } \Phi \not\vdash \psi_{\text{red}} \text{ (Phenomenal truths are not deducible from physical truths).} \\
 \text{\textbf{P4 (Necessitation):}} & \quad \text{If physicalism is true, complete physical truth metaphysically necessitates all truths } (\Phi \implies_{\square} \Psi). \\
 \hline
 \text{\textbf{Conclusion:}} & \quad \text{\textbf{Physicalism is false:}} \text{ the universe contains irreducible phenomenal properties (qualia).}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ---
 

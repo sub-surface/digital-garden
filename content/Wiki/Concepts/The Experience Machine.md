@@ -53,10 +53,12 @@ We desire to inhabit an authentic world that resists our desires and possesses g
 
 The dispute between hedonism and Nozickian realism can be expressed by comparing two models of lifetime well-being ($W$):
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{Hedonistic Well-Being:} & \quad W_{\text{hed}}(L) = \int_{0}^{T} \big[P(t) - D(t)\big] \, dt \\
 \text{Nozickian Multi-Attribute:} & \quad W_{\text{real}}(L) = \int_{0}^{T} \Big[\alpha \cdot \text{Feel}(t) + \beta \cdot \text{Factuality}(t) + \gamma \cdot \text{Agency}(t)\Big] \, dt
-\end{aligned}$$
+\end{aligned}
+$$
 
 * Under classical hedonism ($\beta = 0, \gamma = 0$), plugging into the machine strictly maximizes $W_{\text{hed}}(L)$ since $\forall t, \, P_{\text{machine}}(t) > P_{\text{reality}}(t)$ and $D_{\text{machine}}(t) \to 0$.
 * Nozick's thought experiment proves that for almost all human agents, $\beta > 0$ and $\gamma > 0$: veridical contact with mind-independent states of affairs and genuine bodily agency possess non-zero intrinsic moral weight.

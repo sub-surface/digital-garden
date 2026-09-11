@@ -199,7 +199,7 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
             clusterKey,
             clusterTargetX: center.x,
             clusterTargetY: center.y,
-            r: 2.5 + Math.min(14, Math.log2(deg + 1) * 2.5),
+            r: 1.3 + Math.min(7.0, Math.log2(deg + 1) * 1.3),
             twinkle: Math.random() * Math.PI * 2,
             degree: deg,
             hue: hueForTag(tag),
@@ -225,7 +225,7 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
               .distance((l) => {
                 const sDeg = (l.source as StarNode).degree ?? 1
                 const tDeg = (l.target as StarNode).degree ?? 1
-                return 45 + Math.min(65, Math.sqrt(sDeg + tDeg) * 7)
+                return 40 + Math.min(60, Math.sqrt(sDeg + tDeg) * 6)
               })
               .strength(0.35)
           )
@@ -233,14 +233,14 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
             "charge",
             d3
               .forceManyBody<StarNode>()
-              .strength((d) => -60 - d.degree * 10)
+              .strength((d) => -50 - d.degree * 8)
               .distanceMax(550)
           )
           .force(
             "collide",
             d3
               .forceCollide<StarNode>()
-              .radius((d) => d.r + 8)
+              .radius((d) => d.r + 5)
               .iterations(2)
           )
           .force(
@@ -427,7 +427,7 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
         ctx.stroke()
       }
 
-      // Draw stars with organic breathing & twinkling
+      // Pass 1: Draw stars (auras, halos, core stars)
       const stars = starsRef.current
       for (let i = 0; i < stars.length; i++) {
         const s = stars[i]
@@ -501,65 +501,110 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
         ctx.beginPath()
         ctx.arc(px, py, r, 0, Math.PI * 2)
         ctx.fill()
+      }
 
-        // Labels: active star, 1-hop neighbors, tag matches, or progressive zoom reveal
+      // Pass 2: Draw labels (always rendered on top of all stars and halos)
+      let hoveredStarToDraw: StarNode | null = null
+      let hoveredStarPx = 0
+      let hoveredStarPy = 0
+      let hoveredStarR = 0
+
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i]
+        if (s.x == null || s.y == null) continue
+
+        const driftX = Math.sin(t * 0.0006 + s.twinkle) * 1.5
+        const driftY = Math.cos(t * 0.0006 + s.twinkle) * 1.5
+        const px = s.x + driftX
+        const py = s.y + driftY
+
+        const isHov = s.id === hov
+        const is1Hop = hop1Set?.has(s.id) ?? false
+        const isTagMatch = filterTag ? s.tag === filterTag : false
+
+        let r = s.r
+        if (hov) {
+          if (isHov) {
+            r *= 1.8
+          } else if (is1Hop) {
+            r *= 1.3
+          } else if (hop2Set?.has(s.id)) {
+            r *= 1.1
+          }
+        } else if (filterTag && isTagMatch) {
+          r *= 1.4
+        }
+
+        if (isHov) {
+          hoveredStarToDraw = s
+          hoveredStarPx = px
+          hoveredStarPy = py
+          hoveredStarR = r
+          continue // Defer hovered star's pill & label so it's on the topmost layer
+        }
+
         const zoomReveal = v.zoom >= 1.5
         const showLabel =
-          isHov ||
           is1Hop ||
           (filterTag && isTagMatch) ||
           (zoomReveal && s.degree >= 3) ||
           v.zoom >= 2.6
 
-        if (showLabel) {
-          let labelAlpha = 0.85
-          if (isHov) {
-            labelAlpha = 1
-          } else if (is1Hop || (filterTag && isTagMatch)) {
-            labelAlpha = 0.8
-          } else if (hov || filterTag) {
-            labelAlpha = 0.25
-          } else {
-            // Fade in smoothly as zoom increases
-            const zFactor = Math.min(1, (v.zoom - 1.5) / 1.1)
-            labelAlpha = Math.min(0.8, zFactor * (0.35 + Math.min(0.45, s.degree * 0.1)))
-          }
+        if (!showLabel) continue
 
-          if (labelAlpha > 0.05) {
-            ctx.globalAlpha = labelAlpha
-            ctx.fillStyle = isHov ? labelHovCol : labelBaseCol
-            const fontSize = (isHov ? 12 : 9.5) / v.zoom
-            ctx.font = `${isHov ? "600 " : ""}${fontSize}px 'IBM Plex Mono', monospace`
-            ctx.textAlign = "center"
-
-            // Text background pill for active star
-            if (isHov) {
-              const metrics = ctx.measureText(s.title)
-              const textWidth = metrics.width
-              const pillH = fontSize * 1.5
-              const pillW = textWidth + fontSize * 1.2
-              const pillX = px - pillW / 2
-              const pillY = py - r - pillH - 4 / v.zoom
-
-              ctx.save()
-              ctx.globalAlpha = 0.88
-              ctx.fillStyle = isLight ? "#ffffff" : "#141418"
-              ctx.strokeStyle = accentCol
-              ctx.lineWidth = 1 / v.zoom
-              ctx.beginPath()
-              ctx.roundRect(pillX, pillY, pillW, pillH, 4 / v.zoom)
-              ctx.fill()
-              ctx.stroke()
-              ctx.restore()
-
-              ctx.globalAlpha = 1
-              ctx.fillStyle = isHov ? labelHovCol : labelBaseCol
-              ctx.fillText(s.title, px, pillY + pillH * 0.72)
-            } else {
-              ctx.fillText(s.title, px, py - r - 5 / v.zoom)
-            }
-          }
+        let labelAlpha = 0.85
+        if (is1Hop || (filterTag && isTagMatch)) {
+          labelAlpha = 0.8
+        } else if (hov || filterTag) {
+          labelAlpha = 0.25
+        } else {
+          // Fade in smoothly as zoom increases
+          const zFactor = Math.min(1, (v.zoom - 1.5) / 1.1)
+          labelAlpha = Math.min(0.8, zFactor * (0.35 + Math.min(0.45, s.degree * 0.1)))
         }
+
+        if (labelAlpha <= 0.05) continue
+
+        ctx.globalAlpha = labelAlpha
+        ctx.fillStyle = labelBaseCol
+        const fontSize = 9.5 / v.zoom
+        ctx.font = `${fontSize}px 'IBM Plex Mono', monospace`
+        ctx.textAlign = "center"
+        ctx.fillText(s.title, px, py - r - 5 / v.zoom)
+      }
+
+      // Draw hovered star label and pill on the absolute topmost layer
+      if (hoveredStarToDraw) {
+        const s = hoveredStarToDraw
+        const px = hoveredStarPx
+        const py = hoveredStarPy
+        const r = hoveredStarR
+        const fontSize = 12 / v.zoom
+
+        ctx.font = `600 ${fontSize}px 'IBM Plex Mono', monospace`
+        ctx.textAlign = "center"
+
+        const metrics = ctx.measureText(s.title)
+        const textWidth = metrics.width
+        const pillH = fontSize * 1.5
+        const pillW = textWidth + fontSize * 1.2
+        const pillX = px - pillW / 2
+        const pillY = py - r - pillH - 4 / v.zoom
+
+        ctx.save()
+        ctx.globalAlpha = 0.92
+        ctx.fillStyle = isLight ? "#ffffff" : "#141418"
+        ctx.strokeStyle = accentCol
+        ctx.lineWidth = 1 / v.zoom
+        ctx.beginPath()
+        ctx.roundRect(pillX, pillY, pillW, pillH, 4 / v.zoom)
+        ctx.fill()
+        ctx.stroke()
+        ctx.restore()
+
+        ctx.globalAlpha = 1
+        ctx.fillStyle = labelHovCol
+        ctx.fillText(s.title, px, pillY + pillH * 0.72)
       }
 
       ctx.restore()

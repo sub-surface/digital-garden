@@ -172,7 +172,7 @@ export function WikiGraph({ cluster, tag, height = 520 }: WikiGraphProps) {
           clusterKey: cat,
           clusterTargetX: center.x,
           clusterTargetY: center.y,
-          r: 3.0 + Math.min(14, Math.log2(deg + 1) * 2.4),
+          r: 1.5 + Math.min(7.0, Math.log2(deg + 1) * 1.2),
           color: CATEGORY_COLORS[cat].hex,
           twinkle: Math.random() * Math.PI * 2,
           x: center.x + Math.cos(jitterA) * jitterR,
@@ -195,7 +195,7 @@ export function WikiGraph({ cluster, tag, height = 520 }: WikiGraphProps) {
             .distance(l => {
               const sDeg = (l.source as GraphNode).degree ?? 1
               const tDeg = (l.target as GraphNode).degree ?? 1
-              return 40 + Math.min(60, Math.sqrt(sDeg + tDeg) * 6)
+              return 35 + Math.min(55, Math.sqrt(sDeg + tDeg) * 5.5)
             })
             .strength(0.3)
         )
@@ -203,14 +203,14 @@ export function WikiGraph({ cluster, tag, height = 520 }: WikiGraphProps) {
           "charge",
           d3
             .forceManyBody<GraphNode>()
-            .strength(d => -45 - d.degree * 8)
+            .strength(d => -40 - d.degree * 7)
             .distanceMax(450)
         )
         .force(
           "collide",
           d3
             .forceCollide<GraphNode>()
-            .radius(d => d.r + 6)
+            .radius(d => d.r + 4)
             .iterations(2)
         )
         .force(
@@ -287,7 +287,7 @@ export function WikiGraph({ cluster, tag, height = 520 }: WikiGraphProps) {
           ctx.stroke()
         }
 
-        // 2. Draw nodes
+        // 2. Draw nodes (glows and cores)
         const nodes = nodesRef.current
         for (let i = 0; i < nodes.length; i++) {
           const n = nodes[i]
@@ -325,32 +325,61 @@ export function WikiGraph({ cluster, tag, height = 520 }: WikiGraphProps) {
             ctx.fillStyle = n.color
           }
           ctx.fill()
+        }
 
-          // Labels: draw for hovered node, 1-hop neighbors, or top hubs when zoomed in
-          const showLabel = isHovered || isNeighbor || (zoom >= 1.2 && n.degree >= 5) || (zoom >= 1.8 && n.degree >= 2)
-          if (showLabel && !isDimmed) {
-            ctx.font = `${Math.max(10, Math.min(13, 11 / zoom))}px "IBM Plex Sans", -apple-system, sans-serif`
-            ctx.textAlign = "center"
-            ctx.textBaseline = "middle"
+        // 3. Draw labels (always rendered on top of all nodes, glows, and links)
+        const drawWikiLabel = (n: GraphNode, isHovered: boolean, isNeighbor: boolean) => {
+          if (n.x === undefined || n.y === undefined) return
+          const pulse = 0.85 + 0.15 * Math.sin(n.twinkle)
+          const effectiveR = (isHovered ? n.r * 1.4 : isNeighbor ? n.r * 1.15 : n.r) * (hoveredId ? 1 : pulse)
 
-            const text = n.title
-            const textY = n.y + effectiveR + 10 / zoom
+          ctx.font = `${isHovered ? "600 " : ""}${Math.max(10, Math.min(13, 11 / zoom))}px "IBM Plex Sans", -apple-system, sans-serif`
+          ctx.textAlign = "center"
+          ctx.textBaseline = "middle"
 
-            // Pill backing
-            const textMetrics = ctx.measureText(text)
-            const padX = 4 / zoom
-            const padY = 2 / zoom
-            ctx.fillStyle = isHovered ? "rgba(12, 12, 16, 0.88)" : "rgba(10, 10, 12, 0.65)"
-            ctx.fillRect(
-              n.x - textMetrics.width / 2 - padX,
-              textY - 6 / zoom - padY,
-              textMetrics.width + padX * 2,
-              12 / zoom + padY * 2
-            )
+          const text = n.title
+          const textY = n.y + effectiveR + 8 / zoom
 
-            ctx.fillStyle = isHovered ? "#ffffff" : isNeighbor ? "rgba(240, 240, 250, 0.95)" : "rgba(210, 210, 220, 0.75)"
-            ctx.fillText(text, n.x, textY)
+          // Pill backing
+          const textMetrics = ctx.measureText(text)
+          const padX = 4 / zoom
+          const padY = 2 / zoom
+          ctx.fillStyle = isHovered ? "rgba(12, 12, 16, 0.92)" : "rgba(10, 10, 12, 0.72)"
+          ctx.fillRect(
+            n.x - textMetrics.width / 2 - padX,
+            textY - 6 / zoom - padY,
+            textMetrics.width + padX * 2,
+            12 / zoom + padY * 2
+          )
+
+          ctx.fillStyle = isHovered ? "#ffffff" : isNeighbor ? "rgba(240, 240, 250, 0.95)" : "rgba(210, 210, 220, 0.8)"
+          ctx.fillText(text, n.x, textY)
+        }
+
+        let hoveredNodeToDraw: GraphNode | null = null
+
+        for (let i = 0; i < nodes.length; i++) {
+          const n = nodes[i]
+          if (n.x === undefined || n.y === undefined) continue
+
+          const isHovered = n.id === hoveredId
+          const isNeighbor = hAdj ? hAdj.has(n.id) : false
+          const isDimmed = hoveredId ? !isHovered && !isNeighbor : false
+
+          if (isHovered) {
+            hoveredNodeToDraw = n
+            continue // Draw hovered label last to guarantee it stays topmost
           }
+
+          const showLabel = isNeighbor || (zoom >= 1.2 && n.degree >= 5) || (zoom >= 1.8 && n.degree >= 2)
+          if (showLabel && !isDimmed) {
+            drawWikiLabel(n, false, isNeighbor)
+          }
+        }
+
+        // Draw hovered label last so its pill and text are on the absolute top layer
+        if (hoveredNodeToDraw) {
+          drawWikiLabel(hoveredNodeToDraw, true, false)
         }
 
         ctx.restore()

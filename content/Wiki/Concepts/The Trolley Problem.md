@@ -99,11 +99,13 @@ Philippa Foot explained the divergence through the asymmetry between:
 
 The problem can be modeled in deontic modal logic ($O$ = Obligatory, $P$ = Permissible, $F$ = Forbidden):
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{Consequentialist Axiom:} & \quad \forall a, a' \in \text{Actions}, \, [U(a) > U(a')] \implies O(a) \\
 \text{Kantian Constraint:} & \quad \forall x, \, \text{Person}(x) \implies F\big(\text{TreatAsMeans}(x)\big) \\
 \text{Foot's Priority Rule:} & \quad \text{Weight}\big(O(\neg \text{Harm})\big) \gg \text{Weight}\big(O(\text{Aid})\big)
-\end{aligned}$$
+\end{aligned}
+$$
 
 The tension arises because the consequentialist axiom prescribes pulling the lever in *both* Switch and Footbridge, whereas pure Kantian deontology struggles to explain why turning the switch does not count as killing the one worker.
 

@@ -53,14 +53,16 @@ Virtually all moral intuitions answer: **No.** While staying plugged in would be
 
 Thomson formalizes the classical anti-abortion syllogism and exposes its hidden premise:
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{Premise 1:} & \quad \text{Every person has a right to life.} \\
 \text{Premise 2:} & \quad \text{The violinist is a person.} \\
 \text{Premise 3:} & \quad \text{Therefore, the violinist has a right to life.} \\
 \text{Premise 4:} & \quad \text{You have a right to decide what happens in and to your own body.} \\
 \text{Classical Claim:} & \quad \text{The right to life is strictly weightier than the right to bodily autonomy.} \\
 \text{Conclusion:} & \quad \text{Therefore, you may not unplug yourself.}
-\end{aligned}$$
+\end{aligned}
+$$
 
 Thomson shows that the inference fails because it relies on an incoherent conception of what a **Right to Life** entails.
 

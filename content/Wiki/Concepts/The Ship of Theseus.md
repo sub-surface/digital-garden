@@ -31,13 +31,15 @@ We now have two ships:
 
 The paradox exposes an intractable contradiction between three intuitively undeniable principles:
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{\textbf{Principle 1 (Spatiotemporal Continuity):}} & \quad S_0 = S_A \text{ (Gradual part replacement preserves identity).} \\
 \text{\textbf{Principle 2 (Material Constitution):}} & \quad S_0 = S_B \text{ (Sameness of original constituent matter preserves identity).} \\
 \text{\textbf{Principle 3 (Transitivity of Identity):}} & \quad (S_0 = S_A \land S_0 = S_B) \implies S_A = S_B. \\
 \hline
 \text{\textbf{The Inconsistency:}} & \quad S_A \neq S_B \text{ (They occupy distinct spatial regions at } t_1 \text{).}
-\end{aligned}$$
+\end{aligned}
+$$
 
 Because numerical identity is an equivalence relation satisfying Leibniz's Law of Indiscernibility of Identicals ($\forall x \forall y \, [x = y \implies \forall F (Fx \iff Fy)]$), $S_A$ and $S_B$ cannot both be identical to $S_0$.
 

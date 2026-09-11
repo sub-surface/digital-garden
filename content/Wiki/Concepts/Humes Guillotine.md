@@ -57,12 +57,14 @@ Hume stated the problem in Book III, Part I, Section I of the *Treatise*:
 
 In formal logic, the principle is a consequence of conservative extension: in any valid deductive argument with non-evaluative premises $P_1, P_2, \dots, P_n$, no non-trivial evaluative conclusion $C$ can be derived:
 
-$$\begin{aligned}
-& P_1: \quad \text{Action } X \text{ maximizes reproductive fitness or dopamine secretion.} \quad (\text{Descriptive Fact}) \\
-& P_2: \quad \text{Society } S \text{ penalizes the omission of } X. \quad (\text{Sociological Fact}) \\
-& \hline \\
-& \therefore C: \quad \text{Agents in } S \text{ ought to perform } X. \quad (\text{Invalid deduction without normative bridge premise})
-\end{aligned}$$
+$$
+\begin{aligned}
+P_1: & \quad \text{Action } X \text{ maximizes reproductive fitness or dopamine secretion.} \quad (\text{Descriptive Fact}) \\
+P_2: & \quad \text{Society } S \text{ penalizes the omission of } X. \quad (\text{Sociological Fact}) \\
+\hline
+\therefore C: & \quad \text{Agents in } S \text{ ought to perform } X. \quad (\text{Invalid deduction without normative bridge premise})
+\end{aligned}
+$$
 
 The inference becomes logically valid only if one supplements a normative bridge premise ($P_{\text{bridge}}$): *"Agents ought to maximize reproductive fitness or obey social penal codes."* But this premise itself cannot be established empirically, proving the autonomy of ethics from descriptive science.
 

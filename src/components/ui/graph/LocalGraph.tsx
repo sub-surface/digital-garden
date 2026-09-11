@@ -104,8 +104,8 @@ export function LocalGraph({ slug }: Props) {
           const deg = fullDegreeMap.get(n.id) || 1
           // Logarithmic radius: center is prominent, neighbors scale smoothly by degree
           const r = isCurrent
-            ? 7 + Math.min(6, Math.log2(deg + 1) * 1.5)
-            : 3.5 + Math.min(5, Math.log2(deg + 1) * 1.3)
+            ? 3.5 + Math.min(3, Math.log2(deg + 1) * 0.75)
+            : 1.8 + Math.min(2.5, Math.log2(deg + 1) * 0.65)
           return {
             id: n.id,
             title: n.title || n.id.split("/").pop() || n.id,
@@ -125,7 +125,7 @@ export function LocalGraph({ slug }: Props) {
           tags: [],
           isCurrent: true,
           degree: 0,
-          r: 7,
+          r: 3.5,
           x: 0,
           y: 0,
         })
@@ -191,16 +191,16 @@ export function LocalGraph({ slug }: Props) {
           d3
             .forceLink<LocalNode, LocalLink>(localLinks)
             .id((d) => d.id)
-            .distance((l) => (l.isDirect ? (isMobile ? 55 : 75) : (isMobile ? 70 : 100)))
+            .distance((l) => (l.isDirect ? (isMobile ? 45 : 65) : (isMobile ? 55 : 85)))
             .strength(0.55),
         )
-        .force("charge", d3.forceManyBody().strength(-200))
+        .force("charge", d3.forceManyBody().strength(-160))
         .force("center", d3.forceCenter(0, 0).strength(0.12))
         .force(
           "collision",
           d3
             .forceCollide<LocalNode>()
-            .radius((d) => d.r + (isMobile ? 18 : 24))
+            .radius((d) => d.r + (isMobile ? 12 : 16))
             .strength(0.8),
         )
 
@@ -397,7 +397,7 @@ export function LocalGraph({ slug }: Props) {
           ctx.stroke()
         })
 
-        // 2. Draw Nodes
+        // 2. Draw Nodes (cores and halos)
         localNodes.forEach((n) => {
           if (n.x === undefined || n.y === undefined) return
 
@@ -405,9 +405,9 @@ export function LocalGraph({ slug }: Props) {
 
           if (n.isCurrent) {
             // Central node glowing halo
-            const pulse = Math.sin(elapsed * 3) * 1.5
+            const pulse = Math.sin(elapsed * 3) * 0.8
             ctx.beginPath()
-            ctx.arc(n.x, n.y, n.r + 4 + pulse, 0, Math.PI * 2)
+            ctx.arc(n.x, n.y, n.r + 3 + pulse, 0, Math.PI * 2)
             ctx.fillStyle = accentColor
             ctx.globalAlpha = 0.22
             ctx.fill()
@@ -421,27 +421,41 @@ export function LocalGraph({ slug }: Props) {
           } else {
             // Connected neighbor nodes
             ctx.beginPath()
-            ctx.arc(n.x, n.y, isHovered ? n.r + 2 : n.r, 0, Math.PI * 2)
+            ctx.arc(n.x, n.y, isHovered ? n.r + 1.5 : n.r, 0, Math.PI * 2)
             ctx.fillStyle = isHovered ? accentColor : "#e2e8f0"
             ctx.globalAlpha = isHovered ? 1.0 : 0.75
             ctx.fill()
           }
+        })
 
-          // 3. Draw Labels
+        // 3. Draw Labels (Always on top of all nodes, halos, and links)
+        const renderLocalLabel = (n: LocalNode) => {
+          if (n.x === undefined || n.y === undefined) return
+          const isHovered = hoveredNode?.id === n.id
+
           ctx.font = `${n.isCurrent ? "bold " : ""}9px "JetBrains Mono", monospace`
           ctx.textAlign = "center"
           ctx.textBaseline = "top"
 
-          const labelY = n.y + n.r + 4
+          const labelY = n.y + n.r + 3.5
           // Text shadow backing
-          ctx.fillStyle = "rgba(0, 0, 0, 0.75)"
-          ctx.globalAlpha = 0.9
+          ctx.fillStyle = "rgba(0, 0, 0, 0.85)"
+          ctx.globalAlpha = 0.95
           ctx.fillText(n.title, n.x + 0.5, labelY + 0.5)
 
           ctx.fillStyle = n.isCurrent ? "#ffffff" : isHovered ? "#ffffff" : "#cbd5e1"
-          ctx.globalAlpha = n.isCurrent ? 1.0 : isHovered ? 1.0 : 0.7
+          ctx.globalAlpha = n.isCurrent ? 1.0 : isHovered ? 1.0 : 0.8
           ctx.fillText(n.title, n.x, labelY)
+        }
+
+        // Render regular labels first, and hovered node label last to keep it topmost
+        localNodes.forEach((n) => {
+          if (hoveredNode && n.id === hoveredNode.id) return
+          renderLocalLabel(n)
         })
+        if (hoveredNode) {
+          renderLocalLabel(hoveredNode)
+        }
 
         ctx.restore()
         animFrameId = requestAnimationFrame(render)

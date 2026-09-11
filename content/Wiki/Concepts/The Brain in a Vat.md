@@ -35,11 +35,13 @@ Imagine that a mad neuroscientist has surgically removed your brain, placed it i
 
 The skeptic poses the classical challenge:
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{Premise 1:} & \quad \text{You do not know that you are not a brain in a vat.} \\
 \text{Premise 2:} & \quad \text{If you do not know that you are not a brain in a vat, then you do not know you have hands.} \\
 \text{Conclusion:} & \quad \text{Therefore, you do not know that you have hands.}
-\end{aligned}$$
+\end{aligned}
+$$
 
 Under the **Epistemic Closure Principle**—if $S$ knows $P$, and knows that $P$ entails $Q$, then $S$ knows $Q$—the inability to empirically rule out the BIV hypothesis appears to infect all empirical perceptual beliefs with radical uncertainty.
 

@@ -82,7 +82,8 @@ $$\text{whose worst outcome is superior to the worst outcome of all other option
 
 Rawls deduces that parties in the Original Position would unanimously select two fundamental principles of justice:
 
-$$\begin{aligned}
+$$
+\begin{aligned}
 \text{\bf First Principle (Equal Basic Liberties):} & \quad \text{Each person has an equal right to the most extensive scheme} \\
 & \quad \text{of equal basic liberties compatible with a similar scheme for all.} \\
 \\
@@ -90,7 +91,8 @@ $$\begin{aligned}
 \text{\it (a) Fair Equality of Opportunity:} & \quad \text{They must be attached to offices and positions open to all} \\
 & \quad \text{under conditions of fair equality of opportunity.} \\
 \text{\it (b) The Difference Principle:} & \quad \text{They must be to the greatest benefit of the least-advantaged members.}
-\end{aligned}$$
+\end{aligned}
+$$
 
 ### 1. The Lexical Priority Rules (*Lexikalische Ordnung*)
 Rawls strictly forbids trade-offs between liberty and economic prosperity through two lexical priority rules:
