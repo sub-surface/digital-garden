@@ -1,41 +1,86 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
+import * as d3 from "d3"
 import { useStore } from "@/store"
 import { useProgramHost } from "@/components/ui/games/ProgramHostContext"
 import styles from "./ConstellationPage.module.scss"
 
 /**
- * Living Constellation — the note-graph as a slowly drifting star map.
+ * Living Constellation — Obsidian-style physics graph synthesized with celestial fidelity.
  *
- * Stars are notes (sized by connection count, tinted by their dominant tag);
- * links are faint constellation lines. The whole sky breathes and twinkles even
- * when idle. Hover a star to light its constellation; click to travel to the
- * note. Drag to pan, scroll to zoom. Contemplative cousin of /graph.
+ * Stars are notes sized by degree and tinted by tag/folder clustering.
+ * Interactive D3 force simulation:
+ * - Real-time click-and-drag physics with spring-back equilibrium.
+ * - Dynamic collision bounds preventing node overlap.
+ * - Organic cluster formation by tag/folder lineages.
+ * - Depth-aware edge highlighting (1-hop and 2-hop neighborhood illumination).
+ * - Gentle celestial breathing drift and individual star twinkling.
+ * - Anchor-centered zoom and inertial viewport panning.
  */
 
-interface RawNode { id: string; title: string; tags?: string[] }
-interface RawLink { source: string; target: string }
-interface GraphData { nodes: RawNode[]; links: RawLink[] }
+interface RawNode {
+  id: string
+  title: string
+  tags?: string[]
+}
 
-interface Star {
+interface RawLink {
+  source: string
+  target: string
+}
+
+interface GraphData {
+  nodes: RawNode[]
+  links: RawLink[]
+}
+
+interface StarNode extends d3.SimulationNodeDatum {
   id: string
   title: string
   tag: string
-  x: number; y: number      // home position (graph space)
-  r: number                 // radius
-  twinkle: number           // phase offset
+  clusterKey: string
+  clusterTargetX: number
+  clusterTargetY: number
+  r: number
+  twinkle: number
   degree: number
   hue: number
+  x: number
+  y: number
+  vx?: number
+  vy?: number
+  fx?: number | null
+  fy?: number | null
 }
 
-// A small palette across the spectrum; tags map to a stable hue.
+interface StarLink extends d3.SimulationLinkDatum<StarNode> {
+  source: StarNode | string
+  target: StarNode | string
+}
+
 function hueForTag(tag: string): number {
   let h = 0
-  for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) % 360
+  for (let i = 0; i < tag.length; i++) {
+    h = (h * 31 + tag.charCodeAt(i)) % 360
+  }
   return h
 }
 
-const norm = (t: string) => t.toLowerCase()
+const norm = (t: string) => t.toLowerCase().trim()
+
+function getClusterKey(node: RawNode): string {
+  if (node.tags && node.tags.length > 0 && node.tags[0].trim()) {
+    return norm(node.tags[0])
+  }
+  const parts = node.id.split("/")
+  if (parts.length > 1) {
+    if (parts[0].toLowerCase() === "wiki" && parts.length > 2) {
+      return `wiki/${parts[1].toLowerCase()}`
+    }
+    return parts[0].toLowerCase()
+  }
+  return "general"
+}
 
 interface Stats {
   notes: number
@@ -51,83 +96,197 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
   const isEmbedded = embedded || programHost.embedded
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const navigate = useNavigate()
-  const openNote = useCallback((slug: string) => {
-    if (programHost.open) programHost.open(slug)
-    else navigate({ to: `/${slug}` })
-  }, [navigate, programHost])
+
+  const openNote = useCallback(
+    (slug: string) => {
+      if (programHost.open) programHost.open(slug)
+      else navigate({ to: `/${slug}` })
+    },
+    [navigate, programHost]
+  )
+
   const [ready, setReady] = useState(false)
   const [hovered, setHovered] = useState<string | null>(null)
+  const [activeFilterTag, setActiveFilterTag] = useState<string | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
   const [showStats, setShowStats] = useState(!isEmbedded)
+
   const hoveredRef = useRef<string | null>(null)
   hoveredRef.current = hovered
 
+  const filterTagRef = useRef<string | null>(null)
+  filterTagRef.current = activeFilterTag
+
   const view = useRef({ x: 0, y: 0, zoom: 1 })
-  const stars = useRef<Star[]>([])
-  const adj = useRef<Map<string, Set<string>>>(new Map())
-  const links = useRef<RawLink[]>([])
+  const starsRef = useRef<StarNode[]>([])
+  const linksRef = useRef<StarLink[]>([])
+  const adj1Ref = useRef<Map<string, Set<string>>>(new Map())
+  const adj2Ref = useRef<Map<string, Set<string>>>(new Map())
+  const simRef = useRef<d3.Simulation<StarNode, StarLink> | null>(null)
 
   useEffect(() => {
     let cancelled = false
+
     fetch("/graph.json")
       .then((r) => r.json())
       .then((data: GraphData) => {
         if (cancelled) return
-        const degree = new Map<string, number>()
-        const adjacency = new Map<string, Set<string>>()
+
+        const degreeMap = new Map<string, number>()
+        const adj1 = new Map<string, Set<string>>()
+
         for (const l of data.links) {
-          degree.set(l.source, (degree.get(l.source) ?? 0) + 1)
-          degree.set(l.target, (degree.get(l.target) ?? 0) + 1)
-          if (!adjacency.has(l.source)) adjacency.set(l.source, new Set())
-          if (!adjacency.has(l.target)) adjacency.set(l.target, new Set())
-          adjacency.get(l.source)!.add(l.target)
-          adjacency.get(l.target)!.add(l.source)
+          degreeMap.set(l.source, (degreeMap.get(l.source) ?? 0) + 1)
+          degreeMap.set(l.target, (degreeMap.get(l.target) ?? 0) + 1)
+
+          if (!adj1.has(l.source)) adj1.set(l.source, new Set())
+          if (!adj1.has(l.target)) adj1.set(l.target, new Set())
+          adj1.get(l.source)!.add(l.target)
+          adj1.get(l.target)!.add(l.source)
         }
-        adj.current = adjacency
-        links.current = data.links
 
-        // Lay out stars in loose tag-clusters arranged around a circle, then
-        // jitter — gives constellations a sense of region without a heavy sim.
-        const tagList = Array.from(
-          new Set(data.nodes.flatMap((n) => (n.tags ?? []).map(norm)).concat(["·"]))
-        )
-        const tagAngle = new Map<string, number>()
-        tagList.forEach((t, i) => tagAngle.set(t, (i / tagList.length) * Math.PI * 2))
+        // Compute 2-hop neighborhood map for depth-aware illumination
+        const adj2 = new Map<string, Set<string>>()
+        for (const [nodeId, neighbors] of adj1.entries()) {
+          const hop2Set = new Set<string>()
+          for (const n1 of neighbors) {
+            const n2s = adj1.get(n1)
+            if (n2s) {
+              for (const n2 of n2s) {
+                if (n2 !== nodeId && !neighbors.has(n2)) {
+                  hop2Set.add(n2)
+                }
+              }
+            }
+          }
+          adj2.set(nodeId, hop2Set)
+        }
 
-        const R = 1100
-        stars.current = data.nodes.map((n) => {
-          const tag = (n.tags && n.tags[0] ? norm(n.tags[0]) : "·")
-          const baseAng = tagAngle.get(tag) ?? 0
-          const ang = baseAng + (Math.random() - 0.5) * 0.9
-          const rad = R * (0.25 + Math.random() * 0.75)
-          const deg = degree.get(n.id) ?? 0
+        adj1Ref.current = adj1
+        adj2Ref.current = adj2
+
+        // Cluster targets: organize clusters along a celestial circle
+        const clusterSet = new Set<string>()
+        for (const n of data.nodes) {
+          clusterSet.add(getClusterKey(n))
+        }
+        const clusterList = Array.from(clusterSet)
+        const clusterCenters = new Map<string, { x: number; y: number }>()
+        const clusterRadius = 600
+
+        clusterList.forEach((key, idx) => {
+          const angle = (idx / clusterList.length) * Math.PI * 2
+          clusterCenters.set(key, {
+            x: Math.cos(angle) * clusterRadius,
+            y: Math.sin(angle) * clusterRadius,
+          })
+        })
+
+        const starsList: StarNode[] = data.nodes.map((n) => {
+          const clusterKey = getClusterKey(n)
+          const center = clusterCenters.get(clusterKey) ?? { x: 0, y: 0 }
+          const deg = degreeMap.get(n.id) ?? 0
+          const tag = n.tags && n.tags[0] ? norm(n.tags[0]) : clusterKey
+
+          // Initial position seeded near cluster center with jitter
+          const jitterRadius = 120 + Math.random() * 180
+          const jitterAngle = Math.random() * Math.PI * 2
+
           return {
             id: n.id,
-            title: n.title,
+            title: n.title || n.id.split("/").pop() || n.id,
             tag,
-            x: Math.cos(ang) * rad + (Math.random() - 0.5) * 120,
-            y: Math.sin(ang) * rad + (Math.random() - 0.5) * 120,
-            r: 1.6 + Math.min(6, deg * 0.9),
+            clusterKey,
+            clusterTargetX: center.x,
+            clusterTargetY: center.y,
+            r: 2.2 + Math.min(8, Math.sqrt(deg) * 2.2),
             twinkle: Math.random() * Math.PI * 2,
             degree: deg,
             hue: hueForTag(tag),
+            x: center.x + Math.cos(jitterAngle) * jitterRadius,
+            y: center.y + Math.sin(jitterAngle) * jitterRadius,
           }
         })
 
-        // ── garden statistics ──
+        // Clone links for simulation
+        const linksList: StarLink[] = data.links.map((l) => ({
+          source: l.source,
+          target: l.target,
+        }))
+
+        // Setup D3 Force Simulation
+        const simulation = d3
+          .forceSimulation<StarNode>(starsList)
+          .force(
+            "link",
+            d3
+              .forceLink<StarNode, StarLink>(linksList)
+              .id((d) => d.id)
+              .distance((l) => {
+                const sDeg = (l.source as StarNode).degree ?? 1
+                const tDeg = (l.target as StarNode).degree ?? 1
+                return 45 + Math.min(65, Math.sqrt(sDeg + tDeg) * 7)
+              })
+              .strength(0.35)
+          )
+          .force(
+            "charge",
+            d3
+              .forceManyBody<StarNode>()
+              .strength((d) => -60 - d.degree * 10)
+              .distanceMax(550)
+          )
+          .force(
+            "collide",
+            d3
+              .forceCollide<StarNode>()
+              .radius((d) => d.r + 8)
+              .iterations(2)
+          )
+          .force(
+            "clusterX",
+            d3.forceX<StarNode>((d) => d.clusterTargetX).strength(0.04)
+          )
+          .force(
+            "clusterY",
+            d3.forceY<StarNode>((d) => d.clusterTargetY).strength(0.04)
+          )
+          .force("center", d3.forceCenter(0, 0).strength(0.02))
+          .alphaDecay(0.02)
+          .velocityDecay(0.35)
+
+        // Warm up simulation slightly so it arrives already organized
+        for (let i = 0; i < 35; i++) {
+          simulation.tick()
+        }
+
+        simRef.current = simulation
+        starsRef.current = starsList
+        linksRef.current = linksList
+
+        // Garden statistics
         const tagCounts = new Map<string, number>()
         for (const n of data.nodes) {
-          for (const tg of n.tags ?? []) tagCounts.set(norm(tg), (tagCounts.get(norm(tg)) ?? 0) + 1)
+          for (const tg of n.tags ?? []) {
+            const t = norm(tg)
+            tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)
+          }
         }
+
         const topTags = [...tagCounts.entries()]
           .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-          .map(([tag, count]) => ({ tag, count }))
+          .slice(0, 6)
+          .map(([t, count]) => ({ tag: t, count }))
+
         let hub: Stats["hub"] = null
-        for (const s of stars.current) {
-          if (!hub || s.degree > hub.degree) hub = { title: s.title, id: s.id, degree: s.degree }
+        for (const s of starsList) {
+          if (!hub || s.degree > hub.degree) {
+            hub = { title: s.title, id: s.id, degree: s.degree }
+          }
         }
-        const orphans = stars.current.filter((s) => s.degree === 0).length
+
+        const orphans = starsList.filter((s) => s.degree === 0).length
+
         setStats({
           notes: data.nodes.length,
           links: data.links.length,
@@ -140,12 +299,25 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
         setReady(true)
       })
       .catch((e) => console.warn("Constellation: graph load failed", e))
-    return () => { cancelled = true }
+
+    return () => {
+      cancelled = true
+      if (simRef.current) {
+        simRef.current.stop()
+        simRef.current = null
+      }
+    }
   }, [])
 
-  const resetView = () => { view.current = { x: 0, y: 0, zoom: 1 } }
+  const resetView = () => {
+    view.current = { x: 0, y: 0, zoom: 1 }
+    if (simRef.current) {
+      simRef.current.alpha(0.3).restart()
+    }
+  }
+
   const zoomBy = (factor: number) => {
-    view.current.zoom = Math.max(0.3, Math.min(6, view.current.zoom * factor))
+    view.current.zoom = Math.max(0.25, Math.min(6, view.current.zoom * factor))
   }
 
   useEffect(() => {
@@ -163,102 +335,229 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
     resize()
-    window.addEventListener("resize", resize)
 
-    const starById = new Map(stars.current.map((s) => [s.id, s]))
+    const resizeObserver = new ResizeObserver(() => {
+      resize()
+    })
+    resizeObserver.observe(canvas)
 
     let raf = 0
+
+    // Render loop
     const draw = (t: number) => {
       raf = requestAnimationFrame(draw)
+
       const W = canvas.width / dpr
       const H = canvas.height / dpr
       const v = view.current
-      // gentle global drift (the sky slowly turns)
-      const rot = t * 0.000012
-      const cos = Math.cos(rot), sin = Math.sin(rot)
 
       ctx.clearRect(0, 0, W, H)
 
-      // Resolve theme-dependent colours ONCE per frame. The canvas is transparent
-      // and sits over the (theme-aware) BgCanvas, so in light mode the previously
-      // hardcoded white stars/lines/labels vanished. Reading these per-element
-      // inside the loops below also forced a style recalc every iteration — a
-      // measurable reflow on large graphs. Once per frame keeps them live when
-      // the user toggles theme/accent (the effect doesn't re-run on theme change).
+      // Theme-dependent colors resolved once per frame
       const isLight = document.documentElement.getAttribute("data-theme") === "light"
-      const accentCol = getComputedStyle(document.documentElement).getPropertyValue("--color-accent-base").trim() || "#b4424c"
-      const lineCol = isLight ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.06)"
-      const labelBaseCol = isLight ? "rgba(0,0,0,0.80)" : "rgba(255,255,255,0.82)"
-      const labelHovCol = isLight ? "#000" : "#fff"
-      const starLightness = isLight ? 45 : 72
+      const accentCol =
+        getComputedStyle(document.documentElement)
+          .getPropertyValue("--color-accent-base")
+          .trim() || "#b4424c"
+      const lineBaseCol = isLight ? "rgba(0, 0, 0, 0.14)" : "rgba(255, 255, 255, 0.08)"
+      const labelBaseCol = isLight ? "rgba(0, 0, 0, 0.78)" : "rgba(255, 255, 255, 0.82)"
+      const labelHovCol = isLight ? "#000000" : "#ffffff"
+      const starLightness = isLight ? 42 : 72
 
       ctx.save()
       ctx.translate(W / 2 + v.x, H / 2 + v.y)
       ctx.scale(v.zoom, v.zoom)
 
       const hov = hoveredRef.current
-      const lit = hov ? adj.current.get(hov) ?? new Set<string>() : null
+      const filterTag = filterTagRef.current
+      const hop1Set = hov ? adj1Ref.current.get(hov) ?? new Set<string>() : null
+      const hop2Set = hov ? adj2Ref.current.get(hov) ?? new Set<string>() : null
 
-      const place = (s: Star) => ({ x: s.x * cos - s.y * sin, y: s.x * sin + s.y * cos })
+      // Draw constellation edges with depth-aware lighting
+      const links = linksRef.current
+      for (let i = 0; i < links.length; i++) {
+        const l = links[i]
+        const a = l.source as StarNode
+        const b = l.target as StarNode
+        if (!a || !b || a.x == null || b.x == null) continue
 
-      // constellation lines
-      ctx.lineWidth = 0.6 / v.zoom
-      for (const l of links.current) {
-        const a = starById.get(l.source), b = starById.get(l.target)
-        if (!a || !b) continue
-        const pa = place(a), pb = place(b)
-        const isLit = hov && (l.source === hov || l.target === hov)
-        ctx.strokeStyle = isLit ? accentCol : lineCol
-        ctx.globalAlpha = isLit ? 0.5 : 0.5
+        const is1Hop = hov && (a.id === hov || b.id === hov)
+        const is2Hop =
+          hov &&
+          !is1Hop &&
+          ((hop1Set?.has(a.id) && hop1Set?.has(b.id)) ||
+            (hop1Set?.has(a.id) && hop2Set?.has(b.id)) ||
+            (hop2Set?.has(a.id) && hop1Set?.has(b.id)))
+
+        const isTagMatch = filterTag && (a.tag === filterTag || b.tag === filterTag)
+
+        if (hov) {
+          if (is1Hop) {
+            ctx.lineWidth = 1.8 / v.zoom
+            ctx.strokeStyle = accentCol
+            ctx.globalAlpha = 0.85
+          } else if (is2Hop) {
+            ctx.lineWidth = 1.0 / v.zoom
+            ctx.strokeStyle = lineBaseCol
+            ctx.globalAlpha = 0.35
+          } else {
+            ctx.lineWidth = 0.5 / v.zoom
+            ctx.strokeStyle = lineBaseCol
+            ctx.globalAlpha = 0.04
+          }
+        } else if (filterTag) {
+          if (isTagMatch) {
+            ctx.lineWidth = 1.4 / v.zoom
+            ctx.strokeStyle = accentCol
+            ctx.globalAlpha = 0.7
+          } else {
+            ctx.lineWidth = 0.5 / v.zoom
+            ctx.strokeStyle = lineBaseCol
+            ctx.globalAlpha = 0.04
+          }
+        } else {
+          ctx.lineWidth = 0.65 / v.zoom
+          ctx.strokeStyle = lineBaseCol
+          ctx.globalAlpha = isLight ? 0.18 : 0.13
+        }
+
         ctx.beginPath()
-        ctx.moveTo(pa.x, pa.y)
-        ctx.lineTo(pb.x, pb.y)
+        ctx.moveTo(a.x, a.y)
+        ctx.lineTo(b.x, b.y)
         ctx.stroke()
       }
 
-      // stars
-      for (const s of stars.current) {
-        const p = place(s)
-        const tw = 0.6 + 0.4 * Math.sin(t * 0.002 + s.twinkle)
+      // Draw stars with organic breathing & twinkling
+      const stars = starsRef.current
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i]
+        if (s.x == null || s.y == null) continue
+
+        // Celestial breathing perturbation
+        const driftX = Math.sin(t * 0.0006 + s.twinkle) * 1.5
+        const driftY = Math.cos(t * 0.0006 + s.twinkle) * 1.5
+        const px = s.x + driftX
+        const py = s.y + driftY
+
         const isHov = s.id === hov
-        const isLit = lit?.has(s.id) || isHov
-        const r = s.r * (isHov ? 1.8 : 1) * (0.85 + tw * 0.25)
+        const is1Hop = hop1Set?.has(s.id) ?? false
+        const is2Hop = hop2Set?.has(s.id) ?? false
+        const isTagMatch = filterTag ? s.tag === filterTag : false
 
-        // glow
-        ctx.globalAlpha = (isLit ? 0.9 : 0.5) * tw
-        const col = isLit ? accentCol : `hsl(${s.hue} 45% ${starLightness}%)`
-        ctx.fillStyle = col
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, r, 0, Math.PI * 2)
-        ctx.fill()
+        const tw = 0.7 + 0.3 * Math.sin(t * 0.0025 + s.twinkle)
+        let alpha = tw
+        let r = s.r
 
-        if (isLit) {
-          ctx.globalAlpha = 0.18
+        if (hov) {
+          if (isHov) {
+            r *= 1.8
+            alpha = 1
+          } else if (is1Hop) {
+            r *= 1.3
+            alpha = 0.85
+          } else if (is2Hop) {
+            r *= 1.1
+            alpha = 0.5
+          } else {
+            alpha = 0.18
+          }
+        } else if (filterTag) {
+          if (isTagMatch) {
+            r *= 1.4
+            alpha = 0.95
+          } else {
+            alpha = 0.15
+          }
+        }
+
+        // Halos
+        if (isHov) {
+          // Multi-layer nebula aura for active node
+          ctx.globalAlpha = 0.12
+          ctx.fillStyle = accentCol
           ctx.beginPath()
-          ctx.arc(p.x, p.y, r * 3, 0, Math.PI * 2)
+          ctx.arc(px, py, r * 4.5, 0, Math.PI * 2)
+          ctx.fill()
+
+          ctx.globalAlpha = 0.28
+          ctx.beginPath()
+          ctx.arc(px, py, r * 2.5, 0, Math.PI * 2)
+          ctx.fill()
+        } else if (is1Hop || (filterTag && isTagMatch)) {
+          ctx.globalAlpha = 0.2
+          ctx.fillStyle = is1Hop ? accentCol : `hsl(${s.hue} 65% ${starLightness}%)`
+          ctx.beginPath()
+          ctx.arc(px, py, r * 2.2, 0, Math.PI * 2)
           ctx.fill()
         }
 
-        // Labels: always for the hovered star + its neighbours; and once zoomed
-        // in past a threshold, reveal labels for every star (brighter for bigger
-        // / more-connected stars, fading in as you zoom further).
-        const zoomReveal = v.zoom >= 1.6
-        const showLabel = isHov || (hov && isLit) || zoomReveal
+        // Core star
+        ctx.globalAlpha = alpha
+        ctx.fillStyle =
+          isHov || is1Hop
+            ? accentCol
+            : `hsl(${s.hue} 55% ${starLightness}%)`
+
+        ctx.beginPath()
+        ctx.arc(px, py, r, 0, Math.PI * 2)
+        ctx.fill()
+
+        // Labels: active star, 1-hop neighbors, tag matches, or progressive zoom reveal
+        const zoomReveal = v.zoom >= 1.5
+        const showLabel =
+          isHov ||
+          is1Hop ||
+          (filterTag && isTagMatch) ||
+          (zoomReveal && s.degree >= 3) ||
+          v.zoom >= 2.6
+
         if (showLabel) {
-          let alpha: number
-          if (isHov) alpha = 0.95
-          else if (hov && isLit) alpha = 0.5
-          else {
-            // fade in between zoom 1.6 and 2.4, weighted by degree so hubs show first
-            const z = Math.min(1, (v.zoom - 1.6) / 0.8)
-            alpha = Math.min(0.85, z * (0.4 + Math.min(0.5, s.degree * 0.12)))
+          let labelAlpha = 0.85
+          if (isHov) {
+            labelAlpha = 1
+          } else if (is1Hop || (filterTag && isTagMatch)) {
+            labelAlpha = 0.8
+          } else if (hov || filterTag) {
+            labelAlpha = 0.25
+          } else {
+            // Fade in smoothly as zoom increases
+            const zFactor = Math.min(1, (v.zoom - 1.5) / 1.1)
+            labelAlpha = Math.min(0.8, zFactor * (0.35 + Math.min(0.45, s.degree * 0.1)))
           }
-          if (alpha > 0.04) {
-            ctx.globalAlpha = alpha
+
+          if (labelAlpha > 0.05) {
+            ctx.globalAlpha = labelAlpha
             ctx.fillStyle = isHov ? labelHovCol : labelBaseCol
-            ctx.font = `${(isHov ? 13 : 10) / v.zoom}px 'IBM Plex Mono', monospace`
+            const fontSize = (isHov ? 12 : 9.5) / v.zoom
+            ctx.font = `${isHov ? "600 " : ""}${fontSize}px 'IBM Plex Mono', monospace`
             ctx.textAlign = "center"
-            ctx.fillText(s.title, p.x, p.y - r - 6 / v.zoom)
+
+            // Text background pill for active star
+            if (isHov) {
+              const metrics = ctx.measureText(s.title)
+              const textWidth = metrics.width
+              const pillH = fontSize * 1.5
+              const pillW = textWidth + fontSize * 1.2
+              const pillX = px - pillW / 2
+              const pillY = py - r - pillH - 4 / v.zoom
+
+              ctx.save()
+              ctx.globalAlpha = 0.88
+              ctx.fillStyle = isLight ? "#ffffff" : "#141418"
+              ctx.strokeStyle = accentCol
+              ctx.lineWidth = 1 / v.zoom
+              ctx.beginPath()
+              ctx.roundRect(pillX, pillY, pillW, pillH, 4 / v.zoom)
+              ctx.fill()
+              ctx.stroke()
+              ctx.restore()
+
+              ctx.globalAlpha = 1
+              ctx.fillStyle = isHov ? labelHovCol : labelBaseCol
+              ctx.fillText(s.title, px, pillY + pillH * 0.72)
+            } else {
+              ctx.fillText(s.title, px, py - r - 5 / v.zoom)
+            }
           }
         }
       }
@@ -266,99 +565,169 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
       ctx.restore()
       ctx.globalAlpha = 1
     }
+
     raf = requestAnimationFrame(draw)
 
-    // ── interaction ──
-    let dragging = false
-    let moved = false
-    let lastX = 0, lastY = 0
+    // Interaction mechanics: Obsidian-like dragging physics + pan & zoom
+    let dragTarget: StarNode | null = null
+    let isPanning = false
+    let hasDragged = false
+    let startX = 0
+    let startY = 0
+    let lastX = 0
+    let lastY = 0
 
     const toGraph = (clientX: number, clientY: number) => {
       const rect = canvas.getBoundingClientRect()
-      const W = rect.width, H = rect.height
+      const W = rect.width
+      const H = rect.height
       const v = view.current
-      // inverse of translate+scale (rotation handled per-star, so approximate
-      // hit-testing un-rotates using current rot at call time below)
       return {
         sx: (clientX - rect.left - W / 2 - v.x) / v.zoom,
         sy: (clientY - rect.top - H / 2 - v.y) / v.zoom,
       }
     }
 
-    const hitTest = (clientX: number, clientY: number): Star | null => {
+    const hitTest = (clientX: number, clientY: number): StarNode | null => {
       const { sx, sy } = toGraph(clientX, clientY)
-      const rot = performance.now() * 0.000012
-      const cos = Math.cos(rot), sin = Math.sin(rot)
-      let best: Star | null = null
-      let bestD = 14 / view.current.zoom
-      for (const s of stars.current) {
-        const x = s.x * cos - s.y * sin
-        const y = s.x * sin + s.y * cos
-        const d = Math.hypot(x - sx, y - sy)
-        if (d < Math.max(bestD, s.r + 6)) { bestD = d; best = s }
+      let best: StarNode | null = null
+      let bestDist = 16 / view.current.zoom
+      const stars = starsRef.current
+
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i]
+        const d = Math.hypot(s.x - sx, s.y - sy)
+        const hitR = Math.max(bestDist, s.r + 8 / view.current.zoom)
+        if (d <= hitR && (!best || d < bestDist)) {
+          best = s
+          bestDist = d
+        }
       }
       return best
     }
 
-    const onDown = (e: PointerEvent) => {
-      dragging = true; moved = false
-      lastX = e.clientX; lastY = e.clientY
+    const onPointerDown = (e: PointerEvent) => {
+      startX = e.clientX
+      startY = e.clientY
+      lastX = e.clientX
+      lastY = e.clientY
+      hasDragged = false
+
       canvas.setPointerCapture(e.pointerId)
+
+      const hit = hitTest(e.clientX, e.clientY)
+      if (hit) {
+        dragTarget = hit
+        hit.fx = hit.x
+        hit.fy = hit.y
+
+        // Wake simulation for dynamic interaction
+        if (simRef.current) {
+          simRef.current.alphaTarget(0.25).restart()
+        }
+        canvas.style.cursor = "grabbing"
+      } else {
+        isPanning = true
+        canvas.style.cursor = "grabbing"
+      }
     }
-    const onMove = (e: PointerEvent) => {
-      if (dragging) {
-        const dx = e.clientX - lastX, dy = e.clientY - lastY
-        if (Math.hypot(dx, dy) > 3) moved = true
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (dragTarget) {
+        const { sx, sy } = toGraph(e.clientX, e.clientY)
+        dragTarget.fx = sx
+        dragTarget.fy = sy
+
+        if (Math.hypot(e.clientX - startX, e.clientY - startY) > 4) {
+          hasDragged = true
+        }
+      } else if (isPanning) {
+        const dx = e.clientX - lastX
+        const dy = e.clientY - lastY
+
+        if (Math.hypot(e.clientX - startX, e.clientY - startY) > 3) {
+          hasDragged = true
+        }
+
         view.current.x += dx
         view.current.y += dy
-        lastX = e.clientX; lastY = e.clientY
+        lastX = e.clientX
+        lastY = e.clientY
       } else {
         const hit = hitTest(e.clientX, e.clientY)
-        setHovered(hit?.id ?? null)
+        const newHovId = hit?.id ?? null
+        if (newHovId !== hoveredRef.current) {
+          hoveredRef.current = newHovId
+          setHovered(newHovId)
+        }
         canvas.style.cursor = hit ? "pointer" : "grab"
       }
     }
-    const onUp = (e: PointerEvent) => {
-      if (dragging && !moved) {
-        const hit = hitTest(e.clientX, e.clientY)
-        if (hit) {
-          // close the Knowledge Map overlay if we're inside it, then travel
-          if (embedded) useStore.getState().setGraphOpen(false)
-          openNote(hit.id)
-        }
+
+    const onPointerUp = (e: PointerEvent) => {
+      try {
+        canvas.releasePointerCapture(e.pointerId)
+      } catch {
+        // Pointer capture may have already been released
       }
-      dragging = false
+
+      if (dragTarget) {
+        if (!hasDragged) {
+          // Direct click: navigate to note
+          if (embedded) useStore.getState().setGraphOpen(false)
+          openNote(dragTarget.id)
+        }
+
+        // Release pin so it springs back into equilibrium
+        dragTarget.fx = null
+        dragTarget.fy = null
+
+        if (simRef.current) {
+          simRef.current.alphaTarget(0)
+        }
+        dragTarget = null
+      }
+
+      isPanning = false
+      canvas.style.cursor = "grab"
     }
+
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       const v = view.current
       const rect = canvas.getBoundingClientRect()
-      // cursor position relative to the transform origin (canvas centre + pan)
       const cxp = e.clientX - rect.left - rect.width / 2 - v.x
       const cyp = e.clientY - rect.top - rect.height / 2 - v.y
-      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12
-      const nz = Math.max(0.3, Math.min(6, v.zoom * factor))
-      const ratio = nz / v.zoom
-      // keep the point under the cursor fixed while zooming
+
+      const factor = e.deltaY < 0 ? 1.14 : 1 / 1.14
+      const newZoom = Math.max(0.25, Math.min(6, v.zoom * factor))
+      const ratio = newZoom / v.zoom
+
       v.x -= cxp * (ratio - 1)
       v.y -= cyp * (ratio - 1)
-      v.zoom = nz
+      v.zoom = newZoom
     }
 
-    canvas.addEventListener("pointerdown", onDown)
-    canvas.addEventListener("pointermove", onMove)
-    canvas.addEventListener("pointerup", onUp)
+    canvas.addEventListener("pointerdown", onPointerDown)
+    canvas.addEventListener("pointermove", onPointerMove)
+    canvas.addEventListener("pointerup", onPointerUp)
+    canvas.addEventListener("pointercancel", onPointerUp)
     canvas.addEventListener("wheel", onWheel, { passive: false })
 
     return () => {
       cancelAnimationFrame(raf)
-      window.removeEventListener("resize", resize)
-      canvas.removeEventListener("pointerdown", onDown)
-      canvas.removeEventListener("pointermove", onMove)
-      canvas.removeEventListener("pointerup", onUp)
+      resizeObserver.disconnect()
+      canvas.removeEventListener("pointerdown", onPointerDown)
+      canvas.removeEventListener("pointermove", onPointerMove)
+      canvas.removeEventListener("pointerup", onPointerUp)
+      canvas.removeEventListener("pointercancel", onPointerUp)
       canvas.removeEventListener("wheel", onWheel)
     }
   }, [ready, openNote, embedded])
+
+  const toggleFilterTag = (t: string) => {
+    setActiveFilterTag((prev) => (prev === t ? null : t))
+  }
 
   return (
     <div
@@ -368,44 +737,98 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
       {!isEmbedded && (
         <header className={styles.header}>
           <h1>Constellation</h1>
-          <p>The garden as a night sky. Drift through it — each star a note, each line a link. Click a star to travel there.</p>
+          <p>
+            The garden as an interactive celestial graph. Click and drag stars to test their
+            tensions, scroll to zoom, or select a star to travel there.
+          </p>
         </header>
       )}
+
       <div className={styles.sky}>
         <canvas ref={canvasRef} className={styles.canvas} />
-        {hovered && <div className={styles.hint}>{stars.current.find((s) => s.id === hovered)?.title}</div>}
 
-        {/* Stats panel */}
+        {hovered && (
+          <div className={styles.hint}>
+            {starsRef.current.find((s) => s.id === hovered)?.title}
+          </div>
+        )}
+
+        {/* Stats & clustering panel */}
         {stats && showStats && (
           <div className={styles.statsPanel}>
-            <button className={styles.statsClose} onClick={() => setShowStats(false)} aria-label="Hide stats">×</button>
+            <button
+              className={styles.statsClose}
+              onClick={() => setShowStats(false)}
+              aria-label="Hide stats"
+            >
+              ×
+            </button>
             <div className={styles.statsGrid}>
-              <div className={styles.stat}><strong>{stats.notes}</strong><span>notes</span></div>
-              <div className={styles.stat}><strong>{stats.links}</strong><span>links</span></div>
-              <div className={styles.stat}><strong>{stats.tags}</strong><span>tags</span></div>
-              <div className={styles.stat}><strong>{stats.orphans}</strong><span>orphans</span></div>
+              <div className={styles.stat}>
+                <strong>{stats.notes}</strong>
+                <span>notes</span>
+              </div>
+              <div className={styles.stat}>
+                <strong>{stats.links}</strong>
+                <span>links</span>
+              </div>
+              <div className={styles.stat}>
+                <strong>{stats.tags}</strong>
+                <span>clusters</span>
+              </div>
+              <div className={styles.stat}>
+                <strong>{stats.orphans}</strong>
+                <span>orphans</span>
+              </div>
             </div>
+
             {stats.hub && (
               <button className={styles.hubLink} onClick={() => openNote(stats.hub!.id)}>
                 ★ most-linked: <em>{stats.hub.title}</em> ({stats.hub.degree})
               </button>
             )}
+
             {stats.topTags.length > 0 && (
               <div className={styles.tagRow}>
-                {stats.topTags.map((t) => (
-                  <a key={t.tag} href={`/tags/${t.tag}`} className={styles.tagChip}>{t.tag} <span>{t.count}</span></a>
-                ))}
+                {stats.topTags.map((t) => {
+                  const isFiltered = activeFilterTag === t.tag
+                  return (
+                    <button
+                      key={t.tag}
+                      type="button"
+                      onClick={() => toggleFilterTag(t.tag)}
+                      className={`${styles.tagChip} ${isFiltered ? styles.activeTag : ""}`}
+                      title={isFiltered ? "Clear filter" : `Highlight #${t.tag}`}
+                    >
+                      {t.tag} <span>{t.count}</span>
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
         )}
 
-        {/* Tools */}
+        {/* Viewport & Physics Tools */}
         <div className={styles.tools}>
-          <button onClick={() => zoomBy(1.25)} aria-label="Zoom in" title="Zoom in">+</button>
-          <button onClick={() => zoomBy(1 / 1.25)} aria-label="Zoom out" title="Zoom out">−</button>
-          <button onClick={resetView} aria-label="Reset view" title="Reset view">⌖</button>
-          {!showStats && <button onClick={() => setShowStats(true)} aria-label="Show stats" title="Show stats">ℹ</button>}
+          <button onClick={() => zoomBy(1.25)} aria-label="Zoom in" title="Zoom in">
+            +
+          </button>
+          <button onClick={() => zoomBy(1 / 1.25)} aria-label="Zoom out" title="Zoom out">
+            −
+          </button>
+          <button onClick={resetView} aria-label="Reset view and physics" title="Reset view">
+            ⌖
+          </button>
+          {!showStats && (
+            <button
+              onClick={() => setShowStats(true)}
+              aria-label="Show stats"
+              title="Show constellation stats"
+            >
+              ℹ
+            </button>
+          )}
         </div>
       </div>
     </div>

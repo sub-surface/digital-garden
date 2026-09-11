@@ -76,7 +76,7 @@ tags: [wiki]
 ### Internal (wikilinks)
 Link to other wiki pages with double brackets:
 ```
-[[Spinoza]]
+[[Baruch Spinoza]]
 [[Substance Monism]]
 ```
 
@@ -122,8 +122,10 @@ GFM footnotes render as Tufte-style sidenotes in the right margin:
 ```
 This claim needs a citation.[^1]
 
-[^1]: Source: Author, *Title*, Year.
+[^1]: Source: Author, *Title*, Year. See [[Bibliography]].
 ```
+
+Unverified or contested claims should be flagged with `[citation-needed]`. See the full **[[Citation-Guide|Citation & Style Standards]]** and the **[[Bibliography|Master Bibliography]]** for detailed citation keys and academic pagination rules.
 
 ---
 

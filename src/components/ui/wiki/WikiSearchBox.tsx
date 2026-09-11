@@ -9,6 +9,7 @@ function getWikiCategory(slug: string): string {
   if (s.startsWith("wiki/concepts/")) return "Concept"
   if (s.startsWith("wiki/events/")) return "Event"
   if (s.startsWith("wiki/philosophers/")) return "Philosopher"
+  if (s.startsWith("wiki/movements/")) return "Movement"
   if (s.startsWith("wiki/")) return "Wiki"
   return "Note"
 }

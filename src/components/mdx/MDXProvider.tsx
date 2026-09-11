@@ -24,6 +24,15 @@ import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
 const LazyWikiSubmitForm = lazy(() => import("@/components/ui/wiki/WikiSubmitPage").then((m) => ({ default: m.WikiSubmitForm })))
 const LazyPhotoAlbums = lazy(() => import("@/components/ui/shelves/PhotographyPage").then((m) => ({ default: m.PhotoAlbums })))
 const LazyMachineGod = lazy(() => import("./MachineGod").then((m) => ({ default: m.MachineGod })))
+const LazyWikiGraph = lazy(() => import("./WikiGraph").then((m) => ({ default: m.WikiGraph })))
+
+function WikiGraph() {
+  return (
+    <Suspense fallback={<div className="loading-shimmer" style={{ height: 480, margin: "24px 0" }}>Waking the constellation...</div>}>
+      <LazyWikiGraph />
+    </Suspense>
+  )
+}
 
 function WikiSubmitForm() {
   return (
@@ -94,6 +103,7 @@ export const mdxComponents = {
   ConceptCard,
   ConceptGrid,
   BroadsheetColumns,
+  WikiGraph,
   // Add more custom components here
   img: MDXImage,
   a: (props: any) => {

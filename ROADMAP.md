@@ -1496,6 +1496,8 @@ What remains is deliberately ordered by value and architectural dependency:
     - Reader mode quick-control binding: clicking Reader opens the `\` typography/system settings panel.
     - Seamless lightweight search: instant in-memory fallback, `/` global search trigger, category badge annotations.
     - Wikipedia-standard navigational features: persistent Wiki header with embedded instant search, random article jump, and article table of contents.
+20. [x] **Obsidian-style physics graph & constellation unification.**
+    Synthesize the contemplative visual fidelity of `ConstellationPage` (twinkling star aesthetics, tag-based hue mapping, organic drift) with `LocalGraph`'s interactive D3 force simulation and draggable physics. Transition the site-wide `/graph` view and embedded graph surfaces into an Obsidian-like physics graph: click-and-draggable nodes, responsive collision bounds, depth-aware edge highlighting, cluster formation by tags/folders, and smooth viewport zoom/pan controls.
 
 
 Verification note: Leon browser-verified the 2026-08-01 OS pass and the taller

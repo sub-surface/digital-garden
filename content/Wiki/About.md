@@ -23,7 +23,7 @@ The Philchat Wiki is a collaborative knowledge base built by and for the philcha
 
 ## How articles are structured
 
-**Philosopher profiles** follow a standard format: a quick-info block, biography summary, key contributions, a PhilPapers-style survey, major works, and influence notes. See [[Spinoza]] for an example.
+**Philosopher profiles** follow a standard format: a quick-info block, biography summary, key contributions, a PhilPapers-style survey, major works, and influence notes. See [[Baruch Spinoza]] for an example.
 
 **Chatter profiles** use the Philsurvey format — a standardised set of questions drawn from the PhilPapers survey. See [[Ape|Ape's Profile]] for an example.
 

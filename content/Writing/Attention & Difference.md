@@ -51,11 +51,11 @@ On the [Stanford Encyclopedia](https://plato.stanford.edu/entries/attention/), A
 Of the infinite possible distinctions one could make, at least three distinct modes of attention emerge here, each blending by analogy into the others as and when they occur together:
 
 I. Transformer Attention  
-	- A field of keys and values through which a query is differentially routed.  
+A field of keys and values through which a query is differentially routed.  
 II. Cognitive Attention  
-	- The immanent directionality of a subject's cognitive gaze.  
+The immanent directionality of a subject's cognitive gaze.  
 III. Photographic Attention  
-	- The interplay of image and imaged in the production of a spectatorial event.  
+The interplay of image and imaged in the production of a spectatorial event.  
 
 > Instances of attention differ along several dimensions. In some of its instances attention is a _perceptual_ phenomenon; in some it is a phenomenon related to _action_; and in others it is a purely _intellectual_ matter of giving thought to some question. In some instances the selectivity of attention is _voluntary_. In others it is driven, independently of the subject’s volition, by the high salience of attention-grabbing items in the perceptual field. The difficulty of giving a unified theory of attention that applies to all of these instances makes attention a topic of philosophical interest in its own right. 
 > —[[Attention (Stanford Encyclopedia of Philosophy)]].  

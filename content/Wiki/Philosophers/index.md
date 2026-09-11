@@ -1,72 +1,76 @@
 ---
-title: Philosophers
-description: Survey profiles of canonical philosophers, with positions on the major questions.
-tags: [wiki, philosopher]
+title: "Philosophers Directory"
+description: "Map of Content and survey profiles of canonical thinkers across historical epochs and traditions."
+tags: [wiki, philosopher, moc]
+layout: article
 ---
 
-Survey profiles of canonical philosophers — positions, influences, and key works.
+# Philosophers Directory
 
-<Query filter="folder=Wiki/Philosophers" sort="title" display="list" />
+<div className="dropcap">
 
----
+The **Philosophers Directory** is the central index of thinkers chronicled in the Philchat Wiki. Each profile records biographical context, areas of specialization, core philosophical contributions, major works, and a standardized PhilPapers survey profile evaluating positions on mind, free will, epistemology, meta-ethics, and ontology.
 
-## Submit a Profile
-
-Know a philosopher not yet in the wiki? [[Submit|Submit a philosopher profile →]]
-
----
-
-## Article Format
-
-Here's a markdown template for creating a wiki article. Follow the structure and formatting to ensure consistency across the wiki.
-
-```markdown
-# Philosopher: [Philosopher Name]
-
-> "[Insert a famous or representative quote here.]"
-
-## Quick Info
-* **Dates:** [Birth Year] – [Death Year/Present]
-* **Nationality:** [e.g., German, American, Indian]
-* **Philosophical Tradition:** [Analytic / Continental / Pragmatist / Other]
-* **Areas of Specialization (AOS):** [e.g., Metaphysics, Ethics, Phil. of Mind]
-* **Notable For:** [Key concept 1], [Key concept 2]
+</div>
 
 ---
 
-## Biography Summary
-[A brief 1-2 paragraph overview of their life, education, and the historical context of their work.]
+## Curated Library of Profiles
 
-## Key Philosophical Contributions
-### [Theory/Concept Name]
-[Explain their most significant idea. What problem were they trying to solve?]
+The following catalog displays all active philosopher profiles currently published in the wiki:
 
-### [Theory/Concept Name]
-[Explain another significant contribution.]
-
-## PhilPapers Survey Profile
-*Based on their writings, where would this philosopher stand on the major questions?*
-
-* **Mind:** [Physicalism / Non-physicalism]
-* **Free Will:** [Compatibilism / Libertarianism / No free will]
-* **Knowledge:** [Empiricism / Rationalism]
-* **Meta-ethics:** [Moral realism / Moral anti-realism]
-* **God:** [Theism / Atheism]
-* **[Other Question]:** [Answer]
-
-## Methodologies Used
-*As defined in the 2020 survey:*
-* [Check all that apply: Conceptual analysis / Empirical philosophy / Formal philosophy / Intuition-based / Linguistic philosophy / Phenomenology]
+<Query filter="folder=Wiki/Philosophers" sort="title" display="table" />
 
 ---
 
-## Major Works
-1. *[Book Title]* ([Year]) - [Short description of importance]
-2. *[Essay Title]* ([Year])
+## Thematic & Epochal Classification
 
-## Influence & Legacy
-* **Influenced by:** [Philosopher A], [Philosopher B]
-* **Followers/School:** [e.g., Kantians, Logical Positivists]
-* **Notable Critics:** [Philosopher C]
-* **Impact on Philosophy:** [Briefly describe how they changed the field or influenced others.]
-```
+### Pre-Socratic & Early Global Foundations
+Naturalistic inquiry, being, flux, and cosmic order:
+* **Milesian Naturalism**: [[Thales of Miletus]] · [[Anaximander]] · [[Anaximenes]]
+* **Being & Flux**: [[Heraclitus of Ephesus]] · [[Parmenides of Elea]] · [[Zeno of Elea]]
+* **Atomism & Pluralism**: [[Democritus and Leucippus]] · [[Empedocles]] · [[Anaxagoras]]
+* **Early Eastern Thinkers**: [[Yajnavalkya]] · [[Uddalaka Aruni]] · [[Laozi]] · [[Kongzi]] (Confucius) · [[Mozi]] · [[Zarathustra]]
+
+### Classical & Hellenistic Philosophy
+* **Classical Athens**: [[Socrates]] · [[Plato]] · [[Aristotle]]
+* **Hellenistic Schools**: [[Epicurus]] · [[Zeno of Citium]] · [[Pyrrho of Elis]] · [[Plotinus]] · [[Sextus Empiricus]]
+
+### Medieval & Islamic Golden Age
+* **The Islamic Tradition**: [[Al-Kindi]] · [[Al-Farabi]] · [[Ibn Sina]] (Avicenna) · [[Al-Ghazali]] · [[Ibn Rushd]] (Averroes)
+* **Western Scholasticism & Patristics**: [[Augustine of Hippo]] · [[Anselm of Canterbury]] · [[Thomas Aquinas]] · [[Duns Scotus]] · [[William of Ockham]]
+
+### Early Modern & Enlightenment Rationalism and Empiricism
+* **Continental Rationalism**: [[René Descartes]] · [[Baruch Spinoza]] · [[Nicolas Malebranche]] · [[Gottfried Wilhelm Leibniz]]
+* **British Empiricism**: [[Francis Bacon]] · [[Thomas Hobbes]] · [[John Locke]] · [[George Berkeley]] · [[David Hume]]
+* **Critical Philosophy**: [[Immanuel Kant]] · [[Jean-Jacques Rousseau]]
+
+### 19th-Century & Post-Kantian Thought
+* **German Idealism**: [[J.G. Fichte]] · [[F.W.J. Schelling]] · [[G.W.F. Hegel]]
+* **Existentialism & Critique**: [[Arthur Schopenhauer]] · [[Søren Kierkegaard]] · [[Karl Marx]] · [[Friedrich Nietzsche]]
+* **Classical Pragmatism**: [[Charles Sanders Peirce]] · [[William James]] · [[John Dewey]]
+
+### 20th & 21st-Century Analytic & Pragmatist Traditions
+* **Logic & Language**: [[Gottlob Frege]] · [[Bertrand Russell]] · [[Ludwig Wittgenstein]] · [[Rudolf Carnap]] · [[W.V.O. Quine]] · [[Saul Kripke]]
+* **Epistemology & Epistemic Pragmatism**: [[Susan Haack]] · [[Richard Rorty]] · [[Wilfrid Sellars]] · [[Karl Popper]]
+* **Philosophy of Mind**: [[David Chalmers]] · [[Thomas Nagel]] · [[Derek Parfit]] · [[Frank Jackson]] · [[John Searle]]
+* **Value Theory & Political Philosophy**: [[John Rawls]] · [[Robert Nozick]] · [[Philippa Foot]] · [[G.E.M. Anscombe]]
+
+### 20th & 21st-Century Continental & Critical Traditions
+* **Phenomenology & Existentialism**: [[Edmund Husserl]] · [[Martin Heidegger]] · [[Jean-Paul Sartre]] · [[Simone de Beauvoir]] · [[Maurice Merleau-Ponty]]
+* **Critical Theory & Structuralism**: [[Theodor Adorno]] · [[Walter Benjamin]] · [[Michel Foucault]] · [[Jacques Derrida]]
+* **Post-Structuralism & Assemblage Theory**: [[Gilles Deleuze]] · [[Rosi Braidotti|Rosi Braidotti]] · [[Nick Land]] · [[Slavoj Žižek]]
+
+### Eastern & Comparative Philosophers
+* **Indian Traditions**: [[Nagarjuna]] · [[Vasubandhu]] · [[Shankara]] · [[Ramanuja]]
+* **Chinese Traditions**: [[Zhuangzi]] · [[Mengzi]] · [[Xunzi]] · [[Wang Yangming]]
+* **Japanese Traditions**: [[Dogen]] · [[Nishida Kitaro]]
+
+---
+
+## Contributing to this Index
+
+* Explore the broader structural curriculum: **[[Map of Philosophy|The Map of Philosophy]]**
+* Review upcoming planned articles: **[[Proposed-Articles|Proposed Articles Backlog]]**
+* Draft a new profile: **[[Submit|Submit a Philosopher Profile]]**
+* Citation and formatting standards: **[[Style-Guide|Wiki Style Guide]]** and **[[Citation-Guide|Citation Standards]]**
