@@ -427,12 +427,19 @@ export function EmbedGraph({
     isPanning.current = false
   }
 
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-    if (!interactive) return
-    e.preventDefault()
-    const factor = e.deltaY > 0 ? 0.9 : 1.1
-    view.current.zoom = Math.min(3.5, Math.max(0.2, view.current.zoom * factor))
-  }
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !interactive) return
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const factor = e.deltaY > 0 ? 0.9 : 1.1
+      view.current.zoom = Math.min(3.5, Math.max(0.2, view.current.zoom * factor))
+    }
+
+    canvas.addEventListener("wheel", onWheel, { passive: false })
+    return () => canvas.removeEventListener("wheel", onWheel)
+  }, [interactive])
 
   const displayTitle = title ?? (
     slug ? `Neighborhood: ${slug}` :
@@ -488,10 +495,10 @@ export function EmbedGraph({
       <div className={styles.canvasWrapper}>
         <canvas
           ref={canvasRef}
+          className={styles.canvas}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          onWheel={handleWheel}
         />
       </div>
     </div>

@@ -78,6 +78,19 @@ export function ImageLightbox({
     return () => document.removeEventListener("keydown", handleKey)
   }, [onClose, onNext, onPrevious, reset, zoomAt])
 
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      zoomAt(Math.exp(-event.deltaY * 0.0015), event.clientX, event.clientY)
+    }
+
+    stage.addEventListener("wheel", handleWheel, { passive: false })
+    return () => stage.removeEventListener("wheel", handleWheel)
+  }, [zoomAt])
+
   return createPortal(
     <div
       className={styles.overlay}
@@ -90,10 +103,6 @@ export function ImageLightbox({
         ref={stageRef}
         className={styles.stage}
         data-zoomed={view.zoom > 1 || undefined}
-        onWheel={(event) => {
-          event.preventDefault()
-          zoomAt(Math.exp(-event.deltaY * 0.0015), event.clientX, event.clientY)
-        }}
         onDoubleClick={(event) => {
           if (view.zoom > 1) reset()
           else zoomAt(2, event.clientX, event.clientY)
