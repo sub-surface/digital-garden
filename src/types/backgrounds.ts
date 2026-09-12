@@ -86,6 +86,8 @@ export interface GraphJsonNode {
   id: string
   title: string
   tags?: string[]
+  x?: number
+  y?: number
 }
 
 export interface GraphJsonLink {

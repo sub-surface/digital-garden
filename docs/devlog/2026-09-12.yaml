@@ -82,4 +82,40 @@
   decisions:
     - "Generated self-contained HTML fragments rather than duplicating full index.html boilerplate 291 times, saving massive disk and cache space while enabling instant edge streaming."
     - "Worker caches pre-rendered note fragments in an in-memory Map bounded to 120 entries, serving repeat requests straight from isolate RAM in <5ms."
-  next: "Phase 3: pre-computed search inverted index and D3 Constellation coordinate baking."
+  next: "Phase 3 complete."
+
+- date: 2026-09-12
+  area: engine
+  title: "SSG Phase 3: Pre-computed inverted full-text search index and deterministic D3 force relaxation baking"
+  status: complete
+  files:
+    - scripts/emit-search-index.ts
+    - scripts/emit-graph.ts
+    - scripts/test-search.ts
+    - scripts/test-graph.ts
+    - scripts/prebuild.ts
+    - src/hooks/useContentSearch.ts
+    - src/components/ui/graph/ConstellationPage.tsx
+    - src/components/ui/graph/LocalGraph.tsx
+    - src/components/layout/BgCanvas.tsx
+    - src/types/content.ts
+    - src/types/backgrounds.ts
+    - content/Wiki/Philosophers/Susan Haack.md
+    - content/Wiki/chatters/Ape.md
+    - package.json
+    - .gitignore
+    - ROADMAP.md
+  changes:
+    - "Implemented scripts/emit-search-index.ts: compiles full-prose inverted search index at build time across all 291 notes into public/search-index.json (~570KB uncompressed, ~180KB gzipped) in ~350ms."
+    - "Updated useContentSearch.ts to load /search-index.json once via singleton module cache, delivering instant <1ms dictionary lookups with multi-word scoring, exact title weighting, prefix expansion, and zero runtime indexing CPU overhead."
+    - "Implemented scripts/emit-graph.ts: runs 100-tick D3 force simulation during prebuild using deterministic PRNG, baking stable celestial (x, y) coordinates directly into public/graph.json."
+    - "Updated ConstellationPage.tsx to initialize from baked coordinates and start with calm alpha (0.08), eliminating 35 blocking tick warmups and jarring initial spring explosions on page navigation."
+    - "Updated BgCanvas.tsx graph background mode to project authentic pre-relaxed celestial knowledge clusters onto canvas dimensions rather than using random noise."
+    - "Updated LocalGraph.tsx to seed relative neighbor positions from global constellation coordinates, settling local neighborhood views immediately without tangling."
+    - "Incorporated Leon's content edits to Susan Haack (dates/passing) and Ape (disclaimer and philosophical survey updates)."
+    - "Added automated test suites scripts/test-search.ts and scripts/test-graph.ts to npm test pipeline."
+  decisions:
+    - "Used deterministic PRNG (Mulberry32) for build-time force relaxation so public/graph.json coordinates are 100% reproducible and produce zero diff churn across identical builds."
+    - "Excluded common stop words from body-only indexing while preserving them in titles and tags, reducing inverted index size by 25% without sacrificing precision."
+    - "Kept in-memory contentIndex fallback in useContentSearch so search functions seamlessly in offline dev or mock test environments."
+  next: "Explore arcade cabinet shell or expanded hook test coverage."

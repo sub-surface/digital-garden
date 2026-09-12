@@ -4,6 +4,7 @@ description: British-American epistemologist and logician; founder of foundheren
 tags: [wiki, philosopher]
 type: philosopher
 born: "1945, England"
+died: "2026, United States"
 school: "Analytic Epistemology, Neo-Peircean Pragmatism"
 main_interests: "Epistemology, Philosophy of Logic, Philosophy of Science, Legal Philosophy"
 notable_ideas: "Foundherentism, Crossword Puzzle Metaphor, Critique of Cynical Postmodernism"
@@ -14,7 +15,7 @@ notable_ideas: "Foundherentism, Crossword Puzzle Metaphor, Critique of Cynical P
 > "Evidence is like a crossword puzzle: experiential evidence is like the clues, and already-filled-in entries are like reasons."
 
 ## Quick Info
-* **Dates:** 1945 – present
+* **Dates:** 1945 – 10 March 2026 (aged 80)
 * **Nationality:** British / American
 * **Philosophical Tradition:** Analytic Philosophy / Peircean Pragmatism
 * **Areas of Specialization (AOS):** Epistemology, Philosophy of Logic, Philosophy of Science

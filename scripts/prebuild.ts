@@ -20,6 +20,8 @@ import { execFileSync } from "child_process"
 import { slugifyPath, buildSlugResolver, normalizeSlug } from "../src/lib/slug"
 import { SYSTEM_PAGE_META } from "../src/config/system-pages-meta"
 import { emitPrerender } from "./emit-prerender"
+import { emitSearchIndex } from "./emit-search-index"
+import { emitGraph } from "./emit-graph"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CONTENT_DIR = path.resolve(__dirname, "../content")
@@ -309,18 +311,6 @@ function emitBrokenLinks({ linkMap, resolveLink }: Model) {
   }
 }
 
-function emitGraph({ index }: Model) {
-  // System-page entries (synthesized, no real links) would show up as orphan
-  // stars — exclude them from the Constellation.
-  const graphable = Object.values(index).filter((n) => !n.system)
-  const nodes = graphable.map((n) => ({ id: n.slug, title: n.title, tags: n.tags }))
-  const links: { source: string; target: string }[] = []
-  for (const meta of graphable) {
-    for (const target of meta.links) links.push({ source: meta.slug, target })
-  }
-  writeJson("graph.json", { nodes, links })
-  console.log(`  graph.json: ${nodes.length} nodes, ${links.length} links`)
-}
 
 function emitMusicSeed() {
   // music.json is owned by `npm run sync:music` (SoundCloud -> R2), NOT by
@@ -687,7 +677,6 @@ async function main() {
     emitContentIndex,
     emitSlugMap,
     emitBrokenLinks,
-    emitGraph,
     emitFolders,
     emitPublicContentCopies,
     emitSrcContentCopies,
@@ -696,9 +685,17 @@ async function main() {
   ]
   for (const emit of emitters) emit(model)
 
+  // Pre-calculated D3 Constellation Force Relaxation (SSG Pipeline Phase 3b)
+  const graph = emitGraph(model, PUBLIC_DIR)
+  console.log(`  public/graph.json: ${graph.nodeCount} nodes, ${graph.linkCount} links (pre-relaxed) in ${graph.durationMs}ms`)
+
   // Pre-render static HTML fragments (ROADMAP §5 / SSG Pipeline Phase 1)
   const prerender = await emitPrerender(model, CONTENT_DIR, PUBLIC_DIR)
   console.log(`  public/prerender/: ${prerender.count} notes pre-rendered (${(prerender.totalBytes / 1024).toFixed(1)} KB) in ${prerender.durationMs}ms`)
+
+  // Pre-computed full-text search index (SSG Pipeline Phase 3a)
+  const searchIndex = emitSearchIndex(model, CONTENT_DIR, PUBLIC_DIR)
+  console.log(`  public/search-index.json: ${searchIndex.count} notes indexed (${searchIndex.totalTokens} unique tokens, ${(searchIndex.totalBytes / 1024).toFixed(1)} KB) in ${searchIndex.durationMs}ms`)
 
   // Model-independent emitters
   emitMusicSeed()

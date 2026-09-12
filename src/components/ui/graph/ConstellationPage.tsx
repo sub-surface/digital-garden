@@ -22,6 +22,8 @@ interface RawNode {
   id: string
   title: string
   tags?: string[]
+  x?: number
+  y?: number
 }
 
 interface RawLink {
@@ -182,15 +184,19 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
           })
         })
 
+        const hasPreRelaxed = data.nodes.some((n) => n.x !== undefined && n.y !== undefined)
+
         const starsList: StarNode[] = data.nodes.map((n) => {
           const clusterKey = getClusterKey(n)
           const center = clusterCenters.get(clusterKey) ?? { x: 0, y: 0 }
           const deg = degreeMap.get(n.id) ?? 0
           const tag = n.tags && n.tags[0] ? norm(n.tags[0]) : clusterKey
 
-          // Initial position seeded near cluster center with jitter
+          // Initial position: use pre-relaxed coordinates if available; otherwise jitter around cluster center
           const jitterRadius = 120 + Math.random() * 180
           const jitterAngle = Math.random() * Math.PI * 2
+          const posX = n.x !== undefined ? n.x : center.x + Math.cos(jitterAngle) * jitterRadius
+          const posY = n.y !== undefined ? n.y : center.y + Math.sin(jitterAngle) * jitterRadius
 
           return {
             id: n.id,
@@ -203,8 +209,8 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
             twinkle: Math.random() * Math.PI * 2,
             degree: deg,
             hue: hueForTag(tag),
-            x: center.x + Math.cos(jitterAngle) * jitterRadius,
-            y: center.y + Math.sin(jitterAngle) * jitterRadius,
+            x: posX,
+            y: posY,
           }
         })
 
@@ -255,9 +261,14 @@ export function ConstellationPage({ embedded = false }: { embedded?: boolean } =
           .alphaDecay(0.02)
           .velocityDecay(0.35)
 
-        // Warm up simulation slightly so it arrives already organized
-        for (let i = 0; i < 35; i++) {
-          simulation.tick()
+        if (hasPreRelaxed) {
+          // Graph is already settled from prebuild — start with gentle drift alpha, skipping blocking warmup ticks
+          simulation.alpha(0.08)
+        } else {
+          // Warm up simulation slightly so it arrives already organized (fallback)
+          for (let i = 0; i < 35; i++) {
+            simulation.tick()
+          }
         }
 
         simRef.current = simulation

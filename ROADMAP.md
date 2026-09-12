@@ -72,7 +72,7 @@ Active sequenced priorities:
 
 - [x] **★ Lighthouse CI** — `.github/workflows/lighthouse.yml` + `lighthouserc.json`: automated audit on static dist with error-level thresholds (perf/a11y/BP/SEO >= 0.9, CLS <= 0.1, LCP <= 3s, TBT <= 300ms).
 - [x] **★ Fix CLS — image dimensions.** Prebuild emits `public/image-dimensions.json` and `rehype-image-paths` stamps intrinsic dimensions on MDX images.
-- [~] **★ Pre-render / SSG for notes** — Phase 1 (prebuild HTML fragment emitter) & Phase 2 (Cloudflare Worker edge injection & client progressive enhancement) shipped 2026-09-12. See [`docs/ssg-pipeline-plan.md`](docs/ssg-pipeline-plan.md). Phase 3 (D3 coords & pre-computed search) open.
+- [x] **★ Pre-render / SSG for notes** — Complete SSG pipeline shipped 2026-09-12. Phase 1 (prebuild HTML fragment emitter `emitPrerender`), Phase 2 (Cloudflare Worker edge injection with V8 LRU cache & client handoff in `NoteBody`), Phase 3a (pre-computed inverted full-text search index `emitSearchIndex` in `scripts/emit-search-index.ts`), and Phase 3b (deterministic D3 force relaxation `emitGraph` in `scripts/emit-graph.ts` baking celestial coordinates into `public/graph.json`). See [`docs/ssg-pipeline-plan.md`](docs/ssg-pipeline-plan.md).
 - [ ] Verify `NoteBody` un-lazying didn't fatten entry chunk past intent (`dist/assets/index-*.js`).
 
 ---

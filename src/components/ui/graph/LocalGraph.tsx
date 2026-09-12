@@ -106,6 +106,18 @@ export function LocalGraph({ slug }: Props) {
           const r = isCurrent
             ? 3.5 + Math.min(3, Math.log2(deg + 1) * 0.75)
             : 1.8 + Math.min(2.5, Math.log2(deg + 1) * 0.65)
+          const hasRelCoords = n.x !== undefined && centerNode?.x !== undefined && n.y !== undefined && centerNode?.y !== undefined
+          const initX = isCurrent
+            ? 0
+            : hasRelCoords
+            ? (n.x! - centerNode!.x!) * 0.15
+            : (Math.random() - 0.5) * 60
+          const initY = isCurrent
+            ? 0
+            : hasRelCoords
+            ? (n.y! - centerNode!.y!) * 0.15
+            : (Math.random() - 0.5) * 60
+
           return {
             id: n.id,
             title: n.title || n.id.split("/").pop() || n.id,
@@ -113,8 +125,8 @@ export function LocalGraph({ slug }: Props) {
             isCurrent,
             degree: deg,
             r,
-            x: (Math.random() - 0.5) * 60,
-            y: (Math.random() - 0.5) * 60,
+            x: initX,
+            y: initY,
           }
         })
 

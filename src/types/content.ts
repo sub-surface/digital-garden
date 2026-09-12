@@ -42,7 +42,7 @@ export interface BrokenLinksManifest {
 }
 
 export interface GraphData {
-  nodes: { id: string; title: string; tags: string[] }[]
+  nodes: { id: string; title: string; tags: string[]; x?: number; y?: number }[]
   links: { source: string; target: string }[]
 }
 

@@ -184,14 +184,41 @@ function BgCanvasInner() {
       fetch("/graph.json")
         .then((res) => res.json())
         .then((data: GraphJsonData) => {
+          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+          if (data.nodes) {
+            for (const n of data.nodes) {
+              if (n.x !== undefined && n.y !== undefined) {
+                if (n.x < minX) minX = n.x
+                if (n.x > maxX) maxX = n.x
+                if (n.y < minY) minY = n.y
+                if (n.y > maxY) maxY = n.y
+              }
+            }
+          }
+          const hasCoords = isFinite(minX) && maxX > minX && maxY > minY
+          const spanX = maxX - minX || 1
+          const spanY = maxY - minY || 1
+          const pad = 60
+          const availW = Math.max(100, window.innerWidth - pad * 2)
+          const availH = Math.max(100, window.innerHeight - pad * 2)
+
           const nodes: GraphNode[] = data.nodes
-            ? data.nodes.map((n) => ({
-                ...n,
-                x: Math.random() * window.innerWidth,
-                y: Math.random() * window.innerHeight,
-                vx: (Math.random() - 0.5) * 0.2,
-                vy: (Math.random() - 0.5) * 0.2,
-              }))
+            ? data.nodes.map((n) => {
+                const posX = hasCoords && n.x !== undefined
+                  ? pad + ((n.x - minX) / spanX) * availW
+                  : Math.random() * window.innerWidth
+                const posY = hasCoords && n.y !== undefined
+                  ? pad + ((n.y - minY) / spanY) * availH
+                  : Math.random() * window.innerHeight
+
+                return {
+                  ...n,
+                  x: posX,
+                  y: posY,
+                  vx: (Math.random() - 0.5) * 0.2,
+                  vy: (Math.random() - 0.5) * 0.2,
+                }
+              })
             : []
           stateRef.current.nodes = nodes
           stateRef.current.links = data.links || []

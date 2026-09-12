@@ -27,6 +27,7 @@ public/rss.xml
 public/wiki-rss.xml
 public/content/
 public/prerender/
+public/search-index.json
 # src/content/ is wiped (`rmSync`) and re-synced from content/ on every prebuild
 # — see CLAUDE.md gotcha #1. It was tracked, which made 167 derived files look
 # like source and invited edits that the next prebuild silently destroyed.

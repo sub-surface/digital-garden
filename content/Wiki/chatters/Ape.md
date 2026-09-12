@@ -19,6 +19,12 @@ more educated and smarter than most Phil chat individuals, despite being the you
 
 **Ape** is the youngest person here and argues like the oldest. He wants a worked example, and will keep asking for one long after the room has moved on. He is dogmatically ambivalent about gun control, will correct you on what the word "clearly" signals, and when accused of being autistic replied "what gives you that impression?" Epistemology and philosophy of science, mostly.
 
+> [!important] DISCLAIMER:
+> - Ape's page was recently under criticism by its subject for having been written by a third party. The page has been revised to reflect the subject's own words and opinions.
+> - While the controversy is considered resolved, the philchat times apologises for any inconvenience and awards ape with 400 keks for his patience and understanding.
+> - Ape is encouraged to edit this page to reflect his views insofar as there are any discrepancies, and to add any additional information he feels is relevant.
+> - Until that time, this disclaimer will remain as a notice to readers that the page may not accurately reflect the views of its subject. 
+
 ## Metaphysics & Epistemology
 * **A priori knowledge:** Yes
 * **Epistemic justification:** Externalism (Reliabilism and nonreliabilist foundationalism)
@@ -29,13 +35,15 @@ more educated and smarter than most Phil chat individuals, despite being the you
 * **Mind:** Physicalism (Identity theory and functionalism)
 * **Perceptual experience:** Representationalism
 * **Truth:** Correspondence and deflationary
+* **Practical reason:** Aristotelian practical reason
+
 
 ## Value Theory (Ethics, Politics, & Aesthetics)
 * **Aesthetic value:** Objective
 * **Gender:** Revise
 * **Meta-ethics:** Moral realism
 * **Moral judgment:** Cognitivism
-* **Normative ethics:** Virtue ethics (Aristotelian practical reason)
+* **Normative ethics:** Virtue ethics 
 
 ## Logic, Language, & Science
 * **Newcomb's problem:** One box
@@ -49,7 +57,7 @@ more educated and smarter than most Phil chat individuals, despite being the you
 
 ---
 ## Additional Notes / Nuance
-* **Zombies:** Conceivable but not metaphysically possible
+* **Zombies:** too unclear to answer
 * **Aesthetic experience:** Perception
 * **Belief or credence:** Neither (more fundamental)
 * **Continuum hypothesis:** Indeterminate
