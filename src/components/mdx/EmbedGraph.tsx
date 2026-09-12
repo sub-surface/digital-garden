@@ -171,7 +171,7 @@ export function EmbedGraph({
         // Logarithmic node radius scaling
         const r = isFocal ? 10 : Math.min(12, Math.max(3.5, 3 + Math.log2(deg + 1) * 1.8))
         const angle = clusterAngles[category] ?? 0
-        const clusterRadius = category === "general" ? 40 : Math.min(width, simHeight) * 0.28
+        const clusterRadius = category === "general" ? 40 : Math.min(width, simHeight) * 0.35
 
         return {
           id: n.id,
@@ -194,17 +194,23 @@ export function EmbedGraph({
       linksRef.current = filteredLinks as GraphLink[]
       setStats({ nodes: simNodes.length, links: filteredLinks.length })
 
-      // Pure Canvas 2D + D3 force layout
+      // Pure Canvas 2D + D3 force layout (repulsion dynamics inspired by LocalGraph)
       simulation = d3.forceSimulation<GraphNode>(simNodes)
         .force("link", d3.forceLink<GraphNode, GraphLink>(filteredLinks)
           .id(d => d.id)
-          .distance(50)
-          .strength(0.4)
+          .distance(d => {
+            const s = typeof d.source === "object" ? (d.source as GraphNode) : null
+            const t = typeof d.target === "object" ? (d.target as GraphNode) : null
+            const isFocalLink = Boolean(s?.isFocal || t?.isFocal)
+            return isFocalLink ? 65 : 80
+          })
+          .strength(0.5)
         )
-        .force("charge", d3.forceManyBody().strength(d => -30 - ((d as GraphNode).degree * 14)))
-        .force("collide", d3.forceCollide<GraphNode>().radius(d => d.r + 5).iterations(2))
-        .force("clusterX", d3.forceX<GraphNode>(d => d.clusterTargetX).strength(0.12))
-        .force("clusterY", d3.forceY<GraphNode>(d => d.clusterTargetY).strength(0.12))
+        .force("charge", d3.forceManyBody<GraphNode>().strength(d => (d.isFocal ? -260 : -160)))
+        .force("center", d3.forceCenter(0, 0).strength(0.12))
+        .force("collide", d3.forceCollide<GraphNode>().radius(d => d.r + 14).strength(0.8))
+        .force("clusterX", d3.forceX<GraphNode>(d => d.clusterTargetX).strength(slug ? 0.02 : 0.05))
+        .force("clusterY", d3.forceY<GraphNode>(d => d.clusterTargetY).strength(slug ? 0.02 : 0.05))
         .alphaDecay(0.02)
 
       simulationRef.current = simulation
