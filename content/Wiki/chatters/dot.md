@@ -1,14 +1,15 @@
 ---
-title: "dot's Profile"
-description: "Philchat wiki profile for dot (terrapin.station.) — advocate of Google Antigravity, diachronic identity theorist, and human bookmark for Manuel DeLanda."
+title: "Dot's Profile"
+description: "Philchat wiki profile for Dot"
 tags: [wiki, chatter]
 type: chatter
 username: "terrapin.station."
+image: "/content/Media/Wiki/chatters/terrapin-station-.jpeg"
 pronouns: "he/him"
-tradition: "Spinozism, Continental, Diachronic Essentialism"
-aos: "Spinozist Immanence, Personal Identity, Oregon Coastal Geography, IDE Evangelism, Block-Ledger Forensics"
-influences: "Baruch Spinoza, Manuel DeLanda, Gilles Deleuze, Google Antigravity, Oregon State Parks"
-draft: false
+tradition: "Continental"
+aos: "literary theory, critical theory, post-structuralism, accelerationism"
+influences: "Jerry Garcia, David Foster Wallace, William Burroughs, Thomas Pynchon, Virginia Woolf, Gilles Deleuze, Jean Baudrillard, Georges Bataille, Nick Land, Mark Fisher, Baruch Spinoza"
+draft: true
 ---
 
 # dot's Profile
