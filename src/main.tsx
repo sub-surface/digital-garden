@@ -15,6 +15,19 @@ import "./styles/global.scss"
 const theme = useStore.getState().theme
 document.documentElement.setAttribute("data-theme", theme)
 
+// Cache pre-rendered HTML before React mounts so NoteBody can render it instantly without a loading spinner
+if (typeof document !== "undefined") {
+  const prerenderEl = document.getElementById("prerender-root")
+  if (prerenderEl) {
+    const slug = prerenderEl.getAttribute("data-prerender-slug")
+    const bodyEl = prerenderEl.querySelector(".prerendered-body")
+    ;(window as any).__PRERENDER_CACHE__ = {
+      slug,
+      bodyHtml: bodyEl ? bodyEl.innerHTML : "",
+    }
+  }
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>

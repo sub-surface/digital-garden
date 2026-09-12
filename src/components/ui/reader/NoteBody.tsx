@@ -164,20 +164,37 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
     return () => { cancelled = true }
   }, [slug, isSystemPage, isTagPage, isFolderPage, sysPage, onLoad])
 
-  // Extract headings from MDX after render
-  useEffect(() => {
-    if (MDXComponent && contentRef.current && onLoad) {
-      const headingEls = contentRef.current.querySelectorAll("h2, h3, h4")
-      const extracted = Array.from(headingEls).map((el) => ({
-        id: el.id,
-        text: (el as HTMLElement).innerText,
-        level: parseInt(el.tagName.substring(1)),
-      }))
-      onLoad({ headings: extracted })
-    }
-  }, [MDXComponent, slug, onLoad])
+  // Check if we have stashed pre-rendered HTML for this slug from the edge response
+  const prerenderCache = typeof window !== "undefined" ? (window as any).__PRERENDER_CACHE__ : null
+  const hasPrerender =
+    loading &&
+    Boolean(prerenderCache?.bodyHtml) &&
+    (prerenderCache?.slug?.toLowerCase() === slug.toLowerCase() ||
+      prerenderCache?.slug?.toLowerCase() === resolvedSlug.toLowerCase())
 
-  if (loading) return <div className="note-loading">Loading...</div>
+  // Extract headings from MDX or pre-rendered HTML after render
+  useEffect(() => {
+    if (contentRef.current && onLoad) {
+      const headingEls = contentRef.current.querySelectorAll("h2, h3, h4")
+      if (headingEls.length > 0) {
+        const extracted = Array.from(headingEls).map((el) => ({
+          id: el.id,
+          text: (el as HTMLElement).innerText,
+          level: parseInt(el.tagName.substring(1)),
+        }))
+        onLoad({ headings: extracted })
+      }
+    }
+  }, [MDXComponent, hasPrerender, slug, onLoad])
+
+  // Clear prerender stash once interactive component is mounted
+  useEffect(() => {
+    if (MDXComponent && typeof window !== "undefined" && (window as any).__PRERENDER_CACHE__) {
+      ;(window as any).__PRERENDER_CACHE__ = null
+    }
+  }, [MDXComponent])
+
+  if (loading && !hasPrerender) return <div className="note-loading">Loading...</div>
   if (notFound) return <NotFound />
 
   if (isSystemPage) {
@@ -214,11 +231,16 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
           <img src={posterSrc} alt={(frontmatter.title as string) || ""} loading="lazy" />
         </figure>
       )}
-      {MDXComponent && (
+      {MDXComponent ? (
         <Suspense fallback={<div>Loading component...</div>}>
           <MDXComponent components={mdxComponents as any} />
         </Suspense>
-      )}
+      ) : hasPrerender ? (
+        <div
+          className="prerendered-body-content"
+          dangerouslySetInnerHTML={{ __html: prerenderCache.bodyHtml }}
+        />
+      ) : null}
     </div>
   )
 }

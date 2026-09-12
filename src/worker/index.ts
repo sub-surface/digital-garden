@@ -1,6 +1,6 @@
 import { Env, RouteCtx } from "./types"
 import { corsHeaders, applyApiHeaders, jsonResponse, verifyAuth } from "./lib"
-import { getContentIndex, slugFromPathname, resolveSlugCaseInsensitive, injectMetaTags } from "./meta"
+import { getContentIndex, slugFromPathname, resolveSlugCaseInsensitive, injectMetaTags, getPrerenderFragment, injectPrerender } from "./meta"
 import { handleAuthMe, handleUpdateProfile, handleAvatarUpload, handleRegister } from "./auth"
 import { handleSubmit, handleEdit, handleNew, handleBookmarks, handleLockStatus, handleUserProfile } from "./wiki"
 import {
@@ -153,7 +153,12 @@ export default {
     const canonicalSlug = resolveSlugCaseInsensitive(index, requestSlug) ?? requestSlug
     const meta = index[canonicalSlug] ?? null
 
-    const injected = injectMetaTags(html, meta ?? {}, canonicalSlug, url.origin)
+    const prerenderHtml = await getPrerenderFragment(env.ASSETS, canonicalSlug)
+
+    let injected = injectMetaTags(html, meta ?? {}, canonicalSlug, url.origin)
+    if (prerenderHtml) {
+      injected = injectPrerender(injected, prerenderHtml)
+    }
 
     const headers = new Headers(response.headers)
     addSecurityHeaders(headers)

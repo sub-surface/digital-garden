@@ -1,5 +1,5 @@
 import { NoteMeta } from "./types"
-import { buildSlugResolver, ogCardName, slugFromPathname as sharedSlugFromPathname, type SlugResolver } from "../lib/slug"
+import { buildSlugResolver, ogCardName, prerenderFileName, slugFromPathname as sharedSlugFromPathname, type SlugResolver } from "../lib/slug"
 import { escapeAttr, escapeHtml } from "../lib/escape"
 
 // In-memory cache — survives for the lifetime of the Worker instance.
@@ -7,6 +7,7 @@ import { escapeAttr, escapeHtml } from "../lib/escape"
 // per-request lookups are O(1) instead of scanning every index key.
 let contentIndexCache: Record<string, NoteMeta> | null = null
 let resolverCache: SlugResolver | null = null
+const prerenderCache = new Map<string, string>()
 
 export async function getContentIndex(assetsFetcher: any): Promise<Record<string, NoteMeta>> {
   if (!assetsFetcher) return {};
@@ -99,4 +100,38 @@ export function injectMetaTags(html: string, meta: NoteMeta, slug: string, origi
   return html
     .replace(/<title>[^<]*<\/title>/, "")
     .replace("</head>", `    ${tags}\n  </head>`)
+}
+
+/**
+ * Retrieve pre-rendered HTML fragment for a given slug, caching hot notes in memory.
+ */
+export async function getPrerenderFragment(assetsFetcher: any, slug: string): Promise<string | null> {
+  if (!assetsFetcher || !slug) return null
+  if (prerenderCache.has(slug)) return prerenderCache.get(slug)!
+
+  try {
+    const filename = prerenderFileName(slug)
+    const res = await assetsFetcher.fetch(`https://assets.internal/prerender/${filename}`)
+    if (res.ok) {
+      const fragment = await res.text()
+      // Bound cache size to prevent memory exhaustion in long-lived Worker isolates
+      if (prerenderCache.size > 120) {
+        const firstKey = prerenderCache.keys().next().value
+        if (firstKey) prerenderCache.delete(firstKey)
+      }
+      prerenderCache.set(slug, fragment)
+      return fragment
+    }
+  } catch (e) {
+    // Non-fatal: pre-rendered HTML will be skipped and client SPA will render
+  }
+  return null
+}
+
+/**
+ * Inject pre-rendered static HTML fragment directly into <div id="root"></div>.
+ */
+export function injectPrerender(html: string, prerenderFragment: string | null): string {
+  if (!prerenderFragment) return html
+  return html.replace('<div id="root"></div>', `<div id="root">${prerenderFragment}</div>`)
 }

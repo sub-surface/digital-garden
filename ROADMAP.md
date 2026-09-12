@@ -72,8 +72,7 @@ Active sequenced priorities:
 
 - [x] **★ Lighthouse CI** — `.github/workflows/lighthouse.yml` + `lighthouserc.json`: automated audit on static dist with error-level thresholds (perf/a11y/BP/SEO >= 0.9, CLS <= 0.1, LCP <= 3s, TBT <= 300ms).
 - [x] **★ Fix CLS — image dimensions.** Prebuild emits `public/image-dimensions.json` and `rehype-image-paths` stamps intrinsic dimensions on MDX images.
-- [ ] **Image optimisation pipeline** — Prebuild -> `sharp` -> WebP variants + `<picture>`/srcset.
-- [ ] **★ Pre-render / SSG for notes** — Extend Cloudflare Worker SSR meta-tag injection to full HTML content pre-rendering. See full architecture spec at [`docs/ssg-pipeline-plan.md`](docs/ssg-pipeline-plan.md).
+- [~] **★ Pre-render / SSG for notes** — Phase 1 (prebuild HTML fragment emitter) & Phase 2 (Cloudflare Worker edge injection & client progressive enhancement) shipped 2026-09-12. See [`docs/ssg-pipeline-plan.md`](docs/ssg-pipeline-plan.md). Phase 3 (D3 coords & pre-computed search) open.
 - [ ] Verify `NoteBody` un-lazying didn't fatten entry chunk past intent (`dist/assets/index-*.js`).
 
 ---

@@ -54,4 +54,32 @@
     - "Paced RAF loop with 144 FPS ceiling and -1.0ms buffer (Math.max(16.67, 1000 / 144) - 1.0) rather than a rigid 60 FPS cap, delivering buttery 144Hz fluidity for high-refresh monitors while preventing runaway loops on 240Hz+ panels."
     - "Decoupled graph filtering data transformations from React/SCSS into src/lib/graph-filter.ts so unit tests execute in pure headless Node without requiring mock DOM environments or SCSS preprocessors."
     - "Archived completed roadmap milestones into docs/archive/shipped-milestones.md while keeping stable anchors and summaries in ROADMAP.md to prevent breaking external references."
-  next: "Execute SSG / Note Pre-Rendering Pipeline (Phase 1: prebuild HTML emitter and Cloudflare Worker HTMLRewriter edge injection) and proceed with heXO touch-pinch zoom and arcade cabinet polish."
+  next: "Proceed with SSG pre-rendering pipeline implementation."
+
+- date: 2026-09-12
+  area: engine
+  title: "SSG pre-rendering pipeline execution: build-time HTML emitter, Cloudflare Worker edge injection, and progressive client handoff"
+  status: complete
+  files:
+    - scripts/emit-prerender.ts
+    - scripts/test-prerender.ts
+    - scripts/prebuild.ts
+    - scripts/test-slugs.ts
+    - src/lib/slug.ts
+    - src/worker/meta.ts
+    - src/worker/index.ts
+    - src/main.tsx
+    - src/components/ui/reader/NoteBody.tsx
+    - docs/ssg-pipeline-plan.md
+    - package.json
+    - .gitignore
+  changes:
+    - "Built standalone SSG emitter scripts/emit-prerender.ts generating semantic HTML fragments into public/prerender/ across all 291 notes in ~6 seconds during prebuild."
+    - "Implemented edge pre-render injection in Cloudflare Worker (src/worker/meta.ts & index.ts), replacing empty <div id=\"root\"> with pre-rendered semantic HTML fragments and caching hot notes in an in-memory V8 LRU Map."
+    - "Built zero-flicker progressive enhancement in NoteBody.tsx & main.tsx: initial pre-rendered DOM is stashed before React mounts and rendered instantly, eliminating the 'Loading...' spinner while dynamic MDX chunks import."
+    - "Added prerenderFileName() to src/lib/slug.ts to guarantee case-insensitive asset resolution compatibility with Cloudflare Workers static asset serving."
+    - "Added automated headless test suite scripts/test-prerender.ts covering HTML emission, KaTeX equation markup, title/tag metadata, and mock Worker edge injection."
+  decisions:
+    - "Generated self-contained HTML fragments rather than duplicating full index.html boilerplate 291 times, saving massive disk and cache space while enabling instant edge streaming."
+    - "Worker caches pre-rendered note fragments in an in-memory Map bounded to 120 entries, serving repeat requests straight from isolate RAM in <5ms."
+  next: "Phase 3: pre-computed search inverted index and D3 Constellation coordinate baking."

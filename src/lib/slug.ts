@@ -97,5 +97,13 @@ export function buildSlugResolver(
  * derive the name here.
  */
 export function ogCardName(slug: string): string {
-  return `${slug.replace(/\//g, "-").toLowerCase()}.png`
+  return `${normalizeSlug(slug).replace(/\//g, "-").toLowerCase()}.png`
+}
+
+/**
+ * Filename of a note's pre-rendered HTML fragment: `Wiki/Concepts/Double Bind` → `wiki-concepts-double-bind.html`.
+ * Matches the case-insensitive asset resolution contract of ogCardName.
+ */
+export function prerenderFileName(slug: string): string {
+  return `${normalizeSlug(slug).replace(/\//g, "-").toLowerCase()}.html`
 }

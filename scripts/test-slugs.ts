@@ -35,6 +35,11 @@ check("normalizeSlug trims", normalizeSlug("  Folder/Note  "), "Folder/Note")
 check("slugFromPathname root", slugFromPathname("/"), "index")
 check("slugFromPathname encoded", slugFromPathname("/Folder/My%20Note/"), "Folder/My-Note")
 
+// prerenderFileName — slug -> lowercase hyphenated html
+import { prerenderFileName, ogCardName } from "../src/lib/slug"
+check("prerenderFileName basic", prerenderFileName("Wiki/Concepts/Double Bind"), "wiki-concepts-double-bind.html")
+check("ogCardName basic", ogCardName("Wiki/Concepts/Double Bind"), "wiki-concepts-double-bind.png")
+
 // buildSlugResolver — case-insensitive resolution + basename fallback + collisions
 const resolver = buildSlugResolver(["Movies/Fargo", "Movies/Se7en", "Books/Fargo"])
 check("resolver exact", resolver.resolve("Movies/Fargo"), "Movies/Fargo")

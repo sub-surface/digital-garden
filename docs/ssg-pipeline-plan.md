@@ -90,9 +90,9 @@ To avoid "flash of re-rendered content" when JavaScript loads:
 
 ## 4. Implementation Phasing
 
-| Phase | Milestone | Deliverable | Risk / Mitigation |
+| Phase | Milestone | Deliverable | Status / Verification |
 |---|---|---|---|
-| **Phase 1** | Standalone Pre-render Emitter | `scripts/emit-prerender.ts` integrated into `prebuild.ts` writing `public/prerender/` | Zero risk to runtime (pure additive build step). |
-| **Phase 2** | Edge Worker Injection | `src/worker/meta.ts` injects pre-rendered HTML into `<div id="root">` | Guarded by fallback: if prerender fetch fails, emits default empty root shell. |
-| **Phase 3** | Search & Graph Pre-Compute | Serialized FlexSearch index and D3 $(x, y)$ coordinate baking | Verified by `scripts/test-layout.ts` and `npm test`. |
-| **Phase 4** | Full Benchmark Verification | Lighthouse CI FCP/LCP comparison on mobile and desktop | Ensure 0 warnings and zero regressions in `npm run check`. |
+| **Phase 1** | Standalone Pre-render Emitter | `scripts/emit-prerender.ts` integrated into `prebuild.ts` writing `public/prerender/` | **SHIPPED (2026-09-12)**: 291 notes pre-rendered into semantic HTML fragments, verified by `scripts/test-prerender.ts`. |
+| **Phase 2** | Edge Worker Injection & Client Handoff | `src/worker/meta.ts` & `index.ts` inject pre-rendered HTML into `#root`; `NoteBody.tsx` stashes DOM for zero-flicker progressive enhancement | **SHIPPED (2026-09-12)**: In-memory LRU Worker cache, instant paint, zero layout shift, verified by `npm run typecheck:worker` and `npm run check`. |
+| **Phase 3** | Search & Graph Pre-Compute | Serialized FlexSearch index and D3 $(x, y)$ coordinate baking | Next up. |
+| **Phase 4** | Full Benchmark Verification | Lighthouse CI FCP/LCP comparison on mobile and desktop | Post Phase 3. |

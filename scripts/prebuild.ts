@@ -19,6 +19,7 @@ import matter from "gray-matter"
 import { execFileSync } from "child_process"
 import { slugifyPath, buildSlugResolver, normalizeSlug } from "../src/lib/slug"
 import { SYSTEM_PAGE_META } from "../src/config/system-pages-meta"
+import { emitPrerender } from "./emit-prerender"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CONTENT_DIR = path.resolve(__dirname, "../content")
@@ -668,7 +669,7 @@ function emitOgImages() {
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
-function main() {
+async function main() {
   console.log("Prebuild: scanning content directory...")
 
   if (!fs.existsSync(CONTENT_DIR)) {
@@ -695,6 +696,10 @@ function main() {
   ]
   for (const emit of emitters) emit(model)
 
+  // Pre-render static HTML fragments (ROADMAP §5 / SSG Pipeline Phase 1)
+  const prerender = await emitPrerender(model, CONTENT_DIR, PUBLIC_DIR)
+  console.log(`  public/prerender/: ${prerender.count} notes pre-rendered (${(prerender.totalBytes / 1024).toFixed(1)} KB) in ${prerender.durationMs}ms`)
+
   // Model-independent emitters
   emitMusicSeed()
   emitAlbums()
@@ -705,4 +710,7 @@ function main() {
   console.log("Prebuild complete.")
 }
 
-main()
+main().catch((err) => {
+  console.error("Prebuild failed:", err)
+  process.exit(1)
+})
