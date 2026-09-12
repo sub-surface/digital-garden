@@ -25,7 +25,33 @@ export function usePanelClick() {
 
   useEffect(() => {
     function handleClick(event: MouseEvent) {
-      // Wiki and chat have no PanelStack — let all clicks navigate normally
+      // Wiki has no PanelStack — handle internal links with client-side SPA navigation
+      if (shell === "wiki") {
+        const target = event.target as Element
+        if (!target?.closest) return
+
+        const anchor = target.closest("a") as HTMLAnchorElement | null
+        if (!anchor) return
+
+        const href = anchor.getAttribute("href")
+        if (!href || href.startsWith("music:") || href.startsWith("#")) return
+        if (event.ctrlKey || event.metaKey || event.altKey) return
+        if (target.closest("[data-panel-ignore]") || anchor.getAttribute("target") === "_blank") return
+        if (href.includes("://") && !href.startsWith(window.location.origin)) return
+
+        try {
+          const url = new URL(anchor.href)
+          if (url.origin !== window.location.origin) return
+          if (url.protocol !== "http:" && url.protocol !== "https:") return
+
+          event.preventDefault()
+          navigate({ to: url.pathname + url.search + url.hash })
+        } catch {
+          // let browser handle
+        }
+        return
+      }
+
       if (shell !== "main") return
       const target = event.target as Element
       if (!target?.closest) return

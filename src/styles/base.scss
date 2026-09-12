@@ -68,6 +68,29 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.2;
 }
 
+// Scroll margins for anchor navigation so target elements clear fixed headers
+[id],
+.citation-key,
+h1, h2, h3, h4, h5, h6 {
+  scroll-margin-top: 5rem;
+
+  @media (max-width: $bp-phone) {
+    scroll-margin-top: 4.25rem;
+  }
+}
+
+body[data-banner] {
+  [id],
+  .citation-key,
+  h1, h2, h3, h4, h5, h6 {
+    scroll-margin-top: 6.75rem;
+
+    @media (max-width: $bp-phone) {
+      scroll-margin-top: 6rem;
+    }
+  }
+}
+
 h1 {
   font-size: 2rem;
   font-weight: 600;

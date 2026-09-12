@@ -7,6 +7,7 @@ import { useHotkeys } from "@/hooks/useHotkeys"
 import { useShell } from "@/hooks/useShell"
 import { useDynamicFavicon } from "@/hooks/useDynamicFavicon"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
+import { useScrollManager } from "@/hooks/useScrollManager"
 import { slugFromPathname } from "@/lib/slug"
 const WikiShell = lazy(() => import("./WikiShell").then(m => ({ default: m.WikiShell })))
 const ChatShell = lazy(() => import("./ChatShell").then(m => ({ default: m.ChatShell })))
@@ -85,6 +86,7 @@ export function AppShell() {
     return () => { cancelled = true }
   }, [setContentIndex, setContentIndexError, setImageDimensions])
 
+  useScrollManager()
   usePanelClick()
   useHotkeys()
   useDynamicFavicon()
