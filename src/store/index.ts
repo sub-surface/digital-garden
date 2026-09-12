@@ -50,12 +50,14 @@ function applyTheme(theme: "light" | "dark") {
 export type BgMode =
   | "murmuration" | "graph" | "vectors" | "dots" | "terminal"
   | "chamber" | "schematic" | "isometric" | "orrery" | "plate-scan"
+  | "dendrite" | "lorenz" | "cartography"
   | "chess" | "hexo"
 
 /** The user-facing cycle/picker order (page-scoped boards excluded). */
 export const BG_MODES = [
   "murmuration", "graph", "vectors", "dots", "terminal",
   "chamber", "schematic", "isometric", "orrery", "plate-scan",
+  "dendrite", "lorenz", "cartography",
 ] as const
 
 /**
@@ -75,6 +77,9 @@ export const BG_META: Record<string, { label: string; desc: string }> = {
   isometric: { label: "Isometric", desc: "Wireframe cubes, cursor parallax" },
   orrery: { label: "Orrery", desc: "Nested astrolabe rings" },
   "plate-scan": { label: "Plate-scan", desc: "Dithered still, scanline sweep" },
+  dendrite: { label: "Dendrite", desc: "Reaction-diffusion Lichtenberg trees" },
+  lorenz: { label: "Lorenz", desc: "Strange attractor ribbon in phase space" },
+  cartography: { label: "Cartography", desc: "Topographic contour drift and relief" },
 }
 
 export const ROYGBIV_ACCENTS = [

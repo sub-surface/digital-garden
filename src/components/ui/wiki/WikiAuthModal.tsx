@@ -122,11 +122,13 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
                   </label>
                   <input
                     id="forgot-email"
+                    name="email"
                     className="wiki-form-input"
                     type="email"
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                     placeholder="you@example.com"
+                    autoComplete="email"
                     autoFocus
                     required
                   />
@@ -180,11 +182,13 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
                   </label>
                   <input
                     id="auth-username"
+                    name="username"
                     className="wiki-form-input"
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="my-username"
+                    autoComplete="username"
                     autoFocus
                     required
                     minLength={3}
@@ -203,11 +207,13 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
                 </label>
                 <input
                   id="auth-email"
+                  name="email"
                   className="wiki-form-input"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
+                  autoComplete="email"
                   autoFocus={!isSignup}
                   required
                 />
@@ -219,11 +225,13 @@ export function WikiAuthModal({ onClose, defaultTab = "login" }: Props) {
                 </label>
                 <input
                   id="auth-password"
+                  name="password"
                   className="wiki-form-input"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={isSignup ? "min 6 characters" : "••••••••"}
+                  autoComplete={isSignup ? "new-password" : "current-password"}
                   required
                   minLength={isSignup ? 6 : undefined}
                 />

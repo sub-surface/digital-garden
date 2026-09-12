@@ -194,10 +194,13 @@ export function WikiMarkdownEditor({ value, onChange, placeholder, minHeight = 4
       {mode === "edit" ? (
         <textarea
           ref={textareaRef}
+          id="wiki-markdown-editor-textarea"
+          name="wiki-markdown-content"
           className="wiki-form-textarea wiki-form-md-textarea"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder || "Write your content in Markdown..."}
+          aria-label="Markdown editor content"
           style={{ minHeight: `${minHeight}px` }}
           spellCheck
         />

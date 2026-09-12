@@ -78,6 +78,27 @@ const BG_CONTROLS: Record<string, Ctrl[]> = {
     { key: "nodeSize", label: "Node size", min: 1, max: 10, step: 0.5 },
     { key: "drift", label: "Drift", min: 0, max: 2, step: 0.1 },
   ],
+  dendrite: [
+    { key: "branches", label: "Roots", min: 1, max: 8, step: 1 },
+    { key: "speed", label: "Growth speed", min: 0.2, max: 3, step: 0.1 },
+    { key: "branchChance", label: "Branching", min: 0.01, max: 0.2, step: 0.01 },
+    { key: "curl", label: "Curvature", min: 0.1, max: 2, step: 0.1 },
+    { key: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01 },
+  ],
+  lorenz: [
+    { key: "flowType", label: "Attractor (0:Lorenz 1:Rössler 2:Aizawa 3:Thomas)", min: 0, max: 3, step: 1 },
+    { key: "speed", label: "Time step", min: 0.2, max: 3, step: 0.1 },
+    { key: "rotSpeed", label: "Rotation", min: 0, max: 2, step: 0.1 },
+    { key: "trail", label: "Ribbon length", min: 300, max: 2500, step: 100 },
+    { key: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01 },
+  ],
+  cartography: [
+    { key: "lines", label: "Contour count", min: 4, max: 24, step: 1 },
+    { key: "speed", label: "Undulation speed", min: 0.1, max: 2, step: 0.05 },
+    { key: "relief", label: "Terrain relief", min: 0.5, max: 4, step: 0.1 },
+    { key: "elevation", label: "Frequency", min: 0.0005, max: 0.006, step: 0.0005 },
+    { key: "opacity", label: "Opacity", min: 0.05, max: 1, step: 0.01 },
+  ],
 }
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/

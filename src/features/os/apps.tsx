@@ -2185,11 +2185,11 @@ export function AccountApp() {
           <button type="button" className={explorer.button} onClick={() => { setMode("recover"); setMessage(null) }}>Forgot password</button>
         </div>
         {mode === "signup" && (
-          <label className={explorer.field}>User name<input className={explorer.select} value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required /></label>
+          <label className={explorer.field}>User name<input id="os-account-username" name="username" autoComplete="username" className={explorer.select} value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required /></label>
         )}
-        <label className={explorer.field}>Email<input className={explorer.select} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
+        <label className={explorer.field}>Email<input id="os-account-email" name="email" autoComplete="email" className={explorer.select} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
         {mode !== "recover" && (
-          <label className={explorer.field}>Password<input className={explorer.select} type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
+          <label className={explorer.field}>Password<input id="os-account-password" name="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} className={explorer.select} type="password" minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
         )}
         {mode === "signup" && newUsername && !usernameValid && <p className={explorer.desc}>Use 3–30 letters, numbers or hyphens.</p>}
         {message && <p className={explorer.desc} role="status">{message}</p>}

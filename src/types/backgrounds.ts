@@ -18,22 +18,13 @@ export interface ColorCache {
   palette: string[]
 }
 
-// Declared in stateRef but never populated/read anywhere in BgCanvas.tsx —
-// kept typed (not removed) since this is a typing-only pass.
-export interface Ripple {
+// drawField dots constellation
+export interface DotNode {
   x: number
   y: number
-  t: number
-}
-
-// Same as Ripple: declared, never used.
-export interface Drop {
-  x: number
-  y: number
-  text: string
-  speed: number
-  opacity: number
-  color: string
+  r: number
+  ci: number
+  alpha: number
 }
 
 // drawTerminalPops
@@ -117,6 +108,40 @@ export interface GraphNode extends GraphJsonNode {
 
 export type GraphLink = GraphJsonLink
 
+// drawDendrite
+export interface DendriteSegment {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  depth: number
+  alpha: number
+}
+
+export interface DendriteTree {
+  x: number
+  y: number
+  angle: number
+  segments: DendriteSegment[]
+  tips: Array<{ x: number; y: number; angle: number; depth: number; life: number }>
+  age: number
+  maxAge: number
+  color: string
+}
+
+// drawLorenz
+export interface LorenzState {
+  x: number
+  y: number
+  z: number
+  history: Float32Array
+  head: number
+  count: number
+  theta: number
+  phi: number
+  flowType: number
+}
+
 export interface BgState {
   mx: number
   my: number
@@ -127,8 +152,7 @@ export interface BgState {
   nodes: GraphNode[]
   links: GraphLink[]
   nodeMap: Map<string, GraphNode>
-  ripples: Ripple[]
-  drops: Drop[]
+  dotNodes: DotNode[]
   pops: Pop[]
   boids: Boid[]
   boidGrid: number[][]
@@ -136,6 +160,9 @@ export interface BgState {
   tracks: Track[]
   anchors: Anchor[]    // schematic
   cubes: Cube[]         // isometric
+  dendrites: DendriteTree[] // dendrite
+  lorenz: LorenzState | null // lorenz
+  cartoSeed: number    // cartography
   plate: HTMLCanvasElement | null  // plate-scan offscreen still
   plateKey: string
   lastFrame: number
@@ -238,10 +265,31 @@ export interface PlateScanConfig {
   opacity: number
 }
 
-// drawField reads one shared shape across vectors/dots/terminal — mode-specific
-// fields it touches (range/radius/vortex/rx/ry/minSize/maxSize/opacity) are only
-// defined by some of those three configs; the others fall back via `||` at each
-// read site. Optional here mirrors that real absence, not a typing shortcut.
+export interface DendriteConfig {
+  branches: number
+  speed: number
+  branchChance: number
+  curl: number
+  opacity: number
+}
+
+export interface LorenzConfig {
+  flowType: number
+  speed: number
+  rotSpeed: number
+  trail: number
+  opacity: number
+}
+
+export interface CartographyConfig {
+  lines: number
+  speed: number
+  relief: number
+  elevation: number
+  opacity: number
+}
+
+// drawField reads one shared shape across vectors/dots/terminal
 export interface FieldConfig {
   step: number
   speed: number
@@ -256,12 +304,6 @@ export interface FieldConfig {
   maxSize?: number
 }
 
-// Every user-selectable mode (BgMode minus the page-scoped chess/hexo boards,
-// which have no config block — see drawChess/drawHexo, which take no config
-// param) must have a shape here. Adding a mode to BgMode without adding its
-// shape below is a compile error at the BackgroundsConfig definition —
-// this is what makes the CLAUDE.md "adding a mode" checklist type-enforced
-// (ROADMAP §28.12).
 type ConfigurableBgMode = Exclude<BgMode, "chess" | "hexo">
 
 interface BgModeConfigShapes {
@@ -275,6 +317,9 @@ interface BgModeConfigShapes {
   isometric: IsometricConfig
   orrery: OrreryConfig
   "plate-scan": PlateScanConfig
+  dendrite: DendriteConfig
+  lorenz: LorenzConfig
+  cartography: CartographyConfig
 }
 
 export type BackgroundsConfig = { [K in ConfigurableBgMode]: BgModeConfigShapes[K] }

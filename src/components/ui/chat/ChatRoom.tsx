@@ -677,15 +677,21 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
                     showNewRoom ? (
                       <div className={styles.newRoomForm}>
                         <input
+                          id="chat-new-room-name"
+                          name="new-room-name"
                           className={styles.newRoomInput}
                           placeholder="name"
+                          aria-label="New room name"
                           value={newRoomName}
                           onChange={(e) => setNewRoomName(e.target.value)}
                           autoFocus
                         />
                         <input
+                          id="chat-new-room-slug"
+                          name="new-room-slug"
                           className={styles.newRoomInput}
                           placeholder="slug"
+                          aria-label="New room slug"
                           value={newRoomSlug}
                           onChange={(e) => setNewRoomSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                         />
@@ -720,9 +726,12 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
                 <>
                   <input
                     ref={searchInputRef}
+                    id="chat-header-search-input"
+                    name="chat-search"
                     className={styles.headerSearchInput}
                     type="text"
                     placeholder="search messages..."
+                    aria-label="Search messages"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onBlur={() => {

@@ -166,6 +166,8 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, accessT
           </div>
           <form className={styles.hexRow} onSubmit={handleHexSubmit}>
             <input
+              id="chat-settings-hex-color"
+              name="hex-color"
               className={styles.hexInput}
               type="text"
               value={color}
@@ -173,6 +175,7 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, accessT
               placeholder="#RRGGBB"
               maxLength={7}
               autoComplete="off"
+              aria-label="Hex color code"
             />
             {color && (
               <span className={styles.preview} style={{ color: /^#[0-9a-fA-F]{6}$/.test(color) ? color : undefined }}>
@@ -222,6 +225,8 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, accessT
           )}
           <div className={styles.keyGenRow}>
             <input
+              id="chat-settings-key-name"
+              name="key-name"
               className={styles.keyNameInput}
               type="text"
               value={newKeyName}
@@ -229,6 +234,7 @@ export function ChatSettings({ anchorRef, currentColor, onSave, onClose, accessT
               placeholder="key name (optional)"
               maxLength={40}
               autoComplete="off"
+              aria-label="API key name"
               onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleGenerateKey() } }}
             />
             <button type="button" className={styles.generateBtn} onClick={handleGenerateKey}>

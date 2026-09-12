@@ -32,17 +32,18 @@
 
 ## Features
 
-- [x] BgCanvas: graph/vectors/dots/terminal/chess modes
+- [x] BgCanvas: 10 user-selectable modes (murmuration, graph, vectors, dots, terminal, chamber, schematic, isometric, orrery, plate-scan) + page-scoped chess/hexo boards. Modularized in `src/lib/backgrounds/` with DPR clamping (1.25 max) and 144 FPS monitor cap
 - [x] Music player: persistent audio, FFT visualiser, mobile strip
 - [x] Search: FlexSearch + Ctrl+K overlay
-- [x] Graph: D3 force sim + PixiJS renderer, local radar + global overlay
+- [x] Command Palette: Ctrl/Cmd+P overlay with direct command execution and shared terminal
+- [x] Graph: D3 force sim + Canvas 2D renderer (PixiJS completely purged for pure CSP compliance), local radar + global overlay + `<EmbedGraph />` / `<WikiGraph />` MDX embeds
 - [x] Chess: chess.js + custom board + homemade three-flavour bot (drunk/casual/sharp), Worker-proxied GIF export, Lichess analysis link
 - [x] heXO: Connect-6 on an "infinite" hex grid — SVG board, pan/zoom, hotseat 2-player, win flourish
 - [x] Arcade: `/arcade` index page listing games (Chess, heXO live; Snake/Blackjack coming soon)
 - [x] Photography: masonry grid + lightbox
 - [x] Collections: bookshelf, movieshelf, music library (auto-collected from frontmatter)
 - [x] Theme system: dark/light toggle, ROYGBIV accent cycle, palette generation
-- [x] Keyboard shortcuts: `useHotkeys` hook — Ctrl+K opens search, Escape closes overlays
+- [x] Keyboard shortcuts: `useHotkeys` hook — Ctrl+K opens search, Ctrl+P opens command palette / terminal, Escape closes overlays
 - [x] Telescopic text: `TelescopicHandler.tsx` + `remark-telescopic` plugin — collapsible inline expansions in MDX content
 - [x] 404 page: `NotFound.tsx` — custom not-found page for unresolved slugs
 
@@ -70,7 +71,7 @@
 
 - [x] **Remark plugins** (AST stage): `remark-wikilinks` (wikilinks + embeds), `remark-telescopic` (collapsible text), `remark-callouts` (callout blocks), `remark-sidenotes` (footnote → sidenote conversion, incl. Roman-numeral display numbering)
 - [x] **Rehype plugins** (HTML stage): `rehype-image-paths` (rewrite image paths for CF). Note: `rehype-sidenotes-runtime.ts` is a *separate*, unrelated plugin used only by `markdown.ts`'s standalone runtime processor (LinkPreview/WikiEditPage/BootPage) — not part of this build-time chain.
-- [x] **MDX components registered in `MDXProvider.tsx`**: `BookCard`, `MovieCard`, `Gallery`, `Query`, `WikiSubmitForm`, `AsciiAvatar`, `PhotoAlbums`, custom `<a>` (internal vs external link styling)
+- [x] **MDX components registered in `MDXProvider.tsx`**: `BookCard`, `MovieCard`, `Gallery`, `Query`, `WikiSubmitForm`, `AsciiAvatar`, `PhotoAlbums`, `EmbedGraph`, `WikiGraph`, custom `<a>` (internal vs external link styling)
 - [x] **Content loading**: `content-loader.ts` fetches JSON manifests (content-index, graph, music, broken-links) and resolves slugs via `src/lib/slug.ts`; MDX component resolution itself is inline in `NoteBody.tsx` via `import.meta.glob` (the old standalone `mdx-loader.ts` duplicated this and was dead code — removed 2026-07-12)
 
 ---

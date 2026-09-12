@@ -58,9 +58,9 @@ export function OSLogon({ onContinue }: Props) {
             <button type="button" data-active={mode === "signup"} onClick={() => { setMode("signup"); setMessage(null) }}>Create account</button>
             <button type="button" data-active={mode === "recover"} onClick={() => { setMode("recover"); setMessage(null) }}>Recovery</button>
           </div>
-          {mode === "signup" && <label>User name<input className={explorer.select} value={username} onChange={(event) => setUsername(event.target.value)} required /></label>}
-          <label>Email<input className={explorer.select} type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-          {mode !== "recover" && <label>Password<input className={explorer.select} type="password" minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>}
+          {mode === "signup" && <label>User name<input id="os-logon-username" name="username" autoComplete="username" className={explorer.select} value={username} onChange={(event) => setUsername(event.target.value)} required /></label>}
+          <label>Email<input id="os-logon-email" name="email" autoComplete="email" className={explorer.select} type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
+          {mode !== "recover" && <label>Password<input id="os-logon-password" name="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} className={explorer.select} type="password" minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>}
           {mode === "signup" && username && !usernameValid && <span className={styles.logonDim}>Use 3–30 letters, numbers or hyphens.</span>}
           {message && <span className={styles.logonDim} role="status">{message}</span>}
           <button className={explorer.button} disabled={submitting || (mode === "signup" && !usernameValid)}>

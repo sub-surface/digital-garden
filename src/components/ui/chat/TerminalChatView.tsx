@@ -1033,6 +1033,8 @@ export function TerminalChatView({
         <span className={styles.terminalPrompt}>{mutedTyping ? "$~" : "$"}</span>
         <input
           ref={inputRef}
+          id="terminal-chat-input"
+          name="terminal-chat-command"
           className={styles.terminalInput}
           type="text"
           value={input}
@@ -1043,9 +1045,9 @@ export function TerminalChatView({
           onKeyDown={handleKeyDown}
           autoComplete="off"
           autoCorrect="off"
+          aria-label="Terminal input"
           autoCapitalize="off"
           spellCheck={false}
-          aria-label="Terminal input"
         />
       </div>
     </div>

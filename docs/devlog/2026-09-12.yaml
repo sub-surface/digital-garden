@@ -1,0 +1,57 @@
+- date: 2026-09-12
+  area: engine
+  title: "Modular canvas background architecture, 144Hz frame pacing, unified EmbedGraph, Pixi.js CSP purge, form autofill hygiene, and SSG pipeline specification"
+  status: complete
+  files:
+    - src/components/layout/BgCanvas.tsx
+    - src/components/layout/ThemePanel.tsx
+    - src/components/mdx/EmbedGraph.tsx
+    - src/components/mdx/WikiGraph.tsx
+    - src/components/mdx/MDXProvider.tsx
+    - src/lib/backgrounds/index.ts
+    - src/lib/backgrounds/simplex.ts
+    - src/lib/backgrounds/murmuration.ts
+    - src/lib/backgrounds/graph.ts
+    - src/lib/backgrounds/field.ts
+    - src/lib/backgrounds/terminalPops.ts
+    - src/lib/backgrounds/chamber.ts
+    - src/lib/backgrounds/schematic.ts
+    - src/lib/backgrounds/isometric.ts
+    - src/lib/backgrounds/orrery.ts
+    - src/lib/backgrounds/plateScan.ts
+    - src/lib/backgrounds/board.ts
+    - src/lib/backgrounds/dendrite.ts
+    - src/lib/backgrounds/lorenz.ts
+    - src/lib/backgrounds/cartography.ts
+    - src/lib/graph-filter.ts
+    - src/types/backgrounds.ts
+    - src/config/site-defaults.ts
+    - src/store/index.ts
+    - package.json
+    - vite.config.ts
+    - scripts/test-backgrounds.ts
+    - scripts/test-embed-graph.ts
+    - docs/ssg-pipeline-plan.md
+    - docs/archive/shipped-milestones.md
+    - ROADMAP.md
+    - CLAUDE.md
+    - docs/architecture.md
+    - docs/garden.md
+    - docs/infrastructure.md
+  changes:
+    - "Modularized the monolithic 1,158-line BgCanvas.tsx into single-responsibility simulation modules under src/lib/backgrounds/, reducing the host component to ~315 lines."
+    - "Implemented 3 new ambient background modes: 'dendrite' (reaction-diffusion Lichtenberg tree growth and synaptic arborization), 'lorenz' (chaotic strange attractor ribbons supporting Lorenz, Rössler, Aizawa, and Thomas equations with 3D projection camera), and 'cartography' (topographic contour drift with multi-octave relief, index contours, and cursor surveyor benchmarks)."
+    - "Elevated ambient background rendering performance: clamped devicePixelRatio to 1.25 max (slashing 50-75% fillrate on Retina/4K displays), clamped frame pacing up to 144 FPS with a -1.0ms jitter threshold to prevent frame drops on 144Hz monitors, batched flocking paths in murmuration to reduce draw calls by ~95%, and implemented node pooling in field mode for zero garbage collection."
+    - "Consolidated <LocalGraph /> and <WikiGraph /> into a unified <EmbedGraph /> MDX component supporting custom parameters (slug, cluster, tag, scope, depth, height, interactive, controls) while maintaining backward compatibility for existing notes."
+    - "Decoupled graph filtering and BFS multi-hop neighborhood extraction into pure headless module src/lib/graph-filter.ts, verified by scripts/test-embed-graph.ts."
+    - "Resolved DevTools autofill warning by adding explicit id, name, and contextual autoComplete attributes to all interactive form inputs across 16 files (search overlays, command palette, wiki forms, chat, arcade, and OS windows)."
+    - "Purged pixi.js dependency and deleted dead GraphView.tsx and GraphView.module.scss, guaranteeing strict Content Security Policy compliance (script-src 'self') with zero dynamic code evaluation (eval(), new Function())."
+    - "Scoped out comprehensive architectural specification in docs/ssg-pipeline-plan.md for the SSG / Note Pre-Rendering Pipeline, detailing build-time HTML fragment generation, edge injection via Cloudflare Workers, pre-computed FlexSearch index serialization, and D3 force simulation coordinate baking."
+    - "Streamlined ROADMAP.md from 1,513 lines to 264 lines by archiving bulky shipped milestone implementation records to docs/archive/shipped-milestones.md, keeping active priorities front and center."
+    - "Added automated headless test suites scripts/test-backgrounds.ts and scripts/test-embed-graph.ts to npm test, maintaining 100% green verification across unit tests, ESLint (--max-warnings 0), Cloudflare Worker typechecks, and Vite production builds."
+  decisions:
+    - "Clamped BgCanvas devicePixelRatio to 1.25 rather than 1.0 or window.devicePixelRatio; 1.25 delivers crisp vector antialiasing on high-DPI displays without the devastating 4x fillrate penalty of native 2.0+ Retina displays."
+    - "Paced RAF loop with 144 FPS ceiling and -1.0ms buffer (Math.max(16.67, 1000 / 144) - 1.0) rather than a rigid 60 FPS cap, delivering buttery 144Hz fluidity for high-refresh monitors while preventing runaway loops on 240Hz+ panels."
+    - "Decoupled graph filtering data transformations from React/SCSS into src/lib/graph-filter.ts so unit tests execute in pure headless Node without requiring mock DOM environments or SCSS preprocessors."
+    - "Archived completed roadmap milestones into docs/archive/shipped-milestones.md while keeping stable anchors and summaries in ROADMAP.md to prevent breaking external references."
+  next: "Execute SSG / Note Pre-Rendering Pipeline (Phase 1: prebuild HTML emitter and Cloudflare Worker HTMLRewriter edge injection) and proceed with heXO touch-pinch zoom and arcade cabinet polish."

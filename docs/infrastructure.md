@@ -28,7 +28,7 @@
 > Measured on desktop. FCP 3.6s, LCP 6.8s, TBT 130ms, CLS 0.353. Total payload 7.2MB. Same root causes as mobile — sourcemaps shipping to clients, no code splitting.
 
 - [x] **Disable production sourcemaps**: `sourcemap: true` in `vite.config.ts` is shipping `.map` files to the browser — 4MB+ of the 7.2MB payload. Set `sourcemap: false` for production.
-- [x] **Code splitting**: route-level lazy imports plus targeted `manualChunks` keep heavy dependencies out of the entry chunk. D3, PixiJS, Chess, and FlexSearch now load through lazy page/search paths rather than initial HTML preloads.
+- [x] **Code splitting**: route-level lazy imports plus targeted `manualChunks` keep heavy dependencies out of the entry chunk. D3, Chess, and FlexSearch now load through lazy page/search paths rather than initial HTML preloads. (PixiJS completely purged from codebase).
 - [x] **Create robots.txt**: `public/robots.txt` is missing entirely — Lighthouse logged 25 errors. Add a valid file.
 - [x] **Font display swap**: verified — Google Fonts URL has `display=swap`; no local `@font-face` rules exist in SCSS
 - [x] **`<main>` landmark**: wrap main content in `<main>` element for accessibility + SEO (currently missing, flagged by both Lighthouse runs)
@@ -65,10 +65,9 @@
 - [x] **Worker typechecking**: `tsconfig.worker.json` covers `src/worker.ts` with Cloudflare Worker types; `npm run typecheck:worker` is part of `npm run check`.
 - [ ] **Pre-render SSG**: build-time HTML generation for all notes
 - [ ] **Image optimisation**: sharp WebP variants + `<picture>` srcsets
-- [ ] **Lighthouse CI**: GitHub Actions target 95+ desktop
-- [ ] **OG gen: SVG image support**: satori cannot load `.svg` images from Wikipedia/external sources — throws "Unsupported image type: unknown". Affects any note whose `image`/`cover` frontmatter points to an SVG URL. Fix: detect SVG URLs in `og-gen.ts` and skip the image, or rasterise via `sharp` before passing to satori. Currently crashes silently and falls back to text-only OG card. Affected note: any using `https://upload.wikimedia.org/...svg` cover images.
-- [ ] **OG gen: external image fetch failures**: `https://covers.openlibrary.org/...` fetch fails in CF build environment (likely blocked). Fix: catch fetch errors per-image and fall back gracefully rather than crashing the OG generator. Both SVG and fetch-failure cases should be handled together.
-- [ ] **OG caching not working**: build log shows `132 image(s) to generate (0 cached)` on every build — cache is never hit. OG images are being regenerated from scratch each deploy (~90s added to build time). Investigate cache key / hash logic in `og-gen.ts` and ensure the cache directory persists between CF builds (may need to use CF build output cache or commit generated images).
+- [x] **Lighthouse CI**: GitHub Actions workflow (.github/workflows/lighthouse.yml) targeting desktop performance
+- [x] **OG gen: external image fetch failures**: fetch errors caught and handled gracefully with text-only card fallback
+- [x] **OG caching / committed cards**: `public/og/` cards are committed and guarded by `scripts/test-og.ts` in `npm test`
 - [x] **Prebuild runs twice per CF deploy**: fixed by removing the explicit `npm run prebuild` from the `build` script and relying on npm's `prebuild` lifecycle hook. `npm run build -- --help` now reports one `Prebuild complete.` line.
 - [ ] **`glob@11` deprecation warning**: `npm warn deprecated glob@11.1.0` on every install. Not a breaking issue but should be tracked — update when a direct or transitive dependency releases a fix.
 
@@ -76,12 +75,12 @@
 
 ## Security Headers (Best Practices score: 77)
 
-- [x] **CSP (Content Security Policy)**: `addSecurityHeaders()` in `src/worker.ts` — scoped to own origins, Google Fonts, Supabase, Turnstile, external image CDNs; `frame-ancestors 'none'`
+- [x] **CSP (Content Security Policy)**: `applySecurityHeaders()` in `src/worker/lib.ts` — scoped to own origins, Google Fonts, Supabase, Turnstile, external image CDNs; `frame-ancestors 'none'`; `script-src 'self'` with zero `eval` (PixiJS purged completely)
 - [x] **HSTS**: `Strict-Transport-Security: max-age=31536000; includeSubDomains`
 - [x] **COOP**: `Cross-Origin-Opener-Policy: same-origin`
 - [x] **XFO / framing**: `X-Frame-Options: DENY` + CSP `frame-ancestors 'none'`
 - [x] **Additional**: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`
-- [ ] **Trusted Types**: evaluate `require-trusted-types-for 'script'` — may conflict with PixiJS/D3 dynamic DOM writes, audit first
+- [ ] **Trusted Types**: evaluate `require-trusted-types-for 'script'` — audit D3 dynamic DOM writes
 
 ---
 

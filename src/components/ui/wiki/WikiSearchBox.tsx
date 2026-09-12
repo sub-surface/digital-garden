@@ -108,6 +108,8 @@ export function WikiSearchBox() {
         </svg>
         <input
           ref={inputRef}
+          id="wiki-search-box-input"
+          name="wiki-search-query"
           type="text"
           className={styles.searchInput}
           placeholder="Search wiki... (/)"

@@ -85,6 +85,27 @@ export const SITE_DEFAULTS = {
       "scanSpeed": 1,
       "cell": 4,
       "opacity": 1
+    },
+    "dendrite": {
+      "branches": 4,
+      "speed": 1.2,
+      "branchChance": 0.08,
+      "curl": 0.5,
+      "opacity": 0.35
+    },
+    "lorenz": {
+      "flowType": 0,
+      "speed": 1.0,
+      "rotSpeed": 0.6,
+      "trail": 1200,
+      "opacity": 0.4
+    },
+    "cartography": {
+      "lines": 14,
+      "speed": 0.6,
+      "relief": 1.6,
+      "elevation": 0.002,
+      "opacity": 0.3
     }
   } satisfies BackgroundsConfig
 }

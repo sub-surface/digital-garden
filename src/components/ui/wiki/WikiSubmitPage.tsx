@@ -158,11 +158,14 @@ function ImageUploadField({
       ) : (
         <div className="wiki-form-image-row">
           <input
+            id="wiki-image-url-input"
+            name="image-url"
             className="wiki-form-input wiki-form-image-url"
             type="url"
             value={imageUrl}
             onChange={(e) => onUrlChange(e.target.value)}
             placeholder="https://… (paste a URL)"
+            aria-label="Image URL"
           />
           <span className="wiki-form-image-or">or</span>
           <button
@@ -285,9 +288,12 @@ function MarkdownEditor({
       </div>
       <textarea
         ref={textareaRef}
+        id="wiki-submit-body"
+        name="wiki-submit-body"
         className="wiki-form-textarea wiki-form-md-textarea"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-label="Profile body markdown"
         placeholder={
           "Write your profile body here in Markdown.\n\n" +
           "You can write about yourself, elaborate on your positions, share relevant reading, etc.\n\n" +
@@ -352,11 +358,14 @@ function SurveyQuestion({
       </select>
       {isOther && (
         <input
+          id={`survey-other-${question.key}`}
+          name={`survey-other-${question.key}`}
           type="text"
           className="wiki-form-input wiki-form-other-input"
           placeholder="Describe your position…"
           value={otherInputValue}
           onChange={(e) => onChange(question.key, "__other__:" + e.target.value)}
+          aria-label={`Describe custom position for question ${question.key}`}
           autoFocus
         />
       )}
@@ -596,12 +605,13 @@ export function WikiSubmitForm() {
             <label className="wiki-form-label" htmlFor="name">Name <span className="wiki-form-required">*</span></label>
             <input
               id="name"
+              name="name"
               className="wiki-form-input"
               type="text"
               value={formData.name}
               onChange={(e) => setField("name", e.target.value)}
               placeholder="Your display name"
-              autoComplete="off"
+              autoComplete="name"
             />
           </div>
 
@@ -609,12 +619,13 @@ export function WikiSubmitForm() {
             <label className="wiki-form-label" htmlFor="username">Discord Username <span className="wiki-form-required">*</span></label>
             <input
               id="username"
+              name="username"
               className="wiki-form-input"
               type="text"
               value={formData.username}
               onChange={(e) => setField("username", e.target.value)}
               placeholder="yourhandle"
-              autoComplete="off"
+              autoComplete="username"
             />
           </div>
 
@@ -622,6 +633,7 @@ export function WikiSubmitForm() {
             <label className="wiki-form-label" htmlFor="pronouns">Pronouns</label>
             <input
               id="pronouns"
+              name="pronouns"
               className="wiki-form-input"
               type="text"
               value={formData.pronouns}

@@ -308,20 +308,26 @@ function LocksTab({ token }: { token: string }) {
       <div className="wiki-admin-lock-form">
         <div className="wiki-form-field" style={{ flex: 1 }}>
           <input
+            id="admin-lock-slug"
+            name="lock-slug"
             className="wiki-form-input"
             type="text"
             value={newSlug}
             onChange={(e) => setNewSlug(e.target.value)}
             placeholder="wiki/philosophers/spinoza"
+            aria-label="Wiki article slug to lock"
           />
         </div>
         <div className="wiki-form-field" style={{ flex: 1 }}>
           <input
+            id="admin-lock-reason"
+            name="lock-reason"
             className="wiki-form-input"
             type="text"
             value={newReason}
             onChange={(e) => setNewReason(e.target.value)}
             placeholder="Reason (optional)"
+            aria-label="Reason for locking"
           />
         </div>
         <button className="wiki-form-btn" onClick={addLock} disabled={!newSlug.trim()}>

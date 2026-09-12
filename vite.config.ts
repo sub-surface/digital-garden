@@ -140,8 +140,8 @@ export default defineConfig(({ command }) => ({
         // chunk for wiki/chat auth paths. FlexSearch is intentionally not forced into a
         // manual chunk: SearchOverlay imports it dynamically so search stays off the
         // initial preload graph.
-        // d3 / pixi.js / chess.js are NOT listed — they co-bundle with their own
-        // lazy-loaded pages (GraphView, ChessPage) and never reach the main chunk.
+        // d3 / chess.js are NOT listed — they co-bundle with their own
+        // lazy-loaded pages (ConstellationPage, ChessPage) and never reach the main chunk.
         manualChunks(id) {
           if (id.includes("node_modules")) {
             if (id.includes("react-dom") || id.includes("/react/") || id.includes("scheduler")) return "vendor-react"

@@ -257,6 +257,7 @@ export function WikiNewPage() {
             </label>
             <input
               id="new-title"
+              name="article-title"
               className="wiki-form-input"
               type="text"
               value={title}
@@ -301,6 +302,7 @@ export function WikiNewPage() {
             </label>
             <input
               id="new-summary"
+              name="edit-summary"
               className="wiki-form-input"
               type="text"
               value={editSummary}

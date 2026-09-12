@@ -181,6 +181,7 @@ export function WikiEditPage({ slug }: Props) {
             </label>
             <input
               id="edit-summary"
+              name="edit-summary"
               className="wiki-form-input"
               type="text"
               value={editSummary}

@@ -122,12 +122,15 @@ export function SearchOverlay() {
           </svg>
           <input
             ref={inputRef}
+            id="search-overlay-input"
+            name="search-query"
             type="text"
             placeholder="Search notes..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             className={styles.input}
+            aria-label="Search notes input"
           />
           <div className={styles.shortcut}>ESC</div>
         </div>

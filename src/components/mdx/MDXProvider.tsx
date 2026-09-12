@@ -25,11 +25,20 @@ const LazyWikiSubmitForm = lazy(() => import("@/components/ui/wiki/WikiSubmitPag
 const LazyPhotoAlbums = lazy(() => import("@/components/ui/shelves/PhotographyPage").then((m) => ({ default: m.PhotoAlbums })))
 const LazyMachineGod = lazy(() => import("./MachineGod").then((m) => ({ default: m.MachineGod })))
 const LazyWikiGraph = lazy(() => import("./WikiGraph").then((m) => ({ default: m.WikiGraph })))
+const LazyEmbedGraph = lazy(() => import("./EmbedGraph").then((m) => ({ default: m.EmbedGraph })))
 
 function WikiGraph(props: any) {
   return (
     <Suspense fallback={<div className="loading-shimmer" style={{ height: props?.height || 520, margin: "24px 0" }}>Waking the constellation...</div>}>
       <LazyWikiGraph {...props} />
+    </Suspense>
+  )
+}
+
+function EmbedGraph(props: any) {
+  return (
+    <Suspense fallback={<div className="loading-shimmer" style={{ height: props?.height || 520, margin: "24px 0" }}>Waking the constellation...</div>}>
+      <LazyEmbedGraph {...props} />
     </Suspense>
   )
 }
@@ -104,6 +113,7 @@ export const mdxComponents = {
   ConceptGrid,
   BroadsheetColumns,
   WikiGraph,
+  EmbedGraph,
   // Add more custom components here
   img: MDXImage,
   a: (props: any) => {

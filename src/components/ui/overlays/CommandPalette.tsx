@@ -192,6 +192,8 @@ export function CommandPalette() {
           <span className={styles.prompt}>&rsaquo;</span>
           <input
             ref={inputRef}
+            id="command-palette-input"
+            name="command-palette-query"
             type="text"
             placeholder="Run a command or jump to a note…"
             value={query}

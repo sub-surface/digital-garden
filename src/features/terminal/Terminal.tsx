@@ -416,6 +416,8 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
             <span className={styles.promptSymbol}>{promptSymbol}</span>
             <input
               ref={inputRef}
+              id="shared-terminal-input"
+              name="terminal-command"
               className={styles.input}
               value={input}
               onChange={(e) => setInput(e.target.value)}

@@ -172,6 +172,8 @@ export function ArcadePage() {
       </header>
 
       <input
+        id="arcade-filter-input"
+        name="arcade-filter"
         type="search"
         className={styles.search}
         placeholder="Filter…"
