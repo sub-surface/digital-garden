@@ -8,8 +8,11 @@
  */
 import * as fs from "fs"
 import * as path from "path"
+import { fileURLToPath } from "url"
 import matter from "gray-matter"
 import { slugifyPath } from "../src/lib/slug"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export interface SearchIndexModel {
   files: string[]
@@ -56,21 +59,58 @@ export function tokenizeText(text: string): string[] {
     .filter((w) => w.length >= 2 && w.length <= 30)
 }
 
+const DEFAULT_CONTENT_DIR = path.resolve(__dirname, "..", "content")
+const DEFAULT_PUBLIC_DIR = path.resolve(__dirname, "..", "public")
+
+function walkDir(dir: string): string[] {
+  const results: string[] = []
+  if (!fs.existsSync(dir)) return results
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) results.push(...walkDir(full))
+    else if (/\.mdx?$/.test(entry.name)) results.push(full)
+  }
+  return results
+}
+
+function buildDefaultModel(contentDir: string): SearchIndexModel {
+  const files = walkDir(contentDir)
+  const index: Record<string, any> = {}
+  for (const file of files) {
+    const rel = path.relative(contentDir, file)
+    const slug = slugifyPath(rel)
+    try {
+      const raw = fs.readFileSync(file, "utf-8")
+      const { data } = matter(raw)
+      index[slug] = {
+        slug,
+        title: data.title != null ? String(data.title) : (slug.split("/").pop() ?? slug),
+        tags: Array.isArray(data.tags) ? data.tags : [],
+        private: data.private === true,
+      }
+    } catch {
+      index[slug] = { slug, title: slug, tags: [], private: false }
+    }
+  }
+  return { files, index }
+}
+
 export function emitSearchIndex(
-  model: SearchIndexModel,
-  contentDir: string,
-  publicDir: string,
+  model?: SearchIndexModel,
+  contentDir: string = DEFAULT_CONTENT_DIR,
+  publicDir: string = DEFAULT_PUBLIC_DIR,
 ): { count: number; totalTokens: number; totalBytes: number; durationMs: number } {
   const start = Date.now()
+  const effectiveModel = model ?? buildDefaultModel(contentDir)
 
   const slugList: string[] = []
   const slugToId = new Map<string, number>()
   const invertedIndex: Record<string, number[]> = {}
 
-  for (const file of model.files) {
+  for (const file of effectiveModel.files) {
     const rel = path.relative(contentDir, file)
     const slug = slugifyPath(rel)
-    const meta = model.index[slug]
+    const meta = effectiveModel.index[slug]
     if (!meta || meta.private) continue
 
     const id = slugList.length

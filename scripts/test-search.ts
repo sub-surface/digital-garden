@@ -9,6 +9,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "url"
+import { emitSearchIndex } from "./emit-search-index"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, "..")
@@ -23,6 +24,11 @@ function assert(condition: boolean, msg: string) {
 
 async function testSearchIndex() {
   console.log("=== Testing Pre-Computed Full-Text Search Index ===")
+
+  if (!fs.existsSync(SEARCH_INDEX_PATH)) {
+    console.log("  public/search-index.json not found on disk — generating on the fly for test...")
+    emitSearchIndex()
+  }
 
   assert(fs.existsSync(SEARCH_INDEX_PATH), "public/search-index.json must exist")
 

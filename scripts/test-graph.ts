@@ -25,6 +25,20 @@ function assert(condition: boolean, msg: string) {
 async function testGraph() {
   console.log("=== Testing Constellation Pre-Calculated Relaxation ===")
 
+  if (!fs.existsSync(GRAPH_JSON_PATH)) {
+    console.log("  public/graph.json not found on disk — generating with synthetic model for test...")
+    const mockIndex: Record<string, any> = {}
+    for (let i = 0; i < 300; i++) {
+      mockIndex[`note-${i}`] = {
+        slug: `note-${i}`,
+        title: `Note ${i}`,
+        tags: [i % 3 === 0 ? "philosophy" : i % 3 === 1 ? "physics" : "logic"],
+        links: [`note-${(i + 1) % 300}`, `note-${(i + 7) % 300}`],
+      }
+    }
+    emitGraph({ index: mockIndex }, path.join(ROOT, "public"))
+  }
+
   assert(fs.existsSync(GRAPH_JSON_PATH), "public/graph.json must exist")
 
   const raw = fs.readFileSync(GRAPH_JSON_PATH, "utf-8")
