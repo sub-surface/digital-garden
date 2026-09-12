@@ -27,9 +27,11 @@ export function slugifyPath(relPath: string): string {
     .replace(/\s+/g, "-")
 }
 
-/** Slug from a URL pathname (`/Folder/My%20Note/` → `Folder/My-Note`, `/` → `index`). */
-export function slugFromPathname(pathname: string): string {
-  return normalizeSlug(decodeURIComponent(pathname.replace(/^\//, "")) || "index")
+/** Slug from a URL pathname (`/Folder/My%20Note/` → `Folder/My-Note`, `/` → `index` or `Wiki`). */
+export function slugFromPathname(pathname: string, isWiki = false): string {
+  const normalized = normalizeSlug(decodeURIComponent(pathname.replace(/^\//, "")))
+  if (!normalized) return isWiki ? "Wiki" : "index"
+  return normalized
 }
 
 export interface SlugResolver {

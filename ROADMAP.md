@@ -273,11 +273,13 @@ Active sequenced priorities:
 
 ---
 
-## 26. Performance review sweep & Pre-rendering
+## 26. Performance review sweep & Pre-rendering — ✅ SHIPPED
 
 - [x] **Background engine modularization & optimization** (2026-09-12): Extracted `src/lib/backgrounds/`, clamped DPR to 1.25 max, batched compound paths, clamped frame pacing to 144 FPS max, added `dendrite`, `lorenz`, `cartography`.
 - [x] **Purged PixiJS & GraphView** (2026-09-12): Completely eliminated WebGL shader compilation and dynamic code evaluation.
-- [ ] **SSG / Note Pre-Rendering Pipeline**: Full architectural spec in [`docs/ssg-pipeline-plan.md`](docs/ssg-pipeline-plan.md). Pre-renders markdown to static HTML fragments at build time, injected at Cloudflare Worker edge for instant first-contentful paint without JS.
+- [x] **SSG / Note Pre-Rendering Pipeline** (2026-09-12): Pre-renders markdown to static HTML fragments at build time (`scripts/emit-prerender.ts`), injected at Cloudflare Worker edge with LRU cache, and progressively handed off to TanStack Router without flicker.
+- [x] **Pre-computed search index & baked graph coordinates** (2026-09-12): Inverted search index emitter (`scripts/emit-search-index.ts`) and deterministic D3 force relaxation baking (`scripts/emit-graph.ts`).
+- [x] **Lighthouse audit sweep** (2026-09-12): Fixed wiki root CLS shift (0.702 -> 0), lazy-loaded Cloudflare Turnstile only on edit/submit pages (eliminating third-party cookies & devtools issues), fixed heading hierarchy, and expanded touch targets with header collision decoupling.
 - [ ] **Resource-hogging / lingering state sweep**: Audit intervals, event listeners, and audio contexts on unmount.
 
 ---

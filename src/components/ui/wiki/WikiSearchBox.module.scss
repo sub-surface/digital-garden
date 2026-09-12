@@ -23,9 +23,11 @@
   background: var(--color-bg, #111215);
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
   border-radius: 6px;
-  padding: 3px 8px;
+  padding: 2px 8px;
   gap: 6px;
-  height: 26px;
+  height: 30px;
+  min-height: 28px;
+  box-sizing: border-box;
   transition: border-color 0.15s ease;
 
   &:focus-within {
@@ -41,6 +43,8 @@
 
 .searchInput {
   flex: 1;
+  height: 100%;
+  min-height: 24px;
   background: transparent;
   border: none;
   color: var(--color-text);

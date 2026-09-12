@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { WikiMarkdownEditor } from "../WikiMarkdownEditor"
 import { WikiAuthModal } from "./WikiAuthModal"
 import { apiPost, apiErrorMessage } from "@/lib/api"
+import { loadTurnstile } from "@/lib/turnstile"
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
 
@@ -121,7 +122,9 @@ export function WikiNewPage() {
   // Load Turnstile on step 3
   useEffect(() => {
     if (step !== 3 || !session) return
-    const timer = setTimeout(() => {
+    let cancelled = false
+    loadTurnstile().then(() => {
+      if (cancelled) return
       const el = document.getElementById("cf-turnstile-new")
       if (!el || el.childElementCount > 0) return
       if (typeof window !== "undefined" && (window as any).turnstile && TURNSTILE_SITE_KEY) {
@@ -131,8 +134,10 @@ export function WikiNewPage() {
           "expired-callback": () => setTurnstileToken(""),
         })
       }
-    }, 300)
-    return () => clearTimeout(timer)
+    }).catch((err) => console.warn("Turnstile script failed to load:", err))
+    return () => {
+      cancelled = true
+    }
   }, [step, session])
 
   const handleSubmit = async () => {

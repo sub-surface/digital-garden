@@ -23,11 +23,11 @@ export function ConceptCard({ term, slug, category, origin, definition }: Concep
         <span className={styles.category}>{category}</span>
         {origin && <span className={styles.origin}>{origin}</span>}
       </header>
-      <h4 className={styles.term}>
+      <h3 className={styles.term}>
         <Link to={targetHref as any} className={styles.termLink}>
           {term}
         </Link>
-      </h4>
+      </h3>
       <p className={styles.definition}>{definition}</p>
       <footer className={styles.footer}>
         <Link to={targetHref as any} className={styles.exploreLink}>

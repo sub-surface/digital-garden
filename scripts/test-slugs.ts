@@ -33,6 +33,7 @@ check("normalizeSlug trims", normalizeSlug("  Folder/Note  "), "Folder/Note")
 
 // slugFromPathname — URL pathname -> slug
 check("slugFromPathname root", slugFromPathname("/"), "index")
+check("slugFromPathname wiki root", slugFromPathname("/", true), "Wiki")
 check("slugFromPathname encoded", slugFromPathname("/Folder/My%20Note/"), "Folder/My-Note")
 
 // prerenderFileName — slug -> lowercase hyphenated html

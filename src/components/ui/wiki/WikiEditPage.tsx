@@ -5,6 +5,7 @@ import { WikiAuthModal } from "./WikiAuthModal"
 import { useStore } from "@/store"
 import { resolveSlug } from "@/lib/content-loader"
 import { apiPost, apiErrorMessage } from "@/lib/api"
+import { loadTurnstile } from "@/lib/turnstile"
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
 
@@ -70,7 +71,9 @@ export function WikiEditPage({ slug }: Props) {
 
   useEffect(() => {
     if (!session || role === "pending") return
-    const timer = setTimeout(() => {
+    let cancelled = false
+    loadTurnstile().then(() => {
+      if (cancelled) return
       const el = document.getElementById("cf-turnstile-edit")
       if (!el || el.childElementCount > 0) return
       if (typeof window !== "undefined" && (window as any).turnstile && TURNSTILE_SITE_KEY) {
@@ -80,8 +83,10 @@ export function WikiEditPage({ slug }: Props) {
           "expired-callback": () => setTurnstileToken(""),
         })
       }
-    }, 300)
-    return () => clearTimeout(timer)
+    }).catch((err) => console.warn("Turnstile script failed to load:", err))
+    return () => {
+      cancelled = true
+    }
   }, [session, role])
 
   const handleSubmit = async () => {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { apiPost, apiErrorMessage } from "@/lib/api"
+import { loadTurnstile } from "@/lib/turnstile"
 
 // VITE_TURNSTILE_SITE_KEY — set in .env.local for dev (use 1x00000000000000000000AA test key)
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
@@ -468,7 +469,9 @@ export function WikiSubmitForm() {
   // Load Turnstile widget when reaching final step
   useEffect(() => {
     if (step !== TOTAL_STEPS) return
-    const timer = setTimeout(() => {
+    let cancelled = false
+    loadTurnstile().then(() => {
+      if (cancelled) return
       const el = document.getElementById("cf-turnstile")
       if (!el || el.childElementCount > 0) return
       if (typeof window !== "undefined" && (window as any).turnstile && TURNSTILE_SITE_KEY) {
@@ -478,8 +481,10 @@ export function WikiSubmitForm() {
           "expired-callback": () => setTurnstileToken(""),
         })
       }
-    }, 100)
-    return () => clearTimeout(timer)
+    }).catch((err) => console.warn("Turnstile script failed to load:", err))
+    return () => {
+      cancelled = true
+    }
   }, [step])
 
   const handleSubmit = async () => {

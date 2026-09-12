@@ -118,4 +118,35 @@
     - "Used deterministic PRNG (Mulberry32) for build-time force relaxation so public/graph.json coordinates are 100% reproducible and produce zero diff churn across identical builds."
     - "Excluded common stop words from body-only indexing while preserving them in titles and tags, reducing inverted index size by 25% without sacrificing precision."
     - "Kept in-memory contentIndex fallback in useContentSearch so search functions seamlessly in offline dev or mock test environments."
-  next: "Explore arcade cabinet shell or expanded hook test coverage."
+  next: "Phase 3 complete."
+
+- date: 2026-09-12
+  area: engine
+  title: "Lighthouse audit remediation: wiki root CLS elimination, on-demand Turnstile loading, semantic heading rank, and touch target header decoupling"
+  status: complete
+  files:
+    - index.html
+    - scripts/test-slugs.ts
+    - src/lib/slug.ts
+    - src/lib/turnstile.ts
+    - src/worker/index.ts
+    - src/components/layout/AppShell.tsx
+    - src/components/layout/QuickControls.tsx
+    - src/components/layout/QuickControls.module.scss
+    - src/components/ui/wiki/WikiSearchBox.module.scss
+    - src/components/ui/wiki/WikiSubmitPage.tsx
+    - src/components/ui/wiki/WikiEditPage.tsx
+    - src/components/ui/wiki/WikiNewPage.tsx
+    - src/components/mdx/ConceptCard.tsx
+    - ROADMAP.md
+  changes:
+    - "Eliminated 0.702 CLS shift on wiki.subsurfaces.net: fixed slugFromPathname(pathname, isWiki) to map root '/' to 'Wiki' instead of 'index', guaranteeing Cloudflare Worker pre-render edge injection and TanStack Router hydration mount the exact same 7,000px DOM tree."
+    - "Extracted dynamic Turnstile loader in src/lib/turnstile.ts and purged global script tag from index.html, eliminating third-party cookies (edgesessions_enabled) and DevTools inspector warnings across all reader and garden pages."
+    - "Restored valid semantic heading hierarchy in src/components/mdx/ConceptCard.tsx by converting card title from <h4> to <h3> under parent <h2> sections."
+    - "Fixed touch targets (>= 28px) and resolved control collision in top bar: decoupled QuickControls from centered WikiSearchBox by omitting redundant SearchButton on wiki shell, separating responsive clock date/time, and setting minimum 28px click boundaries on icon buttons and search input."
+    - "Added automated test in scripts/test-slugs.ts verifying root wiki slug resolution."
+  decisions:
+    - "Lazy-loaded Cloudflare Turnstile only when submission/edit forms mount, avoiding third-party scripts, tracking cookies, and CSP friction on 99% of page views."
+    - "Omitted redundant QuickControls SearchButton on WikiShell where the prominent center search box already handles user search."
+  next: "Resource-hogging / lingering state sweep or dedicated music player subdomain."
+

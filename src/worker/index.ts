@@ -143,7 +143,8 @@ export default {
     }
 
     const html = await response.text()
-    const requestSlug = slugFromPathname(url.pathname)
+    const isWiki = url.hostname.includes("wiki.subsurfaces.net")
+    const requestSlug = slugFromPathname(url.pathname, isWiki)
     const index = await getContentIndex(env.ASSETS)
     // Meta tags must be built from the CANONICAL slug, not the casing the visitor
     // happened to use: `/og/<slug>.png` is a static asset and CF serves those

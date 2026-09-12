@@ -56,7 +56,7 @@ function BuildStamp() {
   )
 }
 
-function formatDateTime(): string {
+function formatDateTime(): { date: string; time: string } {
   const d = new Date()
   const dayName = d.toLocaleDateString("en-GB", { weekday: "long" })
   const monthName = d.toLocaleDateString("en-GB", { month: "long" })
@@ -76,7 +76,10 @@ function formatDateTime(): string {
     return n + (s[(v - 20) % 10] || s[v] || s[0])
   }
 
-  return `${dayName}, ${monthName} ${getOrdinal(day)} ${year} | ${time}`
+  return {
+    date: `${dayName}, ${monthName} ${getOrdinal(day)} ${year}`,
+    time,
+  }
 }
 
 interface QuickControlsProps {
@@ -164,7 +167,7 @@ export function QuickControls({ variant = "full", immersive }: QuickControlsProp
 
       {variant === "full" && !isWiki && <MusicBar />}
 
-      {variant === "full" && <SearchButton />}
+      {variant === "full" && !isWiki && <SearchButton />}
 
       {variant === "full" && <RandomNoteButton />}
 
@@ -208,7 +211,10 @@ export function QuickControls({ variant = "full", immersive }: QuickControlsProp
 
       {/* Clock + build stamp */}
       <div className={styles.clockGroup}>
-        <span className={styles.clock}>{time}</span>
+        <span className={styles.clock}>
+          <span className={styles.clockDate}>{time.date} | </span>
+          <span className={styles.clockTime}>{time.time}</span>
+        </span>
         <BuildStamp />
       </div>
     </div>

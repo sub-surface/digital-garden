@@ -33,6 +33,7 @@ const LocalGraph = lazy(() => import("@/components/ui/graph/LocalGraph").then(m 
 
 export function AppShell() {
   const shell = useShell()
+  const isWiki = shell === "wiki"
   const isReaderMode = useStore((s) => s.isReaderMode)
   const readerMeasureCh = useStore((s) => s.readerMeasureCh)
   const readerScale = useStore((s) => s.readerScale)
@@ -99,7 +100,8 @@ export function AppShell() {
   // chunk on a direct /filament visit.
   const isImmersive = slugFromPathname(location.pathname).toLowerCase() === "filament"
   const isWikiRoute =
-    slugFromPathname(location.pathname).toLowerCase().startsWith("wiki") ||
+    isWiki ||
+    slugFromPathname(location.pathname, isWiki).toLowerCase().startsWith("wiki") ||
     activeSlug.toLowerCase().startsWith("wiki") ||
     location.pathname.toLowerCase().startsWith("/wiki")
 
