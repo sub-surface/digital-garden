@@ -105,13 +105,36 @@ Parfit's dismantling of the substantial self carries profound ethical consequenc
 
 ---
 
+## V. Paul Ricœur: Narrative Identity (Idem vs. Ipse)
+
+In *Oneself as Another* (1990)[^ricoeur-oneself], French hermeneutic philosopher [[Paul Ricœur]] mounts a foundational critique of Parfit's reductionist thought experiments:
+
+* **Conflation of *Idem* and *Ipse***: Ricœur demonstrates that Parfit's teletransporter treats identity exclusively as ***Idem* (Sameness / *Mêmeté*)**—numerical identity, psychological continuity, and physical substrate.
+* **The Ethical Dimension of *Ipse* (Selfhood / *Ipséité*)**: Human identity is fundamentally ethical and narrative. It is defined by the capacity to keep a promise (*maintien de soi*) across time: *"Who am I?"* is answered not by an inventory of brain states, but by an ethical posture: *"Here I am"* (*Me voici*).
+* **The Failure of Branching**: When the teletransporter branches in Case 2, the ethical responsibility cannot simply be divided like utility stocks. If Person A promised to raise a child, pay a debt, or answer for a crime on Earth, Person A remains answerable. The clone on Mars may inherit identical memories, but they inhabit a distinct historical narrative. Narrative identity cannot be reduced to a beam of data packets.
+
+---
+
+## VI. The Literary Dread of the Doppelgänger
+
+Viewed as narrative literature, the branch-line teletransporter taps into one of the darkest tropes of Romanticism and modernism: the **Doppelgänger**:
+
+* **Poe's William Wilson (1839)**: In Edgar Allan Poe's tale, the narrator is haunted by an exact namesake who whispers his thoughts and mimics his face. The double is not an alibi for survival; it is an intolerable omen of death and moral dissolution.
+* **Dostoevsky's *The Double* (1846)**: In Fyodor Dostoevsky's novella[^dostoevsky-double], titular councillor Golyadkin meets his exact double, Golyadkin Junior, who systematically steals his reputation, his job, and his social standing. Golyadkin does not feel comforted that his "projects" survive in his clone; he descends into paranoid madness.
+* Parfit assumes that the dying traveler on Earth can look at a video monitor of his Martian replica and feel serene utilitarian consolation: *"My psychological stream continues, so I have not truly died."* Literature reveals the actual human truth: confronting an identical replica is the ultimate narcissistic trauma—the experience of being rendered redundant and spectrally replaced while still breathing.
+
+---
+
 ## References & Citations
 
 [^parfit-rp-ed]: Derek Parfit, *Reasons and Persons* (Oxford: Clarendon Press / Oxford University Press, 1984), Part III: "Personal Identity," chapters 10–15. Standard academic citations reference section numbers (e.g., §75: "The Teletransporter"). See [[Bibliography#Parfit-RP-1984]].
+[^ricoeur-oneself]: Ricœur, Paul. *Oneself as Another*, trans. Kathleen Blamey (Chicago: University of Chicago Press, 1992 [1990]). See [[Bibliography#Ricoeur-Oneself-1990]].
+[^dostoevsky-double]: Dostoevsky, Fyodor. *The Double: A Petersburg Poem*, trans. Hugh Aplin (London: Hesperus Press, 2004 [1846]).
 
 ## See Also
 
 * [[The Ship of Theseus]] — Diachronic identity and mereological replacement
 * [[Philosophical Zombies]] — Consciousness, qualia, and physicalist duplication
 * [[The Experience Machine]] — Subjective experience vs. objective reality
+* [[David Hume]] — Bundle theory of the self
 * [[Bibliography]] — Master citation catalog

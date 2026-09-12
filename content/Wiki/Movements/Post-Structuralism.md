@@ -45,6 +45,19 @@ Foucault analyzed how modern institutions discipline the body and construct subj
 Derrida demonstrated in *Of Grammatology* (1967) that Western metaphysics is dominated by **Logocentrism**—the privilege of spoken presence over written absence:
 * Deconstructive reading locates the internal contradictions and margins of texts, demonstrating that binary hierarchies (speech/writing, nature/culture, male/female) depend constitutively upon the very terms they suppress.
 
+### Roland Barthes (1915–1980): The Death of the Author
+In his 1967 manifesto *"The Death of the Author"* (*La mort de l'auteur*), Barthes dismantled the biographical idol of literary criticism:
+* A text is not a message with a single, secret "theological" meaning whispered by an authorial god.
+* A text is a multidimensional fabric of citations, cultural traces, and linguistic echoes:
+  $$\text{"To give a text an Author is to impose a limit on that text, to furnish it with a final signified."}$$
+  The unity of a text lies not in its origin (the writer), but in its destination: the **birth of the reader** must be purchased by the death of the Author.
+
+### Jean-François Lyotard (1924–1998): Incredulity Toward Metanarratives
+In *The Postmodern Condition: A Report on Knowledge* (1979)[^lyotard-pc], Lyotard defined postmodernity through a succinct diagnostic formula:
+$$\text{"Simplifying to the extreme, I define postmodern as incredulity toward metanarratives."}$$
+* The grand teleological narratives of modernity—the Enlightenment narrative of universal rational emancipation, the Hegelian realization of Spirit, and the Marxist narrative of proletarian revolution—have lost all legitimacy.
+* In their wake, knowledge dissolves into heterogeneous, pluralistic, and incommensurable local **language games** (*le différend*).
+
 ---
 
 ## 3. Political & Contemporary Legacy
@@ -67,13 +80,22 @@ Whenever arguments between analytic logicians and pragmatists reach exhaustion, 
 ## References
 
 * Deleuze, Gilles. *Difference and Repetition* (1968). See [[Bibliography#Deleuze-DR-1968]].
+* Deleuze, Gilles. *The Logic of Sense* (1969). See [[Bibliography#Deleuze-LS-1969]].
 * Deleuze, Gilles, and Félix Guattari. *A Thousand Plateaus* (1980). See [[Bibliography#Deleuze-Guattari-TP-1980]].
 * Foucault, Michel. *Discipline and Punish* (1975). See [[Bibliography#Foucault-DP-1975]].
+* Derrida, Jacques. *Of Grammatology* (1967). See [[Bibliography#Derrida-OG-1967]].
+[^lyotard-pc]: Lyotard, Jean-François. *The Postmodern Condition: A Report on Knowledge*. Translated by Geoff Bennington and Brian Massumi. Minneapolis: University of Minnesota Press, 1984. French original: *La condition postmoderne: rapport sur le savoir* (Paris: Les Éditions de Minuit, 1979).
 
 ## See Also
 
 * [[Gilles Deleuze]]
+* [[Michel Foucault]]
+* [[Jacques Derrida]]
+* [[Logic of Sense (Deleuze)]]
+* [[Discipline and Punish (Foucault)]]
+* [[Of Grammatology (Derrida)]]
 * [[Baruch Spinoza]]
 * [[Nick Land]]
 * [[Phenomenology]]
 * [[The Warranted Assertibility Wars]]
+

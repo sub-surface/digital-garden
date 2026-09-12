@@ -69,14 +69,41 @@ Philosophers of science have proposed several responses to Hume's challenge:
 
 ---
 
+## 4. Kant's Transcendental Response: Causality as Synthetic *A Priori*
+
+In his *Prolegomena* (1783, 4:260)[^kant-prolegomena], [[Immanuel Kant]] famously confessed that it was Hume's skeptical challenge to causality that *"first interrupted my dogmatic slumber and gave my investigations in the field of speculative philosophy a quite new direction."*
+
+* **The Second Analogy of Experience**: In the *Critique of Pure Reason* (A189/B232)[^kant-cpr], Kant demonstrates that causality cannot be an inductive generalization drawn from observing sequences of events in nature. Instead, the category of causality is a **synthetic *a priori* condition for the very possibility of objective experience**.
+* **The Ship Floating Downstream**: Kant observes that when we look at a house, our gaze can move from the roof to the cellar, or from the cellar to the roof—the sequence is subjective and reversible. But when we watch a boat drift downstream, the sequence of perceptual representations is irreversible. 
+* To experience an objective event as having occurred in objective time, consciousness must necessarily apply the transcendental concept of cause and effect. We do not learn that events have causes through induction; we can experience an objective temporal world only because our cognitive faculty pre-structures appearances through causal necessity.
+
+---
+
+## 5. Speculative Realism: Quentin Meillassoux and Radical Contingency
+
+In *After Finitude* (2006)[^meillassoux-af], contemporary French philosopher [[Quentin Meillassoux]] (prefaced by Alain Badiou) performs a radical speculative inversion of Hume's problem:
+
+* **The Mistake of Both Hume and Kant**: Both Hume (the skeptic) and Kant (the transcendentalist) assumed that if natural laws are genuine, they must be *necessary*. Hume lamented that we cannot prove their necessity; Kant internalized necessity into the human transcendental apparatus.
+* **The Thesis of Factiality (*La factualité*)**: Meillassoux demonstrates that the Principle of Sufficient Reason is false: there is **no reason** why physical laws are the way they are rather than another way. 
+* The laws of nature are not necessary: they are **radically contingent**. The physical constants could change tomorrow without contradiction. 
+* Hume's inductive impasse is not a defect of human epistemic faculties, but an accurate ontological insight into the ultimate nature of reality: **the only necessity is that nothing is necessary**. Stability is a contingent fact of the present epoch, not a metaphysical law.
+
+---
+
 ## References
 
 * Hume, David. *An Enquiry Concerning Human Understanding* (1748), Section IV. See [[Bibliography#Hume-Enquiry]].
 * Goodman, Nelson. *Fact, Fiction, and Forecast*. Cambridge, MA: Harvard University Press, 1955.
+[^kant-prolegomena]: Kant, Immanuel. *Prolegomena to Any Future Metaphysics*, trans. Gary Hatfield (Cambridge: Cambridge University Press, 2004 [1783]), Ak. 4:260. See [[Bibliography#Kant-Prolegomena]].
+[^kant-cpr]: Kant, Immanuel. *Critique of Pure Reason*, trans. Paul Guyer and Allen W. Wood (Cambridge: Cambridge University Press, 1998 [1781/1787]). See [[Bibliography#Kant-CPR-1781]].
+[^meillassoux-af]: Meillassoux, Quentin. *After Finitude: An Essay on the Necessity of Contingency*, trans. Ray Brassier (London: Continuum, 2008 [2006]). See [[Bibliography#Meillassoux-AF-2006]].
 
 ## See Also
 
 * [[David Hume]]
+* [[Immanuel Kant]]
+* [[Critique of Pure Reason (Kant)]]
 * [[British Empiricism]]
 * [[Warranted Assertibility]]
 * [[The Six Criteria of Warrant]]
+* [[Humes Guillotine]]

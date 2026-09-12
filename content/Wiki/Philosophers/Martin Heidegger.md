@@ -126,40 +126,35 @@ In his prophetic 1954 lecture *"The Question Concerning Technology"* (*Die Frage
 
 ---
 
-## PhilPapers Survey Profile
+## 6. Language, the Poetic Word, and the Fourfold (*Das Geviert*)
 
-*Projected stance based on Heidegger's corpus:*
+Following his Kehre, Heidegger turned from the analytic of Dasein to the historical disclosure of Being through language and art:
 
-### Metaphysics & Mind
-* **External world:** Beyond Realism/Idealism (the world is the pre-reflective clearing, *Lichtung*, within which entities disclose themselves to Dasein)
-* **Free will:** Resoluteness within Thrownness (*Geworfenheit*; freedom is authentic projection within historically conditioned facticity)
-* **Mind:** Anti-Cartesian / Embodied-Enactive (rejects the isolated *res cogitans*; Dasein is fundamentally Being-in-the-world, *In-der-Welt-sein*)
-* **Personal identity:** Temporal Care Structure (*Sorge*; selfhood is constituted through ecstatic temporality and Being-toward-Death, *Sein-zum-Tode*)
-* **Time:** Ecstatic-Horizonal Temporality (time is not a linear succession of point-like "nows," but the unified dimensional ecstasy of past thrownness, future projection, and present engagement)
-
-### Epistemology
-* **Epistemic justification:** Hermeneutic Circle (all interpretation is grounded in the fore-structure of understanding: *Vor-habe*, *Vor-sicht*, and *Vor-griff*)
-* **Knowledge:** Primacy of Practical Coping (*Zuhandenheit* precedes *Vorhandenheit*; theoretical knowledge derives from the breakdown of unreflective coping)
-* **Truth:** *Aletheia* / Unconcealment (truth is primordial disclosure and clearing rather than propositional correspondence between statement and object)
-
-### Value Theory
-* **Meta-ethics:** Anti-axiological (rejects abstract "values" as modern subjective reifications; grounds ethics in the original Greek sense of *ethos* as authentic dwelling)
-* **Normative stance:** Authenticity (*Eigentlichkeit*) versus fallen conformity to "The They" (*Das Man*)
-
-### Logic, Language, & Science
-* **Language:** "The House of Being" (*"Die Sprache ist das Haus des Seins"*; language speaks through humanity; poetic naming gathers world and thing)
-* **Science:** Derivative Ontic Inquiry (natural science investigates present-at-hand entities, made possible only by a prior ontological clearing)
-
-### Metaphilosophy & Religion
-* **Aim of philosophy:** Fundamental Ontology / The Question of Being (*Seinsfrage*; overcoming the 2,500-year Western Oblivion of Being, *Seinsvergessenheit*)
-* **God:** Post-theological / Epochal Clearing (*"Only a god can save us"*, *Der Spiegel*; awaiting a new historical advent of Being beyond onto-theology)
-* **Philosophical methods:** Phenomenological hermeneutics, destruction (*Destruktion*) of the history of ontology, poetic listening
+* **The Destruction of the History of Ontology (*Destruktion*)**: Heidegger emphasizes that *Destruktion* does not mean nihilistic demolition. It is the deconstructive dismantling of the hardened, unexamined conceptual categories of metaphysics (substance, subject, object, representation) in order to rediscover the original, unthought Greek encounter with Being as unconcealment (***aletheia***).
+* **"Language is the House of Being"**: In his *Letter on Humanism* (1947)[^heidegger-humanism], Heidegger famously declared: *"Die Sprache ist das Haus des Seins. In ihrer Behausung wohnt der Mensch."* Language is not an instrumental tool manufactured by human animals to transmit thoughts. Language speaks through humanity (*Die Sprache spricht*); humans dwell poetically by listening to what language discloses.
+* **Hölderlin and Poetic Naming**: In *Poetry, Language, Thought* (1950)[^heidegger-plt], Heidegger examines the poetry of Friedrich Hölderlin. The poet is the messenger who stands between mortals and gods, gathering the world into the **Fourfold** (***Das Geviert***)—Earth and Sky, Mortals and Divinities—manifested in the humble presence of a thing (a bridge spanning a river, an earthenware jug pouring wine).
 
 ---
+
+## 7. Politics, Cybernetics, and the "End of Philosophy"
+
+* **The Political Catastrophe**: In 1933, Heidegger joined the Nazi party and accepted the rectorate of the University of Freiburg, delivering his notorious *Rectorate Address*. While he resigned the rectorate after a year, the posthumous publication of his private *Black Notebooks* (*Schwarze Hefte*, 1931–1948)[^heidegger-sh] revealed an alarming ontological anti-Semitism that viewed world-historical events through a mythologized combat of Being against rootless modern technology. The question of how deeply this politics infects his ontology remains the most fiercely contested dispute in contemporary continental philosophy.
+* **Cybernetics as the Completion of Metaphysics**: In his 1964 lecture *"The End of Philosophy and the Task of Thinking"*, Heidegger proclaimed that the 2,500-year cycle of Western philosophy had reached its end. Philosophy dissolves into the empirical sciences, whose unified planetary regime is **Cybernetics**—the totalized algorithmic steering, calculation, and information processing of nature and society. Thinking must step back from calculation to prepare a new beginning for Being.
+
+---
+
+## References
+
+[^heidegger-bt-ref]: Martin Heidegger, *Being and Time*, translated by Joan Stambaugh, revised by Dennis J. Schmidt (Albany: State University of New York Press, 2010). See [[Bibliography#Heidegger-BT-1927]].
+[^heidegger-tech-ref]: Martin Heidegger, *The Question Concerning Technology and Other Essays*, translated by William Lovitt (New York: Harper & Row, 1977).
+[^heidegger-humanism]: Martin Heidegger, "Letter on Humanism" (1947), in *Basic Writings*, ed. David Farrell Krell (San Francisco: HarperSanFrancisco, 1993), pp. 213–265.
+[^heidegger-plt]: Martin Heidegger, *Poetry, Language, Thought*, translated by Albert Hofstadter (New York: Harper & Row, 1971 [1950]).
+[^heidegger-sh]: Martin Heidegger, *Ponderings II–VI: Black Notebooks 1931–1938*, translated by Richard Rojcewicz (Bloomington: Indiana University Press, 2016).
 
 ## Related Notes & Concepts
 
 * **Traditions**: [[Phenomenology]], [[Continental Rationalism]], [[Map of Philosophy]]
-* **Philosophers**: [[Edmund Husserl]], [[Friedrich Nietzsche]], [[Immanuel Kant]], [[G.W.F. Hegel]], [[Arthur Schopenhauer]]
-* **Concepts**: [[The Hard Problem of Consciousness]], [[Philosophical Zombies]], [[The Ship of Theseus]]
+* **Philosophers**: [[Edmund Husserl]], [[Maurice Merleau-Ponty]], [[Jacques Derrida]], [[Friedrich Nietzsche]], [[Immanuel Kant]], [[G.W.F. Hegel]]
+* **Concepts**: [[The Brain in a Vat]], [[The Hard Problem of Consciousness]], [[The Chinese Room]], [[Philosophical Zombies]]
+* **Texts**: [[Being and Time (Heidegger)]], [[Critique of Pure Reason (Kant)]]
 * **Bibliography**: [[Bibliography#Heidegger-BT-1927]], [[Bibliography#Husserl-Ideas-1913]]

@@ -87,7 +87,46 @@ Does the Chinese Room argument apply to twentieth-first-century generative AI, t
 
 ---
 
-## 5. In Phil Chat
+---
+
+## 5. Wittgenstein & Ordinary Language: Meaning as Use, Not Mental Fluid
+
+From the perspective of ordinary language philosophy and late twentieth-century hermeneutics, Searle's dichotomy between "pure syntax" and "mental semantics" rests on a Cartesian myth of the interior mind:
+
+* **Meaning as Use (*Gebrauch*)**: In *Philosophical Investigations* (1953)[^wittgenstein-pi], [[Ludwig Wittgenstein]] demonstrates that meaning is not an occult psychological substance, an emotional feeling, or a biological secretion added onto physical glyphs. Meaning is **use within a form of life** (*Lebensform*).
+* **The Ghost in the Room**: Searle's argument surreptitiously presupposes that for understanding to occur, there must be an inner conscious homunculus having an introspective experience of "understanding." But if an agent or system deploys symbols correctly across the full spectrum of a linguistic community's practical interactions, questioning whether it has an additional "inner feeling of Chinese" commits a category mistake. As Wittgenstein observed: *"If God looked into our minds, he would not be able to see there whom we were speaking of."*
+
+---
+
+## 6. Derrida & Iterability: The Searle-Derrida Debate
+
+In their acrimonious exchange surrounding speech-act theory (*Limited Inc*, 1977)[^derrida-limited-inc], [[Jacques Derrida]] deconstructed the very theory of intentionality that animates Searle's Chinese Room:
+
+* **The Independence of the Mark**: Searle's "biological naturalism" insists that genuine meaning requires an authentic human speaker's conscious intention (*vouloir-dire*) anchored in organic brain tissue.
+* **Iterability (*Itérabilité*)**: Derrida proves that a sign is a sign only if it can be repeated, quoted, and functionally deployed in the **radical absence of the original speaker and their mental intention**. The mark must be legible even if the author is unconscious, dead, or non-existent.
+* Far from refuting linguistic understanding, the Chinese Room dramatizes the structural condition of all language: symbols circulate, hook into institutional effects, and produce meaning precisely because they are autonomous from the interior psychological states of the clerks who pass them under the door.
+
+---
+
+## 7. Hubert Dreyfus: Phenomenological Coping vs. Symbolic AI
+
+Decades before LLMs, [[Hubert Dreyfus]] (*What Computers Still Can't Do*, 1972/1992)[^dreyfus-ai] deployed [[Martin Heidegger|Heidegger]] and [[Maurice Merleau-Ponty|Merleau-Ponty]] to mount a phenomenological critique of artificial intelligence that cut far deeper than Searle's biological chauvinism:
+
+* **The Problem of the Background (*Hintergrund*)**: Dreyfus argued that human intelligence does not operate by applying explicit rules to symbol sets (the GOFAI paradigm). Human intelligence is grounded in **unreflective, embodied coping** within a shared cultural background that can never be fully formalized into a rulebook.
+* The failure of the room is not that its chips are made of silicon rather than carbon neurons, but that the system lacks a **lived body** embedded in a physical, social world that gives situations salience, urgency, and practical orientation.
+
+---
+
+## 8. Literary Allegory: The Scribe in Kafka and Borges
+
+Viewed through a literary lens, the Chinese Room is an existential allegory of bureaucratic alienation and scriptural opacity:
+
+* **Kafka's Scribes**: Like the trapped officials in Franz Kafka's *The Trial* and *In the Penal Colony*, the clerk in the room is subjugated to an elaborate apparatus of rules whose ultimate rationale and origin remain entirely hidden. The clerk executes mechanical labor with high precision while remaining alienated from the truth of the text.
+* **Borges' Hexagons**: In Jorge Luis Borges' *"The Library of Babel"* (1941), librarians wander through infinite shelves of seemingly random letters, searching for a divine index. The Chinese Room mirrors this Borgesian nightmare: language operating at an astronomical combinatorial scale, indifferent to whether any conscious eye reads the pages.
+
+---
+
+## 9. In Phil Chat
 
 In Philchat, the Chinese Room is invoked whenever the community evaluates large language models, particularly during debates surrounding **[[The Machine Witness]]**. 
 
@@ -100,10 +139,17 @@ When server participants summon an LLM (nicknamed *Clank* or *Omnius*) to adjudi
 * Searle, John R. "Minds, Brains, and Programs." *Behavioral and Brain Sciences* 3, no. 3 (1980): 417–424. See [[Bibliography#Searle-MBI-1980]].
 * Searle, John R. *Minds, Brains and Science*. Harvard University Press, 1984.
 * Searle, John R. "Is the Brain's Mind a Computer Program?" *Scientific American* 262, no. 1 (1990): 26–31.
+[^wittgenstein-pi]: Wittgenstein, Ludwig. *Philosophical Investigations*, trans. G.E.M. Anscombe (Oxford: Basil Blackwell, 1953). See [[Bibliography#Wittgenstein-PI-1953]].
+[^derrida-limited-inc]: Derrida, Jacques. *Limited Inc*, trans. Samuel Weber and Jeffrey Mehlman (Evanston, IL: Northwestern University Press, 1988 [1977]). See [[Bibliography#Derrida-LI]].
+[^dreyfus-ai]: Dreyfus, Hubert L. *What Computers Still Can't Do: A Critique of Artificial Reason* (Cambridge, MA: MIT Press, 1992 [1972]).
 
 ## See Also
 
 * [[John Searle]]
+* [[Ludwig Wittgenstein]]
+* [[Jacques Derrida]]
+* [[Maurice Merleau-Ponty]]
+* [[Martin Heidegger]]
 * [[The Hard Problem of Consciousness]]
 * [[Marys Room]]
 * [[Philosophical Zombies]]

@@ -96,9 +96,36 @@ In recent decades, physicalist orthodoxy has faced powerful philosophical counte
 
 ---
 
+## 5. Phenomenological Overcoming: The Lived Body (*Corps Propre*)
+
+In *Phenomenology of Perception* (1945)[^merleau-ponty-pp-mb], [[Maurice Merleau-Ponty]] argues that the entire Mind-Body Problem is a pathological byproduct of **objective thought** (*la pensée objective*):
+
+* **The Cartesian Fallacy of Dissection**: Objective thought divides reality into an *in-itself* (*en-soi*, extended physical mechanism) and a *for-itself* (*pour-soi*, transparent thinking consciousness). Having violently bisected reality, philosophers struggle fruitlessly to reconnect them via pineal glands, functional software, or identity mappings.
+* **The Lived Body (***Le Corps Propre***)**: Merleau-Ponty revives Edmund Husserl's distinction between the physical corpse/object (*Körper*) and the **living, experiencing body** (*Leib* / *le corps propre*).
+* My body is not an external physical instrument that my mind drives like a chauffeur in an automobile; **I am my body** (*"Je suis mon corps"*).
+* The lived body is our primordial anchorage in a meaningful perceptual world. It possesses a pre-reflective **motor intentionality** (*l'intentionnalité corporelle*) and an dynamic **body schema** (*schéma corporel*)—a practical grip on the environment that operates beneath theoretical cognition and neurochemical reduction.
+
+---
+
+## 6. Spinoza & Deleuze: Immanence, Parallelism, and Affect
+
+In the seventeenth century, [[Baruch Spinoza]] formulated the most profound alternative to both Cartesian dualism and reductive materialism in his *Ethics* (1677)[^spinoza-ethics-mb]:
+
+* **Substance Monism and Parallelism**: Mind and body are not two interacting substances; they are two divergent **attributes** (Thought and Extension) expressing one and the same underlying reality (Nature or God, *Deus sive Natura*). 
+  > *"The order and connection of ideas is the same as the order and connection of things."* (*Ethics* II, P7)
+* Because mind and body are identical in substance, neither causally commands the other: the body does not determine the mind to think, nor does the mind determine the body to motion or rest.
+* **Deleuze's Ethology of the Body**: In *Spinoza: Practical Philosophy* (1970)[^deleuze-spinoza-pp], [[Gilles Deleuze]] develops Spinoza's famous provocation: *"We do not even know what a body can do"* (*Ethics* III, P2S). A body is not defined by its physiological organs or mental intentions, but by its **affects**—its capacity to affect other bodies and be affected by them, increasing or diminishing its active power of existing (*potentia*).
+
+---
+
 ## Related Notes & Concepts
 
-* **Philosophers**: [[René Descartes]], [[Baruch Spinoza]], [[David Chalmers]], [[Frank Jackson]], [[John Searle]], [[Thomas Nagel]]
+* **Philosophers**: [[René Descartes]], [[Baruch Spinoza]], [[Maurice Merleau-Ponty]], [[Gilles Deleuze]], [[David Chalmers]], [[Frank Jackson]], [[John Searle]], [[Thomas Nagel]]
 * **Concepts**: [[The Hard Problem of Consciousness]], [[Marys Room]], [[Philosophical Zombies]], [[The Chinese Room]], [[Substance Monism]]
-* **Traditions**: [[Continental Rationalism]], [[British Empiricism]], [[Phenomenology]]
-* **Bibliography**: [[Bibliography#Descartes-CSM]], [[Bibliography#Chalmers-Conscious-1996]], [[Bibliography#Jackson-Qualia-1982]]
+* **Traditions**: [[Continental Rationalism]], [[Phenomenology]], [[Post-Structuralism]], [[British Empiricism]]
+* **Bibliography**: [[Bibliography#Descartes-CSM]], [[Bibliography#Spinoza-Ethics]], [[Bibliography#Merleau-Ponty-PP]], [[Bibliography#Deleuze-SPP-1970]], [[Bibliography#Chalmers-Conscious-1996]]
+
+[^descartes-med-ref]: René Descartes, *Meditations on First Philosophy* (1641), in *The Philosophical Writings of Descartes*, trans. John Cottingham et al., Vol. 2 (Cambridge University Press, 1985). See [[Bibliography#Descartes-CSM]].
+[^merleau-ponty-pp-mb]: Merleau-Ponty, Maurice. *Phenomenology of Perception*, trans. Donald A. Landes (London: Routledge, 2012 [1945]). See [[Bibliography#Merleau-Ponty-PP]].
+[^spinoza-ethics-mb]: Spinoza, Baruch. *Ethics*, in *The Collected Works of Spinoza*, Vol. 1, ed. and trans. Edwin Curley (Princeton University Press, 1985 [1677]). See [[Bibliography#Spinoza-Ethics]].
+[^deleuze-spinoza-pp]: Deleuze, Gilles. *Spinoza: Practical Philosophy*, trans. Robert Hurley (San Francisco: City Lights Books, 1988 [1970]). See [[Bibliography#Deleuze-SPP-1970]].

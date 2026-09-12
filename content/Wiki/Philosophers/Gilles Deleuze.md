@@ -56,14 +56,20 @@ Deleuze is the ubiquitous mascot and recurring debate token of Phil Chat. Whenev
 
 * *Nietzsche and Philosophy* (1962)
 * *Difference and Repetition* (1968)
-* *The Logic of Sense* (1969)
+* *The Logic of Sense* (1969) — See [[Logic of Sense (Deleuze)]]
 * *Anti-Oedipus* (with Félix Guattari, 1972)
 * *A Thousand Plateaus* (with Félix Guattari, 1980)
 * *What is Philosophy?* (with Félix Guattari, 1991)
 
 ## See also
 
+- [[Logic of Sense (Deleuze)]]
+- [[Post-Structuralism]]
+- [[Michel Foucault]]
+- [[Jacques Derrida]]
 - [[Baruch Spinoza]]
+- [[Friedrich Nietzsche]]
 - [[Nick Land]]
 - [[The Warranted Assertibility Wars]]
 - [[stackhouse|Stackhouse]]
+

@@ -118,7 +118,36 @@ The tension arises because the consequentialist axiom prescribes pulling the lev
 
 ---
 
-## 5. In Phil Chat
+---
+
+## 5. Bernard Williams: Moral Alienation and "One Thought Too Many"
+
+In his foundational critique of consequentialism (*Utilitarianism: For and Against*, 1973)[^williams-util], British philosopher [[Bernard Williams]] attacked the structural premise shared by both consequentialist and formal deontic trolley dilemmas:
+
+* **Alienation from Integrity**: Consequentialist aggregation requires an agent to regard their deepest moral projects, attachments, and instincts as mere entries in an impersonal utility ledger. If an agent must push a bystander or pull a switch simply because the arithmetic favors $5 > 1$, the agent is reduced to a passive channel for global utility maximization, severed from their own moral integrity and agency.
+* **"One Thought Too Many"**: In *Moral Luck* (1981), Williams observed that when an agent faces catastrophic moral choices involving loved ones or immediate human lives, pausing to justify an instinctive rescue through abstract ethical principles is already a moral deformity—it is to have *"one thought too many."* The trolley problem forces an artificial, detached bureaucratic perspective upon situations that are phenomenologically tragic.
+
+---
+
+## 6. Critical Theory: Instrumental Reason & The Logistics of the Rail
+
+From the perspective of Frankfurt School Critical Theory, [[Theodor Adorno]] and [[Max Horkheimer]] (*Dialectic of Enlightenment*, 1947)[^adorno-de] diagnose the trolley problem as an ideological symptom of **Instrumental Rationality** (*instrumentelle Vernunft*):
+
+* **The Subject as Switchman**: The thought experiment does not invite moral reflection; it trains the thinker to think like a railway switchman or a wartime logistics officer. The individual human body is reified into an abstract, interchangeable unit of sacrifice.
+* **The Tracks of Modernity**: The runaway trolley is not an accidental metaphor: it is the literal machinery of industrial modernization, Taylorist production, and state administration. The tracks dictate a rigid, pre-laid destiny where human agents cannot question why the train is runaway, who owns the rail company, or why workers are stranded without safety mechanisms; the agent is permitted only to pull the lever of administrative sacrifice. Adorno identified this calculating equivalence as the very logic of capitalist exchange-value extended into human flesh.
+
+---
+
+## 7. Tragedy vs. Optimization: The Loss of the Tragic
+
+In classical literature and ancient tragedy—from Sophocles' *Antigone* to Shakespeare's *King Lear*—ethical catastrophe is understood as an **irreconcilable tear** in the normative cosmos:
+
+* In Greek tragedy, when duties collide (e.g., Antigone's duty to family vs. Creon's duty to the state), the collision is an ontological rupture that leaves the actor tragic, stained, and mourning.
+* The trolley problem sanitizes this tragic depth by transforming horror into an optimization problem—a neat puzzle with a numeric payoff ($\Delta U = +4$). It erases the somatic trauma of blood, the scream of the victim, and the enduring stain of killing, replacing lived ethical horror with tidy decision matrices.
+
+---
+
+## 8. In Phil Chat
 
 In Philchat, the Trolley Problem serves as the canonical battleground between channel welfarists and rights theorists:
 * In Volume I, debates over **[[The Pleasure Box]]** mirrored the Footbridge dilemma: [[jere|Jere]] argued that aggregate utils override individual autonomy, while [[chair|Chair]] invoked Kantian moral side-constraints to argue that using persons as instruments is categorically illegitimate.
@@ -130,6 +159,8 @@ In Philchat, the Trolley Problem serves as the canonical battleground between ch
 
 [^foot-trolley-67]: Foot, Philippa. "The Problem of Abortion and the Doctrine of the Double Effect." *Oxford Review* 5 (1967): 5–15. See [[Bibliography#Foot-Trolley-1967]].
 [^thomson-trolley-85]: Thomson, Judith Jarvis. "The Trolley Problem." *Yale Law Journal* 94, no. 6 (1985): 1395–1415. See [[Bibliography#Thomson-Trolley-1985]].
+[^williams-util]: Williams, Bernard. "A Critique of Utilitarianism." In J.J.C. Smart and Bernard Williams, *Utilitarianism: For and Against* (Cambridge: Cambridge University Press, 1973), pp. 75–150.
+[^adorno-de]: Horkheimer, Max, and Theodor W. Adorno. *Dialectic of Enlightenment*, trans. John Cumming (New York: Continuum, 1972 [1947]). See [[Bibliography#Adorno-Horkheimer-DE]].
 
 * Kamm, Frances. *Intricate Ethics: Rights, Responsibilities, and Permissible Harm*. Oxford University Press, 2007. See [[Bibliography#Kamm-Ethics-2007]].
 * Greene, Joshua D., et al. "An fMRI Investigation of Emotional Engagement in Moral Judgment." *Science* 293, no. 5537 (2001): 2105–2108.
@@ -137,6 +168,7 @@ In Philchat, the Trolley Problem serves as the canonical battleground between ch
 ## See Also
 
 * [[Philippa Foot]]
+* [[Theodor Adorno]]
 * [[Utilitarianism]]
 * [[Deontology]]
 * [[The Experience Machine]]

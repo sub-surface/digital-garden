@@ -87,7 +87,40 @@ In *Reality+*, [[David Chalmers]] challenges Nozick's third premise (that the ma
 
 ---
 
-## 5. In Phil Chat
+---
+
+## 5. Guy Debord: The Society of the Spectacle & Commodified Illusion
+
+From the perspective of Situationist critique, [[Guy Debord]] (*The Society of the Spectacle*, 1967)[^debord-spectacle] diagnoses the Experience Machine not as an eccentric futuristic hypothetical, but as the literal culmination of late-capitalist alienation:
+
+> *"All that once was directly lived has receded into a representation... The spectacle is not a collection of images, but a social relation among people, mediated by images."* (Thesis 1 & 4)
+
+* **The Industrialization of Experience**: Nozick published *Anarchy, State, and Utopia* in 1974, at the dawn of modern mass media and algorithmic leisure. In Debord's analysis, late capital progresses from *being* into *having*, and from *having* into *appearing*. 
+* The Experience Machine is the commodification of lived existence: it extracts the subject from the social, historical world and pacifies them inside an isolated metabolic womb, substituting privatized sensations for genuine agency and revolutionary transformation.
+
+---
+
+## 6. Psychoanalysis: Beyond Pleasure and the Horror of *Jouissance*
+
+Philosophical hedonism presumes an ego that seeks continuous pleasure and homeostatic relief. Twentieth-century psychoanalysis dismantled this naïve psychology:
+
+* **Freud's Death Drive (*Todestrieb*)**: In *Beyond the Pleasure Principle* (1920)[^freud-bpp], Sigmund Freud demonstrated that human psychology is not governed exclusively by the pleasure principle. The mind is driven by repetition compulsions, self-destructive impulses, and a drive to return to the inorganic.
+* **Lacanian *Jouissance***: [[Jacques Lacan]] distinguished mere pleasure (*plaisir*—the soothing regulation of tension) from ***jouissance***—an excessive, traumatic ecstasy that breaches the pleasure principle and borders on horror. Human desire is structured around a constitutive lack (*objet petit a*); it does not seek total satisfaction, which induces claustrophobic anxiety (*angoisse*). A machine offering seamless, friction-free pleasure would paralyze the human subject, suffocating desire by abolishing the very resistance that sustains it.
+
+---
+
+## 7. Literary Counterweights: Nietzsche's Last Man & Huxley's Savage
+
+The refusal to plug into the tank echoes foundational literary warnings against technological sedation:
+
+* **Nietzsche's Last Man (*Der letzte Mensch*)**: In *Thus Spoke Zarathustra* (1883)[^nietzsche-zarathustra], [[Friedrich Nietzsche]] warned of a coming human type who would abandon great striving, danger, and self-overcoming in favor of tepid comfort: *"One has one's little pleasure for the day and one's little pleasure for the night: but one has a regard for health. 'We have invented happiness,' say the last men, and blink."*
+* **Huxley's *Brave New World* (1932)**: In the climactic debate between the World Controller Mustapha Mond and John the Savage, Mond offers a society engineered for total hedonic stability via *soma* and "feelies." The Savage famously refuses:
+  > *"I don't want comfort. I want God, I want poetry, I want real danger, I want freedom, I want goodness. I want sin... I'm claiming the right to be unhappy."*[^huxley-bnw]
+  Nozick's third reason (contact with deeper reality) is precisely John the Savage's demand for the tragic friction of an unsimulated world.
+
+---
+
+## 8. In Phil Chat
 
 In Philchat, the Experience Machine is the direct classical ancestor of the Volume I chronicle of **[[The Pleasure Box]]**. 
 
@@ -100,12 +133,17 @@ When [[jere|Jere]] proposed an artificial entity wired for maximal cosmic utils,
 [^nozick-asu]: Nozick, Robert. *Anarchy, State, and Utopia* (1974), pp. 42–45. See [[Bibliography#Nozick-ASU-1974]].
 [^debrigard-2010]: De Brigard, Felipe. "If You Like It, Does It Matter If It's Real?" *Philosophical Psychology* 23, no. 1 (2010): 43–57. See [[Bibliography#DeBrigard-EM-2010]].
 [^silverstein-2000]: Silverstein, Matthew. "In Defense of Water-Poles: A Hedonist Response to Nozick." *Pacific Philosophical Quarterly* 81, no. 3 (2000): 279–300.
+[^debord-spectacle]: Debord, Guy. *The Society of the Spectacle*, trans. Donald Nicholson-Smith (New York: Zone Books, 1994 [1967]). See [[Bibliography#Debord-Spectacle-1967]].
+[^freud-bpp]: Freud, Sigmund. *Beyond the Pleasure Principle*, trans. James Strachey (New York: W.W. Norton, 1961 [1920]).
+[^nietzsche-zarathustra]: Nietzsche, Friedrich. *Thus Spoke Zarathustra*, trans. Walter Kaufmann (New York: Viking Press, 1954 [1883]). See [[Bibliography#Nietzsche-Zarathustra]].
+[^huxley-bnw]: Huxley, Aldous. *Brave New World* (London: Chatto & Windus, 1932).
 
 * Chalmers, David J. *Reality+: Virtual Worlds and the Problems of Philosophy*. W.W. Norton & Company, 2022. See [[Bibliography#Chalmers-Reality-2022]].
 
 ## See Also
 
 * [[Robert Nozick]]
+* [[Friedrich Nietzsche]]
 * [[The Pleasure Box]]
 * [[Utilitarianism]]
 * [[The Trolley Problem]]

@@ -85,11 +85,43 @@ In 1998, Frank Jackson famously repudiated his own thought experiment, convertin
 
 ---
 
+## 5. The Phenomenological Critique: The Lived Body & The Environmental Field
+
+Continental phenomenology, preeminently represented by [[Maurice Merleau-Ponty]] in *Phenomenology of Perception* (1945)[^merleau-ponty-pp], argues that the entire Knowledge Argument is founded on a flawed, intellectualist pathology of perception:
+
+* **Color is a Level, Not an Atomic Quale**: For Merleau-Ponty, red is not an isolated sensory datum or an interior mental property ("quale") projected on an internal homunculus screen. A color is a *field of bodily interaction*, an environmental modulation that solicitates the motor intentionality of the lived body (*le corps propre*).
+* **The Artificiality of the Cell**: Jackson's thought experiment presumes that perceptual experience consists of passive optical inputs decoded into mental representations. But an embodied subject does not encounter "red" in the abstract: red is the texture of the carpet, the warmth of the sun on skin, the ripe resistance of a tomato held in the hand. By confining Mary to a monochrome laboratory, the thought experiment violently excises the perceptual world (*Umwelt*) and mistakes a detached scientific abstraction for primordial perceptual life.
+* As Merleau-Ponty observes: *"The sensory datum is an artifact of analysis... To see is to enter into a universe of beings which display themselves, and they would not be beings if they could not also be hidden behind others."*
+
+---
+
+## 6. The Myth of the Given & The Space of Reasons (Sellars)
+
+From the post-Kantian and Pittsburgh School perspective, [[Wilfrid Sellars]] (*Empiricism and the Philosophy of Mind*, 1956)[^sellars-epm] diagnoses the Knowledge Argument as an instance of the **Myth of the Given**:
+
+* The thought experiment assumes that when Mary opens the door, a brute, unconceptualized phenomenal sensation simply floods her consciousness, instantly delivering non-inferential "knowledge."
+* But Sellars demonstrates that physical stimulation of the sensory receptors belongs strictly to the **space of causal explanations**, whereas *knowledge* belongs to the normative **space of reasons**—the social practice of justifying, evaluating, and applying conceptual claims.
+* Stepping outside the room does not automatically grant Mary new epistemic facts; it offers new sensory occasions for applying and revising conceptual commitments within a linguistic community.
+
+---
+
+## 7. Literary & Aesthetic Dimension: The Ascetic Cell & Goethe's Chromatics
+
+Viewed as a literary fable, Mary's Room belongs to the lineage of Cartesian asceticism—the philosopher retreating into the heated room (*poêle*) or the monastic cell, purging the senses to isolate pure intellect. 
+
+* **Newtonian Optics vs. Goethe's Chromatics**: Jackson's experiment uncritically inherits Isaac Newton's mechanical prism, treating color as nothing more than reified wavelengths and retinal cones. In contrast, Johann Wolfgang von Goethe's *Theory of Colours* (*Zur Farbenlehre*, 1810)[^goethe-colors] understood colors as the dynamic deeds and sufferings of light (*Taten und Leiden des Lichts*) emerging through its dialectical struggle with darkness. 
+* To see red is not to verify an optical frequency; it is an affective rupture that shatters Mary's ascetic cloister, confronting her with the sensory plenitude of the living world.
+
+---
+
 ## References
 
 [^jackson-qualia-82]: Jackson, Frank. "Epiphenomenal Qualia." *The Philosophical Quarterly* 32, no. 127 (1982): 127–136. See [[Bibliography#Jackson-Qualia-1982]].
 [^lewis-1988]: Lewis, David. "What Experience Teaches." *Proceedings of the Russellian Society* 13 (1988): 29–57.
 [^loar-1990]: Loar, Brian. "Phenomenal States." *Philosophical Perspectives* 4 (1990): 81–108.
+[^merleau-ponty-pp]: Merleau-Ponty, Maurice. *Phenomenology of Perception*, trans. Donald A. Landes (London: Routledge, 2012 [1945]). See [[Bibliography#Merleau-Ponty-PP]].
+[^sellars-epm]: Sellars, Wilfrid. *Empiricism and the Philosophy of Mind* (Cambridge, MA: Harvard University Press, 1997 [1956]).
+[^goethe-colors]: Goethe, Johann Wolfgang von. *Theory of Colours*, trans. Charles Lock Eastlake (London: John Murray, 1840 [1810]).
 
 * Jackson, Frank. "What Mary Didn't Know." *The Journal of Philosophy* 83, no. 5 (1986): 291–295.
 * Nagel, Thomas. "What Is It Like to Be a Bat?" *The Philosophical Review* 83, no. 4 (1974): 435–450. See [[Bibliography#Nagel-Bat-1974]].
@@ -98,6 +130,7 @@ In 1998, Frank Jackson famously repudiated his own thought experiment, convertin
 
 * [[Frank Jackson]]
 * [[David Chalmers]]
+* [[Maurice Merleau-Ponty]]
 * [[The Hard Problem of Consciousness]]
 * [[The Chinese Room]]
 * [[Philosophical Zombies]]

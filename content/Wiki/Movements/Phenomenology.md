@@ -42,6 +42,14 @@ In *Phenomenology of Perception* (1945), Merleau-Ponty argued that consciousness
 ### Jean-Paul Sartre (1905–1980): Existentialist Freedom
 Sartre's *Being and Nothingness* (1943) distinguished between Being-in-itself (*en-soi*, non-conscious, inert matter) and Being-for-itself (*pour-soi*, conscious human reality). Consciousness is a "nihilating" void that introduces lack and choice into reality. Human beings are "condemned to be free"; pretending that one has no choice constitutes **bad faith** (*mauvaise foi*).
 
+### Emmanuel Levinas (1906–1995): Ethics as First Philosophy
+In *Totality and Infinity* (1961), Levinas redirected phenomenology from ontology toward ethics. Breaking with both Husserl's perceptual spectator and Heidegger's impersonal Being (*Sein*), Levinas demonstrated that the primary philosophical encounter is the **Face of the Other** (*le visage d'autrui*):
+* The Other cannot be comprehended, conceptualized, or reduced to an object within my cognitive horizon (which Levinas terms totalitarian violence).
+* The naked vulnerability of the Face speaks an absolute, primordial ethical imperative: *"Thou shalt not kill"* (*Tu ne commettras pas de meurtre*). Ethics—as asymmetrical responsibility to the neighbor—is first philosophy.
+
+### The Deconstructive Rupture: Derrida's Critique of Voice
+In *Speech and Phenomena* (1967), [[Jacques Derrida]] interrogated Husserl's foundation of phenomenology. Derrida revealed that Husserl’s attempt to base meaning on pure, unmediated self-presence in the silent inner monologue of the ego (*the living present*) is constitutively impossible: the phenomenological "present" is always already fractured by the **trace**, retention, and the differential spacing of [[Jacques Derrida#Différance|différance]].
+
 ---
 
 ## 3. Impact on Contemporary Cognitive Science
@@ -62,11 +70,20 @@ When participants such as [[zack|Zack]] or [[hughchungus|Hugh]] attempt to expla
 
 [^husserl-ideas]: Husserl, Edmund. *Ideas Pertaining to a Pure Phenomenology and to a Phenomenological Philosophy* (1913). See [[Bibliography#Husserl-Ideas-1913]].
 * Heidegger, Martin. *Being and Time* (1927). See [[Bibliography#Heidegger-BT-1927]].
+* Merleau-Ponty, Maurice. *Phenomenology of Perception* (1945). See [[Bibliography#Merleau-Ponty-PP-1945]].
 * Sartre, Jean-Paul. *Being and Nothingness* (1943). See [[Bibliography#Sartre-BN-1943]].
+* Derrida, Jacques. *Speech and Phenomena* (1967). See [[Bibliography#Derrida-SP-1967]].
 
 ## See Also
 
+* [[Maurice Merleau-Ponty]]
+* [[Phenomenology of Perception (Merleau-Ponty)]]
+* [[Being and Nothingness (Sartre)]]
+* [[Jacques Derrida]]
+* [[Martin Heidegger]]
+* [[Jean-Paul Sartre]]
 * [[Continental Rationalism]]
 * [[The Hard Problem of Consciousness]]
 * [[Marys Room]]
 * [[Post-Structuralism]]
+

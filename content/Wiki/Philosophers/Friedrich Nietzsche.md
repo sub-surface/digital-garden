@@ -55,15 +55,21 @@ Truths are illusions whose metaphorical origin has been forgotten—habits of th
 
 ---
 
-## PhilPapers Survey Profile
+## Style, Method, and Aesthetic Rupture
 
-*Projected stance based on Nietzsche's corpus:*
+### 1. Style as Weapon: The Aphorism and the Mask
+Nietzsche is singular in Western philosophy because his thought is inseparable from its literary form. He rejects the systematic treatise as an intellectual and psychological straightjacket:
 
-* **Meta-ethics:** Moral anti-realism / Error theory / Cultural critique
-* **Mind:** Naturalist / Physicalist / Embodied multiplicity of drives
-* **Free Will:** No free will (the conscious ego is an illusion created by competing instinctual drives)
-* **God:** Atheism
-* **Truth:** Perspectivism / Pragmatic instrumentalism
+> *"I mistrust all systematizers and avoid them. The will to a system is a lack of integrity."* (*Twilight of the Idols*, "Maxims and Arrows", §26)[^nietzsche-ti]
+
+* **The Art of Rumination**: In the aphorism, parataxis, and the polemical fragment, Nietzsche forces the reader to become an active interpreter rather than a passive consumer of doctrine: *"An aphorism, properly stamped and cast, has not been 'deciphered' simply by being read; rather, one must begin its exegesis, for which an art of exegesis is needed... one must almost be a cow to do it: rumination is required."* (*GM*, Preface, §8)
+* **The Philosophy of the Mask**: Every profound spirit requires a mask (*die Maske*). Philosophical doctrines are not neutral, disembodied truths dropped from heaven; they are the involuntary memoirs of their creators—symptomatic expressions of underlying physiological drives, metabolic vigor, or sick decadence.
+
+### 2. The Apollonian and the Dionysian
+In *The Birth of Tragedy* (1872)[^nietzsche-bot], Nietzsche traces Greek art to the dialectical collision of two primordial artistic energies:
+* **The Apollonian**: The instinct of the dream, light, sculpture, measure, and the principle of individuation (*principium individuationis*). It clothes the terror of existence in luminous, beautiful illusion.
+* **The Dionysian**: The instinct of intoxication, music, the dissolution of the individual ego, and ecstatic, terrifying immersion in the primal unity of nature (*das Ur-Eine*).
+* **The Death of Tragedy via Socratism**: Attic tragedy (Aeschylus, Sophocles) achieved the fragile, miraculous reconciliation of Apollo and Dionysus. This tragic horizon was murdered by Socrates and Euripides, who instituted the fatal delusion of rational optimism: that thought, through the thread of causality, can fathom the deepest abysses of being and correct existence. Modernity remains trapped in this Socratic decay.
 
 ---
 
@@ -87,11 +93,15 @@ Nietzsche is an enduring intellectual and cultural presence in Phil Chat:
 
 ## References
 
-[^nietzsche-gm]: Nietzsche, Friedrich. *On the Genealogy of Morality*, Essay I. See [[Bibliography#Nietzsche-Genealogy]].
+[^nietzsche-gm]: Nietzsche, Friedrich. *On the Genealogy of Morality*, trans. Carol Diethe. Cambridge: Cambridge University Press, 2006 [1887]. See [[Bibliography#Nietzsche-Genealogy]].
+[^nietzsche-ti]: Nietzsche, Friedrich. *Twilight of the Idols*, trans. Duncan Large. Oxford: Oxford World's Classics, 1998 [1888]. See [[Bibliography#Nietzsche-TI]].
+[^nietzsche-bot]: Nietzsche, Friedrich. *The Birth of Tragedy*, trans. Ronald Speirs. Cambridge: Cambridge University Press, 1999 [1872]. See [[Bibliography#Nietzsche-BT-1872]].
 
 ## See Also
 
 * [[Gilles Deleuze]]
 * [[Post-Structuralism]]
-* [[Immanuel Kant]]
+* [[Theodor Adorno]]
+* [[Arthur Schopenhauer]]
+* [[The Sublime vs The Beautiful]]
 * [[The Moggening]]

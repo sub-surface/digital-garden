@@ -102,6 +102,7 @@ export function EmbedGraph({
   const isPanning = useRef(false)
   const panStart = useRef({ x: 0, y: 0, viewX: 0, viewY: 0 })
   const dragDistance = useRef(0)
+  const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null)
 
   const resetView = useCallback(() => {
     view.current = { x: 0, y: 0, zoom: 0.95 }
@@ -205,6 +206,8 @@ export function EmbedGraph({
         .force("clusterX", d3.forceX<GraphNode>(d => d.clusterTargetX).strength(0.12))
         .force("clusterY", d3.forceY<GraphNode>(d => d.clusterTargetY).strength(0.12))
         .alphaDecay(0.02)
+
+      simulationRef.current = simulation
 
       const canvas = canvasRef.current
       if (!canvas) return
@@ -318,6 +321,7 @@ export function EmbedGraph({
       cancelled = true
       if (animId) cancelAnimationFrame(animId)
       if (simulation) simulation.stop()
+      simulationRef.current = null
     }
   }, [slug, cluster, tag, scope, depth, height])
 
@@ -352,6 +356,7 @@ export function EmbedGraph({
       isDraggingNode.current = clickedNode
       clickedNode.fx = clickedNode.x
       clickedNode.fy = clickedNode.y
+      simulationRef.current?.alphaTarget(0.3).restart()
     } else {
       isPanning.current = true
       panStart.current = { x: e.clientX, y: e.clientY, viewX: view.current.x, viewY: view.current.y }
@@ -360,6 +365,7 @@ export function EmbedGraph({
   }
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isDraggingNode.current || isPanning.current) return
     const rect = canvasRef.current?.getBoundingClientRect()
     if (!rect) return
 
@@ -371,20 +377,6 @@ export function EmbedGraph({
 
     const worldX = (mouseX - midX) / z
     const worldY = (mouseY - midY) / z
-
-    if (isDraggingNode.current) {
-      dragDistance.current += Math.hypot(e.movementX, e.movementY)
-      isDraggingNode.current.fx = worldX
-      isDraggingNode.current.fy = worldY
-      return
-    }
-
-    if (isPanning.current) {
-      dragDistance.current += Math.hypot(e.movementX, e.movementY)
-      view.current.x = panStart.current.viewX + (e.clientX - panStart.current.x)
-      view.current.y = panStart.current.viewY + (e.clientY - panStart.current.y)
-      return
-    }
 
     // Hover check
     let found: GraphNode | null = null
@@ -413,7 +405,7 @@ export function EmbedGraph({
     }
   }
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     if (isDraggingNode.current) {
       if (dragDistance.current < 4) {
         // Direct click navigation
@@ -423,9 +415,55 @@ export function EmbedGraph({
       isDraggingNode.current.fx = null
       isDraggingNode.current.fy = null
       isDraggingNode.current = null
+      simulationRef.current?.alphaTarget(0)
     }
     isPanning.current = false
-  }
+  }, [navigate])
+
+  useEffect(() => {
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      if (!isDraggingNode.current && !isPanning.current) return
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!rect) return
+
+      const mouseX = e.clientX - rect.left
+      const mouseY = e.clientY - rect.top
+      const midX = rect.width / 2 + view.current.x
+      const midY = rect.height / 2 + view.current.y
+      const z = view.current.zoom
+
+      const worldX = (mouseX - midX) / z
+      const worldY = (mouseY - midY) / z
+
+      if (isDraggingNode.current) {
+        dragDistance.current += Math.hypot(e.movementX, e.movementY)
+        isDraggingNode.current.fx = worldX
+        isDraggingNode.current.fy = worldY
+        simulationRef.current?.alphaTarget(0.3).restart()
+        return
+      }
+
+      if (isPanning.current) {
+        dragDistance.current += Math.hypot(e.movementX, e.movementY)
+        view.current.x = panStart.current.viewX + (e.clientX - panStart.current.x)
+        view.current.y = panStart.current.viewY + (e.clientY - panStart.current.y)
+        return
+      }
+    }
+
+    const handleWindowMouseUp = () => {
+      if (isDraggingNode.current || isPanning.current) {
+        handleMouseUp()
+      }
+    }
+
+    window.addEventListener("mousemove", handleWindowMouseMove)
+    window.addEventListener("mouseup", handleWindowMouseUp)
+    return () => {
+      window.removeEventListener("mousemove", handleWindowMouseMove)
+      window.removeEventListener("mouseup", handleWindowMouseUp)
+    }
+  }, [handleMouseUp])
 
   useEffect(() => {
     const canvas = canvasRef.current

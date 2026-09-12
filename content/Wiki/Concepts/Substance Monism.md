@@ -88,9 +88,35 @@ Drawing support from quantum entanglement (where the quantum state of an entangl
 
 ---
 
+## 5. Dialectical & Post-Structuralist Reconfigurations: Hegel and Deleuze
+
+The fate of substance monism in Continental philosophy was radically shaped by two opposing readings of Spinoza:
+
+### 1. Hegel: Substance Must Become Subject
+In the Preface to the *Phenomenology of Spirit* (1807, §16)[^hegel-ps-pref], [[G.W.F. Hegel]] delivered his most celebrated metaphysical indictment of Spinozist monism:
+* Hegel famously remarked that Spinoza's absolute substance is **"the night in which, as the saying goes, all cows are black"** (*die Nacht, worin, wie man zu sagen pflegt, alle Kühe schwarz sind*).
+* In Spinoza, all finite entities (minds, bodies, individual things) are simply swallowed up into an undifferentiated, motionless abyss. The modes lack internal dialectical drive; difference is merely asserted from outside rather than generated from within.
+* Hegel insisted that philosophy must overcome static substance:
+  $$\text{"Everything turns on grasping and expressing the True, not only as Substance, but equally as Subject."}$$
+  The Absolute is not a motionless block of marble; it is the historical, self-differentiating movement of Spirit (*Geist*) undergoing the labor of the negative and returning to itself through alienation.
+
+### 2. Deleuze: Immanence and Univocity
+In *Expressionism in Philosophy: Spinoza* (1968)[^deleuze-spinoza-ref], [[Gilles Deleuze]] mounted a fierce defense of Spinozist monism against the Hegelian charge of lifeless abstraction:
+* **The Univocity of Being**: Deleuze demonstrated that Spinozist monism is the supreme philosophy of pure **immanence** (*le plan d'immanence*). Being is said in a single, identical sense of everything that is, from God to the humblest blade of grass.
+* **Expression, Not Emanation**: The modes do not dilute or diminish substance; they **express** it. Finite creatures are not illusory shadows (as in Neoplatonic emanation or vulgar pantheism), but active, differential intensities of divine power:
+  > *"Substance is not an immovable foundation; it is the absolute plane of composition upon which all bodies and desires actively construct lines of flight."*
+
+---
+
 ## Related Notes & Concepts
 
-* **Philosophers**: [[Baruch Spinoza]], [[Parmenides of Elea]], [[René Descartes]], [[David Chalmers]], [[Gilles Deleuze]]
-* **Traditions**: [[Continental Rationalism]], [[Advaita Vedanta]], [[German Idealism]], [[Map of Philosophy]]
+* **Philosophers**: [[Baruch Spinoza]], [[Parmenides of Elea]], [[G.W.F. Hegel]], [[Gilles Deleuze]], [[René Descartes]], [[David Chalmers]]
+* **Traditions**: [[Continental Rationalism]], [[German Idealism]], [[Post-Structuralism]], [[Advaita Vedanta]], [[Map of Philosophy]]
 * **Concepts**: [[The Mind-Body Problem]], [[The Hard Problem of Consciousness]], [[Philosophical Zombies]]
-* **Bibliography**: [[Bibliography#Spinoza-Curley]], [[Bibliography#Spinoza-Gebhardt]]
+* **Bibliography**: [[Bibliography#Spinoza-Curley]], [[Bibliography#Hegel-PhG-1807]], [[Bibliography#Deleuze-EPS-1968]]
+
+## References
+
+[^hegel-ps-pref]: G.W.F. Hegel, *Phenomenology of Spirit*, trans. A.V. Miller (Oxford: Oxford University Press, 1977), Preface, §16, p. 9. See [[Bibliography#Hegel-PhG-1807]].
+[^deleuze-spinoza-ref]: Gilles Deleuze, *Expressionism in Philosophy: Spinoza*, trans. Martin Joughin (New York: Zone Books, 1990). French original: *Spinoza et le problème de l'expression* (Paris: Les Éditions de Minuit, 1968). See [[Bibliography#Deleuze-EPS-1968]].
+

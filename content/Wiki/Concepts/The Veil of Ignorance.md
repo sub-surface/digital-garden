@@ -66,13 +66,48 @@ Rawls' construct has been the focal point of debate in Anglo-American political 
 
 ---
 
+## 4. Marxist & Critical Legal Studies Critique: The Bourgeois Juridical Illusion
+
+From the perspective of historical materialism and critical legal theory, the Veil of Ignorance is diagnosed as the supreme ideological fantasy of late-twentieth-century liberalism:
+
+* **Abstraction as Class Erasure**: In *On the Jewish Question* (1844) and *Critique of the Gotha Programme* (1875)[^marx-gotha], [[Karl Marx]] argued that liberal rights treat human beings as abstract, isolated monads in civil society while leaving the concrete material relations of production untouched.
+* By placing private property, market distribution, and wage-labor inside the assumed knowledge retained behind the veil, Rawls naturalizes capitalist political economy. The Difference Principle presents class inequalities as mutually advantageous, legitimating exploitation by promising that economic surplus will "trickle down" to the least-advantaged.
+* The assembly behind the veil is an idealized parliament of bourgeois property owners negotiating the administrative maintenance of the capitalist state.
+
+---
+
+## 5. Foucault: Power/Knowledge & The Invention of the Liberal Subject
+
+In his lectures on *The Birth of Biopolitics* (1979)[^foucault-biopolitics], [[Michel Foucault]] demonstrates that the rational, utility-maximizing deliberator behind the veil is not an ahistorical Archimedean point:
+
+* **The Production of *Homo Oeconomicus***: The deliberating party who calculates risk, weighs primary social goods, and adopts the maximin rule is a historical artifact of eighteenth-century liberal **governmentality** and disciplinary regimes.
+* Power is not a sovereign social contract formed by free individuals emerging from a pre-social condition; subjectivity itself is forged through disciplinary institutions (prisons, clinics, schools, demographic statistics). 
+* The original position mistakes the disciplinary end-product of liberal modernity for the primordial origin of human justice.
+
+---
+
+## 6. Decolonial & Feminist Critiques: The Sexual & Racial Contracts
+
+Contemporary political theorists have demonstrated that the veil's universalism systematically sanitizes historical domination:
+
+* **Carole Pateman's *The Sexual Contract* (1988)**[^pateman-sc]: Social contract theory presupposes a public sphere of free equal contractors that constitutively depends upon the private, unacknowledged subjugation of women in the domestic sphere. The "individual" behind the veil is coded as a patriarchal head of household.
+* **Charles W. Mills' *The Racial Contract* (1997)**[^mills-rc]: Mills argues that Rawlsian "ideal theory" acts as an ideological white screen. By designing justice in a counterfactual space where race, chattel slavery, colonial expropriation, and apartheid are treated as accidental deviations rather than the foundational architecture of the modern global order, the Veil of Ignorance insulates white supremacy from reparative interrogation.
+
+---
+
 ## References
 
 * Rawls, John. *A Theory of Justice* (1971). See [[Bibliography#Rawls-TJ-1971]].
 * Nozick, Robert. *Anarchy, State, and Utopia* (1974). See [[Bibliography#Nozick-ASU-1974]].
+[^marx-gotha]: Marx, Karl. *Critique of the Gotha Programme* (1875), in *The Marx-Engels Reader*, ed. Robert C. Tucker (New York: W.W. Norton, 1978).
+[^foucault-biopolitics]: Foucault, Michel. *The Birth of Biopolitics: Lectures at the Collège de France, 1978–1979*, trans. Graham Burchell (New York: Palgrave Macmillan, 2008). See [[Bibliography#Foucault-Biopolitics]].
+[^pateman-sc]: Pateman, Carole. *The Sexual Contract* (Stanford, CA: Stanford University Press, 1988).
+[^mills-rc]: Mills, Charles W. *The Racial Contract* (Ithaca, NY: Cornell University Press, 1997). See [[Bibliography#Mills-RC-1997]].
 
 ## See Also
 
+* [[John Rawls]]
+* [[Michel Foucault]]
 * [[Utilitarianism]]
 * [[The Trolley Problem]]
 * [[The Experience Machine]]

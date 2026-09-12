@@ -131,7 +131,41 @@ While logically valid, contemporary philosophers (such as Charles Pigden and Fra
 
 ---
 
-## 5. Meta-Ethical Ramifications
+---
+
+## 5. Hegel's Dialectical Critique: The Impotence of the *Sollen* (Ought)
+
+In the *Phenomenology of Spirit* (1807) and *Elements of the Philosophy of Right* (1820)[^hegel-pr], [[G.W.F. Hegel]] demonstrates that the rigid analytical separation between *Sein* (Being/Is) and *Sollen* (Ought) is the diagnostic symptom of an alienated, abstract moral consciousness (what Hegel terms ***Moralität***):
+
+* **The Impotence of the Ought**: When morality is reduced to an abstract "ought" suspended above reality, it remains an impotent, endless yearning (*unendliche Sehnsucht*). The moralist eternally scolds the world for failing to match the ideal, while remaining powerless to realize it.
+* **Ethical Life (***Sittlichkeit***)**: Hegel resolves the dichotomy by showing that genuine normativity is neither an empirical fact of physics nor an abstract logical command. Norms are realized historically in **Ethical Life**—the living customs, laws, practices, and institutions of a concrete community (the family, civil society, and the state). 
+* What *ought* to be is not a detached deduction; it is already implicitly unfolding within the historical dialectic of human freedom: *"What is rational is actual; and what is actual is rational."*
+
+---
+
+## 6. Nietzsche's Genealogical Critique: Debt, Guilt, and Blood
+
+In *On the Genealogy of Morality* (Essay II)[^nietzsche-gm-ed], [[Friedrich Nietzsche]] subjects Hume's logical operator to a visceral historical autopsy:
+
+> *"Have these current genealogists of morality had even the remotest inkling that the major moral concept 'Schuld' (guilt) has its origin in the very material concept 'Schulden' (debts)? Or that punishment as a requital developed entirely independently of any presupposition concerning freedom or lack of freedom of the will?"* (*GM* II:4)
+
+* The analytical tradition treats the "ought" as an innocent, disembodied formal operator. Nietzsche reveals that the moral "ought" has a brutal material pedigree forged in contractual violence: the creditor's right to exact physical punishment on the flesh of the debtor.
+* To create an animal capable of making promises—an animal that acknowledges an "ought"—humanity required the terrible apparatus of mnemotechnics: burning obligations into the living body with blood, torture, and public spectacles of cruelty.
+* Hume's Guillotine is not a timeless logical puzzle; it is the modern philosophical residue of the internalization of cruelty into the "bad conscience."
+
+---
+
+## 7. Sellars & The Space of Reasons
+
+From the perspective of American post-Kantian naturalism, [[Wilfrid Sellars]] (*Empiricism and the Philosophy of Mind*, 1956)[^sellars-epm-hume] reformulates the breach without mystification:
+
+* Hume is strictly correct that no descriptive statement in physical vocabulary logically entails a normative prescription.
+* However, this does not imply that normativity is an occult non-natural property (Moore) or an emotional grunt (Ayer). 
+* To characterize an action as what someone *ought* to do is not to describe a state of affairs in the causal order, but to locate the agent within the **social space of reasons**—the communal linguistic practice of justifying, challenging, and holding one another to account.
+
+---
+
+## 8. Meta-Ethical Ramifications
 
 Hume's Guillotine forms the primary watershed of modern value theory:
 
@@ -141,17 +175,23 @@ Hume's Guillotine forms the primary watershed of modern value theory:
 | **Expressivism & Quasi-Realism** | Agrees that moral claims are not descriptive facts, but explains how moral language mimics truth-evaluable propositions. | Simon Blackburn, Allan Gibbard |
 | **Error Theory** | Acknowledges that moral claims claim objectivity, but asserts they are systematically false because objective normative "oughts" do not exist. | J.L. Mackie, Richard Joyce |
 | **Non-Naturalist Moral Realism** | Accepts the gap, holding that moral properties are sui generis, irreducible non-natural realities accessible via rational intuition. | G.E. Moore, W.D. Ross, Russ Shafer-Landau |
+| **Dialectical Historicism** | Overcomes the abstract gap: norms are immanently realized within the historical institutions of ethical life (*Sittlichkeit*). | [[G.W.F. Hegel]] |
+| **Genealogy of Power** | Deconstructs the gap: "ought" is a sublimation of material debt (*Schuld*) and disciplinary cruelty. | [[Friedrich Nietzsche]], [[Michel Foucault]] |
+| **Normative Functionalism** | Reframes the gap: normativity belongs to the communal space of reasons rather than causal explanation. | [[Wilfrid Sellars]], Robert Brandom |
 | **Constructivism** | Replaces metaphysical derivation with procedural justification: moral principles are valid because they survive ideal rational agreement. | [[Immanuel Kant]], [[John Rawls]] |
 
 ---
 
 ## Related Notes & Concepts
 
-* **Philosophers**: [[David Hume]], [[Immanuel Kant]], [[G.W.F. Hegel]], [[Friedrich Nietzsche]], [[John Searle]]
-* **Movements**: [[British Empiricism]], [[Utilitarianism]], [[Deontology]], [[Virtue Ethics]], [[Logical Positivism]]
+* **Philosophers**: [[David Hume]], [[Immanuel Kant]], [[G.W.F. Hegel]], [[Friedrich Nietzsche]], [[Michel Foucault]], [[John Searle]]
+* **Movements**: [[British Empiricism]], [[Utilitarianism]], [[Deontology]], [[Virtue Ethics]], [[Logical Positivism]], [[German Idealism]]
 * **Concepts**: [[The Problem of Induction]], [[The Trolley Problem]], [[The Veil of Ignorance]], [[Occams Razor]]
-* **Bibliography**: [[Bibliography#Hume-Treatise]], [[Bibliography#Ayer-LTL-1936]], [[Bibliography#Kant-GMM]]
+* **Bibliography**: [[Bibliography#Hume-Treatise]], [[Bibliography#Ayer-LTL-1936]], [[Bibliography#Kant-GMM]], [[Bibliography#Nietzsche-Genealogy]], [[Bibliography#Hegel-PR-1820]]
 
 [^hume-treatise-ref]: David Hume, *A Treatise of Human Nature*, edited by David Fate Norton and Mary J. Norton (Oxford: Oxford University Press, 2000), 302 (THN 3.1.1.27). See [[Bibliography#Hume-Treatise]].
 [^moore-ref]: G.E. Moore, *Principia Ethica* (Cambridge: Cambridge University Press, 1903), Chapter 1.
 [^searle-ref]: John R. Searle, "How to Derive 'Ought' from 'Is'," *The Philosophical Review* 73, no. 1 (1964): 43–58.
+[^hegel-pr]: Hegel, G.W.F. *Elements of the Philosophy of Right*, ed. Allen W. Wood, trans. H.B. Nisbet (Cambridge: Cambridge University Press, 1991 [1820]). See [[Bibliography#Hegel-PR-1820]].
+[^nietzsche-gm-ed]: Nietzsche, Friedrich. *On the Genealogy of Morality*, trans. Carol Diethe (Cambridge: Cambridge University Press, 2006 [1887]), Second Essay: "'Guilt', 'Bad Conscience' and Related Matters," pp. 35–66. See [[Bibliography#Nietzsche-Genealogy]].
+[^sellars-epm-hume]: Sellars, Wilfrid. *Empiricism and the Philosophy of Mind* (Cambridge, MA: Harvard University Press, 1997 [1956]), §36.

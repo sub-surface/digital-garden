@@ -91,7 +91,39 @@ Roderick Chisholm adopted the radical mereological view: any change in parts des
 
 ---
 
-## 4. In Phil Chat
+---
+
+## 4. Roland Barthes: The Argo & The Structuralist Text
+
+In *Roland Barthes by Roland Barthes* (1975)[^barthes-by-barthes], French semiotician [[Roland Barthes]] offers a celebrated literary and post-structuralist reading of the ship:
+
+> *"A frequent image: that of the ship Argo (luminous and white), each piece of which the Argonauts gradually replaced, so that they ended with an entirely new ship, without having to alter either its name or its form... This ship Argo is very useful: it provides allegory of an eminently structural object, created not by genius, inspiration, determination, or evolution, but by two modest actions: substitution (one piece displaces another, as in a paradigm) and nomination (the name is in no way linked to the stability of the parts)."*
+
+* **The Empty Signifier**: For Barthes, the ship demonstrates that identity is an effect of the **signifier**, not an underlying material essence. The vessel has no metaphysical core; it is a system of functional differences held together purely by the act of naming.
+* The ship is an allegory of the text and the subject: we continually replace our cells, our vocabularies, and our memories, yet the proper name remains anchored in social discourse as a grammatical placeholder.
+
+---
+
+## 5. Buddhist Ontology: Nagarjuna and Emptiness (*Śūnyatā*)
+
+In the Eastern philosophical tradition, [[Nagarjuna]] (*Mūlamadhyamakakārikā*, 2nd century CE)[^nagarjuna-mmk-ship] resolves the paradox by deconstructing its underlying assumption:
+
+* **The Myth of *Svabhāva* (Intrinsic Self-Nature)**: Western metaphysics generated the paradox because it assumes that for the ship to be real, it must possess an enduring, independent essence or soul (*svabhāva*).
+* **Dependent Origination (*Pratītyasamutpāda*)**: The ship exists only in dependence upon its causes, conditions, and parts (the planks, the nails, the shipwright, the water). It is completely **empty** (*śūnya*) of independent, substantial identity.
+* To ask whether Ship A or Ship B is the "true" Ship of Theseus is an error born of conceptual grasping: conventionally, either may be called the ship according to practical needs; ultimately, neither possesses an intrinsic self.
+
+---
+
+## 6. Deleuzian Difference: Persistence as Becoming
+
+In *Difference and Repetition* (1968)[^deleuze-dr-ship], [[Gilles Deleuze]] overturns the classical primacy of identity over difference:
+
+* Representational philosophy forces the ship into the dogmatic matrix of identity: it demands that the ship be identical to itself across time ($S_0 = S_t$).
+* For Deleuze, reality is not composed of stable substances that endure through time; reality is **Becoming** (*devenir*). The replacement of planks is not a threat to identity, but the continuous, productive unfolding of **difference and repetition**. The ship does not persist *despite* change; it exists *as* change.
+
+---
+
+## 7. In Phil Chat
 
 In Philchat, the Ship of Theseus is the central philosophical metaphor for community continuity:
 * **Server Identity**: As channel rosters turn over, original founders depart, bot architectures are rewritten, and discord servers are cloned across outages, participants debate whether "Philchat" remains the same social organism or a reassembled replica ($S_B$).
@@ -106,12 +138,17 @@ In Philchat, the Ship of Theseus is the central philosophical metaphor for commu
 * Locke, John. *An Essay Concerning Human Understanding* (1689), Book II, Chapter 27. See [[Bibliography#Locke-Essay]].
 * Lewis, David. "Survival and Identity" (1976). In *Philosophical Papers*, Vol. 1. Oxford University Press.
 * Sider, Theodore. *Four-Dimensionalism: An Ontology of Persistence and Time*. Oxford University Press, 2001.
+[^barthes-by-barthes]: Barthes, Roland. *Roland Barthes by Roland Barthes*, trans. Richard Howard (New York: Hill and Wang, 1977 [1975]), pp. 46–47. See [[Bibliography#Barthes-RB-1975]].
+[^nagarjuna-mmk-ship]: Nāgārjuna. *The Fundamental Wisdom of the Middle Way: Nāgārjuna's Mūlamadhyamakakārikā*, trans. Jay L. Garfield (Oxford: Oxford University Press, 1995). See [[Bibliography#Nagarjuna-MMK]].
+[^deleuze-dr-ship]: Deleuze, Gilles. *Difference and Repetition*, trans. Paul Patton (New York: Columbia University Press, 1994 [1968]). See [[Bibliography#Deleuze-DR-1968]].
 
 ## See Also
 
 * [[John Locke]]
 * [[David Hume]]
+* [[Nagarjuna]]
+* [[Gilles Deleuze]]
 * [[The Teletransporter]]
-* [[Personal Identity]]
 * [[Substance Monism]]
 * [[British Empiricism]]
+* [[Madhyamaka]]

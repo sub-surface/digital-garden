@@ -99,9 +99,45 @@ If the zombie argument succeeds in refuting physicalism, it confronts a notoriou
 
 ---
 
+## 4. The Literary & Psychological Uncanny: Automata and Dolls
+
+The philosophical zombie is the contemporary analytic heir to a profound Romantic and psychological obsession: the terror of the **Automaton**:
+
+* **E.T.A. Hoffmann's Olimpia**: In *The Sandman* (*Der Sandmann*, 1816)[^hoffmann-sandman], the protagonist Nathanael falls passionately in love with Olimpia, a woman who plays the piano, dances, and speaks polite, measured phrases, only to discover in horror that she is an enamel-faced clockwork automaton crafted by Coppola and Spalanzani.
+* **Freud and the Uncanny (*Das Unheimliche*)**: In his 1919 essay[^freud-uncanny], Sigmund Freud (drawing on Ernst Jentsch) identifies the essence of the uncanny as *"doubts whether an apparently animate being is really alive; or conversely, whether a lifeless object might not be in fact animate."*
+* The p-zombie is not merely a neutral logical instrument in modal semantics; it taps into the primal horror of the hollow double—the suspicion that the communicative gestures, smiles, and tears of our fellows might conceal complete inner void.
+
+---
+
+## 5. Wittgenstein: "An Attitude Toward a Soul"
+
+In *Philosophical Investigations* (Part II, iv)[^wittgenstein-pi-zombies], [[Ludwig Wittgenstein]] dismantles the Cartesian premise underlying the zombie puzzle:
+
+> *"My attitude towards him is an attitude towards a soul. I am not of the opinion that he has a soul."* (*PI*, II, iv, p. 178)
+
+* The zombie thought experiment presumes that when we interact with a human being, we observe their physical behavior and infer a second, hidden metaphysical substance called "consciousness."
+* Wittgenstein shows that attributing consciousness is not an epistemic hypothesis or inductive guess that could be undermined by a zombie twin. It is an immediate, pre-theoretical **moral attitude** (*Einstellung zur Seele*).
+* We comfort someone crying because their pain is present in their weeping and their eyes—not hidden inside an internal cinema that might be switched off while the tears continue mechanically. To treat a human being as a potential zombie is not sophisticated skepticism; it is a moral and linguistic breakdown.
+
+---
+
+## 6. Deleuze & Guattari: The Mechanosphere and the Body without Organs
+
+In *A Thousand Plateaus* (1980)[^deleuze-guattari-tp-pz], [[Gilles Deleuze]] and [[Félix Guattari]] invert the zombie dilemma:
+
+* Rather than lamenting the absence of an immaterial soul inside the physical machine, they analyze how the human body is already a complex **desiring-machine** assembled from non-human circuits, language-flows, and social institutions.
+* The **Body without Organs** (*corps sans organes*) is the body stripped of its unified subjective identity, functioning as a pure plane of intensive physical and biological affects. The p-zombie dramatizes the nightmare of late-capitalist subjectivity: human bodies integrated into cybernetic and industrial routines, carrying out complex functions while the sovereign liberal soul evaporates.
+
+---
+
 ## Related Notes & Concepts
 
-* **Philosophers**: [[David Chalmers]], [[René Descartes]], [[Ludwig Wittgenstein]]
-* **Concepts**: [[The Hard Problem of Consciousness]], [[Marys Room]], [[The Chinese Room]], [[The Ship of Theseus]]
-* **Traditions**: [[Continental Rationalism]], [[Phenomenology]], [[Map of Philosophy]]
-* **Bibliography**: [[Bibliography#Chalmers-Conscious-1996]], [[Bibliography#Jackson-Qualia-1982]], [[Bibliography#Nagel-Bat-1974]]
+* **Philosophers**: [[David Chalmers]], [[René Descartes]], [[Ludwig Wittgenstein]], [[Gilles Deleuze]], [[Thomas Nagel]]
+* **Concepts**: [[The Hard Problem of Consciousness]], [[Marys Room]], [[The Chinese Room]], [[The Mind-Body Problem]], [[The Ship of Theseus]]
+* **Traditions**: [[Continental Rationalism]], [[Phenomenology]], [[Post-Structuralism]], [[Map of Philosophy]]
+* **Bibliography**: [[Bibliography#Chalmers-Conscious-1996]], [[Bibliography#Wittgenstein-PI-1953]], [[Bibliography#Jackson-Qualia-1982]], [[Bibliography#Nagel-Bat-1974]], [[Bibliography#Deleuze-Guattari-TP-1980]]
+
+[^hoffmann-sandman]: Hoffmann, E.T.A. "The Sandman" (1816), in *The Golden Pot and Other Tales*, trans. Ritchie Robertson (Oxford World's Classics, 1992).
+[^freud-uncanny]: Freud, Sigmund. "The 'Uncanny'" (1919), in *The Standard Edition of the Complete Psychological Works of Sigmund Freud*, Vol. XVII, trans. James Strachey (London: Hogarth Press, 1955), pp. 217–256.
+[^wittgenstein-pi-zombies]: Wittgenstein, Ludwig. *Philosophical Investigations*, trans. G.E.M. Anscombe (Oxford: Basil Blackwell, 1953). See [[Bibliography#Wittgenstein-PI-1953]].
+[^deleuze-guattari-tp-pz]: Deleuze, Gilles, and Félix Guattari. *A Thousand Plateaus: Capitalism and Schizophrenia*, trans. Brian Massumi (Minneapolis: University of Minnesota Press, 1987 [1980]). See [[Bibliography#Deleuze-Guattari-TP-1980]].

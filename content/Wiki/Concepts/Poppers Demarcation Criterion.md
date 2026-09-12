@@ -105,11 +105,38 @@ Popper's student, **Imre Lakatos**, resolved the Duhem-Quine dilemma by shifting
 
 ---
 
+## 5. Continental, Anarchist, & Critical Theory Critiques
+
+While Popper positioned falsification as the hygienic boundary protecting rationality from dogma, 20th-century history of science and Continental Critical Theory attacked the criterion from multiple angles:
+
+### 1. Feyerabend's Epistemological Anarchism (*Against Method*)
+In *Against Method* (1975)[^feyerabend-am], Popper's former student **Paul Feyerabend** argued that if scientists had actually followed Popperian falsificationism, the scientific revolution would have been aborted in its cradle:
+* **The Galileo Case**: Galileo's telescopic observations of the Moon were blurry, contradicted naked-eye experience, and suffered from optical anomalies that were technically "falsified" by contemporary Aristotelian physics. Galileo triumphed not through strict *modus tollens*, but through brilliant Italian rhetoric, *ad hoc* hypotheses, and aesthetic propaganda.
+* **"Anything Goes"**: There is no single universal "scientific method." Science is an essentially anarchic enterprise; strict methodological rules inevitably stifle creative breakthroughs:
+  > *"The only principle that does not inhibit progress is: anything goes."*
+
+### 2. The *Positivismusstreit* (The Positivism Dispute, 1961)
+At the 1961 Tübingen conference of the German Sociological Association, [[Theodor Adorno]] and Jürgen Habermas engaged in a famous confrontation with Karl Popper and Hans Albert over the nature of scientific inquiry:
+* **The Fetishism of the Fact**: Adorno argued that Popper's demarcation criterion imports a naive laboratory positivism into the social sciences. Society is not an assortment of atomized, isolated facts waiting to be tested against isolated hypotheses; it is a contradictory, historically mediated **totality** (*Totalität*).
+* **The Ideological Neutrality Fallacy**: By treating the scientist as a disinterested, neutral tester of falsifiable propositions, Popperianism conceals how scientific institutions and categories are produced by the demands of late-capitalist administration. Demarcating "science" from "metaphysics" serves ideologically to delegitimize dialectical critique.
+
+### 3. Kuhn: Demarcation as Sociological Consensus
+In *The Structure of Scientific Revolutions* (1962)[^kuhn-ssr], **Thomas Kuhn** demonstrated that actual working scientists do not spend their days attempting to falsify their theories:
+* **Normal Science**: During periods of "normal science," researchers solve puzzles within an accepted **paradigm**. When an experimental observation clashes with the theory, scientists do not reject the theory (as Popper dictates); they assume their instruments are malfunctioning or their calculations are flawed.
+* **Paradigm Shifts**: Demarcation between science and non-science is sociological rather than purely logical: an enterprise is scientific when a community of practitioners shares a cohesive paradigm capable of sustaining a cumulative puzzle-solving tradition.
+
+---
+
 ## Related Notes & Concepts
 
 * **Heuristics & Epistemic Razors**: [[Hitchens Razor]], [[Occams Razor]], [[The Principle of Charity]]
 * **Epistemology & Science**: [[The Problem of Induction]], [[Warranted Assertibility]], [[The Six Criteria of Warrant]], [[Foundationalism vs Coherentism]]
-* **Movements**: [[Logical Positivism]], [[British Empiricism]]
-* **Thinkers**: [[Immanuel Kant]], [[David Hume]], [[Susan Haack]], [[Ludwig Wittgenstein]]
+* **Movements**: [[Logical Positivism]], [[British Empiricism]], [[Frankfurt School|Critical Theory]], [[Post-Structuralism]]
+* **Thinkers**: [[Theodor Adorno]], [[Karl Popper]], [[Immanuel Kant]], [[David Hume]], [[Susan Haack]], [[Ludwig Wittgenstein]]
 
-[^popper-lsd-ref]: Karl Popper, *The Logic of Scientific Discovery* (London: Hutchinson, 1959; Routledge Classics, 2002).
+## References
+
+[^popper-lsd-ref]: Karl Popper, *The Logic of Scientific Discovery* (London: Hutchinson, 1959; Routledge Classics, 2002). German original: *Logik der Forschung* (Vienna: Julius Springer, 1934). See [[Bibliography#Popper-LSD-1934]].
+[^feyerabend-am]: Paul Feyerabend, *Against Method: Outline of an Anarchistic Theory of Knowledge* (London: New Left Books, 1975; 4th ed., Verso, 2010). See [[Bibliography#Feyerabend-AM-1975]].
+[^kuhn-ssr]: Thomas S. Kuhn, *The Structure of Scientific Revolutions* (Chicago: University of Chicago Press, 1962; 4th ed., 2012). See [[Bibliography#Kuhn-SSR-1962]].
+

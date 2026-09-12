@@ -23,10 +23,19 @@ The following table catalogs all canonical philosophical text analyses currently
 |---|---|---|---|
 | **[[Ethics (Spinoza)]]** | [[Baruch Spinoza]] | 1677 | Substance monism, geometric deduction, affective psychology, intellectual love of God |
 | **[[Critique of Pure Reason (Kant)]]** | [[Immanuel Kant]] | 1781 / 1787 | Synthetic *a priori*, transcendental deduction, limits of metaphysics, antinomies |
+| **[[Fear and Trembling (Kierkegaard)]]** | [[Søren Kierkegaard]] | 1843 | Teleological suspension of the ethical, Knight of Faith, Abraham and the absurd |
 | **[[Tractatus Logico-Philosophicus (Wittgenstein)]]** | [[Ludwig Wittgenstein]] | 1921 | Truth-functional picture theory of meaning, saying vs. showing, proposition 7 |
 | **[[Being and Time (Heidegger)]]** | [[Martin Heidegger]] | 1927 | Fundamental ontology, *Dasein*, ready-to-hand (*Zuhandenheit*), ecstatic temporality |
-| **[[A Theory of Justice (Rawls)]]** | [[John Rawls]] | 1971 | Contractarian justice as fairness, Original Position, Difference Principle |
+| **[[The Last Messiah (Zapffe)]]** | [[Peter Wessel Zapffe]] | 1933 | Evolutionary tragedy of over-consciousness, isolation, anchoring, distraction, sublimation |
+| **[[The Myth of Sisyphus (Camus)]]** | [[Albert Camus]] | 1942 | Absurdity, refusal of suicide, revolt, freedom, passion, the absurd hero |
+| **[[Being and Nothingness (Sartre)]]** | [[Jean-Paul Sartre]] | 1943 | Phenomenological ontology, in-itself vs. for-itself, nothingness, bad faith, the Look |
+| **[[Phenomenology of Perception (Merleau-Ponty)]]** | [[Maurice Merleau-Ponty]] | 1945 | Lived body (*corps propre*), body schema, motor intentionality, situated freedom |
+| **[[The Ethics of Ambiguity (Beauvoir)]]** | [[Simone de Beauvoir]] | 1947 | Situated freedom, intersubjective existential ethics, critique of the Serious Man |
+| **[[Dialectic of Enlightenment (Adorno & Horkheimer)]]** | [[Theodor Adorno]] & Horkheimer | 1947 | Instrumental reason, myth reverts to enlightenment, culture industry, anti-Semitism |
+| **[[Of Grammatology (Derrida)]]** | [[Jacques Derrida]] | 1967 | Deconstruction, logocentrism, metaphysics of presence, trace, arche-writing, supplement |
 | **[[Logic of Sense (Deleuze)|The Logic of Sense]]** | [[Gilles Deleuze]] | 1969 | Incorporeal surface logic, Stoic event-ontology, Carrollian paradox of series |
+| **[[A Theory of Justice (Rawls)]]** | [[John Rawls]] | 1971 | Contractarian justice as fairness, Original Position, Difference Principle |
+| **[[Discipline and Punish (Foucault)]]** | [[Michel Foucault]] | 1975 | Sovereign torture to disciplinary power, docile bodies, panopticism, carceral archipelago |
 
 ---
 
