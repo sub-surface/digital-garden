@@ -39,17 +39,30 @@ function extractSlug(href: string): string | null {
 function computePosition(
   rect: DOMRect,
   depth: number,
+  isFootnote?: boolean,
 ): { x: number; y?: number; bottom?: number; pos: "above" | "below" } {
-  const GAP = 10
+  const GAP = isFootnote ? 6 : 10
   const PADDING = 12
-  // When showing above, add a line's height buffer (~26px) so the preview card
-  // never overlays or obscures the link itself.
-  const LINE_HEIGHT_BUFFER = 26
+  const width = isFootnote ? 280 : PREVIEW_W
+  const height = isFootnote ? 110 : PREVIEW_H
 
   // Cascade each depth level rightward so cards don't stack exactly
   const offset = depth * 20
-  let x = rect.left + rect.width / 2 - PREVIEW_W / 2 + offset
-  x = Math.max(PADDING, Math.min(x, window.innerWidth - PREVIEW_W - PADDING))
+  let x = rect.left + rect.width / 2 - width / 2 + offset
+  x = Math.max(PADDING, Math.min(x, window.innerWidth - width - PADDING))
+
+  if (isFootnote) {
+    // Footnotes prefer rendering ABOVE the marker (matching the old system) if space permits
+    if (rect.top - GAP - height > PADDING) {
+      const bottom = Math.max(PADDING, window.innerHeight - rect.top + GAP)
+      return { x, bottom, pos: "above" }
+    }
+    return { x, y: rect.bottom + GAP, pos: "below" }
+  }
+
+  // When showing above, add a line's height buffer (~26px) so the preview card
+  // never overlays or obscures the link itself.
+  const LINE_HEIGHT_BUFFER = 26
 
   if (rect.bottom + GAP + PREVIEW_H > window.innerHeight - PADDING) {
     // Anchor to the bottom of the viewport so the card expands upwards and
@@ -183,6 +196,7 @@ export function LinkPreview() {
   const pushCard = useStore((s) => s.pushCard)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const currentSlug = useRef("")
+  const highlightedSidenote = useRef<HTMLElement | null>(null)
 
   const popTo = useCallback((depth: number) => {
     setStack(prev => {
@@ -201,13 +215,13 @@ export function LinkPreview() {
 
     const meta = contentIndex?.[slug]
     const rect = anchor.getBoundingClientRect()
-    const { x, y, bottom, pos } = computePosition(rect, depth)
+    const { x, y, bottom, pos } = computePosition(rect, depth, isFootnote)
     const id = Math.random().toString(36).slice(2)
 
     let footnoteHtml: string | undefined
     if (isFootnote) {
       const href = anchor.getAttribute("href") ?? ""
-      const fnId = href.startsWith("#") ? href.slice(1) : ""
+      const fnId = href.startsWith("#") ? href.slice(1) : (anchor.getAttribute("data-footnote-id") ?? "")
       const container = anchor.closest(".mainPane, .contentScroll, .link-preview") ?? document
       const fnLi = container.querySelector(`#${CSS.escape(fnId)}`)
       if (fnLi) {
@@ -215,10 +229,10 @@ export function LinkPreview() {
         cloned.querySelectorAll("[data-footnote-backref]").forEach(el => el.remove())
         footnoteHtml = cloned.innerHTML
       } else {
-        const parentSup = anchor.closest(".footnote-marker")
-        const supContent = parentSup?.getAttribute("data-content")
-        if (supContent) {
-          footnoteHtml = supContent
+        const cleanId = fnId.replace(/^fn-/, "")
+        const aside = container.querySelector(`#sn-aside-${CSS.escape(cleanId)}`) || document.getElementById(`sn-aside-${cleanId}`)
+        if (aside) {
+          footnoteHtml = aside.innerHTML
         }
       }
     }
@@ -294,6 +308,30 @@ export function LinkPreview() {
 
       const isInternal = anchor.classList.contains("internal-link")
       const isFootnote = anchor.hasAttribute("data-footnote-ref")
+
+      // If it's a footnote reference, check if the corresponding Tufte sidenote is visible
+      if (isFootnote) {
+        const fnId = anchor.getAttribute("data-footnote-id") || (anchor.getAttribute("href") ?? "").replace(/^#fn-/, "")
+        const cleanId = fnId.replace(/^fn-/, "")
+        const sidenote = cleanId ? document.getElementById(`sn-aside-${cleanId}`) : null
+
+        if (sidenote && getComputedStyle(sidenote).display !== "none" && sidenote.offsetParent !== null) {
+          // On article pages with visible sidenotes in the margin: highlight the sidenote, no popup
+          if (highlightedSidenote.current && highlightedSidenote.current !== sidenote) {
+            highlightedSidenote.current.classList.remove("is-highlighted")
+          }
+          sidenote.classList.add("is-highlighted")
+          highlightedSidenote.current = sidenote
+          return
+        }
+      }
+
+      // If we got here and there was a highlighted sidenote, unhighlight it
+      if (highlightedSidenote.current) {
+        highlightedSidenote.current.classList.remove("is-highlighted")
+        highlightedSidenote.current = null
+      }
+
       const targetAnchor = anchor.hash ? anchor.hash.slice(1) : undefined
       const baseSlug = isInternal ? extractSlug(anchor.href) : (isFootnote ? (anchor.getAttribute("href") ?? "").slice(1) : null)
       const previewKey = targetAnchor && baseSlug ? `${baseSlug}#${targetAnchor}` : baseSlug
@@ -308,6 +346,17 @@ export function LinkPreview() {
 
     function handleOut(e: MouseEvent) {
       const related = e.relatedTarget as Element | null
+
+      // Clean up highlighted sidenote when mouse leaves the footnote reference
+      if (highlightedSidenote.current) {
+        const target = e.target as Element
+        const currentAnchor = target.closest("a")
+        if (!related || !currentAnchor || !currentAnchor.contains(related)) {
+          highlightedSidenote.current.classList.remove("is-highlighted")
+          highlightedSidenote.current = null
+        }
+      }
+
       const toPreview = related?.closest(".link-preview")
 
       if (toPreview) {
@@ -335,6 +384,10 @@ export function LinkPreview() {
       document.removeEventListener("mouseover", handleOver)
       document.removeEventListener("mouseout", handleOut)
       clearTimeout(timer.current)
+      if (highlightedSidenote.current) {
+        highlightedSidenote.current.classList.remove("is-highlighted")
+        highlightedSidenote.current = null
+      }
     }
   }, [stack, pushPreview, popTo])
 
@@ -370,14 +423,16 @@ function PreviewCard({ state, onOpen, onEnter }: {
 
   return (
     <div
-      className="link-preview"
+      className={`link-preview ${state.isFootnote ? "link-preview--footnote" : ""}`}
       style={{
         left: state.x,
         top: state.y,
         bottom: state.bottom,
-        maxHeight,
+        maxHeight: state.isFootnote ? 260 : maxHeight,
         zIndex: 1000 + state.depth,
-        boxShadow: `0 ${4 + state.depth * 2}px ${12 + state.depth * 4}px rgba(0,0,0,0.25)`
+        boxShadow: state.isFootnote
+          ? "0 4px 14px rgba(0,0,0,0.35)"
+          : `0 ${4 + state.depth * 2}px ${12 + state.depth * 4}px rgba(0,0,0,0.25)`
       }}
       data-panel-ignore
       data-pos={state.pos}

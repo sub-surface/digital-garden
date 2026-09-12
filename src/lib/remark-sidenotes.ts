@@ -90,10 +90,7 @@ export function remarkSidenotes() {
       const domId = `sn-${id}`
 
       // Inline: just the superscript marker — safe to nest inside a <p>/<h2>.
-      const supHtml = `<sup class="footnote-marker" data-content="${content
-        .replace(/<[^>]*>/g, "")
-        .replace(/"/g, "&quot;")
-        .trim()}"><a href="#fn-${id}" data-footnote-ref="true">${displayLabel}</a></sup>`
+      const supHtml = `<sup class="footnote-marker"><a href="#fn-${id}" data-footnote-ref="true" data-footnote-id="${id}">${displayLabel}</a></sup>`
       parent.children.splice(index, 1, { type: "html", value: supHtml } as any)
 
       // Block-level: walk up through inline wrappers (emphasis/strong/link/...)
@@ -109,7 +106,7 @@ export function remarkSidenotes() {
       const asideHtml = [
         `<input type="checkbox" id="${domId}" class="sidenote-checkbox" />`,
         `<label for="${domId}" class="sidenote-toggle">${displayLabel}</label>`,
-        `<aside class="sidenote" data-number="${displayLabel}">${content}</aside>`,
+        `<aside class="sidenote" data-number="${displayLabel}" id="sn-aside-${id}" data-sidenote-id="${id}">${content}</aside>`,
       ].join("")
 
       pendingInsertions.push({ parent: entry.parent, index: entry.index, html: asideHtml })

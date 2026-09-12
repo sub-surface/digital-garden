@@ -41,6 +41,68 @@
   // Re-allow overflow for ::before bridge
   overflow: visible;
 
+  // Footnote popup variant — matches the clean, minimal aesthetic of the older tooltip
+  // while preserving rich text and bibliography links
+  &--footnote {
+    width: max-content;
+    max-width: 280px;
+    background: var(--color-bg-surface);
+    backdrop-filter: none;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 0.4em 0.65em;
+
+    &[data-pos="below"] {
+      margin-top: 0;
+      &::before {
+        height: 14px;
+        top: -14px;
+      }
+    }
+
+    &[data-pos="above"] {
+      margin-bottom: 0;
+      &::before {
+        height: 14px;
+        bottom: -14px;
+      }
+    }
+
+    .link-preview__rich {
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      font-weight: 400;
+      line-height: 1.45;
+      color: var(--color-text-muted);
+
+      p, ul, ol, blockquote {
+        margin: 0;
+        &:not(:last-child) {
+          margin-bottom: var(--space-2);
+        }
+      }
+
+      a {
+        color: var(--color-primary);
+        text-decoration: underline;
+        text-decoration-thickness: 1px;
+        transition: color var(--duration-fast) var(--ease-default);
+
+        &:hover {
+          color: var(--color-accent);
+        }
+      }
+
+      code {
+        font-family: var(--font-code);
+        font-size: 0.75rem;
+        background: var(--color-highlight);
+        padding: 0 3px;
+        border-radius: 2px;
+      }
+    }
+  }
+
   @starting-style {
     opacity: 0;
     transform: translateY(4px);

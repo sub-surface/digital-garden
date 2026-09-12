@@ -87,6 +87,7 @@ export function rehypeSidenotes() {
       const href = refLink.properties?.href as string | undefined
       if (!href) return
       const key = href.replace("#user-content-fn-", "")
+      refLink.properties = { ...refLink.properties, dataFootnoteId: key }
       const content = footnoteMap.get(key)
       if (!content) return
 
@@ -117,7 +118,7 @@ export function rehypeSidenotes() {
       const sidenote: Element = {
         type: "element",
         tagName: "aside",
-        properties: { className: ["sidenote"], dataNumber: displayNum },
+        properties: { className: ["sidenote"], dataNumber: displayNum, id: `sn-aside-${key}`, dataSidenoteId: key },
         children: content,
       }
 

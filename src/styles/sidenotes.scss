@@ -49,47 +49,12 @@
       box-shadow: none;
     }
   }
-
-  // Hover tooltip — shows plain-text footnote content
-  &[data-content]::after {
-    content: attr(data-content);
-    position: absolute;
-    bottom: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--color-bg-surface);
-    color: var(--color-text-muted);
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    padding: 0.4em 0.6em;
-    font-family: var(--font-body);
-    font-size: 0.78rem;
-    font-weight: 400;
-    line-height: 1.4;
-    white-space: normal;
-    width: max-content;
-    max-width: 260px;
-    vertical-align: baseline;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    z-index: 100;
-  }
-
-  &[data-content]:hover::after {
-    opacity: 1;
-  }
 }
 
 // ── Article Layout (Wide) ──
 
 .article-layout {
   @media (min-width: $article-narrow + 1) {
-    // In wide article layout, the sidenote floats right so the tooltip is redundant
-    .footnote-marker[data-content]::after {
-      display: none;
-    }
-
     .sidenote {
       display: block;
       float: right;
@@ -104,7 +69,7 @@
       position: relative;
       border-left: 1px solid var(--color-border);
       padding-left: var(--space-4);
-      transition: color 0.2s ease, border-color 0.2s ease;
+      transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 
       // Small number label inside the sidenote
       &::before {
@@ -116,6 +81,7 @@
         font-size: 0.7rem;
         color: var(--color-primary);
         opacity: 0.5;
+        transition: opacity 0.2s ease, color 0.2s ease;
       }
 
       p {
@@ -136,9 +102,17 @@
         font-size: inherit;
       }
 
+      &.is-highlighted,
       &:hover {
         color: var(--color-text);
         border-color: var(--color-primary);
+        background: var(--color-highlight);
+        border-radius: 0 4px 4px 0;
+
+        &::before {
+          opacity: 1;
+          font-weight: 700;
+        }
       }
     }
 
