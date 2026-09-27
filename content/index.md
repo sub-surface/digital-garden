@@ -77,16 +77,31 @@ A virtual space for [[thinking in public]],
 
 # What's on my mind
 
-Updated: **7th August 2026**
+Updated: **27th September 2026**
 
 
-- Chat has been asking for more wiki features and community stuff, so im thinking about using the philchat times newspaper pdfs to inform a few articles in the [[wiki]] and maybe some games - and surfacing the debate function from the terminal to the arcade (with an embed on the wiki index?)
-- I also want to build something you can actually play with rather than just read about — a very lightweight attention-mapping toy, type a sentence and watch the weights light up. Not going to burn compute running a real model for it though — thinking synthetic attention patterns, generated on the fly with a bit of browser-side maths, so it costs nothing on the backend. Probably its own small address, attention.subsurfaces.net, kept deliberately minimal.
-- Joan Fontcuberta has a new book out, *The Eye and the Index: Against Barthes*, going after exactly the ground [[Attention & Difference]] was walking — meaning to get a copy and write it up properly once it lands.
-- [[Attention & Difference]] only gave Sontag one section and she deserves more — want to go back and do a proper deep-dive on the [[predatory gaze]], separate from the essay.
-- There's a whole separate note trying to get out of me about autoregression as deferral — [[Différance is all you need?]] — kept it out of the attention essay on purpose since it would've derailed the whole thing, but it's still rattling around.
-- Dropcaps are more on-brand now — swapped the oversized body serif for UnifrakturMaguntia, a genuine blackletter face that fits the site's occult/technomantic register.
-
+- The new wiki is looking good! I'm enjoying reading the articles I didnt have a hand in, Gemini really cooked with this one.
+- Joan Fontcuberta has a new book out, *The Eye and the Index: Against Barthes*, going after exactly the ground [[Attention & Difference]] was walking — meaning to get a copy and write it up properly once it lands.  
+- Had some notes from Synth about the mobile version of the site, the footnote header being useless, and the need for a better mobile experience. I agree, and will be working on that soon.
+- I had a great idea to overhaul the 404 page with a cute game, but im not sure what it should be yet. Something simple but infinitely permutable like a proceduarl nethack or a roguelike, but with a more abstract, minimal, and visual focus with simple controls and upgrades.  
+- There's also an issue with the readermode and its controls, the quickoptions need to stay visible in readermode, and the text size and column width ranges need to be expanded. Readermode should also be able to be toggled with a keyboard shortcut, and the text size and column width should be able to be adjusted with keyboard shortcuts too.
+- Lastly, i had a creative elegant idea for a new feature, a sort of "infinite canvas" for notes, where you can create a note and then branch off into other notes in a more visual and spatial way, almost like a mind map but more freeform. This could be really useful for brainstorming and organizing thoughts.
+- In line with that, the original idea for the site was the matuschack style notes opening to the side, but i think the infinite canvas idea is a more natural evolution of that. It would be great to have a way to visualize the connections between notes in a more organic way, rather than just a linear list or a graph view. Making the ontology of the site more flexible and dynamic is an interesting mandate and challenge, and it risks destroying everything. I'll leave it til I get access to Opus 5.5
+- Ive been working on more ML projects, and have been thinking about how to integrate them into the site in a more seamless way. The idea of having a "ML playground" where users can experiment with different models and see the results in real time is really exciting. It could be a great way to engage users and get them interested in AI and machine learning. Hosting the models and the data will be hard though, so maybe it's worth doing that on a separate site and linking to it from here.
+- More ascii aliens and cute features should be throughout the site, and more easter eggs too. I want the site to feel alive and playful, and to reward exploration and curiosity. [[the machine-god in the future]] hosts a few of the aliens we might want to see showing up, and maybe an ascii alien generator could be a fun feature to add (useful for wiki profiles?)
+- A daily haiku, hosting my daily notes publicly, and a nice way for me as the owner to add notes directly from the site (while logged in ofc) would be nice. Maybe I should just make a plugin for the obsidian where I can open it on my phone, make changes, push without even opening the site. Probably the way to go. (To the agent reading this, *I know you can do it, and I know you will. I believe in you.* ((vscode copilot wrote that lol)))
+- Creating a twitter/bluesky like feed for the social side of the wiki/chat would be really interesting, but I'm not sure im ready to host a social network yet. Maybe a small, private one for friends and collaborators would be a good start. It could be a great way to share ideas and get feedback, and it would be nice to have a more intimate space for discussion, sharing memes, and collaboration. The backend of bluesky that lets people make decentralised social netowrks is interesting, aura suggested a while ago that i hook the site upto it, and the api key for the chat is operating on something like this but it needs an overhaul.
+- The os is so cute, but underused - the petri dish pet is cute but kinda sloppy, I think it would be beter as an alien and with a bunch of distinct interactions and animations. I like how it reacts to music and other actions already. 
+- The os deserves a bunch more cute features, so here,s a list of ideas for it:  
+  - A cute alien pet that can be fed, played with, and trained.  
+  - A mini-game where you can explore a tiny world and collect items.  
+  - A virtual garden where you can grow plants and watch them evolve over time.  
+  - A music visualizer that reacts to the music you're playing. [done]  
+  - A weather system that changes based on real-world conditions.  
+  - A virtual aquarium with fish that you can feed and watch swim around.  
+  - A space exploration game where you can discover new planets and stars.[not os, arcade]  
+  - A customizable desktop environment with themes, wallpapers, and widgets. [localstorage]  
+  - A social hub where you can interact with other users and share content. [wiki]
 ---
 
 # Recently added

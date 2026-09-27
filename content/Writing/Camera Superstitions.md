@@ -15,7 +15,11 @@ image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Hippolyte_Baya
 
 <div className="dropcap">
 
-Appearances have long been associated in the mind of man with the essential qualities of a thing. Since antiquity, our obsession with images, with the likeness of things found elsewhere, has been a source of both fascination and fear. The camera, as a device that captures and reproduces images, has been the subject of various superstitions and folklore across time and space. This shouldn't be surprising, of course, since humans have a knack for attributing magic to technology we simply don't have the language for.[^1]
+Appearances have long been associated in the mind of man with the essential qualities of a thing. Since antiquity, our obsession with images, with the likeness of things found elsewhere, has been a source of both fascination and fear.  
+
+It was Parmenides who first suggested that the world of appearances was a mere shadow of the real, and that the real was unchanging and eternal; that the world of appearances, on the other hand, is in constant flux, and is therefore unreliable. This idea has been echoed throughout history, from Plato's Cave, to the Buddhist concept of Maya. In this context, it is not surprising that humans have long been fascinated by images, and have often attributed magical or supernatural qualities to them.  
+
+The camera, as a device that captures and reproduces images, has been the subject of various superstitions and folklore across time and space. This shouldn't be surprising, of course, since humans have a knack for attributing magic to technology we simply don't have the language for.[^1]
 
 <blockquote className="pullquote">
 It is a little bit of magic realized: of natural magic. You make the powers of nature work for you, and no wonder your work is well and quickly done.
@@ -28,7 +32,7 @@ Then again, *is the camera not magic?*
 
 ---
 
-## One, or several ghosts in my machine
+## One, or Several ghosts in my machine...
 
 As early as 1840, the French photographer Hippolyte Bayard staged a self-portrait in which he depicted himself as a drowned man, claiming that his invention of photography had been stolen by Louis Daguerre. He was so distraught by this betrayal that he had drowned himself. This relation to death, financial ruin, and the reconstitution of self-as-other which photography permits so readily became a central theme in the folklore surrounding photography in the 200 years since its invention.[^2]
 
