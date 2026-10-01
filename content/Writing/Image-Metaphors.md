@@ -11,7 +11,11 @@ tags:
   - semiosis
   - occularcentrism
 id: blog
+layout: article
+type: essay
 growth: becoming
+date: 2026-09-30
+published: true
 quote: All men by nature desire to know... and above all others the sense of sight... this, most of all the senses, makes us know and brings to light many differences between things.
 quote-author: — Aristotle, Metaphysics, 980a21–27 (trans. W. D. Ross)
 image: "Media/Escherpuddle.jpg"
