@@ -9,37 +9,51 @@ import { gfm } from "micromark-extension-gfm"
 import { toHast } from "mdast-util-to-hast"
 import { toHtml } from "hast-util-to-html"
 import { escapeAttr } from "./escape"
+import { slug as headingSlug } from "github-slugger"
 
-let slugMap: Record<string, string> | null = null
+/**
+ * Prebuild-generated manifests, re-read whenever prebuild rewrites them. The
+ * old module-level cache held the first slug-map for the life of the Vite
+ * process, so notes added while `npm run dev` was running never resolved.
+ */
+const manifestCache = new Map<string, { mtimeMs: number; data: unknown }>()
 
-function getSlugMap() {
-  if (slugMap) return slugMap
+function readManifest<T>(file: string, fallback: T): T {
+  const abs = path.resolve(process.cwd(), "public", file)
   try {
-    const mapPath = path.resolve(process.cwd(), "public/slug-map.json")
-    if (fs.existsSync(mapPath)) {
-      slugMap = JSON.parse(fs.readFileSync(mapPath, "utf-8"))
-    }
+    const { mtimeMs } = fs.statSync(abs)
+    const hit = manifestCache.get(abs)
+    if (hit && hit.mtimeMs === mtimeMs) return hit.data as T
+    const data = JSON.parse(fs.readFileSync(abs, "utf-8")) as T
+    manifestCache.set(abs, { mtimeMs, data })
+    return data
   } catch {
-    console.warn("Failed to load slug-map.json for wikilink resolution")
+    console.warn(`[remark-wikilinks] could not load public/${file} — run prebuild`)
+    return fallback
   }
-  return slugMap || {}
 }
 
-const MEDIA_EXTS = /\.(png|jpe?g|gif|svg|webp|avif|mp4|webm|mp3|wav|pdf)$/i
+const getSlugMap = () => readManifest<Record<string, string>>("slug-map.json", {})
 
-/** Read source markdown for a slug, trying common path patterns. */
+const MEDIA_EXTS = /\.(png|jpe?g|gif|svg|webp|avif|mp4|webm|mp3|wav|pdf)$/i
+const WIKILINK_RE = /(!)?\[\[([^\[\]\|#\\]+)?(#[^\[\]\|#\\]+)?(\|[^\[\]#]*)?\]\]/g
+const VIDEO_ID_RE = /^[\w-]{6,20}$/
+
+/**
+ * Read the source of a resolved slug via its index `contentPath`. Slugs are
+ * not paths: spaces become hyphens (`Double Bind.md` → `Double-Bind`), and the
+ * Linux build is case-sensitive, so joining a slug onto content/ missed every
+ * note whose filename had a space, and every lowercased target in production.
+ */
 function readNoteSource(slug: string): string | null {
-  const contentDir = path.resolve(process.cwd(), "content")
-  const candidates = [
-    path.join(contentDir, `${slug}.md`),
-    path.join(contentDir, `${slug}.mdx`),
-    path.join(contentDir, `${slug}/index.md`),
-    path.join(contentDir, `${slug}/index.mdx`),
-  ]
-  for (const p of candidates) {
-    if (fs.existsSync(p)) return fs.readFileSync(p, "utf-8")
+  const index = readManifest<Record<string, { contentPath?: string }>>("content-index.json", {})
+  const contentPath = index[slug]?.contentPath
+  if (!contentPath) return null
+  try {
+    return fs.readFileSync(path.resolve(process.cwd(), "content", contentPath), "utf-8")
+  } catch {
+    return null
   }
-  return null
 }
 
 /**
@@ -91,7 +105,8 @@ export function remarkWikilinks(opts: { embedDepth?: number } = {}) {
     visit(tree, "text", (node: Text, index, parent) => {
       if (!parent || index === undefined) return
 
-      const regex = /(!)?\[\[([^\[\]\|#\\]+)?(#[^\[\]\|#\\]+)?(\|[^\[\]#]*)?\]\]/g
+      const regex = WIKILINK_RE
+      regex.lastIndex = 0
       const value = node.value
       let match: RegExpExecArray | null
       let lastIndex = 0
@@ -118,17 +133,15 @@ export function remarkWikilinks(opts: { embedDepth?: number } = {}) {
           } else if (rawTarget.includes("youtube.com") || rawTarget.includes("youtu.be")) {
             const videoId = rawTarget.includes("v=")
               ? rawTarget.split("v=")[1].split("&")[0]
-              : rawTarget.split("/").pop()
-            newNodes.push({
-              type: "html",
-              value: `<div class="video-embed"><iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe></div>`,
-            })
+              : rawTarget.split("/").pop()?.split("?")[0] ?? ""
+            newNodes.push(VIDEO_ID_RE.test(videoId)
+              ? { type: "html", value: `<div class="video-embed"><iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe></div>` }
+              : { type: "text", value: match[0] })
           } else if (rawTarget.includes("vimeo.com")) {
-            const videoId = rawTarget.split("/").pop()
-            newNodes.push({
-              type: "html",
-              value: `<div class="video-embed"><iframe src="https://player.vimeo.com/video/${videoId}" frameborder="0" allowfullscreen></iframe></div>`,
-            })
+            const videoId = rawTarget.split("/").pop()?.split("?")[0] ?? ""
+            newNodes.push(/^\d+$/.test(videoId)
+              ? { type: "html", value: `<div class="video-embed"><iframe src="https://player.vimeo.com/video/${videoId}" frameborder="0" allowfullscreen></iframe></div>` }
+              : { type: "text", value: match[0] })
           } else {
             // ── Note embed ──
             const lookup = rawTarget.toLowerCase().replace(/\s+/g, "-")
@@ -191,7 +204,9 @@ export function remarkWikilinks(opts: { embedDepth?: number } = {}) {
           const lookup = rawTarget.toLowerCase().replace(/\s+/g, "-")
           const resolvedSlug = map[lookup] || lookup
           const displayText = alias || rawTarget
-          const href = `/${resolvedSlug.replace(/\s+/g, "-")}${anchor}`
+          // rehype-slug ids are github-slugger output ("Some Heading" → "some-heading");
+          // a raw `#Some Heading` anchor never matched one.
+          const href = `/${resolvedSlug.replace(/\s+/g, "-")}${anchor ? `#${headingSlug(anchor.slice(1))}` : ""}`
 
           newNodes.push({
             type: "link",

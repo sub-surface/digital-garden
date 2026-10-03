@@ -31,8 +31,10 @@ function applyInlineFormatting(text: string): string {
     /\[\[([^\]]+)\]\]/g,
     (_, target) => `<a href="/${target.toLowerCase().replace(/\s+/g, "-")}" class="internal-link">${target}</a>`,
   )
-  // Standard markdown links
-  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+  // Standard markdown links — http(s), site-relative and fragment only; a
+  // `javascript:` href would otherwise pass straight through.
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (whole, label: string, href: string) =>
+    /^(https?:\/\/|\/|#)/i.test(href) ? `<a href="${href}">${label}</a>` : whole)
   return s
 }
 

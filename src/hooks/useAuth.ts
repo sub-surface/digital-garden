@@ -4,6 +4,8 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
@@ -45,16 +47,21 @@ const AuthContext = createContext<AuthContextValue | null>(null)
  * shell. Keeping this lifecycle at the application root prevents each caller
  * of useAuth() from opening another listener and repeating the same bootstrap.
  */
+const EMPTY_PROFILE: ProfileFields & { role: UserRole; claimed_slug: string | null } = {
+  role: null, username: null, bio: null, avatar_url: null, created_at: null, name_color: null, claimed_slug: null,
+}
+type Profile = typeof EMPTY_PROFILE
+
 function useAuthController(): AuthContextValue {
   const [session, setSession] = useState<Session | null>(null)
-  const [role, setRole] = useState<UserRole>(null)
+  const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE)
   const [loading, setLoading] = useState(true)
-  const [username, setUsername] = useState<string | null>(null)
-  const [bio, setBio] = useState<string | null>(null)
-  const [avatar_url, setAvatarUrl] = useState<string | null>(null)
-  const [created_at, setCreatedAt] = useState<string | null>(null)
-  const [name_color, setNameColor] = useState<string | null>(null)
-  const [claimed_slug, setClaimedSlug] = useState<string | null>(null)
+  // Profile is per USER, not per token: TOKEN_REFRESHED (hourly) and the
+  // getSession/onAuthStateChange double-fire at boot used to refetch
+  // /api/auth/me each time. `profileFor` remembers whose profile is loaded;
+  // `requestSeq` drops responses that resolve after a newer request or sign-out.
+  const profileFor = useRef<string | null>(null)
+  const requestSeq = useRef(0)
 
   useEffect(() => {
     if (!supabase) {
@@ -62,36 +69,28 @@ function useAuthController(): AuthContextValue {
       return
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session)
-      if (session) {
-        fetchProfile(session.access_token)
-
-        // Recovery flow — redirect to profile so user can set a new password
-        if (event === "PASSWORD_RECOVERY") {
-          window.location.replace("/profile")
-          return
-        }
-      } else {
-        setRole(null)
-        setUsername(null)
-        setBio(null)
-        setAvatarUrl(null)
-        setCreatedAt(null)
-        setNameColor(null)
-        setClaimedSlug(null)
+    function applySession(next: Session | null) {
+      setSession(next)
+      if (!next) {
+        profileFor.current = null
+        requestSeq.current++
+        setProfile(EMPTY_PROFILE)
         setLoading(false)
+        return
       }
+      if (profileFor.current !== next.user.id) {
+        profileFor.current = next.user.id
+        fetchProfile(next.access_token)
+      }
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, next) => {
+      applySession(next)
+      // Recovery flow — redirect to profile so user can set a new password
+      if (next && event === "PASSWORD_RECOVERY") window.location.replace("/profile")
     })
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setSession(session)
-        fetchProfile(session.access_token)
-      } else {
-        setLoading(false)
-      }
-    })
+    supabase.auth.getSession().then(({ data: { session: initial } }) => applySession(initial))
 
     // Fallback: detect recovery tokens in URL hash (implicit flow from email links)
     // PKCE's detectSessionInUrl only checks query params, not hash fragments,
@@ -101,14 +100,18 @@ function useAuthController(): AuthContextValue {
       const params = new URLSearchParams(hash.substring(1))
       const accessToken = params.get("access_token")
       const refreshToken = params.get("refresh_token")
+      // Scrub the tokens from the address bar and history immediately, success
+      // or not — a failed exchange used to leave them sitting in the URL.
+      window.history.replaceState(null, "", window.location.pathname + window.location.search)
       if (accessToken && refreshToken) {
         supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
         }).then(({ data: { session: newSession }, error }) => {
-          if (error || !newSession) return
-          // Clean hash from URL
-          window.history.replaceState(null, "", window.location.pathname)
+          if (error || !newSession) {
+            console.error("[auth] could not exchange link tokens:", error?.message ?? "no session")
+            return
+          }
           // Recovery flow — redirect to profile for password reset
           if (params.get("type") === "recovery") {
             window.location.replace("/profile")
@@ -118,6 +121,8 @@ function useAuthController(): AuthContextValue {
     }
 
     return () => subscription.unsubscribe()
+    // fetchProfile only touches setters and refs; the subscription is set up once.
+     
   }, [])
 
   // Dev auto-login — only in development, only when VITE_DEV_AUTH_EMAIL + VITE_DEV_AUTH_PASSWORD set
@@ -137,6 +142,7 @@ function useAuthController(): AuthContextValue {
   }, [])
 
   async function fetchProfile(accessToken: string) {
+    const seq = ++requestSeq.current
     try {
       const data = await apiGet<{
         role: string
@@ -147,13 +153,16 @@ function useAuthController(): AuthContextValue {
         name_color: string | null
         claimed_slug?: string | null
       }>("/api/auth/me", { token: accessToken })
-      setRole(data.role as UserRole)
-      setUsername(data.username)
-      setBio(data.bio)
-      setAvatarUrl(data.avatar_url)
-      setCreatedAt(data.created_at)
-      setNameColor(data.name_color)
-      setClaimedSlug(data.claimed_slug ?? null)
+      if (seq !== requestSeq.current) return
+      setProfile({
+        role: data.role as UserRole,
+        username: data.username,
+        bio: data.bio,
+        avatar_url: data.avatar_url,
+        created_at: data.created_at,
+        name_color: data.name_color,
+        claimed_slug: data.claimed_slug ?? null,
+      })
 
       // If we have a pending username from signup, set it now
       const pendingUsername = localStorage.getItem("wiki_pending_username")
@@ -161,16 +170,21 @@ function useAuthController(): AuthContextValue {
         localStorage.removeItem("wiki_pending_username")
         try {
           await apiPut("/api/auth/profile", { username: pendingUsername }, { token: accessToken })
-          setUsername(pendingUsername)
-        } catch {
-          // Previously: `if (updateRes.ok) setUsername(...)` with no error
-          // handling on failure — preserve that silent skip.
+          if (seq === requestSeq.current) setProfile((p) => ({ ...p, username: pendingUsername }))
+        } catch (e) {
+          console.error("[auth] could not apply pending username:", apiErrorMessage(e, "unknown error"))
         }
       }
-    } catch {
-      setRole("pending")
+    } catch (e) {
+      if (seq !== requestSeq.current) return
+      // A failed profile fetch is our outage, not a demotion. Only fall back to
+      // "pending" (the least-privileged signed-in state) when nothing is known yet;
+      // an already-loaded editor/admin keeps their role.
+      console.error("[auth] /api/auth/me failed:", apiErrorMessage(e, "unknown error"))
+      profileFor.current = null // let the next auth event retry
+      setProfile((p) => (p.role ? p : { ...p, role: "pending" }))
     } finally {
-      setLoading(false)
+      if (seq === requestSeq.current) setLoading(false)
     }
   }
 
@@ -208,6 +222,8 @@ function useAuthController(): AuthContextValue {
       password,
       options: { emailRedirectTo: `${redirectOrigin}/profile` },
     })
+    // Never leave a stale pending username for the next account to inherit.
+    if (error) localStorage.removeItem("wiki_pending_username")
     return { error: error?.message ?? null }
   }
 
@@ -227,15 +243,8 @@ function useAuthController(): AuthContextValue {
 
   async function signOut() {
     if (!supabase) return
+    // The SIGNED_OUT auth event resets session + profile (applySession).
     await supabase.auth.signOut()
-    setSession(null)
-    setRole(null)
-    setUsername(null)
-    setBio(null)
-    setAvatarUrl(null)
-    setCreatedAt(null)
-    setNameColor(null)
-    setClaimedSlug(null)
   }
 
   const updateProfile = useCallback(async (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url" | "name_color">>) => {
@@ -246,14 +255,21 @@ function useAuthController(): AuthContextValue {
       return { error: apiErrorMessage(e, "Update failed") }
     }
     // Update local state
-    if (data.username !== undefined) setUsername(data.username)
-    if (data.bio !== undefined) setBio(data.bio)
-    if (data.avatar_url !== undefined) setAvatarUrl(data.avatar_url)
-    if (data.name_color !== undefined) setNameColor(data.name_color)
+    setProfile((p) => {
+      const next = { ...p }
+      for (const [k, v] of Object.entries(data)) if (v !== undefined) (next as Record<string, unknown>)[k] = v
+      return next
+    })
     return { error: null }
   }, [session])
 
-  return { session, role, loading, username, bio, avatar_url, created_at, name_color, claimed_slug, signIn, signInWithPassword, signUp, signOut, updateProfile, changePassword, resetPassword }
+  // The other actions close over setters and refs only, so memoising on state
+  // stops every consumer re-rendering whenever the provider's parent renders.
+  return useMemo(
+    () => ({ session, loading, ...profile, signIn, signInWithPassword, signUp, signOut, updateProfile, changePassword, resetPassword }),
+     
+    [session, loading, profile, updateProfile],
+  )
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

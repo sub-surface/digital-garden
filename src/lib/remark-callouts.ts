@@ -14,7 +14,11 @@ import { escapeHtml } from "./escape"
  *   </div>
  */
 
-const CALLOUT_REGEX = /^\[!(\w+)\]\s*([^\n]*)?/
+// `[ \t]*`, not `\s*`: \s used to swallow the newline after an untitled
+// `> [!note]`, promoting the first body line to the title (and then repeating it
+// as body text). `[+-]?` consumes Obsidian's fold markers instead of leaking
+// them into the title.
+const CALLOUT_REGEX = /^\[!([\w-]+)\][+-]?[ \t]*([^\n]*)/
 
 export function remarkCallouts() {
   return (tree: Root) => {

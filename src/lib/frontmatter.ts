@@ -19,6 +19,7 @@
 
 /** Remove a leading `---\n … \n---` YAML frontmatter block, if present. */
 export function stripFrontmatter(src: string): string {
-  const match = src.match(/^---\n[\s\S]*?\n---\n?/)
+  // \r? — raw copies keep the vault's line endings, and Windows-authored notes are CRLF.
+  const match = src.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/)
   return match ? src.slice(match[0].length) : src
 }

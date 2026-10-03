@@ -10,6 +10,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "url"
 import { emitSearchIndex } from "./emit-search-index"
+import { tokenizeSearchText } from "../src/lib/search-tokenize"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, "..")
@@ -24,6 +25,12 @@ function assert(condition: boolean, msg: string) {
 
 async function testSearchIndex() {
   console.log("=== Testing Pre-Computed Full-Text Search Index ===")
+
+  // Tokenizer: Unicode letters survive and diacritics fold, so "zizek" finds "Žižek".
+  const folded = tokenizeSearchText("Žižek's café, Möbius-strip naïveté")
+  for (const t of ["zizek", "cafe", "mobius", "strip", "naivete"]) {
+    assert(folded.includes(t), `tokenizer should produce '${t}', got ${JSON.stringify(folded)}`)
+  }
 
   if (!fs.existsSync(SEARCH_INDEX_PATH)) {
     console.log("  public/search-index.json not found on disk — generating on the fly for test...")
@@ -57,7 +64,7 @@ async function testSearchIndex() {
 
   // Scoring function simulating useContentSearch
   function search(query: string, limit = 5): string[] {
-    const terms = query.toLowerCase().replace(/[^\w\s-]/g, " ").split(/[\s-]+/).filter((t) => t.length >= 2)
+    const terms = tokenizeSearchText(query)
     if (terms.length === 0) return []
 
     const scores = new Map<number, number>()

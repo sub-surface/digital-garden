@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useStore } from "@/store"
 import { useRestoredNotes } from "./useRestoredNotes"
+import { tokenizeSearchText } from "@/lib/search-tokenize"
 
 export type SearchDocumentKind = "garden" | "local"
 
@@ -33,6 +34,25 @@ const NO_EXTRA_DOCUMENTS: ContentSearchDocument[] = []
 // Module-level singleton cache so search-index.json is loaded at most once per page session
 let cachedIndexPayload: SearchIndexPayload | null = null
 let indexFetchPromise: Promise<SearchIndexPayload | null> | null = null
+// Vocabulary sorted once, so prefix lookups are a binary search to the first
+// candidate plus a walk over the matching run — not a scan of ~10k tokens per
+// term per keystroke.
+let sortedTokens: string[] | null = null
+
+function tokensWithPrefix(prefix: string): string[] {
+  const tokens = sortedTokens
+  if (!tokens) return []
+  let lo = 0
+  let hi = tokens.length
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1
+    if (tokens[mid] < prefix) lo = mid + 1
+    else hi = mid
+  }
+  const out: string[] = []
+  for (let i = lo; i < tokens.length && tokens[i].startsWith(prefix); i++) out.push(tokens[i])
+  return out
+}
 
 function loadSearchIndexPayload(): Promise<SearchIndexPayload | null> {
   if (cachedIndexPayload) return Promise.resolve(cachedIndexPayload)
@@ -45,6 +65,7 @@ function loadSearchIndexPayload(): Promise<SearchIndexPayload | null> {
     })
     .then((data) => {
       cachedIndexPayload = data
+      sortedTokens = Object.keys(data.index).sort()
       return data
     })
     .catch((err) => {
@@ -73,7 +94,6 @@ export function useContentSearch({
   const [ready, setReady] = useState(Boolean(cachedIndexPayload))
   const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<ContentSearchResult[]>([])
-  const tokensRef = useRef<string[] | null>(null)
 
   // Pre-load the inverted index when search is enabled or mounted
   useEffect(() => {
@@ -87,13 +107,8 @@ export function useContentSearch({
     loadSearchIndexPayload()
       .then((data) => {
         if (cancelled) return
-        if (data) {
-          tokensRef.current = Object.keys(data.index)
-          setReady(true)
-        } else {
-          // In-memory fallback is still ready
-          setReady(true)
-        }
+        // Ready either way: without the payload, search falls back to in-memory metadata.
+        setReady(true)
       })
       .catch((err) => {
         if (!cancelled) {
@@ -115,10 +130,7 @@ export function useContentSearch({
     }
 
     const q = term.toLowerCase()
-    const terms = q
-      .replace(/[^\w\s-]/g, " ")
-      .split(/[\s-]+/)
-      .filter((t) => t.length >= 2)
+    const terms = tokenizeSearchText(term)
 
     const restored = new Set(restoredSlugs)
     const seen = new Set<string>()
@@ -147,8 +159,6 @@ export function useContentSearch({
     // 2. Pre-computed inverted full-text search index (Phase 3a)
     if (cachedIndexPayload && contentIndex) {
       const payload = cachedIndexPayload
-      if (!tokensRef.current) tokensRef.current = Object.keys(payload.index)
-      const allTokens = tokensRef.current
 
       const docScores = new Map<number, number>()
       const termHits = new Map<number, number>()
@@ -167,17 +177,13 @@ export function useContentSearch({
 
         // Prefix match for terms with length >= 3
         if (t.length >= 3) {
-          for (let i = 0; i < allTokens.length; i++) {
-            const cand = allTokens[i]
-            if (cand !== t && cand.startsWith(t)) {
-              const prefixPostings = payload.index[cand]
-              if (prefixPostings) {
-                for (let j = 0; j < prefixPostings.length; j += 2) {
-                  const id = prefixPostings[j]
-                  const weight = Math.round(prefixPostings[j + 1] * 0.7)
-                  docScores.set(id, (docScores.get(id) || 0) + weight)
-                }
-              }
+          for (const cand of tokensWithPrefix(t)) {
+            if (cand === t) continue
+            const prefixPostings = payload.index[cand]
+            for (let j = 0; j < prefixPostings.length; j += 2) {
+              const id = prefixPostings[j]
+              const weight = Math.round(prefixPostings[j + 1] * 0.7)
+              docScores.set(id, (docScores.get(id) || 0) + weight)
             }
           }
         }

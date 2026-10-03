@@ -11,6 +11,7 @@ import * as path from "path"
 import { fileURLToPath } from "url"
 import matter from "gray-matter"
 import { slugifyPath } from "../src/lib/slug"
+import { tokenizeSearchText } from "../src/lib/search-tokenize"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -24,17 +25,18 @@ export interface SearchIndexPayload {
   index: Record<string, number[]>
 }
 
+// Function words only. Content words that happen to be frequent ("work", "time",
+// "people", "new", "mind"…) used to be listed here too, which made them
+// unsearchable unless they appeared in a title or tag.
 const STOP_WORDS = new Set([
-  "the", "be", "to", "of", "and", "a", "in", "that", "have", "i",
-  "it", "for", "not", "on", "with", "he", "as", "you", "do", "at",
-  "this", "but", "his", "by", "from", "they", "we", "say", "her", "she",
-  "or", "an", "will", "my", "one", "all", "would", "there", "their", "what",
-  "so", "up", "out", "if", "about", "who", "get", "which", "go", "me",
-  "when", "make", "can", "like", "time", "no", "just", "him", "know", "take",
-  "people", "into", "year", "your", "good", "some", "could", "them", "see", "other",
-  "than", "then", "now", "look", "only", "come", "its", "over", "think", "also",
-  "back", "after", "use", "two", "how", "our", "work", "first", "well", "way",
-  "even", "new", "want", "because", "any", "these", "give", "day", "most", "us",
+  "the", "be", "to", "of", "and", "in", "that", "have", "it", "for",
+  "not", "on", "with", "he", "as", "you", "do", "at", "this", "but",
+  "his", "by", "from", "they", "we", "her", "she", "or", "an", "will",
+  "my", "all", "would", "there", "their", "what", "so", "up", "out", "if",
+  "about", "who", "which", "me", "when", "can", "no", "just", "him", "into",
+  "your", "some", "could", "them", "than", "then", "its", "also", "how", "our",
+  "because", "any", "these", "us", "is", "are", "was", "were", "been", "has",
+  "had", "did", "does", "those", "such", "very", "each",
 ])
 
 function stripMarkdown(content: string): string {
@@ -42,6 +44,12 @@ function stripMarkdown(content: string): string {
     // Strip code blocks
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/`[^`]+`/g, " ")
+    // MDX scaffolding: import/export lines and JSX tags (keep the text between them)
+    .replace(/^(?:import|export)\s.*$/gm, " ")
+    .replace(/<\/?[A-Za-z][^>]*>/g, " ")
+    // Math: TeX is not prose
+    .replace(/\$\$[\s\S]*?\$\$/g, " ")
+    .replace(/\$[^$\n]+\$/g, " ")
     // Resolve wikilinks to text
     .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2 $1")
     .replace(/\[\[([^\]]+)\]\]/g, "$1")
@@ -51,13 +59,7 @@ function stripMarkdown(content: string): string {
     .replace(/[#>*~_=+\-|\\]/g, " ")
 }
 
-export function tokenizeText(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, " ")
-    .split(/[\s-]+/)
-    .filter((w) => w.length >= 2 && w.length <= 30)
-}
+export const tokenizeText = tokenizeSearchText
 
 const DEFAULT_CONTENT_DIR = path.resolve(__dirname, "..", "content")
 const DEFAULT_PUBLIC_DIR = path.resolve(__dirname, "..", "public")

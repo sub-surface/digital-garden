@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { useStore } from "@/store"
+import { escapeAttr, escapeHtml } from "@/lib/escape"
+import { stripFrontmatter } from "@/lib/frontmatter"
 
 interface PreviewState {
   id: string
@@ -76,8 +78,7 @@ function computePosition(
 
 // Extract the first image URL (external http or internal /content/) from markdown
 function extractFirstImage(md: string): string {
-  // Strip frontmatter first
-  const body = md.replace(/^---[\s\S]*?---\n?/, "")
+  const body = stripFrontmatter(md)
   // External image: ![alt](url)
   const extMatch = body.match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/)
   if (extMatch) return extMatch[1]
@@ -90,36 +91,39 @@ function extractFirstImage(md: string): string {
   return ""
 }
 
-// Convert markdown body to HTML with wikilinks/md-links as <a> tags, strip other formatting
+// Convert markdown body to HTML with wikilinks/md-links as <a> tags, strip other formatting.
+// The result goes through dangerouslySetInnerHTML, and wiki notes are user-submitted, so
+// the source is ESCAPED FIRST and the markup below is the only HTML that can appear.
+// Truncation happens on the source (at a word boundary), never on the generated HTML,
+// which used to be sliced mid-tag.
 function mdToBodyHtml(md: string): string {
-  return md
-    .replace(/^---[\s\S]*?---\n?/, "")          // frontmatter
+  let src = stripFrontmatter(md)
     .replace(/!\[\[[^\]]*\]\]/g, "")             // note embeds (not images)
     .replace(/!\[[^\]]*\]\([^)]+\)/g, "")        // inline images
-    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) => {
-      const label = alias || target
-      const href = "/" + target.replace(/\s+/g, "-")
-      return `<a href="${href}" class="internal-link">${label}</a>`
+    .replace(/~~|__/g, "")
+  if (src.length > 600) src = src.slice(0, 600).replace(/\s\S*$/, "")
+  return escapeHtml(src)
+    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target: string, alias?: string) => {
+      const href = "/" + target.trim().replace(/\s+/g, "-")
+      return `<a href="${escapeAttr(href)}" class="internal-link">${alias || target}</a>`
     })
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" class="external-link" target="_blank" rel="noopener">$1</a>')
-    .replace(/\[([^\]]+)\]\(\/([^)]+)\)/g, '<a href="/$2" class="internal-link">$1</a>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, label: string, href: string) =>
+      `<a href="${escapeAttr(href)}" class="external-link" target="_blank" rel="noopener">${label}</a>`)
+    .replace(/\[([^\]]+)\]\(\/([^)\s]+)\)/g, (_, label: string, href: string) =>
+      `<a href="/${escapeAttr(href)}" class="internal-link">${label}</a>`)
     .replace(/^#{1,6}\s+(.+)$/gm, "<strong>$1</strong>")  // headings → bold
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
     .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/^>\s+(.+)$/gm, "<span class=\"preview-quote\">$1</span>")
-    .replace(/[_~]/g, "")
+    .replace(/^&gt;\s+(.+)$/gm, "<span class=\"preview-quote\">$1</span>")
     .replace(/\n{2,}/g, " · ")
-    .replace(/\n/g, " ")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 400)
 }
 
 // Plain text fallback (for excerpt field)
 function mdToPlain(md: string): string {
-  return md
-    .replace(/^---[\s\S]*?---\n?/, "")
+  return stripFrontmatter(md)
     .replace(/!\[\[[^\]]*\]\]/g, "")
     .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, t, a) => a || t)
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
