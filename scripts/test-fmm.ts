@@ -264,6 +264,42 @@ for (const cloud of clouds) {
   console.log(`  periodic  FFT round trip: ${maxError.toExponential(2)}`)
 }
 
+// A round trip passes for any self-inverse transform, so also pin the forward
+// FFT against the textbook 2D DFT, X[ky,kx] = Σ x[y,x]·e^{-2πi(kx·x + ky·y)/n}.
+for (const n of [8, 32]) {
+  const rnd = mulberry32(1000 + n)
+  const re = new Float64Array(n * n)
+  const im = new Float64Array(n * n)
+  for (let i = 0; i < re.length; i++) {
+    re[i] = rnd() * 2 - 1
+    im[i] = rnd() * 2 - 1
+  }
+  const srcR = re.slice()
+  const srcI = im.slice()
+  fft2(re, im, n, false)
+  let maxError = 0
+  for (let ky = 0; ky < n; ky++) {
+    for (let kx = 0; kx < n; kx++) {
+      let sr = 0
+      let si = 0
+      for (let y = 0; y < n; y++) {
+        for (let x = 0; x < n; x++) {
+          const angle = (-2 * Math.PI * (kx * x + ky * y)) / n
+          const c = Math.cos(angle)
+          const s = Math.sin(angle)
+          const j = y * n + x
+          sr += srcR[j] * c - srcI[j] * s
+          si += srcR[j] * s + srcI[j] * c
+        }
+      }
+      const k = ky * n + kx
+      maxError = Math.max(maxError, Math.abs(re[k] - sr), Math.abs(im[k] - si))
+    }
+  }
+  if (!(maxError < 1e-9)) fail(`periodic FFT ${n}² disagrees with direct DFT by ${maxError.toExponential(2)}`)
+  console.log(`  periodic  FFT ${n}² vs direct DFT: ${maxError.toExponential(2)}`)
+}
+
 {
   const side = 32
   const n = side * side

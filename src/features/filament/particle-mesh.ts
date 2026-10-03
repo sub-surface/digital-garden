@@ -19,10 +19,21 @@ import type { Cloud } from "./presets"
 interface FftPlan {
   n: number
   reverse: Uint32Array
-  /** One twiddle rotation per radix-2 stage, shared by every transform. */
-  stepR: Float64Array
-  stepI: Float64Array
+  /** cos/sin(2πk/n) for k < n/2 — every stage indexes this one table. */
+  cos: Float64Array
+  sin: Float64Array
+  /** Contiguous scratch for {@link COLUMN_BLOCK} gathered columns. */
+  blockR: Float64Array
+  blockI: Float64Array
 }
+
+/**
+ * Columns are transformed in blocks: gathering 8 adjacent columns reads each
+ * row as one 64-byte cache line, where a column-at-a-time pass touched a new
+ * line for every element. At a 256² mesh that stride walk, not arithmetic, was
+ * most of the solve.
+ */
+const COLUMN_BLOCK = 8
 
 const FFT_PLANS = new Map<number, FftPlan>()
 
@@ -44,33 +55,42 @@ function fftPlan(n: number): FftPlan {
     }
     reverse[i] = y
   }
-  const stepR = new Float64Array(bits + 1)
-  const stepI = new Float64Array(bits + 1)
-  for (let level = 1, len = 2; level <= bits; level++, len <<= 1) {
-    const angle = (2 * Math.PI) / len
-    stepR[level] = Math.cos(angle)
-    stepI[level] = Math.sin(angle)
+  // A table rather than a running rotation (w ← w·step): exact to the last
+  // bit at every stage, and one load instead of four multiplies per butterfly.
+  const cos = new Float64Array(n >> 1)
+  const sin = new Float64Array(n >> 1)
+  for (let k = 0; k < n >> 1; k++) {
+    cos[k] = Math.cos((2 * Math.PI * k) / n)
+    sin[k] = Math.sin((2 * Math.PI * k) / n)
   }
-  const plan = { n, reverse, stepR, stepI }
+  const block = Math.min(COLUMN_BLOCK, n)
+  const plan = {
+    n,
+    reverse,
+    cos,
+    sin,
+    blockR: new Float64Array(block * n),
+    blockI: new Float64Array(block * n),
+  }
   FFT_PLANS.set(n, plan)
   return plan
 }
 
+/** In-place radix-2 transform of `n` contiguous complex values at `offset`. */
 function fft1d(
   re: Float64Array,
   im: Float64Array,
   offset: number,
-  stride: number,
   inverse: boolean,
   plan: FftPlan,
 ): void {
-  const { n, reverse, stepR, stepI } = plan
+  const { n, reverse, cos, sin } = plan
 
   for (let i = 0; i < n; i++) {
     const j = reverse[i]
     if (j <= i) continue
-    const a = offset + i * stride
-    const b = offset + j * stride
+    const a = offset + i
+    const b = offset + j
     let t = re[a]
     re[a] = re[b]
     re[b] = t
@@ -79,16 +99,17 @@ function fft1d(
     im[b] = t
   }
 
-  for (let len = 2, level = 1; len <= n; len <<= 1, level++) {
-    const wrStep = stepR[level]
-    const wiStep = stepI[level] * (inverse ? 1 : -1)
+  // Forward uses e^{-2πik/n}; inverse e^{+2πik/n}.
+  const sign = inverse ? 1 : -1
+  for (let len = 2; len <= n; len <<= 1) {
     const half = len >> 1
-    for (let base = 0; base < n; base += len) {
-      let wr = 1
-      let wi = 0
-      for (let j = 0; j < half; j++) {
-        const even = offset + (base + j) * stride
-        const odd = offset + (base + j + half) * stride
+    const step = n / len
+    for (let base = offset; base < offset + n; base += len) {
+      for (let j = 0, t = 0; j < half; j++, t += step) {
+        const wr = cos[t]
+        const wi = sign * sin[t]
+        const even = base + j
+        const odd = even + half
         const or = re[odd] * wr - im[odd] * wi
         const oi = re[odd] * wi + im[odd] * wr
         const er = re[even]
@@ -97,19 +118,15 @@ function fft1d(
         im[even] = ei + oi
         re[odd] = er - or
         im[odd] = ei - oi
-        const nextR = wr * wrStep - wi * wiStep
-        wi = wr * wiStep + wi * wrStep
-        wr = nextR
       }
     }
   }
 
   if (inverse) {
     const scale = 1 / n
-    for (let i = 0; i < n; i++) {
-      const o = offset + i * stride
-      re[o] *= scale
-      im[o] *= scale
+    for (let i = offset; i < offset + n; i++) {
+      re[i] *= scale
+      im[i] *= scale
     }
   }
 }
@@ -120,8 +137,28 @@ export function fft2(re: Float64Array, im: Float64Array, n: number, inverse: boo
     throw new Error("FILAMENT FFT arrays do not match the requested mesh")
   }
   const plan = fftPlan(n)
-  for (let y = 0; y < n; y++) fft1d(re, im, y * n, 1, inverse, plan)
-  for (let x = 0; x < n; x++) fft1d(re, im, x, n, inverse, plan)
+  for (let y = 0; y < n; y++) fft1d(re, im, y * n, inverse, plan)
+
+  const { blockR, blockI } = plan
+  const width = Math.min(COLUMN_BLOCK, n)
+  for (let x0 = 0; x0 < n; x0 += width) {
+    // Gather: block column c lives contiguously at [c·n, (c+1)·n).
+    for (let y = 0; y < n; y++) {
+      const row = y * n + x0
+      for (let c = 0; c < width; c++) {
+        blockR[c * n + y] = re[row + c]
+        blockI[c * n + y] = im[row + c]
+      }
+    }
+    for (let c = 0; c < width; c++) fft1d(blockR, blockI, c * n, inverse, plan)
+    for (let y = 0; y < n; y++) {
+      const row = y * n + x0
+      for (let c = 0; c < width; c++) {
+        re[row + c] = blockR[c * n + y]
+        im[row + c] = blockI[c * n + y]
+      }
+    }
+  }
 }
 
 /** Wrap a coordinate into [-half, half) without an iteration. */
