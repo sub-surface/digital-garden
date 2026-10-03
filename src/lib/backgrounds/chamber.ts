@@ -83,11 +83,15 @@ export function drawChamber(
     if (a >= 0.008) {
       ctx.fillStyle = pal[tr.ci] || state.colorCache.secondary
       ctx.globalAlpha = a
-      for (let i = 0; i < tr.pts.length; i += p.gap) {
+      // One path + one fill per track instead of a fillRect per stipple dot
+      const npts = tr.pts.length
+      ctx.beginPath()
+      for (let i = 0; i < npts; i += p.gap) {
         const pt = tr.pts[i]
-        const s = p.dot * (0.5 + 0.5 * (i / tr.pts.length))
-        ctx.fillRect(pt.x, pt.y, s, s)
+        const s = p.dot * (0.5 + 0.5 * (i / npts))
+        ctx.rect(pt.x, pt.y, s, s)
       }
+      ctx.fill()
       ctx.globalAlpha = Math.min(1, a * 1.6)
       ctx.fillRect(tr.pts[0].x - 1, tr.pts[0].y - 1, 2.4, 2.4)
       if (tr.glyph) {

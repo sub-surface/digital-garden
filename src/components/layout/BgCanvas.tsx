@@ -33,6 +33,30 @@ const BG_SUPPRESSED = new Set(["filament"])
 const MAX_FPS = 144
 const MIN_FRAME_INTERVAL = 1000 / MAX_FPS // ~6.94ms
 
+/** Idle cap for slow, purely time-based ambient modes (and any mode while dimmed by reader mode). */
+const SLOW_FRAME_INTERVAL = 1000 / 30
+/**
+ * Modes whose motion is a pure function of wall-clock time (or static), so a
+ * 30 FPS cap does not change their speed, only their temporal resolution.
+ * Per-frame-stepped modes (murmuration, graph, chamber, dendrite, lorenz,
+ * terminal) are deliberately absent: capping them would slow the simulation.
+ */
+const SLOW_MODES = new Set<string>([
+  "orrery",
+  "schematic",
+  "isometric",
+  "plate-scan",
+  "cartography",
+  "chess",
+  "hexo",
+])
+/** Modes that only change when the cursor moves, alpha eases, or the viewport/colours change. */
+const STATIC_MODES = new Set<string>(["chess", "hexo"])
+/** Full frame rate is restored for this long after the last cursor movement. */
+const MOUSE_ACTIVE_MS = 500
+/** Below this, the canvas is visually empty: skip drawing entirely. */
+const ALPHA_EPS = 0.0005
+
 export function BgCanvas() {
   const activeSlug = useStore((s) => s.activeGraphSlug)
   // Skip entirely on mobile — canvas is CSS-hidden at the phone breakpoint.
@@ -131,15 +155,25 @@ function BgCanvasInner() {
     if (!canvas) return
     const ctx = canvas.getContext("2d")!
 
+    let lastW = -1
+    let lastH = -1
+    let lastDpr = -1
+
     const resize = () => {
       const w = window.innerWidth
       const h = window.innerHeight
-      stateRef.current.w = w
-      stateRef.current.h = h
-
       // Carmack/Torvalds optimization: clamp DPR to max 1.25 on high-DPI (Retina/4K)
       // screens to eliminate 50–75% fillrate load without visible loss of sharpness.
       const dpr = Math.min(window.devicePixelRatio || 1, 1.25)
+      // Mobile URL-bar show/hide and similar fire resize with an unchanged size;
+      // resetting canvas.width would clear the canvas and reseed every mode.
+      if (w === lastW && h === lastH && dpr === lastDpr) return
+      lastW = w
+      lastH = h
+      lastDpr = dpr
+      stateRef.current.w = w
+      stateRef.current.h = h
+
       canvas.width = Math.round(w * dpr)
       canvas.height = Math.round(h * dpr)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -170,13 +204,28 @@ function BgCanvasInner() {
       stateRef.current.colorValid = true
     }
 
+    let lastMouseMove = -Infinity
     const mouseMove = (e: MouseEvent) => {
       stateRef.current.mx = e.clientX
       stateRef.current.my = e.clientY
+      lastMouseMove = e.timeStamp
     }
 
-    window.addEventListener("resize", resize)
-    window.addEventListener("mousemove", mouseMove)
+    // Coalesce resize bursts (window drags fire per pixel) into one resize per frame:
+    // each resize reallocates the canvas and reseeds/rebuilds mode state (e.g. plate-scan dither).
+    let resizeRaf = 0
+    let redrawStill: (() => void) | null = null
+    const onResize = () => {
+      if (resizeRaf) return
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = 0
+        resize()
+        redrawStill?.()
+      })
+    }
+
+    window.addEventListener("resize", onResize)
+    window.addEventListener("mousemove", mouseMove, { passive: true })
     resize()
 
     // Fetch graph nodes only when graph background mode is active
@@ -273,29 +322,77 @@ function BgCanvasInner() {
 
     // Honour prefers-reduced-motion: paint one static frame, run no loop
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-    if (reduceMotion) {
+    // bgStyle "off" also runs no loop (previously a 144 FPS clearRect loop).
+    if (reduceMotion || bgStyle === "off") {
       stateRef.current.readerAlpha = stateRef.current.readerTarget
       draw()
+      // The loop is off, so a resize (which clears the canvas) must repaint the still.
+      redrawStill = draw
       return () => {
-        window.removeEventListener("resize", resize)
+        if (resizeRaf) cancelAnimationFrame(resizeRaf)
+        window.removeEventListener("resize", onResize)
         window.removeEventListener("mousemove", mouseMove)
       }
     }
 
     let animationId = 0
     let lastPaintTime = 0
+    let blank = false
+    // Inputs of the last static-mode draw, to skip identical repaints
+    let sMx = NaN, sMy = NaN, sAlpha = NaN, sW = 0, sH = 0, sDrawn = false
+    const isStaticMode = STATIC_MODES.has(bgMode)
+    const isSlowMode = SLOW_MODES.has(bgMode)
 
     const frame = (timestamp: number) => {
       animationId = requestAnimationFrame(frame)
 
-      // Throttle to max 144 FPS: -1ms delta buffer prevents frame drops from timestamp jitter on 144Hz displays
-      if (timestamp - lastPaintTime < MIN_FRAME_INTERVAL - 1.0) {
+      const state = stateRef.current
+      const dt = timestamp - lastPaintTime
+
+      // Frame pacing: max 144 FPS (-1ms buffer absorbs timestamp jitter on 144Hz displays).
+      // Drops to 30 FPS while reader mode dims the canvas to ~nothing, and for slow
+      // wall-clock-driven modes while the cursor is idle.
+      const dimmed = state.readerTarget < 0.1 && state.readerAlpha < 0.1
+      const slow = dimmed || (isSlowMode && timestamp - lastMouseMove > MOUSE_ACTIVE_MS)
+      if (dt < (slow ? SLOW_FRAME_INTERVAL : MIN_FRAME_INTERVAL) - 1.0) {
         return
       }
       lastPaintTime = timestamp
 
-      const state = stateRef.current
-      state.readerAlpha += (state.readerTarget - state.readerAlpha) * 0.08
+      // Time-based easing (equals the old 0.08/frame at 60 Hz) so pacing changes don't alter fade time
+      const k = 1 - Math.pow(0.92, Math.min(dt, 100) / 16.667)
+      state.readerAlpha += (state.readerTarget - state.readerAlpha) * k
+      if (Math.abs(state.readerTarget - state.readerAlpha) < ALPHA_EPS) {
+        state.readerAlpha = state.readerTarget
+      }
+
+      // Fully transparent (bgOpacity 0): clear once, then draw nothing until it fades back in
+      if (state.readerAlpha <= 0) {
+        if (!blank) {
+          ctx.clearRect(0, 0, state.w, state.h)
+          blank = true
+          sDrawn = false
+        }
+        return
+      }
+      blank = false
+
+      // Static boards only change with cursor / fade / resize / theme colours
+      if (isStaticMode) {
+        if (
+          sDrawn &&
+          state.colorValid &&
+          state.mx === sMx &&
+          state.my === sMy &&
+          state.readerAlpha === sAlpha &&
+          state.w === sW &&
+          state.h === sH
+        ) {
+          return
+        }
+        sMx = state.mx; sMy = state.my; sAlpha = state.readerAlpha
+        sW = state.w; sH = state.h; sDrawn = true
+      }
       draw()
     }
 
@@ -318,7 +415,8 @@ function BgCanvasInner() {
     if (!document.hidden) start()
 
     return () => {
-      window.removeEventListener("resize", resize)
+      if (resizeRaf) cancelAnimationFrame(resizeRaf)
+      window.removeEventListener("resize", onResize)
       window.removeEventListener("mousemove", mouseMove)
       document.removeEventListener("visibilitychange", onVisibility)
       stop()

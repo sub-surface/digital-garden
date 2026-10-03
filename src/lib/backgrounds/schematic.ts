@@ -6,6 +6,29 @@ import type { SiteConfig } from "@/config/site-defaults"
 // clusters that fade in and out; ruler ticks along the viewport edges.
 export const SCHEMATIC_GLYPHS = "∮∇∂≡⊕⊗·°∆⟁"
 
+// Edge ruler ticks are static per viewport size: build the Path2D once.
+let tickPath: Path2D | null = null
+let tickW = -1
+let tickH = -1
+function getTickPath(W: number, H: number): Path2D {
+  if (tickPath && tickW === W && tickH === H) return tickPath
+  const path = new Path2D()
+  for (let x = 0; x < W; x += 24) {
+    const len = x % 120 === 0 ? 8 : 4
+    path.moveTo(x, 0); path.lineTo(x, len)
+    path.moveTo(x, H); path.lineTo(x, H - len)
+  }
+  for (let y = 0; y < H; y += 24) {
+    const len = y % 120 === 0 ? 8 : 4
+    path.moveTo(0, y); path.lineTo(len, y)
+    path.moveTo(W, y); path.lineTo(W - len, y)
+  }
+  tickPath = path
+  tickW = W
+  tickH = H
+  return path
+}
+
 export function drawSchematic(
   ctx: CanvasRenderingContext2D,
   state: BgState,
@@ -30,22 +53,11 @@ export function drawSchematic(
     }))
   }
 
-  // Edge ruler ticks - batched in one path
+  // Edge ruler ticks - cached static path, one stroke
   ctx.strokeStyle = pen
   ctx.lineWidth = 1
   ctx.globalAlpha = 0.05 * op * state.readerAlpha
-  ctx.beginPath()
-  for (let x = 0; x < W; x += 24) {
-    const len = x % 120 === 0 ? 8 : 4
-    ctx.moveTo(x, 0); ctx.lineTo(x, len)
-    ctx.moveTo(x, H); ctx.lineTo(x, H - len)
-  }
-  for (let y = 0; y < H; y += 24) {
-    const len = y % 120 === 0 ? 8 : 4
-    ctx.moveTo(0, y); ctx.lineTo(len, y)
-    ctx.moveTo(W, y); ctx.lineTo(W - len, y)
-  }
-  ctx.stroke()
+  ctx.stroke(getTickPath(W, H))
 
   ctx.font = "10px 'IBM Plex Mono', monospace"
   ctx.textAlign = "left"

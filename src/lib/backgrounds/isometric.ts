@@ -1,6 +1,18 @@
 import type { BgState } from "@/types/backgrounds"
 import type { SiteConfig } from "@/config/site-defaults"
 
+// Cube edges as vertex-index pairs (vertices differing in exactly one bit), and a
+// shared projected-vertex scratch buffer, so no per-cube/per-frame arrays are built.
+const CUBE_EDGES: number[] = []
+for (let i = 0; i < 8; i++) {
+  for (let b = 1; b <= 4; b <<= 1) {
+    const j = i | b
+    if (j > i) CUBE_EDGES.push(i, j)
+  }
+}
+const CUBE_VX = new Float64Array(8)
+const CUBE_VY = new Float64Array(8)
+
 export const GLYPH_POOL =
   "░▒▓█─│┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬■□●○◘▄▀▌▐«»¶§±≡≈∞ΩαβπΣφψχρλμνξ♠♣♥♦☺☻♪♫►◄▲▼◇◆◈✦✧⋆∂∆∅∈∝⟨⟩⊕⊗⊙↑↗→↘↓↙←↖⁰¹²³⁴⁵⁶⁷⁸⁹αβγδεζηθ"
 
@@ -48,25 +60,21 @@ export function drawIsometric(
     const cos = Math.cos(ang), sin = Math.sin(ang)
     const tilt = 0.42
 
-    // Precomputed vertices
-    const v: [number, number][] = []
+    // Projected vertices into the shared scratch buffers
     for (let i = 0; i < 8; i++) {
       const X = i & 1 ? 1 : -1, Y = i & 2 ? 1 : -1, Z = i & 4 ? 1 : -1
       const rx = X * cos - Z * sin
       const rz = X * sin + Z * cos
-      v.push([cx + rx * c.s, cy + Y * c.s * 0.8 + rz * c.s * tilt])
+      CUBE_VX[i] = cx + rx * c.s
+      CUBE_VY[i] = cy + Y * c.s * 0.8 + rz * c.s * tilt
     }
 
     ctx.globalAlpha = 0.07 * c.depth * op * state.readerAlpha
     ctx.beginPath()
-    for (let i = 0; i < 8; i++) {
-      for (let b = 1; b <= 4; b <<= 1) {
-        const j = i | b
-        if (j !== i && j > i) {
-          ctx.moveTo(v[i][0], v[i][1])
-          ctx.lineTo(v[j][0], v[j][1])
-        }
-      }
+    for (let e = 0; e < CUBE_EDGES.length; e += 2) {
+      const i = CUBE_EDGES[e], j = CUBE_EDGES[e + 1]
+      ctx.moveTo(CUBE_VX[i], CUBE_VY[i])
+      ctx.lineTo(CUBE_VX[j], CUBE_VY[j])
     }
     ctx.stroke()
 

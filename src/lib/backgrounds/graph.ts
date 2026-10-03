@@ -1,5 +1,39 @@
-import type { BgState } from "@/types/backgrounds"
+import type { BgState, GraphLink, GraphNode } from "@/types/backgrounds"
 import type { SiteConfig } from "@/config/site-defaults"
+
+// Link endpoints resolved once per graph load (node objects are stable and
+// mutated in place), instead of two string-keyed Map lookups per link per frame.
+interface ResolvedLinks {
+  links: GraphLink[]
+  src: GraphNode[]
+  dst: GraphNode[]
+  n: number
+  /** index in the original links array -> index in src/dst, or -1 if an endpoint is missing */
+  origToResolved: Int32Array
+}
+const resolvedCache = new WeakMap<Map<string, GraphNode>, ResolvedLinks>()
+
+function resolveLinks(links: GraphLink[], nodeMap: Map<string, GraphNode>): ResolvedLinks {
+  const cached = resolvedCache.get(nodeMap)
+  if (cached && cached.links === links) return cached
+  const src: GraphNode[] = []
+  const dst: GraphNode[] = []
+  const origToResolved = new Int32Array(links.length)
+  for (let i = 0; i < links.length; i++) {
+    const s = nodeMap.get(links[i].source)
+    const t = nodeMap.get(links[i].target)
+    if (s && t) {
+      origToResolved[i] = src.length
+      src.push(s)
+      dst.push(t)
+    } else {
+      origToResolved[i] = -1
+    }
+  }
+  const out = { links, src, dst, n: src.length, origToResolved }
+  resolvedCache.set(nodeMap, out)
+  return out
+}
 
 // ── Living Knowledge Graph background ──
 // An ambient, living constellation network of notes and ideas.
@@ -64,15 +98,14 @@ export function drawGraph(
   ctx.strokeStyle = color
   ctx.lineWidth = p.linkWidth || 1
 
+  const { src, dst, n: linkCount, origToResolved } = resolveLinks(links, nodeMap)
+
   ctx.beginPath()
-  for (let i = 0; i < links.length; i++) {
-    const l = links[i]
-    const s = nodeMap.get(l.source)
-    const t = nodeMap.get(l.target)
-    if (s && t) {
-      ctx.moveTo(s.x, s.y)
-      ctx.lineTo(t.x, t.y)
-    }
+  for (let i = 0; i < linkCount; i++) {
+    const s = src[i]
+    const t = dst[i]
+    ctx.moveTo(s.x, s.y)
+    ctx.lineTo(t.x, t.y)
   }
   ctx.stroke()
 
@@ -84,10 +117,10 @@ export function drawGraph(
   ctx.beginPath()
   const linkStep = Math.max(1, Math.floor(links.length / 40)) // limit active pulses to ~40 at once
   for (let i = 0; i < links.length; i += linkStep) {
-    const l = links[i]
-    const s = nodeMap.get(l.source)
-    const t = nodeMap.get(l.target)
-    if (s && t) {
+    const k = origToResolved[i]
+    if (k >= 0) {
+      const s = src[k]
+      const t = dst[k]
       // Progress along edge from 0 to 1
       const progress = ((now * 0.25 + (i * 0.17)) % 1.0)
       const px = s.x + (t.x - s.x) * progress

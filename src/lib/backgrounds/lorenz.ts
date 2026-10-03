@@ -135,13 +135,17 @@ export function drawLorenz(
   ctx.beginPath()
   let first = true
 
-  // Loop from oldest point to newest point
+  const history = ls.history
+  const zShift = flowType === 0 ? 25 : 0 // Center Lorenz z-axis
+  // Loop from oldest point to newest point; the ring index wraps by compare, not modulo
+  let offset = ((ls.head - trailCount + MAX_TRAIL) % MAX_TRAIL) * 3
+  const ringEnd = MAX_TRAIL * 3
   for (let i = 0; i < trailCount; i++) {
-    const ptIdx = (ls.head - trailCount + i + MAX_TRAIL) % MAX_TRAIL
-    const offset = ptIdx * 3
-    const px = ls.history[offset]
-    const py = ls.history[offset + 1]
-    const pz = ls.history[offset + 2] - (flowType === 0 ? 25 : 0) // Center Lorenz z-axis
+    const px = history[offset]
+    const py = history[offset + 1]
+    const pz = history[offset + 2] - zShift
+    offset += 3
+    if (offset >= ringEnd) offset = 0
 
     // 3D rotation around Y and X
     const rx = px * cosT - py * sinT

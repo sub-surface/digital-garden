@@ -34,6 +34,45 @@ export function spawnTree(state: BgState, color: string): DendriteTree {
   }
 }
 
+// Persistent trunk/capillary paths. Segments are append-only, so each frame only
+// the newly grown segments are added; the path is rebuilt from scratch only when
+// a tree is recycled / the tree set changes (rare) rather than re-walking every
+// segment of every tree each frame.
+interface ArborCache {
+  trunk: Path2D
+  capillary: Path2D
+  trees: DendriteTree[]
+  cursors: number[]
+  list: DendriteTree[]
+}
+const arborCache = new WeakMap<BgState, ArborCache>()
+
+function syncArbor(state: BgState): ArborCache {
+  const trees = state.dendrites
+  let c = arborCache.get(state)
+  let valid = !!c && c.list === trees && c.trees.length === trees.length
+  if (valid && c) {
+    for (let i = 0; i < trees.length; i++) {
+      if (c.trees[i] !== trees[i] || c.cursors[i] > trees[i].segments.length) { valid = false; break }
+    }
+  }
+  if (!valid || !c) {
+    c = { trunk: new Path2D(), capillary: new Path2D(), trees: trees.slice(), cursors: trees.map(() => 0), list: trees }
+    arborCache.set(state, c)
+  }
+  for (let i = 0; i < trees.length; i++) {
+    const segs = trees[i].segments
+    for (let s = c.cursors[i]; s < segs.length; s++) {
+      const seg = segs[s]
+      const target = seg.depth <= 2 ? c.trunk : c.capillary
+      target.moveTo(seg.x1, seg.y1)
+      target.lineTo(seg.x2, seg.y2)
+    }
+    c.cursors[i] = segs.length
+  }
+  return c
+}
+
 export function drawDendrite(
   ctx: CanvasRenderingContext2D,
   state: BgState,
@@ -61,9 +100,6 @@ export function drawDendrite(
     state.dendrites.length = targetCount
   }
 
-  // Pre-batching paths: trunk (depth <= 2) and capillaries (depth > 2)
-  const trunkPath = new Path2D()
-  const capillaryPath = new Path2D()
   const boutons: Array<{ x: number; y: number; r: number }> = []
 
   for (let tIdx = 0; tIdx < state.dendrites.length; tIdx++) {
@@ -132,15 +168,6 @@ export function drawDendrite(
       treeAlpha = Math.max(0, (tree.maxAge - tree.age) / 60)
     }
 
-    // 3. Accumulate paths
-    const segs = tree.segments
-    for (let sIdx = 0; sIdx < segs.length; sIdx++) {
-      const s = segs[sIdx]
-      const target = s.depth <= 2 ? trunkPath : capillaryPath
-      target.moveTo(s.x1, s.y1)
-      target.lineTo(s.x2, s.y2)
-    }
-
     // Recycle tree once fully aged
     if (tree.age >= tree.maxAge) {
       const col = pal[tIdx % pal.length] || state.colorCache.secondary
@@ -148,16 +175,19 @@ export function drawDendrite(
     }
   }
 
+  // 3. Sync incremental trunk (depth <= 2) / capillary (depth > 2) paths
+  const arbor = syncArbor(state)
+
   // 4. Render batched arbor
   ctx.strokeStyle = state.colorCache.secondary
 
   ctx.lineWidth = 1.8
   ctx.globalAlpha = baseAlpha * 0.9
-  ctx.stroke(trunkPath)
+  ctx.stroke(arbor.trunk)
 
   ctx.lineWidth = 0.9
   ctx.globalAlpha = baseAlpha * 0.6
-  ctx.stroke(capillaryPath)
+  ctx.stroke(arbor.capillary)
 
   // 5. Render synaptic bouton points
   if (boutons.length > 0) {

@@ -49,6 +49,11 @@ export function buildPlate(state: BgState, cell: number): HTMLCanvasElement {
   return off
 }
 
+// The scanline gradient is identical every frame (only its y offset changes), so it
+// is built once per colour at the origin and positioned with a translate.
+let scanGrad: CanvasGradient | null = null
+let scanGradColor = ""
+
 export function drawPlateScan(
   ctx: CanvasRenderingContext2D,
   state: BgState,
@@ -81,12 +86,17 @@ export function drawPlateScan(
 
   // Scanline sweep
   const sy = ((now * 26 * scanSpeed) % (H * 1.4)) - H * 0.2
-  const grad = ctx.createLinearGradient(0, sy - 40, 0, sy + 40)
-  grad.addColorStop(0, "transparent")
-  grad.addColorStop(0.5, state.colorCache.secondary)
-  grad.addColorStop(1, "transparent")
+  if (!scanGrad || scanGradColor !== state.colorCache.secondary) {
+    scanGrad = ctx.createLinearGradient(0, 0, 0, 80)
+    scanGrad.addColorStop(0, "transparent")
+    scanGrad.addColorStop(0.5, state.colorCache.secondary)
+    scanGrad.addColorStop(1, "transparent")
+    scanGradColor = state.colorCache.secondary
+  }
   ctx.globalAlpha = 0.05 * op * state.readerAlpha
-  ctx.fillStyle = grad
-  ctx.fillRect(0, sy - 40, W, 80)
+  ctx.fillStyle = scanGrad
+  ctx.translate(0, sy - 40)
+  ctx.fillRect(0, 0, W, 80)
+  ctx.translate(0, 40 - sy)
   ctx.globalAlpha = 1
 }

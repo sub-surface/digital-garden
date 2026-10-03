@@ -144,7 +144,7 @@ export function drawMurmuration(
     }
 
     // Clamp speed
-    let sp = Math.hypot(b.vx, b.vy)
+    let sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy)
     if (sp > maxSpeed) {
       b.vx = (b.vx / sp) * maxSpeed
       b.vy = (b.vy / sp) * maxSpeed
