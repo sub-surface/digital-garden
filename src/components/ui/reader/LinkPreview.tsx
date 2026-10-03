@@ -91,6 +91,23 @@ function extractFirstImage(md: string): string {
   return ""
 }
 
+/**
+ * Resolve an internal link exactly as the browser will, and keep it only if it
+ * stays on this origin. Regex checks lose to the URL parser: `/\host` and
+ * `/\/host` normalise to `//host` (backslash is a slash in http URLs), and the
+ * parser also strips tabs/newlines. Returning the parsed path means the href we
+ * emit is the one the browser actually navigates to.
+ */
+function sameOriginPath(path: string): string | null {
+  try {
+    const url = new URL(path, window.location.origin)
+    if (url.origin !== window.location.origin) return null
+    return url.pathname + url.search + url.hash
+  } catch {
+    return null
+  }
+}
+
 // Convert markdown body to HTML with wikilinks/md-links as <a> tags, strip other formatting.
 // The result goes through dangerouslySetInnerHTML, and wiki notes are user-submitted, so
 // the source is ESCAPED FIRST and the markup below is the only HTML that can appear.
@@ -104,16 +121,16 @@ function mdToBodyHtml(md: string): string {
   if (src.length > 600) src = src.slice(0, 600).replace(/\s\S*$/, "")
   return escapeHtml(src)
     .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target: string, alias?: string) => {
-      // Strip leading slashes: "/" + "/evil.com" would be a protocol-relative,
-      // off-site link wearing the internal-link style.
-      const href = "/" + target.trim().replace(/^\/+/, "").replace(/\s+/g, "-")
-      return `<a href="${escapeAttr(href)}" class="internal-link">${alias || target}</a>`
+      const label = alias || target
+      const href = sameOriginPath("/" + target.trim().replace(/\s+/g, "-"))
+      return href ? `<a href="${escapeAttr(href)}" class="internal-link">${label}</a>` : label
     })
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, label: string, href: string) =>
       `<a href="${escapeAttr(href)}" class="external-link" target="_blank" rel="noopener">${label}</a>`)
-    // Site-relative only: `(?!\/)` rejects `//host` protocol-relative URLs.
-    .replace(/\[([^\]]+)\]\(\/(?!\/)([^)\s]+)\)/g, (_, label: string, href: string) =>
-      `<a href="/${escapeAttr(href)}" class="internal-link">${label}</a>`)
+    .replace(/\[([^\]]+)\]\((\/[^)\s]+)\)/g, (_, label: string, path: string) => {
+      const href = sameOriginPath(path)
+      return href ? `<a href="${escapeAttr(href)}" class="internal-link">${label}</a>` : label
+    })
     .replace(/^#{1,6}\s+(.+)$/gm, "<strong>$1</strong>")  // headings → bold
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
