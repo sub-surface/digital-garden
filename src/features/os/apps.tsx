@@ -1029,7 +1029,7 @@ export function FloppyApp() {
 
 // ---------------------------------------------------------------------------
 // Recycle Bin — where `draft: true` notes live. The content policy is the
-// puzzle; see docs/os-95-spec.md §8.3.
+// puzzle; see docs/archive/specs/os-95-spec.md §8.3.
 // ---------------------------------------------------------------------------
 
 export function BinApp() {

@@ -15,7 +15,7 @@ Custom React 19 + Vite 6 SPA. A digital garden (notes, essays, collections) at `
 ## Commands
 
 ```bash
-npm run dev          # prebuild + Vite HMR + nodemon watching content/
+npm run dev          # prebuild + Vite HMR + nodemon watching content/ + wrangler dev on :8787 (scripts/dev.mjs)
 npm run dev:os       # same stack, forced into the SUBSURFACES 95 shell
 npm run build        # prebuild (via npm lifecycle) + tsc --noEmit + vite build → dist/
 npm test             # script checks + Vitest/RTL interaction tests + OG/package invariants
@@ -45,9 +45,9 @@ Dev dashboard: `/__dev` (dev mode only).
 | `content/Media/` | Images, audio | Yes |
 | `src/content/` | **Auto-generated** by prebuild | **NO** |
 | `src/components/layout/` | AppShell, WikiShell, TerminalTitle, CornerMenu, ThemePanel, QuickControls, BgCanvas | Yes |
-| `src/components/ui/` | Page + feature components, grouped: `chat/ wiki/ reader/ games/ shelves/ graph/ music/ overlays/` + small shared bits flat | Yes |
+| `src/components/ui/` | Page + feature components, grouped: `chat/ wiki/ reader/ games/ shelves/ graph/ music/ overlays/ composer/` + small shared bits flat | Yes |
 | `src/components/panel/` | PanelStack, PanelCard, usePanelClick | Yes |
-| `src/features/boot/` | Reusable terminal/POST generators, playback, audio, seed and chatbot helpers (the old BootPage is retired) | Yes |
+| `src/features/boot/` | Reusable terminal/POST generators, playback, seed, rng, markdown and chatbot helpers (the old BootPage is retired) | Yes |
 | `src/features/terminal/` | Shared terminal for `/terminal`, Ctrl/Cmd+P, OS Prompt and DOS mode | Yes |
 | `src/features/os/` | SUBSURFACES 95 shell, window/store primitives, metadata-only lazy app registry and program implementations | Yes |
 | `src/components/mdx/` | MDXProvider + registered components | Yes |
@@ -57,7 +57,7 @@ Dev dashboard: `/__dev` (dev mode only).
 | `src/router.tsx` | Hand-written route tree (not file-based) | Yes |
 | `src/config/system-pages-meta.ts` | Pure system-page slug → title/layout/date metadata (safe for prebuild) | Yes |
 | `src/config/system-pages.ts` | React component registry joined onto system-page metadata | Yes |
-| `src/worker.ts` | Cloudflare Worker entry: API routes + asset/meta handling (`tsconfig.worker.json`) | Yes |
+| `src/worker/` | Cloudflare Worker: `index.ts` route table + one module per area (`src/worker.ts` is a one-line re-export; `tsconfig.worker.json`) | Yes |
 | `scripts/` | prebuild.ts, og-gen.ts, test-*.ts, dash.mjs (NOT type-checked by tsconfig) | Yes |
 | `public/` | Static assets + generated manifests | Manifests are generated |
 | `docs/` | Living docs; `docs/migrations/` (SQL), `docs/devlog/` (session logs), `docs/archive/` (shipped/superseded specs — reference only) | Yes |
@@ -144,9 +144,9 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 - **Platform:** Cloudflare Workers (not Pages, despite project name)
 - **Trigger:** Push to `master` → CF auto-build
 - **Build output:** `dist/`
-- **SPA routing:** `wrangler.toml` `[assets]` block + `public/_redirects` (`/* /index.html 200`)
+- **SPA routing:** `wrangler.toml` `[assets]` block (`not_found_handling = "single-page-application"`, `run_worker_first = true`)
 - **Custom domains:** `subsurfaces.net`, `www.subsurfaces.net`, `wiki.subsurfaces.net`, `chat.subsurfaces.net`, `os.subsurfaces.net` (Worker custom domains)
-- **Worker/API:** `src/worker.ts` — one Cloudflare Worker serves API routes, static assets, and per-route OG/meta injection. Excluded from the Vite SPA build and `tsconfig.json`; compiled by Wrangler/CF and type-checked via `tsconfig.worker.json`.
+- **Worker/API:** `src/worker/index.ts` — one Cloudflare Worker serves API routes, static assets, and per-route OG/meta injection. Excluded from the Vite SPA build and `tsconfig.json`; compiled by Wrangler/CF and type-checked via `tsconfig.worker.json`.
 
 ### Worker architecture (src/worker/)
 
@@ -154,6 +154,7 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 
 - **Auth:** resolved once per request (`verifyAuth`, cached in-isolate ~60s per bearer token); handlers receive the user via `ctx.auth`. Call `invalidateAuthCache(userId)` after profile mutations.
 - **Error boundary:** a thrown handler becomes a logged JSON 500 with a short `requestId` (correlate user reports with `wrangler tail`).
+- **Handler helpers (`lib.ts`):** `readJson<T>(request)` (returns a 400 `Response` on malformed bodies — `if (body instanceof Response) return body`), `isUuid()` before interpolating any client-supplied id into a PostgREST filter, `verifyTurnstile()` (fails closed). Wiki PRs go through `openPullRequest()` in `wiki.ts`, which deletes its branch on failure; `/api/edit` resolves the file via the content index's `contentPath` (GitHub paths are case-sensitive).
 - **CORS + security headers:** applied to every `/api` response by `applyApiHeaders` (origin allowlist in `lib.ts`). Handlers return plain `jsonResponse(...)`.
 - **Rate limiting:** write methods are limited per user/IP via the `WRITE_LIMITER` binding (wrangler.toml); absent binding = no-op (dev).
 - **Background work:** anything after the response (identity propagation, bookkeeping) MUST go through `ctx.waitUntil(...)` or the runtime may cancel it.
@@ -168,12 +169,12 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 ## Gotchas (read these)
 
 1. **`src/content/` is wiped on every prebuild.** Never edit files there. It is also **gitignored** (ROADMAP §28.14) — it used to be tracked, which made 167 derived files look like source and invited edits the next prebuild silently destroyed. Same policy for every prebuild-generated manifest in `public/`; the only committed exceptions are `public/music.json` (written by `npm run sync:music`) and `public/og/` (see #20).
-2. **`usePanelClick`** intercepts all internal link clicks at capture phase. Hash-only links (`#heading`) are skipped. `isWiki` bail-out added — wiki lets all links navigate normally.
+2. **`usePanelClick`** intercepts all internal link clicks at capture phase. Hash-only links (`#heading`) are skipped. `shell !== "main"` bail-out — wiki/chat/os let all links navigate normally.
 3. **`BgCanvas` is z-index 0.** All containers must be `background: transparent`. Global bg color on `body` only.
 4. **`import.meta.glob` is build-time.** New content files need a rebuild. `npm run dev` watches automatically.
-5. **`src/worker.ts` is NOT in the Vite SPA build.** Excluded from `tsconfig.json`; compiled by Wrangler/CF. VS Code errors against it are ignorable — type-check it with `npm run typecheck:worker`.
+5. **`src/worker/` is NOT in the Vite SPA build.** Excluded from `tsconfig.json`; compiled by Wrangler/CF. VS Code errors against it are ignorable — type-check it with `npm run typecheck:worker`.
 6. **System pages use a paired registry.** Add pure title/layout/date metadata in `src/config/system-pages-meta.ts` and the matching lazy React component in `src/config/system-pages.ts`; `scripts/test-layout.ts` enforces key parity. Add content-driven layout rules only in `src/lib/layout.ts`'s `classifyLayout()`.
-7. **Sidenote footnotes — two plugins, two pipelines, never both at once.** `remark-sidenotes.ts` is the one that matters for published notes — wired into `vite.config.ts`'s MDX build. It converts footnote identifiers to sequential Roman numerals for display (the `[^bateson]`-style identifier is just an internal key, never shown to readers), and inserts the checkbox/label/aside triplet as siblings of the nearest *block* ancestor rather than inline — an `<aside>` can't legally nest inside a `<p>`/heading, and letting the HTML parser silently hoist it out breaks the CSS `:checked + label + aside` sibling chain the narrow-viewport toggle depends on. `rehype-sidenotes-runtime.ts` is unrelated to that pipeline — it's only for `markdown.ts`'s standalone runtime `unified()` processor (LinkPreview hover, WikiEditPage live preview, terminal document rendering), which unwraps the first `<p>` inside footnote definitions. Don't wrap sidenote content in block elements there either.
+7. **Sidenote footnotes — two plugins, two pipelines, never both at once.** `remark-sidenotes.ts` is the one that matters for published notes — wired into `vite.config.ts`'s MDX build. It converts footnote identifiers to sequential Roman numerals for display (the `[^bateson]`-style identifier is just an internal key, never shown to readers), and inserts the checkbox/label/aside triplet as siblings of the nearest *block* ancestor rather than inline — an `<aside>` can't legally nest inside a `<p>`/heading, and letting the HTML parser silently hoist it out breaks the CSS `:checked + label + aside` sibling chain the narrow-viewport toggle depends on. `rehype-sidenotes-runtime.ts` is unrelated to that pipeline — it's only for `markdown.ts`'s standalone `unified()` processor — now build-time only (`scripts/emit-prerender.ts`, `scripts/test-math.ts`); LinkPreview does its own escaped regex rendering — which unwraps the first `<p>` inside footnote definitions. Don't wrap sidenote content in block elements there either.
 8. **Case sensitivity:** Routes are case-insensitive at runtime. CF is case-sensitive for static assets — keep media filenames consistent. This bit us for real once: `og:image` was built from the *request* casing, so `/Abbas` got a working card and `/abbas` a 404 (ROADMAP §28.16). Any static path derived from a slug must go through a single canonical casing — `ogCardName()` in `src/lib/slug.ts` is the pattern (lowercase, shared by both generators, the Worker, and the guard).
 9. **Graph route** exists as both a dedicated route AND a NoteRenderer system page. Dedicated route wins via router specificity.
 10. **MDX content files use JSX syntax for inline HTML.** Use `className` not `class`, `htmlFor` not `for`, etc. in any raw HTML inside `.md`/`.mdx` files — they are compiled as JSX by `@mdx-js/rollup`.
@@ -220,7 +221,7 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 --color-bg: #0a0a0a            // OLED dark
 --color-bg-surface: #1a1a1f
 --color-text: #e0e0e0
---color-accent-base: #b4424c   // User-configurable, ROYGBIV cycle, localStorage
+--color-accent-base: #427ab4   // User-configurable, ROYGBIV cycle, localStorage
 --font-header: "Playfair Display", serif
 --font-body: "IBM Plex Sans", sans-serif
 --font-code: "IBM Plex Mono", monospace

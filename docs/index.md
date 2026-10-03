@@ -1,36 +1,35 @@
-# Digital Garden — Docs
+# Docs
 
-Custom React 19 + Vite 6 SPA serving four domains: `subsurfaces.net` (garden), `wiki.subsurfaces.net` (wiki), `chat.subsurfaces.net` (chat), and `os.subsurfaces.net` (boot TUI). Deployed as a Cloudflare Worker. All shells share a single codebase and Supabase instance; dependencies flow strictly downward (garden → wiki → chat — nothing flows upward).
-
-**Agent/dev quick-start lives in [`../CLAUDE.md`](../CLAUDE.md)** — commands, directory map, gotchas. This folder holds the deeper reference material.
-
----
+Custom React 19 + Vite 6 SPA on one Cloudflare Worker, serving four hostnames from one codebase:
+`subsurfaces.net` (garden), `wiki.`, `chat.` and `os.` (SUBSURFACES 95). Dev quick-start, commands
+and gotchas are in [`../CLAUDE.md`](../CLAUDE.md); the one list of outstanding work is
+[`../ROADMAP.md`](../ROADMAP.md). Docs describe the current system; superseded material goes to `archive/`.
 
 ## Living docs
 
-| File | Description |
+| File | Read it for |
 |---|---|
-| [../ROADMAP.md](../ROADMAP.md) | **Consolidated outstanding work.** Start here for "what's next". |
-| [../CHAT-API.md](../CHAT-API.md) | Public REST API reference for third-party chat clients/bots (split out of README 2026-07-12) |
-| [architecture.md](architecture.md) | Shell system, layering rules, domain routing, build pipeline |
-| [garden.md](garden.md) | Garden (`subsurfaces.net`) — platform, layout, features, content, UX |
-| [wiki.md](wiki.md) | Wiki (`wiki.subsurfaces.net`) — infrastructure, submission, contributor experience |
-| [chat.md](chat.md) | Chat (`chat.subsurfaces.net`) — chat + identity (stonks removed 2026-07) |
-| [infrastructure.md](infrastructure.md) | OG gen, performance, security headers, legal |
-| [music-workflow.md](music-workflow.md) | Music pipeline — SoundCloud → `npm run sync:music` → R2 → `music.json` |
-| [future.md](future.md) | Full per-domain backlog (detail backer for ROADMAP) |
-| [templeos-boot-ideas.md](templeos-boot-ideas.md) | Idea bank for `/boot` TUI easter eggs |
+| [../ROADMAP.md](../ROADMAP.md) | Everything not yet built, grouped by area. Start here for "what's next". |
+| [architecture.md](architecture.md) | Shells, layering, Worker, build pipeline, pre-rendering, backgrounds, headers/OG/perf, Supabase data. |
+| [garden.md](garden.md) | Main-site reading model, authoring syntax, MDX components, features, games. |
+| [wiki.md](wiki.md) | Wiki content rules, submit/edit flow, accounts and roles, claims, admin panel. |
+| [chat.md](chat.md) | Chat UI and backend, identity denormalisation, moderation, bots, terminal mode. |
+| [../CHAT-API.md](../CHAT-API.md) | Public REST contract for third-party chat clients and bots. |
+| [os.md](os.md) | SUBSURFACES 95 desktop, window manager, programs, terminal, persistence contracts. |
+| [apparatus.md](apparatus.md) | The generative plate composer: layers, registries, determinism, how to extend. |
+| [music-workflow.md](music-workflow.md) | SoundCloud to R2 to `public/music.json`, and how the site plays it. |
 
 ## Records
 
-| Folder | Description |
+| Folder | Contents |
 |---|---|
-| [migrations/](migrations/) | Database schema changes (SQL, run via Supabase SQL Editor or MCP). One file per change, dated. |
-| [devlog/](devlog/README.md) | Session logs (YAML, schema in the README) |
-| [archive/](archive/) | Historical specs, plans, and mockups for **shipped or superseded** work — including the boot-page specs, chamber/SIGIL spec, chess/arcade/chat design docs, and the old iteration-spec (superseded by ROADMAP.md). Reference, never edit. |
+| [migrations/](migrations/) | Dated SQL for schema changes, applied by hand in the Supabase SQL Editor (REST cannot run DDL). Historical; never edit. |
+| [devlog/](devlog/README.md) | One log per work session (YAML, schema in its README). History; not rewritten. |
+| [archive/](archive/) | Shipped or superseded specs and plans, including the full OS-95, composer, SSG, boot-page, chamber/SIGIL, chess/arcade and chat design docs, the old iteration spec and the shipped-milestones record. Reference only. |
 
 ## Conventions
 
-- New DB change → SQL file in `migrations/`, dated (`YYYY-MM-<topic>.sql`), applied via SQL Editor/MCP (REST can't do DDL).
-- New build spec arriving from outside → drop it in `archive/specs/` once built; link it from the ROADMAP item it spawned.
-- Docs describe the *current* system; superseded material moves to `archive/` rather than being rewritten in place.
+- New DB change: dated `migrations/YYYY-MM-<topic>.sql`.
+- Finished build spec: move it to `archive/specs/`, summarise what is still true in a living doc, and put any unbuilt ideas in the ROADMAP.
+- Do not duplicate: commands and gotchas live in `CLAUDE.md`, API contracts in `CHAT-API.md`, backlog only in the ROADMAP.
+- Never edit `content/` (the owner's writing) without asking; never edit `src/content/` (generated).

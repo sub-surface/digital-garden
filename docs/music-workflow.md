@@ -133,7 +133,7 @@ npx wrangler r2 object put "subsurfaces-music/covers/track-name.png" --file cove
 ```
 
 ```jsonc
-// public/music.json — append an object
+// public/music.json: append an object (sync:music also writes scId, scUrl, year, duration)
 {
   "title": "Track Name",
   "artist": "m0rvidd",
@@ -147,21 +147,22 @@ npx wrangler r2 object put "subsurfaces-music/covers/track-name.png" --file cove
 
 ## How the site consumes it
 
-- `MusicProvider` (`src/components/ui/MusicContext.tsx`) fetches `/music.json`
-  at runtime and drives a single `<audio>` element + Web Audio analyser.
-- `MusicPage`, `MusicPlayer`, `MusicBar`, `MobileMusicBar` all read from that
-  context — they don't care where the audio is hosted.
-- `music:Track Title` links (case-insensitive title match) play a track and open
-  the player from anywhere in the garden; handled in `NoteBody`.
-- A track may **optionally** have a backing note at its slug
-  (`content/Music/<name>.md`) for liner notes — the `/music` page links to it
-  only if it exists. The note is no longer required for a track to appear.
-- `prebuild` no longer generates `music.json`; `sync:music` owns it.
-
----
+- `MusicProvider` (`src/components/ui/music/MusicContext.tsx`, mounted once in `main.tsx`) fetches
+  `/music.json` and drives the single streaming-deck audio graph plus analyser. `MusicPage`,
+  `MusicPlayer`, `MusicBar`, `MobileMusicBar` and the OS Media Player all read that context; none own playback.
+- R2 URLs in the manifest are rewritten by `musicAssetUrl()` (`src/lib/musicAsset.ts`) to the
+  same-origin, range-aware Worker route `/api/music/(audio|covers)/<file>` (`src/worker/media.ts`), so
+  Web Audio works on every subdomain regardless of R2's per-host CORS. If you change the R2 public
+  base, update the constant in both `musicAsset.ts` and `media.ts`.
+- `music:Track Title` links (case-insensitive title match) play a track and open the player from
+  anywhere; handled in `NoteBody` only.
+- A track may optionally have a liner-notes note at `content/Music/<name>.md`; the `/music` page links
+  to it only if it exists.
+- `prebuild` never generates `music.json` (it only seeds `[]` if missing); `sync:music` owns it, and it
+  is committed.
 
 ## Tooling
 
-Requires `yt-dlp`, `ffmpeg`/`ffprobe`, and `wrangler` (logged in). On this
-machine they're installed via winget; the sync script resolves them from the
-winget Links dir if they're not on `PATH`.
+Requires `yt-dlp`, `ffmpeg`/`ffprobe`, and `wrangler` (logged in). On the owner's Windows machine they
+come from winget; the script resolves them from the winget Links dir if they are not on `PATH`.
+`R2_PUBLIC_BASE` defaults to the committed r2.dev URL if the env var is unset.

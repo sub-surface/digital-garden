@@ -2,7 +2,7 @@
  * Root of SUBSURFACES 95 — os.subsurfaces.net.
  *
  * State machine: post → splash → desktop, plus an escape hatch to the original
- * endless TUI. See docs/os-95-spec.md.
+ * endless TUI. See docs/archive/specs/os-95-spec.md.
  */
 
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"

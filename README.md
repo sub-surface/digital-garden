@@ -3,14 +3,14 @@
 A digital garden — notes, essays, philosophy, music, photography, and a growing collection of
 games and generative toys, wired together as one explorable, non-linear site.
 
-**Garden:** [subsurfaces.net](https://subsurfaces.net) · **Arcade:** [subsurfaces.net/arcade](https://subsurfaces.net/arcade) · **Wiki:** [wiki.subsurfaces.net](https://wiki.subsurfaces.net) · **Chat:** [chat.subsurfaces.net](https://chat.subsurfaces.net) · **Boot TUI:** [os.subsurfaces.net](https://os.subsurfaces.net)
+**Garden:** [subsurfaces.net](https://subsurfaces.net) · **Arcade:** [subsurfaces.net/arcade](https://subsurfaces.net/arcade) · **Wiki:** [wiki.subsurfaces.net](https://wiki.subsurfaces.net) · **Chat:** [chat.subsurfaces.net](https://chat.subsurfaces.net) · **OS:** [os.subsurfaces.net](https://os.subsurfaces.net)
 
 ---
 
 ## What's here
 
-A non-linear, explorable knowledge base with 100+ interconnected notes, essays, and reading
-lists. Two reading modes: article (long-form, margin sidenotes, footnotes) and note (panel
+A non-linear, explorable knowledge base of several hundred interconnected notes, essays, and
+reading lists. Two reading modes: article (long-form, margin sidenotes, footnotes) and note (panel
 stacking for exploration). An interactive knowledge graph, a vinyl-style music player, and
 animated backgrounds you can cycle or theme.
 
@@ -28,9 +28,10 @@ sandbox, ant farm, and more). Plus two original games with their own research th
 **Generative art:** [Apparatus](https://subsurfaces.net/apparatus) is a plate composer — armatures
 × motifs × eras combine into one-off generative compositions, rendered live as SVG.
 
-**`/boot`** (also the whole of `os.subsurfaces.net`) is a self-contained, endlessly-generated
-terminal boot sequence — a TUI easter egg with its own procedural text generators and ambient
-audio.
+**SUBSURFACES 95** ([os.subsurfaces.net](https://os.subsurfaces.net)) is a Win95-style windowed desktop
+that is a second reading interface for the garden: notes, games, a media player, local files,
+Paint and a pet, all in draggable windows. The shared procedural **terminal** (`/terminal`, or
+Ctrl+P anywhere) powers its MS-DOS Prompt and also runs on the main site.
 
 The wiki at `wiki.subsurfaces.net` is a community space for the philchat Discord — profiles,
 philosophical positions, and collaborative articles, with accounts, moderation, and edit history.
@@ -83,12 +84,12 @@ npm run dev
 
 Content lives in `content/`. Drop a `.md` file with a `title` in frontmatter and it's live.
 
-See `CLAUDE.md` for the full developer reference.
+See `CLAUDE.md` for the developer reference and `docs/index.md` for the docs map.
 
 ## Stack
 
-React 19, Vite 6, TanStack Router, MDX, Zustand, SCSS modules. D3 + PixiJS for the knowledge
-graph. FlexSearch for search. Deployed on Cloudflare Workers.
+React 19, Vite 6, TanStack Router, MDX, Zustand, SCSS modules. D3 + Canvas 2D for the knowledge
+graph. FlexSearch for search. Supabase for auth and chat. Deployed as a Cloudflare Worker.
 
 ## License
 

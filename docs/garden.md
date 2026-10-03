@@ -1,161 +1,37 @@
-# Garden — subsurfaces.net
+# Garden (subsurfaces.net)
 
-## Core Platform
+Feature reference for the main site. Outstanding work is in [`../ROADMAP.md`](../ROADMAP.md).
 
-- [x] React 19 + Vite 6 + TanStack Router + Zustand + SCSS modules
-- [x] MDX build-time compilation via `@mdx-js/rollup` (120 notes)
-- [x] Prebuild pipeline: content-index, graph, slug-map, music, folders, photography manifests
-- [x] Catch-all routing with system page slugs (graph, chess, photography, bookshelf, movieshelf, music-library)
-- [x] CF Workers deployment with custom domains (subsurfaces.net, www, wiki, chat)
+## Reading model
 
----
+- **Layout** is decided by `classifyLayout()` (`src/lib/layout.ts`): frontmatter `layout` wins, then `type` book/movie/chatter/philosopher, then `wiki/` and `writing/` slug prefixes, then system-page metadata, else note.
+- **Article layout**: 900px body, right margin column (TOC and Tufte sidenotes above the `$article-narrow` width, checkbox toggle below it), `WikiInfobox` for chatter/philosopher types, breadcrumbs, reading time, bookmark button, `data-article-kind` ("essay" vs "wiki") for typography. Reader mode keeps the grid and drives the prose track from `--reader-measure`; its controls live in the ThemePanel Reader tab (`\`).
+- **Note layout**: exploration mode. Internal links open stacked panel cards (`usePanelClick`, `PanelStack`); article/game destinations and all mobile navigation use client-side `navigate()` so music keeps playing. Hover previews (`LinkPreview`) fetch `public/content/*.md` raw copies, recurse to depth 4, and have an OPEN button that pushes a card; they are disabled on touch.
+- **Backlinks, tags, folders, `/recent`, Inbox, random note (`r`)** are derived from `content-index.json`.
 
-## Layout System
+## Authoring syntax
 
-- [x] Article layout: 900px body, Tufte-style sidenotes, TOC, WikiInfobox for chatter/philosopher types
-- [x] Note layout: exploration mode, panel stacking, link previews
-- [x] Layout auto-resolution: frontmatter → type → slug prefix → default
-- [x] `NoteRenderer` + `NoteBody` unified content loading
+- `[[wikilinks]]` (aliases from frontmatter `aliases`; fragments stripped before slugging), `![[Note]]` / `![[Note#Section]]` transclusion (depth limit 2), `![[image]]`, Obsidian callouts (`> [!type]`), `[^n]` footnotes rendered as Roman-numeral sidenotes, telescopic text (`remark-telescopic`), KaTeX math (`$...$`, `$$...$$`).
+- MDX components registered in `MDXProvider.tsx` (and passed explicitly in `NoteBody`): `Query` (dataview-lite: `filter`, `sort`, `limit`, `display=list|grid|table`, layout pills), `BookCard`, `MovieCard`, `Gallery`, `PhotoAlbums`, `EmbedGraph` (BFS neighbourhood via `src/lib/graph-filter.ts`; `WikiGraph` is an alias defaulting to the wiki scope), `GameOfLife`, `OnThisDay`, `AsciiAvatar`, `Epigraph`, `WikiSubmitForm`, plus the wiki editorial set (`ChatterCard`, `ConceptCard`, `ChronicleCard`, `Clipping`, `Classifieds`, `BroadsheetColumns`, `FactionTree`, `MachineGod`, `Tape`, `WeighIn`, `ChuckleRating`).
+- Raw HTML in `.md` is compiled as JSX (`className`, not `class`).
+- Frontmatter extras: `image`/`cover`/`poster` (OG + header), `description`, `published`, `draft`, `private`, `date`, `layout`, `type`, `username` (chatter claim key), `aliases`.
+- Feeds: `rss.xml` (Writing/ or `published: true`) and `wiki-rss.xml`; `sitemap.xml`; `robots.txt`.
 
----
+## Platform features
 
-## Shell & Navigation
+- **Backgrounds** (13 modes, ThemePanel `\`, hotkey `b`): see architecture.md. Theme: dark/light plus ROYGBIV accent cycle with triadic secondary colours; `bgOpacity` "Intensity".
+- **Navigation overlays**: search (Ctrl+K, FlexSearch over the pre-built index), command palette (Ctrl+Shift+P), terminal (Ctrl+P, shared with `/terminal` and the OS), keyboard cheat sheet (`?`), skip link, global focus ring.
+- **Graph**: `/graph` constellation (Canvas 2D + D3), local radar, global overlay, MDX embeds.
+- **Music**: persistent `MusicProvider` (one `<audio>`, FFT analyser), turntable player with vinyl scratch (AudioWorklet in `public/`), radial visualiser, Document-PiP pop-out, mobile bar, `music:Track Title` links. See [`music-workflow.md`](music-workflow.md).
+- **Collections**: bookshelf, movieshelf, music library, photography albums (`content/Photos/*.md` into `albums.json`), Inbox triage (`/inbox`).
+- **Games and toys** (`/arcade`, `GameCabinet` shell with start/again overlay, score+best, zen): Chess (chess.js, homemade drunk/casual/sharp bot, Worker-proxied GIF export, Lichess link), HeXO (connect six on a hex grid, SVG, in-repo bot `src/lib/hexo.ts`), Snake, Tetris, 2048, Blackjack, Hex Mines, Hex Life, Life, Boids/Murmuration, Sandbox, Ant Farm, Progressions, The Knotted Field (Persian carpet), SIGIL and Collider (chamber engine), Apparatus ([`apparatus.md`](apparatus.md)), FILAMENT (cosmic-web simulation, `src/features/filament`). The arcade also links out to StarWeft, Lines of Flight, Anabasis, JANKEN, The Predictor and Lissajous.
+- **Accessibility and motion**: focus traps on overlays, `prefers-reduced-motion` honoured by backgrounds/telescopic/boot, `--color-overlay-tint` for theme-correct chrome.
+- **Mobile** (`<=800px`, `$bp-phone` / `usePhoneViewport()`): no BgCanvas, CornerMenu arc, article grid collapses, commands reachable from CornerMenu.
+- **Dev tools**: `/__dev` dashboard (dev only), properties editor, `npm run dash`, `scripts/audit-site.mjs`.
 
-- [x] AppShell: BgCanvas + workspace + PanelStack + floating overlays
-- [x] WikiShell: lean wiki subdomain shell (no BgCanvas, no music, no panels)
-- [x] TerminalTitle: boot sequence, idle animations, wiki context support
-- [x] CornerMenu: mobile arc menu with wiki variant
-- [x] QuickControls: desktop top-right strip (music, search, theme, clock)
-- [x] Panel system: capture-phase click interceptor, depth-aware trimming, card animations
+## Conventions worth knowing
 
----
-
-## Features
-
-- [x] BgCanvas: 10 user-selectable modes (murmuration, graph, vectors, dots, terminal, chamber, schematic, isometric, orrery, plate-scan) + page-scoped chess/hexo boards. Modularized in `src/lib/backgrounds/` with DPR clamping (1.25 max) and 144 FPS monitor cap
-- [x] Music player: persistent audio, FFT visualiser, mobile strip
-- [x] Search: FlexSearch + Ctrl+K overlay
-- [x] Command Palette: Ctrl/Cmd+P overlay with direct command execution and shared terminal
-- [x] Graph: D3 force sim + Canvas 2D renderer (PixiJS completely purged for pure CSP compliance), local radar + global overlay + `<EmbedGraph />` / `<WikiGraph />` MDX embeds
-- [x] Chess: chess.js + custom board + homemade three-flavour bot (drunk/casual/sharp), Worker-proxied GIF export, Lichess analysis link
-- [x] heXO: Connect-6 on an "infinite" hex grid — SVG board, pan/zoom, hotseat 2-player, win flourish
-- [x] Arcade: `/arcade` index page listing games (Chess, heXO live; Snake/Blackjack coming soon)
-- [x] Photography: masonry grid + lightbox
-- [x] Collections: bookshelf, movieshelf, music library (auto-collected from frontmatter)
-- [x] Theme system: dark/light toggle, ROYGBIV accent cycle, palette generation
-- [x] Keyboard shortcuts: `useHotkeys` hook — Ctrl+K opens search, Ctrl+P opens command palette / terminal, Escape closes overlays
-- [x] Telescopic text: `TelescopicHandler.tsx` + `remark-telescopic` plugin — collapsible inline expansions in MDX content
-- [x] 404 page: `NotFound.tsx` — custom not-found page for unresolved slugs
-
----
-
-## Note Transclusion (Note Embeds)
-
-- [x] **`![[Note]]` inline embed**: renders as styled `<aside class="note-embed">` block — header with label + link, body content, "open note" footer
-- [x] **`![[Note#Section]]` heading-scoped embed**: extracts content under the specified heading at build time
-- [x] **2-level depth limit**: `embedDepth` option prevents recursion beyond depth 2 (falls back to plain link)
-- [x] **Broken embed detection**: warns at build time when `![[Target]]` cannot be resolved
-
----
-
-## Content Features
-
-- [x] **Reading time**: calculated at build time in prebuild, stored in content-index, shown in article header
-- [x] **Broken link detection**: prebuild pass warns on `[[wikilinks]]` that don't resolve in slug-map; skips media file extensions and code-block/backtick-span false positives
-- [x] **`contentPath` in index**: original relative path stored in content-index so runtime fetches use correct casing on CF's case-sensitive Linux filesystem
-- [x] **Note aliases**: `aliases: [Name, AltName]` frontmatter → added to slug-map at prebuild, resolves from any alias
-- [x] **`/recent` page**: notes sorted by `date` descending, similar to folder page layout
-- [x] **Dataview-lite**: `<Query filter="type=book" sort="-date" limit="5" display="list|grid|table" />` MDX component — filters/sorts contentIndex at runtime, registered in MDXProvider; `<Query>` fix: components passed explicitly via props to bypass MDX context lookup issue
-
-### MDX Pipeline
-
-- [x] **Remark plugins** (AST stage): `remark-wikilinks` (wikilinks + embeds), `remark-telescopic` (collapsible text), `remark-callouts` (callout blocks), `remark-sidenotes` (footnote → sidenote conversion, incl. Roman-numeral display numbering)
-- [x] **Rehype plugins** (HTML stage): `rehype-image-paths` (rewrite image paths for CF). Note: `rehype-sidenotes-runtime.ts` is a *separate*, unrelated plugin used only by `markdown.ts`'s standalone runtime processor (LinkPreview/WikiEditPage/BootPage) — not part of this build-time chain.
-- [x] **MDX components registered in `MDXProvider.tsx`**: `BookCard`, `MovieCard`, `Gallery`, `Query`, `WikiSubmitForm`, `AsciiAvatar`, `PhotoAlbums`, `EmbedGraph`, `WikiGraph`, custom `<a>` (internal vs external link styling)
-- [x] **Content loading**: `content-loader.ts` fetches JSON manifests (content-index, graph, music, broken-links) and resolves slugs via `src/lib/slug.ts`; MDX component resolution itself is inline in `NoteBody.tsx` via `import.meta.glob` (the old standalone `mdx-loader.ts` duplicated this and was dead code — removed 2026-07-12)
-
----
-
-## UX Polish
-
-- [x] **Breadcrumbs on articles**: `Folder / Subfolder / Note` derived from slug, shown above title in article layout
-- [x] **Export / print styles**: `@media print` CSS — hides shell chrome, full-width content, sidenotes inline
-- [x] **Hover previews**: body text fetched from `public/content/` using `contentPath` from index (preserves original filename casing); wikilinks rendered as hoverable `<a>` tags; first image shown as full-width header; HTML SPA-fallback rejection via `content-type` check; recursive hover to depth 4; OPEN button pushes panel card
-
----
-
-## Dev Tools
-
-- [x] **Properties editor redesign**: floating glass panel (bottom-right, no overlay, glassmorphism), session-override fields (title, type, tags)
-- [x] **Admin consolidation**: DevDashboard already consolidates content index, note browser, store state, actions — using CSS variables throughout for light/dark support
-
----
-
-## Typography & Content
-
-- [x] **Tufte sidenotes in article layout**: `remarkSidenotes` plugin converts GFM footnotes (`[^1]`) at remark stage (rehype-level approach failed in MDX); injects `<aside class="sidenote">` after the containing block; floats into the right margin above `$article-narrow` (1300px), checkbox toggle on narrow viewports
-- [x] **Obsidian callouts**: `>[!type] Title` syntax renders as styled callout divs; fixed single-node collapse (remark-gfm collapses blockquote continuations into one `\n`-joined text node — plugin now splits on first `\n`)
-- [x] **External link styling**: `href^="http"` links not pointing to `subsurfaces.net` get muted colour + `↗` superscript arrow; print stylesheet updated to show full URL only for external links
-- [x] **WikiInfobox image expand**: clicking avatar opens fullscreen lightbox overlay; click backdrop to close; `cursor: zoom-in` hint
-- [x] **`Writing/` slug → article layout**: shared `classifyLayout()` returns `article` for any `writing/` slug without needing `layout: article` in frontmatter (though frontmatter still wins)
-- [x] **`rehypeImagePaths` double-prefix fix**: strips leading `media/` or `Media/` before prepending `/content/Media/` — prevents `media/media/` doubling when images are referenced from sidenotes or raw HTML
-- [x] **Sample writing note**: `content/Writing/On-Attention.md` — demos dropcap, pullquote, callouts, sidenotes with wikilink + external link + image, `<Query>` component, `published: true` for RSS
-- [x] **Writing template**: `content/Writing/Writing-Template.md` — style reference covering all supported features with inline examples
-- [x] **Note embed HTML rendering**: embed body now parsed via `mdast-util-from-markdown` + `hast-util-to-html` — was injecting raw markdown as text
-- [x] **EB Garamond dropcap**: loaded via Google Fonts; upright 400, `5.4em`, `clear: right` on pullquote prevents sidenote overlap; `z-index: 1` prevents text overlap
-- [x] **`Query` filter key fix**: filter key is `tag=` not `tags=`; fixed in template and On-Attention
-- [x] **`Query` date formatting**: raw `Date.toString()` output (e.g. `Sat Mar 07 2026 00:00:00 GMT+0000 (Greenwich Mean Time)`) now formatted to short date (`Sat, 07 Mar 2026`) or with short timezone (`Sat, 07 Mar 2026, 12:00 GMT`) when time is specified
-
----
-
-## Photography Albums
-
-- [x] **Album system**: `content/Photos/*.md` frontmatter-driven albums → `public/albums.json`; `<PhotoAlbums />` MDX component renders album grid → drill-in masonry → lightbox with keyboard nav
-- [x] **`_template.md`**: album template in `content/Photos/` for adding new albums without code changes
-- [x] **Photography.md restored**: written content now renders normally; `<PhotoAlbums />` appended below prose
-
----
-
-## Content Housekeeping
-
-- [ ] **35 broken wikilinks**: build log reports 35 unresolved `[[wikilinks]]` after route/placeholder/fragment false-positive cleanup. Highest priority clusters:
-  - `Moltbook` → 15 unresolved references, including duplicated private/draft notes (`[[OpenClaw]]`, `[[Hyperstition]]`, `[[The-Claude-Bliss-Attractor]]`, `[[11---Scheming-and-Deceptive-Alignment]]`, etc.) — consider either publishing stubs or converting intentionally private references to plain text
-  - `The-Apparatus-is-the-only-subject` → 3 references from `algorithmic-synchronicity`, `cybernetic-superstition`, and `hyperstition-as-compiler` — likely wants a stub or alias target
-  - `Writing/On-Attention` / `Writing/Writing-Template` → `[[Philosophy-of-Mind]]` and `[[Wittgenstein]]` — create wiki/concept stubs or revise examples
-  - Starter/editorial missing notes: `[[Rabbit-Holes]]`, `[[Narrative-hooks]]`, `[[Literary-orientations]]`
-  - One-offs/person aliases: `[[Walter-Benjamin]]`, `[[Kodachrome]]`, `[[Lars-von-Trier]]`, `[[Lars-Von-Trier]]`, `[[Abbas]]`, `[[08-11-25]]`, `[[Thomas-Sauvin]]`, `[[Gilles-Deleuze]]`, `[[Michel-Foucault]]`
-
----
-
-## Content & SEO
-
-- [x] **Sitemap** in prebuild (sitemap.xml → public/)
-- [x] **`image` field in content-index**: extracted from frontmatter (`image`/`cover`/`poster`) for OG and meta use
-- [x] **RSS feeds (two, opt-in)**: `public/rss.xml` (Writing/ or `published: true`, non-wiki) + `public/wiki-rss.xml` (wiki/ + `published: true`); both generated in prebuild; `published` extracted into content-index; undated notes excluded; fixed wiki feed link text to say `wiki.subsurfaces.net`. `content/Writing/` folder ready — add notes there or set `published: true` + `date` on any note to include it.
-- [x] **robots.txt created**: `public/robots.txt` was missing entirely — created with `Allow: /` + sitemap reference; fixes 25 Lighthouse SEO errors
-- [x] **Meta descriptions**: already injected by `src/worker.ts` `injectMetaTags()` using `description` ?? `excerpt` frontmatter fields
-- [x] **`description` field in content-index**: already extracted in `prebuild.ts`, present in `NoteMetadata` type, used by worker's `injectMetaTags()` for OG + meta description
-- [ ] **Detailed documentation**: comprehensive docs for the codebase (delegate to worker agent)
-
----
-
-## Bug Fixes
-
-- [x] **`class` → `className` in MDX content**: raw HTML in `.md` files compiled as JSX — `class=` attribute causes React warnings. Fixed in: `Chess.md`, `Photography.md`, `Writing/Writing-Template.md`, `Writing/On-Attention.md`, `Wiki/chatters/hughchungus.md`, `thinking in public.md`, `Wiki/Philsurvey Template.md`
-- [x] **Telescopic wikilink slugs**: `[[Note Name]]` inside telescopic blocks was generating `href="/Note Name"` (spaces, not hyphens) — now slugified to `href="/note-name"` matching runtime resolver
-- [x] **`usePanelClick` stale `tracks` closure**: music link handler closed over empty `tracks` array (before `music.json` loaded) — `tracks` added to `useEffect` deps
-- [x] **`music:` link handler matching**: `NoteBody` was calling `playTrack(slug)` but `playTrack` matches by `t.slug` (`"Music/Eden"`) not by name — now matches by `t.title` (case-insensitive), consistent with `usePanelClick`; also opens music player if closed
-- [x] **Panel card top padding**: note body in panel cards was overlapping QuickControls — top padding increased to `4rem`
-- [x] **`usePanelClick` slug normalisation**: slug extracted from clicked URL now normalises spaces → hyphens before passing to panel/store
-- [x] **Graph overlay close on node click**: clicking a node in the GraphOverlay now closes the overlay before opening the panel card
-
----
-
-## Styling & UX Fixes
-
-- [x] **TOC hash link fix**: `usePanelClick` intercepts `#hash` clicks — add early return for anchor links so TOC smooth-scrolls in both layouts
-- [x] **Tag/Folder page headings**: add `<h1>` to TagPage and FolderPage (currently render lists with no heading)
-- [x] **Infobox persistence bug**: WikiInfobox remains visible when navigating from a chatter/philosopher page to a non-infobox page — state not clearing on slug change
-- [x] **Search overlay light mode**: styling broken in light theme
-- [x] **Link preview simplification**: body content shown on hover (fetched from public/content/), recursive hover with depth cap, OPEN button pushes panel card
-- [x] **Triadic colour harmony**: JS hue-rotation generates secondary/tertiary from accent; applied to callouts, blockquotes, growth badges, BgCanvas palette, TOC active state
+- `BgCanvas` sits at z-index 0, so every container is `background: transparent`; only `body` has the colour.
+- Persisted settings go through the single `garden-settings` zustand-persist key (`PERSISTED_KEYS`).
+- Telescopic blur stays at or below 3px; no terminal glow effects; no emojis in file content.
+- Failure must be visible: toasts, error banners and per-window boundaries, never silent empties.

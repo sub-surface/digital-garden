@@ -1,315 +1,171 @@
 # ROADMAP — digital-garden
 
-Single source of truth for outstanding work, for an agent picking up the repo. Merges the
-public wishlist (`content/index.md` "What's on my mind"), the long backlog (`docs/future.md`),
-the sequenced/opinionated cut (`docs/archive/iteration-spec.md`), the HeXO research pipeline
-(`../hexgo-theory/DIRECTION.md`), and live threads that were only in memory/devlog.
+Single list of outstanding work. Open items only; shipped work lives in git history,
+`docs/devlog/` and `docs/archive/`. Reconciled against the working tree 2026-10-03.
 
-> [!NOTE]
-> For historical rationale, root-cause analyses, and implementation records of completed milestones
-> (§2 Worker split, §3 UI grouping, §4 a11y, §4b theme audit, §16 ambient modes, §17 hygiene, §19 nav rewrite,
-> §21 layout classification, §23 reader mode, §28 desloppification sweep), see **[`docs/archive/shipped-milestones.md`](docs/archive/shipped-milestones.md)**.
-
-**Conventions**
-- `[ ]` open · `[~]` partially done · `[x]` done (kept briefly for context, then pruned or archived)
-- `★` = high win-to-effort (from iteration-spec)
-- **Do not edit anything in `content/` without asking Leon first.** `index.md` is the site
-  landing page — only update it to reflect things that have actually shipped, and only with the OK.
-- Detail backers: `docs/future.md` (full backlog by domain), `docs/archive/shipped-milestones.md` (completed milestones archive),
-  `docs/ssg-pipeline-plan.md` (pre-rendering specification), `../hexgo-theory/{DIRECTION,SPEC}.md` (the theory).
-
-Last reconciled against the working tree: 2026-09-12 (Modular background engine, 144 FPS pacing, PixiJS purge, Form autofill diagnostics, `<EmbedGraph />` consolidation, SSG architecture plan).
+Conventions
+- `[ ]` open, `[~]` partly done (the note says what remains), `★` high win for effort.
+- Never edit `content/` without asking Leon. `content/index.md` ("What's on my mind") is the
+  owner's wishlist; section 14 mirrors it so nothing there is lost.
+- Research dependencies live outside this repo: `../hexo-theory/{DIRECTION,SPEC}.md`.
+- Docs map: [`docs/index.md`](docs/index.md).
 
 ---
 
-## 0. Now — sequenced top picks
+## 0. Next up (suggested order)
 
-Recent completions:
-- **Browser Autofill Diagnostics & Strict CSP Audit** (§29.21, 2026-09-12): Added `id`, `name`, and `autoComplete` to all interactive form fields. Purged `pixi.js` and dead `GraphView.tsx` to align with strict `script-src 'self'` without `eval`.
-- **Modular Background Engine & 144 FPS Pacing** (§26, 2026-09-12): Extracted all canvas draw routines into `src/lib/backgrounds/`. Clamped DPR to 1.25 max, batched compound paths, clamped frame rate to monitor refresh with a 144 FPS ceiling, and added 3 new modes: `dendrite`, `lorenz`, and `cartography`.
-- **Unified `<EmbedGraph />`** (2026-09-12): Consolidating `<LocalGraph />` and `<WikiGraph />` into a single customizable MDX embed component with pure BFS neighborhood extraction (`src/lib/graph-filter.ts`).
-
-Active sequenced priorities:
-1. **SSG / Note Pre-Rendering Pipeline** (§5, §26, and [`docs/ssg-pipeline-plan.md`](docs/ssg-pipeline-plan.md)) — Build-time HTML pre-rendering, edge injection in Cloudflare Worker, pre-computed FlexSearch index, and D3 coordinate baking.
-2. **heXO → arcade cabinet integration + bot polish** (§6, §10) — Touch-pinch zoom, generalize zen mode, asymmetric arena test for fork-aware bot.
-3. **Component/hook test coverage** (§22) — Expand Vitest + RTL coverage into `usePanelClick`, `useFocusTrap`, shared hotkeys, and high-risk chat/wiki flows.
-4. **Live inline editing for admin** (§20) — Command Palette triggered in-place editor with GitHub Contents API direct commit.
-5. **Dedicated music player subdomain** (§25) — `music.subsurfaces.net`, independent origin player with advanced mixer/EQ controls.
+1. Benchmark the SSG pipeline: Lighthouse FCP/LCP before/after on mobile and desktop (section 5).
+2. Mobile pass: footnote/sidenote header, touch-gesture parity, reader-mode controls (section 7).
+3. heXO into the arcade cabinet + bot polish (sections 1, 9).
+4. Component/hook test coverage: `usePanelClick`, `useFocusTrap`, hotkeys, chat/wiki flows (section 12).
+5. Live inline editing for admin, or an Obsidian-side publish path (section 8).
+6. Dedicated music subdomain (section 10).
 
 ---
 
-## 1. Pre-commit hygiene
-
-- [x] **★ `AGENTS.md` vs `CLAUDE.md` drift.** Resolved: `AGENTS.md` is a 3-line pointer to `CLAUDE.md` (single source of truth).
-- [x] Document implicit-prebuild build contract inline in Commands block — covered by `CLAUDE.md` and guarded by `test-package-scripts.mjs`.
-
----
-
-## 2. Worker split — ✅ SHIPPED
-
-- [x] **Done** (2026-06-24): `src/worker.ts` split into thin dispatcher + domain modules in `src/worker/*`.
-- Full rationale and directory layout archived in [`docs/archive/shipped-milestones.md#2-worker-split-shipped-2026-06-24`](docs/archive/shipped-milestones.md#2-worker-split-shipped-2026-06-24).
-
----
-
-## 3. Group `src/components/ui/` — ✅ SHIPPED
-
-- [x] **Done** (2026-07-03): Organized into eight subdirectories (`chat/`, `games/`, `reader/`, `wiki/`, `shelves/`, `graph/`, `music/`, `overlays/`).
-- Full layout archived in [`docs/archive/shipped-milestones.md#3-group-srccomponentsui-shipped-2026-07-03`](docs/archive/shipped-milestones.md#3-group-srccomponentsui-shipped-2026-07-03).
-
----
-
-## 4 & 4b. a11y, Keyboard, and Theme Consistency Audit — ✅ SHIPPED
-
-- [x] **a11y & Keyboard Pass**: Shipped `?` cheat sheet (`KeyboardCheatSheet`), focus traps (`useFocusTrap`), `prefers-reduced-motion` guards across canvas and animations, skip-to-content link, and global `:focus-visible` ring.
-- [x] **Theme Consistency Audit**: Dynamically resolved theme colors in canvas views (`ConstellationPage`, `LocalGraph`, `ProgressionsPage`), added `--color-overlay-tint` and eliminated hardcoded `rgba(255,255,255,N)` across all global chrome.
-- [ ] **Follow-on**: Per-game module CSS (`ChessPage`, `HexoPage`, etc.) still carries some `rgba(255,255,255,N)` texture/hover literals. Migrate to `color-mix(in srgb, var(--color-overlay-tint) N%, transparent)` opportunistically.
-- Full details archived in [`docs/archive/shipped-milestones.md#4--4b-a11y-keyboard-and-theme-consistency-audit-shipped-2026-07-03--2026-07-12`](docs/archive/shipped-milestones.md#4--4b-a11y-keyboard-and-theme-consistency-audit-shipped-2026-07-03--2026-07-12).
-
----
-
-## 5. Performance & Core Web Vitals
-
-- [x] **★ Lighthouse CI** — `.github/workflows/lighthouse.yml` + `lighthouserc.json`: automated audit on static dist with error-level thresholds (perf/a11y/BP/SEO >= 0.9, CLS <= 0.1, LCP <= 3s, TBT <= 300ms).
-- [x] **★ Fix CLS — image dimensions.** Prebuild emits `public/image-dimensions.json` and `rehype-image-paths` stamps intrinsic dimensions on MDX images.
-- [x] **★ Pre-render / SSG for notes** — Complete SSG pipeline shipped 2026-09-12. Phase 1 (prebuild HTML fragment emitter `emitPrerender`), Phase 2 (Cloudflare Worker edge injection with V8 LRU cache & client handoff in `NoteBody`), Phase 3a (pre-computed inverted full-text search index `emitSearchIndex` in `scripts/emit-search-index.ts`), and Phase 3b (deterministic D3 force relaxation `emitGraph` in `scripts/emit-graph.ts` baking celestial coordinates into `public/graph.json`). See [`docs/ssg-pipeline-plan.md`](docs/ssg-pipeline-plan.md).
-- [ ] Verify `NoteBody` un-lazying didn't fatten entry chunk past intent (`dist/assets/index-*.js`).
-
----
-
-## 6. ★ Arcade cabinet shell — unify heXO & Chess, unblock new games
-
-- [x] **`<GameCabinet>` wrapper** — Shipped (`src/components/ui/games/GameCabinet.tsx`): title + blurb header, start/again overlay, score+best bar, zen/fullscreen, accent-aware win flourish. Migrated Snake, 2048, Hex Mines, Hex Life.
-- [ ] **Generalise heXO zen mode** into cabinet — Esc-to-exit handler, overlay, bottom bar, wide viewBox.
-- [ ] heXO polish threads:
-  - [x] `setPointerCapture` targeted SVG cell; fixed to `svgRef.current`.
-  - [ ] Touch-pinch zoom (wheel only currently). The cabinet should own a touch story.
-  - [ ] Annotations (`highlights`/`arrows`) wiped on every move — consider preserving across non-placing pan.
-- [ ] **Back-to-arcade button placement** — Revisit placement beside page title vs corner.
-
-### New arcade games queued:
-- [ ] **Memory Garden** — Concentration game on note titles / tags / covers / emotes.
-- [ ] **Link Ladder** — Word/concept ladder seeded from note titles & tags.
-- [ ] **Lights Out / Circuit Shrine** — 5x5 toggle puzzle with theme/accent glow.
-- [x] **The Predictor: Mass** — Shipped as standalone worker `omega.subsurfaces.net`.
-- [ ] **Add p(doom) (`pdoom.subsurfaces.net`) to the arcade** — Featured/external card in `ArcadePage.tsx`.
-- [ ] **Add `bazar.subsurfaces.net` to the arcade** — Procedural Persian-carpet walking simulator card.
-
----
-
-## 7. Wiki & content polish
-
-- [~] **Broken wikilinks** — Down to 5 (originating in placeholder notes). Monitored via `public/broken-links.json`.
-- [ ] Page metadata editing (description, tags) from wiki editor UI.
-- [ ] Watchlist — Notify on bookmarked-page edits via Supabase table.
-- [ ] Contributor dashboard — Recent activity and stats from `edit_log`.
-- [ ] Wiki community features (comments, reactions).
-- [ ] **GitHub App token** for non-expiring wiki submissions (until then, preflight token check with friendly error).
-
----
-
-## 8. Terminal mode finish (~90% there)
-
-- [ ] `/emotes off` — Pure ASCII fallback (no inline images).
-- [ ] `/ping` — Supabase Realtime round-trip latency.
-- [ ] Screensaver — Idle N min -> replay ASCII animation (reuse TerminalTitle idle snippets).
-- [ ] Documented public API schema for third-party terminal clients.
-- [ ] WebSocket endpoint for raw `wscat`-style access.
-
----
-
-## 9. Resilience — make failure visible
-
-- [x] **Error boundaries** around Outlet in all three shells (`AppShell`, `WikiShell`, `ChatShell`), reset on `location.pathname`.
-- [x] **Content-index load failure surfaced** via `ContentIndexErrorBanner`.
-- [x] **Supabase-down drill passed**: Site degrades gracefully without Supabase; static garden routes remain 100% functional.
-- [x] **Unchecked fetch in worker handlers**: Wrapped with `upstreamError` and global dispatcher error boundary.
-
----
-
-## 10. HeXO — theory, bot, and the page
-
-- [ ] **Port a stronger bot to the garden.** Asymmetric arena test (`make_fork_aware` vs plain ES) in `../hexgo-theory/competition/arena.py` before porting to `src/lib/hexo.ts`.
-- [ ] **HeXO leaderboard** (results table, pairs with chess leaderboard).
-- [ ] **NP-hardness via 3-SAT** — Formalize threat-atom reduction.
-- [ ] **Headline experiment** — Measure description length of strong self-play (`~log N` vs `~N`).
-- [ ] **Progressions overwrite-mode research** — Garden-of-Eden states, loopy games, gliders.
-- [ ] **Folder rename `hexgo-theory` -> `hexo-theory`** (Leon manual task).
-
----
-
-## 11. From index.md "What's on my mind" — site features
-
-- [x] **Vinyl-record music player** — Shipped with turntable, grooved spinning disc, radial visualizer, AudioWorklet scratch, Document PiP.
-- [ ] **Music player extras**:
-  - LPF/HPF filter knobs behind a toggle (BiquadFilter on music graph).
-  - Unify queue drag/reordering and stable slugs with OS Media Player.
-  - Scratch first-activation latency prewarm/cache.
-- [x] **"Random note" button** (`r` hotkey + QuickControls dice icon).
-- [ ] **Generative-art section** — Dedicated "create your own & share" surface for toys.
-- [ ] **Philosophy <-> computation writing** (Leon content).
-
----
-
-## 12. Identity
-
-- [x] Stonks (Phase 2) removed entirely 2026-07.
-- [ ] Easter-egg reactions with configurable effects (e.g. confetti).
-- [ ] Idle game (Identity Phase 3).
-
----
-
-## 13. OG image gen hardening
-
-- [x] Homepage card meta tag injection (`run_worker_first = true`).
-- [x] Local-only thumbnail inlining in `og-gen.ts`.
-- [x] Filenames normalized to lowercase (`ogCardName()`) and guarded by `scripts/test-og.ts`.
-- [ ] **SVG image support** — Detect SVG URLs in `og-gen.ts` and rasterize via `sharp`.
-
----
-
-## 14. Infrastructure & misc
-
-- [ ] **Trusted Types** — Evaluate `require-trusted-types-for 'script'`.
-- [ ] **`glob@11` deprecation warning** — Track and update upstream.
-- [ ] **Detailed codebase documentation** — Comprehensive docs pass.
-
----
-
-## 15. Dream / sweeping bets
-
-- [x] **Command palette (`Ctrl+P`)** — Shipped (`CommandPalette`).
-- [x] **Reading progress bar** on articles (`ReadingProgress`).
-- [x] **Game of Life consolidated** (`<GameOfLife>` MDX component).
-- [x] **Adjustable measure / type-scale control** in reader mode (`ThemePanel` Reader tab).
-- [ ] **Inline backlink mini-map** in article margin.
-- [ ] **Named theme presets** ("terminal amber", "blueprint", "newsprint").
-- [ ] **Garden seasons / time-of-day ambient theming** — Shift default bg palette and warmth by local clock.
-
----
-
-## 16. Chamber & SIGIL follow-ons — ✅ SHIPPED
-
-- [x] **Done** (2026-07-03): Shipped `schematic`, `isometric`, `orrery`, `plate-scan` ambient modes, and `Collider` aiming toy.
-- [ ] **Oracle toy** (stretch) — Click-to-cast daily plate with asemic gloss.
-- Archived in [`docs/archive/shipped-milestones.md#16-chamber--sigil-follow-ons-shipped-2026-07-03`](docs/archive/shipped-milestones.md#16-chamber--sigil-follow-ons-shipped-2026-07-03).
-
----
-
-## 17. Codebase hygiene sweep (2026-07-12) — ✅ SHIPPED
-
-- [x] **Done**: Dead code deleted, test scripts modernized, docs reconciled, chat API split into `CHAT-API.md`.
-- Archived in [`docs/archive/shipped-milestones.md#17-codebase-hygiene-sweep-shipped-2026-07-12`](docs/archive/shipped-milestones.md#17-codebase-hygiene-sweep-shipped-2026-07-12).
-
----
-
-## 18. Mobile coherence sweep
-
-- [x] **Article grid backlinks fix**: Grid collapses cleanly without stranding footer in right column.
-- [x] **Shared breakpoint source of truth**: `$bp-phone: 800px` and `$bp-panel-narrow: 560px` in `_breakpoints.scss`, mirrored in `src/config/breakpoints.ts` with `usePhoneViewport()`.
-- [x] **Command Palette touch entry**: Reachable via "Commands" in `CornerMenu`.
-- [x] **LinkPreview hover gate**: Disabled on touch via `(hover: hover) and (pointer: fine)`.
-- [ ] **Touch-gesture parity on canvas/SVG pages**: Pinch-zoom on heXO, Collider, graph views, SIGIL.
-- [ ] **Full visual sweep**: On-device audit across key pages for reflow and touch targets.
-
----
-
-## 19. `usePanelClick` & SPA routing overhaul — ✅ SHIPPED
-
-- [x] **Done** (2026-07-12): Destination classification via `classifyLayout()`, TanStack Router `navigate()` for articles/games/mobile, eliminating hard reloads and preserving music playback.
-- Archived in [`docs/archive/shipped-milestones.md#19-usepanelclick--spa-navigation-rewrite-shipped-2026-07-12`](docs/archive/shipped-milestones.md#19-usepanelclick--spa-navigation-rewrite-shipped-2026-07-12).
-
----
-
-## 20. Live inline editing for admin (design ready)
-
-- [ ] Command Palette action **"Toggle edit mode"** (admin-only via `ctx.auth.role`).
-- [ ] Direct commit via GitHub Contents API `PUT` (skipping PR for admin; instant save, CF rebuild takes ~minutes).
-- [ ] UI copy setting expectations ("saved — live in a few minutes").
-- [ ] Skip Turnstile captcha for authenticated admin requests.
-- [ ] Verify `WRITE_LIMITER` allows comfortable editing rhythm.
-- [ ] Reuse `page_locks` table during active inline session.
-
----
-
-## 21. Query "type" display + system pages in index — ✅ SHIPPED
-
-- [x] **Done** (2026-07-12): Split `src/config/system-pages-meta.ts`, synthesized `system: true` entries in `prebuild.ts`, and rendered layout pills (`game`, `article`, `note`) in `Query.tsx`.
-- Archived in [`docs/archive/shipped-milestones.md#21-query-type-display--system-pages-index-integration-shipped-2026-07-12`](docs/archive/shipped-milestones.md#21-query-type-display--system-pages-index-integration-shipped-2026-07-12).
-
----
-
-## 22. Component & hook test coverage
-
-- [~] Vitest + React Testing Library harness shipped (2026-08-02). Tests singleton auth lifecycle, per-window OS error isolation, Task Manager restoration, Start flyouts.
-- [x] Pure unit tests added for background simulations (`scripts/test-backgrounds.ts`) and embed graph filtering (`scripts/test-embed-graph.ts`).
-- [ ] Expand component tests into `usePanelClick`, `useFocusTrap`, hotkeys, and high-risk wiki/chat interactions.
-- [ ] Shareable `?seed=` URL parameter convention across generative toys (Apparatus, Collider, SIGIL).
-- [ ] Visitor marginalia (localStorage highlights and private annotations on essay text).
-
----
-
-## 23. Reader mode sidenotes & settings consolidation — ✅ SHIPPED
-
-- [x] **Done** (2026-07-12): Preserved article CSS grid in reader mode with `--reader-measure` prose track and floating sidenote margins; consolidated controls into `ThemePanel` Reader tab.
-- Archived in [`docs/archive/shipped-milestones.md#23-reader-mode-sidenotes--settings-consolidation-shipped-2026-07-12`](docs/archive/shipped-milestones.md#23-reader-mode-sidenotes--settings-consolidation-shipped-2026-07-12).
-
----
-
-## 24. Writing health
-
-- [ ] New "Log" or "What's on my mind" page absorbing recent thoughts as dated prose notes.
-- [ ] Merge with `a place to start writing` as unified writing hub.
-- [ ] Randomized writing prompt widget on hub using Inbox flag counts ("X notes have no frontmatter...").
-- [ ] Visible cadence indicator ("N days since last entry").
-
----
-
-## 25. Dedicated music player subdomain
-
-- [ ] Standalone shell (`music.subsurfaces.net` / `MusicShell`) running independently of main garden tab.
-- [ ] Advanced controls: LPF/HPF filter knobs, OS mix editor, crossfader, visualizer modes.
-- [ ] Minimal handoff from garden via `?track=&t=` query parameters.
-
----
-
-## 26. Performance review sweep & Pre-rendering — ✅ SHIPPED
-
-- [x] **Background engine modularization & optimization** (2026-09-12): Extracted `src/lib/backgrounds/`, clamped DPR to 1.25 max, batched compound paths, clamped frame pacing to 144 FPS max, added `dendrite`, `lorenz`, `cartography`.
-- [x] **Purged PixiJS & GraphView** (2026-09-12): Completely eliminated WebGL shader compilation and dynamic code evaluation.
-- [x] **SSG / Note Pre-Rendering Pipeline** (2026-09-12): Pre-renders markdown to static HTML fragments at build time (`scripts/emit-prerender.ts`), injected at Cloudflare Worker edge with LRU cache, and progressively handed off to TanStack Router without flicker.
-- [x] **Pre-computed search index & baked graph coordinates** (2026-09-12): Inverted search index emitter (`scripts/emit-search-index.ts`) and deterministic D3 force relaxation baking (`scripts/emit-graph.ts`).
-- [x] **Lighthouse audit sweep** (2026-09-12): Fixed wiki root CLS shift (0.702 -> 0), lazy-loaded Cloudflare Turnstile only on edit/submit pages (eliminating third-party cookies & devtools issues), fixed heading hierarchy, and expanded touch targets with header collision decoupling.
-- [ ] **Resource-hogging / lingering state sweep**: Audit intervals, event listeners, and audio contexts on unmount.
-
----
-
-## 27. Dream features
-
-- [ ] **Living garden growth timelapse** — Scrubbable timeline replaying graph growth node-by-node.
-- [ ] **HeXO self-play spectator arena** — Live bot-vs-bot matches annotated with real-time tau pressure and threat families.
-- [ ] **Semantic "ask the garden" query layer** — Cloudflare Vectorize + Workers AI embeddings over content index.
-- [ ] **Public marginalia** — Moderated running commentary layer around essay text.
-- [ ] **Physical printable export** — Printable zine/poster generator for curated notes.
-
----
-
-## 28. Desloppification sweep — ✅ SHIPPED
-
-- [x] **Done** (2026-07-25 / 2026-08-02): All 16 items shipped (OG card test guard, CI check pipeline, ESLint 0 warnings, breakpoint injection, HTML escaper unification, API helper `src/lib/api.ts`, strictly-typed `BackgroundsConfig`, dead code purge).
-- [ ] **Follow-on**: 61 `!important` declarations across SCSS stylesheets to audit and unpick.
-- Archived in [`docs/archive/shipped-milestones.md#28-desloppification-sweep-shipped-2026-07-25--2026-08-02`](docs/archive/shipped-milestones.md#28-desloppification-sweep-shipped-2026-07-25--2026-08-02).
-
----
-
-## 29. SUBSURFACES 95 — personal-machine backlog
-
-See `docs/os-95-spec.md` §13 for state boundaries. Remaining:
-- [ ] **8. Program-host hardening pass**: Browser-check every `SYSTEM_PAGES` entry at narrow/default/maximized sizes; replace page-level fixed assumptions.
-- [ ] **15. Philchat chronicle intake**: Review chatter additions, expand terminal persona phrase banks, cited wiki enrichment.
-- [ ] **18. FILAMENT: Celestrium simulation bridge**: Ingest Gaia DR3 stellar streams into comoving dark matter web.
-- [x] **19. Wiki reorganisation, Philchat orientation, Wikipedia QoL**: Orientation article, curated index, header search.
-- [x] **20. Obsidian-style physics graph**: Interactive D3 force simulation on pure Canvas 2D.
-- [x] **21. Browser console hygiene and CSP audit** (2026-09-12):
-  - Added `id`, `name`, and contextual `autoComplete` to all form inputs across search overlays, command palette, wiki, arcade, chat, and OS.
-  - Purged `pixi.js` and dead `GraphView.tsx`, fully eliminating dynamic code evaluation (`eval()`, `new Function()`) to comply with strict Cloudflare Workers CSP `script-src 'self'`.
+## 1. Arcade and games
+
+- [ ] **Generalise heXO zen mode into `GameCabinet`.** `GameCabinet` already has an opt-in `zen`
+      prop, but `HexoPage` still owns its own zen state (Esc handler, overlay, bottom bar, wide viewBox).
+- [ ] heXO: touch-pinch zoom (wheel only today). Same gap on Collider, SIGIL and graph pages; the
+      cabinet should own one touch story.
+- [ ] heXO: annotations (`highlights`/`arrows`) are wiped on every move; keep them across a non-placing pan.
+- [ ] Revisit back-to-arcade placement (beside the title vs a corner); `BackToArcade` was deleted in the 2026-07 sweep.
+- [ ] Add `pdoom.subsurfaces.net` and `bazar.subsurfaces.net` as external cards in `ArcadePage.tsx`
+      (StarWeft, Lines of Flight, Anabasis, JANKEN, The Predictor and Lissajous are already there).
+- [ ] New games: **Memory Garden** (concentration on note titles/tags/covers/emotes), **Link Ladder**
+      (word/concept ladder over linked notes, daily-seeded), **Lights Out / Circuit Shrine** (5x5 toggle puzzle, accent glow).
+- [ ] **Specimen-plate memory/matching game** and an **Oracle toy** (click to cast a daily plate with an asemic reading), both from the chamber/Apparatus register.
+- [ ] **404 page as a game**: simple, infinitely permutable, abstract/minimal roguelike or nethack-like with upgrades (owner idea, not designed).
+- [ ] Chess: public leaderboard (needs a results table). heXO leaderboard pairs with it.
+- [ ] Generalise the cabinet's fullscreen/zen affordance to other interactive widgets (graph, chess, music).
+- [ ] Shareable `?seed=` URL convention across generative toys (SIGIL, Collider; Apparatus already uses a hash code).
+
+## 2. HeXO research and bot
+
+- [ ] Port a stronger bot to `src/lib/hexo.ts`. First run the asymmetric arena test (`make_fork_aware` vs plain ES) in `../hexo-theory/competition/arena.py`.
+- [ ] NP-hardness via 3-SAT: formalise the threat-atom reduction.
+- [ ] Headline experiment: description length of strong self-play (`~log N` vs `~N`).
+- [ ] Progressions overwrite mode: Garden-of-Eden states, loopy games, gliders.
+- [ ] heXO page features never built: move undo, game export, online play.
+- [ ] HeXO self-play spectator arena: live bot-vs-bot with tau pressure and threat families annotated.
+
+## 3. Wiki
+
+- [~] **Broken wikilinks.** `public/broken-links.json` (2026-10-01) reports 469 unresolved references across 52 notes,
+      335 distinct targets, mostly missing philosopher/concept stubs after the wiki expansion (Schopenhauer, Quine,
+      Nagel, Benatar, Sellars, Mill...). Earlier docs claimed 4-5; that was stale. Decide: write stubs, alias, or accept red links; consider a build-time threshold so the count can only go down.
+- [ ] Page metadata editing (description, tags) from the wiki editor UI.
+- [ ] Watchlist: notify on bookmarked-page edits (needs a Supabase `watchlist` table).
+- [ ] Contributor dashboard: recent activity and stats from `edit_log`.
+- [ ] Wiki community features: comments, reactions.
+- [ ] **GitHub App token** for non-expiring wiki submissions (today: PAT plus a preflight check with a friendly error).
+- [ ] Chatter pages (`type: chatter`): "Is this you? Claim this page" button and linked-account display (claim data is already fetched by `WikiInfobox`; the claim/avatar override works, the on-page claim prompt does not exist).
+- [ ] "Create your chatter profile" for logged-in users with no claim and no matching page: open `/submit` pre-filled with their username.
+- [ ] Show the user's avatar in the `WikiShell` auth header.
+- [ ] Wiki content backlog (owner's call): deepen `Map of Philosophy` prose, more Texts / thought-experiment articles, keep Bibliography anchors and `[^key]` footnote definitions complete.
+- [ ] Philchat chronicle intake: review chatter additions, expand terminal persona phrase banks, cited wiki enrichment.
+
+## 4. Chat and identity
+
+- [ ] Terminal chat: `/emotes off` (pure ASCII), `/ping` (Realtime round-trip), idle screensaver (replay boot/ASCII; reuse `TerminalTitle` idle snippets), `/filter <pattern>`, copy-as-text/clipboard integration, keyboard-driven reply (arrow-select then Enter).
+- [ ] Future chat commands: `/whisper`, `/pepo`, `/remind`.
+- [ ] Machine-readable API schema (OpenAPI or similar) on top of [`CHAT-API.md`](CHAT-API.md), plus a raw WebSocket endpoint for `wscat`-style clients.
+- [ ] Chat API-key platform overhaul; evaluate an AT-protocol / Bluesky bridge (suggested by a user) and a small private social feed for the wiki/chat community. Owner is not ready to host a public social network.
+- [ ] Easter-egg reactions with configurable effects (e.g. confetti via `canvas-confetti`).
+- [ ] Idle game (Identity phase 3): cookie-clicker style, avatar "collects" while away, delta computed from `last_login`, capped at 24h. Design TBD; stonks is gone, so it needs a fresh premise.
+
+## 5. Performance and delivery
+
+- [x] SSG pre-render, search index and baked graph shipped 2026-09-12 (see `docs/architecture.md`).
+- [ ] **Benchmark SSG**: Lighthouse FCP/LCP comparison on mobile and desktop (the plan's "Phase 4").
+- [ ] Verify `NoteBody` un-lazying did not fatten the entry chunk past intent (`dist/assets/index-*.js`).
+- [ ] Image optimisation: `sharp` WebP variants plus `<picture>`/srcset (pairs with `image-dimensions.json`).
+- [ ] Resource/lingering-state sweep: intervals, listeners, audio contexts on unmount.
+- [ ] OG gen: SVG image support (satori cannot load `.svg`; detect and rasterise via `sharp`, or skip).
+- [ ] OG gen: generative card per coverless note (seed a motif from the primary tag; extends `og-system.ts`).
+- [ ] Trusted Types: evaluate `require-trusted-types-for 'script'` (audit D3 dynamic DOM writes first).
+- [ ] `glob@11` deprecation warning on install: update when a dependency releases a fix.
+- [ ] Audit icon-only buttons for `aria-label` (many rely on `title=` only).
+- [ ] Style debt: 61 `!important` declarations in SCSS; per-game CSS still carries `rgba(255,255,255,N)` literals to migrate to `color-mix(in srgb, var(--color-overlay-tint) N%, transparent)`.
+
+## 6. Garden features and dream bets
+
+- [ ] **Infinite canvas for notes**: freeform spatial branching (mind-map-like), a possible successor to the panel stack. Risky to the site's ontology; owner is deferring until a stronger model is available.
+- [ ] Inline backlink mini-map in the article margin (reuse `LocalGraph`).
+- [ ] Named theme presets ("terminal amber", "blueprint", "newsprint") setting accent, background style and density together.
+- [ ] Time-of-day / seasonal ambient theming from the local clock.
+- [ ] Constellation "guided tour" mode; a "what changed" timeline; living garden growth timelapse (scrubbable graph growth).
+- [ ] Music-reactive generative art (FFT analyser already available); living visit-decay note visuals.
+- [ ] Semantic "ask the garden": Cloudflare Vectorize + Workers AI embeddings over the content index.
+- [ ] Marginalia: visitor-private highlights/annotations in localStorage; later a moderated public layer.
+- [ ] Printable zine/poster export for curated notes.
+- [ ] Generative-art section: a "make your own and share" surface for the toys.
+- [ ] More ASCII aliens, cute features and easter eggs site-wide (see `[[the machine-god in the future]]`); an ASCII alien generator, possibly for wiki profiles.
+- [ ] "ML playground" for the owner's ML projects, hosted as a separate site and linked from here.
+- [ ] Philosophy-computation writing (owner content).
+
+## 7. Mobile and reader mode
+
+- [ ] Mobile: owner feedback that the footnote header is useless and the mobile experience needs work.
+- [ ] Touch-gesture parity on canvas/SVG pages: pinch-zoom on heXO, Collider, graph, SIGIL.
+- [ ] Full on-device visual sweep of key pages (reflow, touch targets).
+- [ ] Reader mode: keep QuickControls visible, widen the text-size and column-width ranges, add a keyboard shortcut to toggle it and to step size/measure.
+
+## 8. Authoring and writing health
+
+- [ ] **Live inline editing for admin**: command-palette "Toggle edit mode" (admin only), direct commit via the GitHub Contents API `PUT`, "saved, live in a few minutes" copy, skip Turnstile for authenticated admin, confirm `WRITE_LIMITER` allows editing cadence, reuse `page_locks`. Alternative the owner prefers: an Obsidian plugin that edits and pushes from the phone.
+- [ ] Publish daily notes publicly (`Daily/` is excluded from prebuild today); a daily haiku.
+- [ ] A "Log" / "What's on my mind" page absorbing dated thoughts, merged with `a place to start writing` as one writing hub.
+- [ ] Writing prompt widget driven by Inbox flag counts; visible cadence indicator ("N days since last entry").
+
+## 9. Terminal (shared `/terminal`, Ctrl+P, OS prompt)
+
+- [ ] Easter-egg commands from the old TempleOS idea bank: `god` (3-7 random poetic words, after F7 "God word"), an ASCII TempleOS elephant scene, an ASCII `temple` scene. (`holyc` and `theme temple` already exist.)
+- [ ] ASCII DOOM.
+- [ ] Wire a chatbot Eliza persona as its own command if wanted (`chat`/`debate` personas exist in `src/features/boot/chatbot.ts`).
+
+## 10. Music
+
+- [ ] Dedicated `music.subsurfaces.net` shell (independent origin, handoff via `?track=&t=`).
+- [ ] Unify the garden player with the OS Media Player: one queue implementation, stable slugs, the EQ/HPF/LPF rack and crossfade (the OS player has them; the garden player has no filter knobs).
+- [ ] Scratch first-activation latency: prewarm/cache the AudioWorklet.
+- [ ] Media follow-ons: mix rename/duplicate/import/export/sharing, stereo vectorscope, user-authored skins, sample-accurate gapless playback, a player-specific windowshade layout.
+
+## 11. SUBSURFACES 95 (OS shell)
+
+See [`docs/os.md`](docs/os.md).
+- [ ] Program-host hardening: browser-check every `SYSTEM_PAGES` entry at narrow/default/maximised sizes; replace page-level fixed-position assumptions.
+- [ ] Visual certification of the 2026-08-02 continuation (`npm run dev:os`): logon, widgets, Solitaire, program host, production audio.
+- [ ] Account filesystem sync (needs visible revision history and an explicit conflict model first).
+- [ ] FILAMENT: Celestrium observational bridge: ingest Gaia DR3 stellar streams / CatWISE-DESI quasar dipole candidates from `../astro-theory` into the comoving simulation buffers with a diagnostic overlay against simulated LCDM.
+- [ ] Paint: selection/move, layers, image import, animation, wallpaper handoff.
+- [ ] Petri: accessories, mini-games, desktop roaming. Owner wants it reworked as an alien with distinct interactions and animations (it already reacts to music).
+- [ ] More OS toys from the owner list: tiny explorable collect-items world, virtual garden that grows, virtual aquarium, alien pet that can be fed/played with/trained. (Visualiser, desktop theming, weather widget, wiki hub are done; the space-exploration game belongs in the arcade.)
+- [ ] ARG queue: **Sysop** (continue half a chatbot transcript), **Uninstall** (wizard where every Cancel goes deeper), an OG card that contradicts its note.
+- [ ] No pet-to-pet, cloud sync, push notifications, currencies or punitive streaks (deliberate non-goals).
+
+## 12. Tests and tooling
+
+- [~] Vitest + RTL harness exists (auth lifecycle, OS error isolation, Task Manager, Start flyouts, Media pane, Paint, Petri). Add component tests for `usePanelClick`, `useFocusTrap`, hotkeys and high-risk wiki/chat interactions.
+- [ ] Optional: tighten or add a Lighthouse budget per route class once the SSG benchmark is in.
+
+## 13. Apparatus (generative plate composer)
+
+See [`docs/apparatus.md`](docs/apparatus.md).
+- [ ] True Hershey single-stroke font for labels and the plotter path (`font: "hershey"` exists in the types but the renderer still falls back to mono).
+- [ ] More eras: Spectrum, MSX, Teletext, Atari, Hercules mono, Risograph 2-colour.
+- [ ] Zoom/pan on the stage; animated plot-in flourish and WebM/GIF export of it.
+- [ ] Saved galleries (Supabase `plates` table) and a public gallery.
+- [ ] Breeding/lineage: crossover two plates (armature from A, palette from B, motifs from both).
+- [ ] Tiny textual DSL that compiles to the IR (`radial { orrery; voxel*3 } --dotted--> margin`).
+- [ ] Node-graph patcher (rack paradigm); the trigger to graduate to `composer.subsurfaces.net`.
+- [ ] AxiDraw export with pen ordering and travel optimisation.
+- [ ] Print-store hookup: contact sheet, pick, hi-res PNG/SVG, product.
+
+## 14. Owner wishlist cross-check (`content/index.md`, 2026-09-27)
+
+Every bullet there maps to a section above: wiki reading/Fontcuberta (content, not code); mobile notes (7); 404 game (1);
+reader-mode controls (7); infinite canvas and ontology (6); ML playground (6); ASCII aliens/easter eggs (6);
+daily haiku, public daily notes, owner-side adding of notes and the Obsidian plugin (8); social feed / Bluesky (4);
+Petri as alien and the OS idea list (11).

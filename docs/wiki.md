@@ -1,156 +1,43 @@
-# Wiki — wiki.subsurfaces.net
+# Wiki (wiki.subsurfaces.net)
 
-## Wiki Subdomain
+The community wiki for the philchat Discord: philosophers, concepts, movements, thought experiments,
+canonical texts, chatter profiles and chronicles, with accounts, moderation and edit history. It is
+the same SPA in `WikiShell` (see [`architecture.md`](architecture.md)). Outstanding work is in
+[`../ROADMAP.md`](../ROADMAP.md).
 
-- [x] `wiki.subsurfaces.net` Worker custom domain configured
-- [x] `useIsWiki` hook (hostname + VITE_WIKI_MODE detection)
-- [x] WikiShell with BgCanvas, QuickControls, breadcrumb, simplified CornerMenu
-- [x] Wiki content: index, Philosophers, Concepts, Movements, Chatters sections
-- [x] Wiki index routing: `wiki.subsurfaces.net/` correctly resolves to `Wiki/index.md`
-- [x] Case-insensitive `contentIndex` lookup via `resolveSlug` — fixes titles/metadata on all wiki pages
+## Content
 
----
+- Lives in `content/Wiki/` (`Philosophers/`, `Concepts/` including the thought experiments, `Movements/`, `Texts/`, `Events/`, `chatters/`, plus `index.mdx`, `About`, `Style-Guide`, `Citation Guide`, `Bibliography`, `Map of Philosophy.mdx`). Slugs under `wiki/` classify as articles. `wiki.subsurfaces.net/` resolves to `Wiki/index`.
+- Standard tags: `philosopher`, `chatter`, `concept`, `movement`; index sections link to `/tags/{type}`. `type: chatter` / `philosopher` pages render `WikiInfobox`.
+- Style rules (enforced by convention in `Style-Guide.md`): primary-source citations, formal premises and objections, no emojis, Obsidian-style `[[Note#Section]]` references, every `[^key]` footnote defined, ASCII diagrams in fenced code blocks (the `:not(pre) > code` selector keeps them unhighlighted).
+- Cross-domain backlinks from wiki pages to non-wiki notes use the full `https://subsurfaces.net/` prefix; wiki links never go through the panel stack (`usePanelClick` bails on non-main shells); wiki RSS is `wiki-rss.xml`.
+- `<WikiGraph>`/`<EmbedGraph>` embeds support `cluster`, `tag`, `slug`, `depth`, `height`, `interactive`.
 
-## Wiki Submission System
+## Contribution flow
 
-- [x] `src/worker.ts` — CF Worker entry point handles `POST /api/submit` (Turnstile + GitHub PR)
-- [x] `WikiSubmitPage.tsx` — 4-step form: basic info → survey (35 questions) → page body editor → review
-- [x] Survey dropdowns include "Other…" option with inline free-text input
-- [x] Markdown editor with toolbar, word count, MDX syntax guide
-- [x] Profile image: upload file or paste URL; committed to `content/Media/Wiki/chatters/` on PR branch
-- [x] Draft save/load: `localStorage` auto-restore, download/upload `.json` draft file
-- [x] Upload draft on step 1 — jumps straight to review step
-- [x] Submissions create PR against `master` branch with `tags: [wiki, chatter]`
-- [x] Turnstile + GitHub token configured in CF Worker runtime secrets
-- [x] End-to-end submission verified in production
+- **Submit** (`/submit`, `WikiSubmitPage`): 4 steps (basics, 35-question survey with "Other" free text, markdown body editor, review), profile image upload or URL, localStorage draft plus `.json` draft download/upload. `POST /api/submit` verifies Turnstile and opens a PR against `master` with `tags: [wiki, chatter]`. User text must go through `yamlStr()` in `src/worker/wiki.ts`.
+- **Edit** (`/edit/<slug>`) and **New** (`/new`): editor/admin roles only. Markdown editor with toolbar, word count, lazy-loaded preview, mandatory edit summary (200 chars), "+N / -M lines" summary; both open a GitHub PR (`POST /api/edit`, `POST /api/new`) and write `edit_log`. `GET /api/lock-status` reports page locks so concurrent editing is blocked.
+- The GitHub token is a personal token; a GitHub App token is on the roadmap. The wiki rebuilds only after a PR merges.
 
-### Wiki Worker Endpoints
+## Accounts and roles
 
-- [x] `POST /api/submit` — new chatter submission (Turnstile + GitHub PR)
-- [x] `POST /api/edit` — edit existing wiki article (creates GitHub PR)
-- [x] `POST /api/new` — create new wiki article (creates GitHub PR)
-- [x] `GET /api/lock-status` — check wiki page lock status (concurrent editing guard)
-- [x] `GET /api/user/:username` — public user profile
-- [x] `GET /api/auth/me` — current user profile (with avatar fallback)
-- [x] `PUT /api/auth/profile` — update username/bio
-- [x] `POST /api/auth/register` — register new user + auto-create profile row
-- [x] `POST /api/profile/avatar` — upload avatar to Supabase Storage
-- [x] `GET/POST/DELETE /api/bookmarks` — bookmark CRUD
-- [x] `POST /api/bookmarks/migrate` — migrate localStorage bookmarks to Supabase
-- [x] `POST /api/chat/claim` / `GET /api/users/:username/claim` / `GET /api/claims/by-slug/:slug` —
-  chatter profile claiming (see Chatter Profile Claiming below)
-- [x] `GET /api/admin/users`, `POST /api/admin/approve`, `POST /api/admin/revoke`,
-  `GET /api/admin/log`, `GET/POST/DELETE /api/admin/lock(s)` — admin panel, `auth: "admin"` gated
-  (see Admin Panel below)
+- Roles: `pending`, `editor`, `admin`. Supabase auth with email+password (`signInWithPassword`), signup with username (3-30 chars, unique), magic link or password reset landing on `/profile` (the page detects an OTP-only or recovery session via `session.user.amr` and prompts for a password). Custom SMTP via Resend. Dev auto-login: `VITE_DEV_AUTH_EMAIL` + `VITE_DEV_AUTH_PASSWORD` in `.env.local` (never commit).
+- `useAuth()` consumes the single `AuthProvider` (mounted in `main.tsx`); never create another listener.
+- Endpoints: `GET /api/auth/me`, `PUT /api/auth/profile`, `POST /api/auth/register`, `POST /api/profile/avatar` (2MB JPEG/PNG/WebP/GIF to the public `avatars` bucket; falls back to a claimed or `username`-matched chatter page image), `GET /api/user/:username`.
+- Profiles: `/profile` (own, editable bio/username, avatar upload, edit history, bookmarks, claim status) and `/user/:username`.
+- Bookmarks: `useBookmarks` is Supabase-backed when logged in, localStorage when not, and migrates on first login (`GET/POST/DELETE /api/bookmarks`, `POST /api/bookmarks/migrate`).
 
----
+## Chatter claiming
 
-## Wiki Subdomain UX Fixes
+A logged-in user links their account to a chatter page whose `username` frontmatter matches theirs.
+`chatter_claims(user_id PK, wiki_slug UNIQUE, claimed_at)`. `POST /api/chat/claim` (409 if taken by
+someone else), `GET /api/users/:username/claim`, `GET /api/claims/by-slug/:slug`. `WikiInfobox`
+overrides the frontmatter image with the claimer's avatar; `WikiProfilePage` shows the claimed page
+and a "Claim this page" button.
 
-- [x] **Submit page 404 in wiki subdomain**: added dedicated `/submit` route in router (before catch-all) rendering `WikiSubmitPage`
-- [x] **Tag/folder pages unconstrained width in wiki**: removed `tags`/`folder` from the article-classification rules now owned by `classifyLayout()`; also fixed `NoteBody` frontmatter override to not force article layout for tag/folder pages
-- [x] **Search overlay links broken in wiki**: `handleSelect` now uses `navigate()` in wiki mode instead of `pushCard` (which requires PanelStack)
-- [x] **TerminalTitle home button**: wiki logo now links to `/` (wiki root) instead of `https://subsurfaces.net`
-- [x] **Tag/folder links not navigating in wiki**: `usePanelClick` was intercepting all clicks (hooks run before conditional shell return) — added `isWiki` bail-out so wiki lets links navigate normally
-- [x] **Cross-domain backlinks broken in wiki**: backlinks to non-wiki slugs now link to `https://subsurfaces.net/{slug}` instead of `/{slug}`, preventing the wiki router from swallowing them
+## Admin panel (`/admin`, `role === "admin"`)
 
----
-
-## Wiki Content & Structure
-
-- [x] **Wiki frontmatter cleanup**: add explicit `type` fields where semantically appropriate (chatters, philosophers); leave slug-based article rule as fallback
-- [x] **Wiki tag taxonomy**: standardised tags (`philosopher`, `chatter`, `concept`, `movement`) on all wiki content; section links on index page route to `/tags/{type}`
-- [x] **Wiki index redesign**: make it a proper hub page — section links (tag-based), recent additions, community stats
-- [x] **Wiki page organisation**: establish standard wiki pages (index, about, guidelines, submit)
-
----
-
-## Wiki Contributor Experience
-
-### Phase 1: Visible Auth & Signup
-
-- [x] Auth controls in WikiShell header (bottom-left): "Log in / Sign up" when logged out, username + role badge + dropdown when logged in
-- [x] WikiAuthModal: Login + Signup tabs; signup validates username (3-30 chars) + checks uniqueness
-- [x] `useAuth` exposes `username`, `bio`, `avatar_url`, `created_at`; adds `signUp()` and `updateProfile()` methods
-- [x] Worker: `GET /api/auth/me` returns full profile fields; `PUT /api/auth/profile`; `POST /api/auth/register`; auto-creates profile row on first login
-
-### Phase 2: User Profile Pages
-
-- [x] `WikiProfilePage` — username, role badge, join date ("joined {date}" from `profiles.created_at`), contribution count, bio (inline-editable), edit history table, bookmarks list
-- [x] Username change from own profile page (validated, uniqueness-checked server-side)
-- [x] Routes: `/profile` (own) and `/user/:username` (public)
-
-### Phase 3: Editor Improvements
-
-- [x] Markdown preview toggle in `WikiMarkdownEditor` (react-markdown + remark-gfm, lazy-loaded)
-- [x] Required edit summary field (max 200 chars) on both WikiEditPage and WikiNewPage
-- [x] Change summary box: "+N lines added, -M removed" shown before submit in WikiEditPage
-
-### Bookmarks
-
-- [x] `useBookmarks` hook — Supabase-backed when logged in, localStorage fallback when logged out
-- [x] Auto-migrates localStorage bookmarks to Supabase on first login
-- [x] Bookmark button on all article pages (wiki + main site) in note header
-- [x] Bookmarks list on own profile page with remove button
-- [x] Worker endpoints: `GET/POST/DELETE /api/bookmarks`, `POST /api/bookmarks/migrate`
-- [x] Supabase `bookmarks` table with `UNIQUE(user_id, slug)` constraint
-
-### Chatter Profile Claiming
-
-Lets a logged-in user link their account to an existing wiki chatter page (`content/Wiki/…`
-frontmatter with `type: chatter`), so their own avatar/profile surfaces on that page instead of
-the static frontmatter image.
-
-- [x] `chatter_claims` table (`user_id`, `wiki_slug`, `claimed_at`) — one claim per slug, enforced
-  server-side (`POST /api/chat/claim` returns 409 if already claimed by someone else, or
-  `{ ok: true, already_claimed: true }` if re-claimed by the same user)
-- [x] `GET /api/users/:username/claim` — does this user have a claim? (`{ claim: { wiki_slug,
-  claimed_at } | null }`)
-- [x] `GET /api/claims/by-slug/:slug` — who claimed this wiki page? (`{ claim: { username,
-  avatar_url } | null }`)
-- [x] `WikiInfobox` fetches claim-by-slug and overrides the frontmatter `image` with the claimer's
-  `avatar_url` when present
-- [x] "Claim this page" button + claimed-page link on `WikiProfilePage`
-
-### Auth & Security
-
-- [x] **`signInWithPassword()`** added to `useAuth` — ready for password auth UI
-- [x] **Password auth UI**: `WikiAuthModal` login tab now shows email + password fields → `signInWithPassword`; signup still uses magic link for email verification.
-- [x] **Magic link → profile redirect**: `emailRedirectTo` changed to `${origin}/profile`; `WikiProfilePage` detects OTP-only session (no password) via `session.user.amr` and shows accent notice prompting user to set a password; `WikiAuthModal` sent-state message updated accordingly.
-- [x] **Custom SMTP**: Resend configured via `smtp.resend.com:465` — bypasses Supabase free tier 3 emails/hour limit.
-- [x] **`handle_new_user` security fix**: `ALTER FUNCTION public.handle_new_user() SET search_path = public` applied to resolve mutable search path warning.
-- [x] **Password recovery redirect**: `resetPasswordForEmail` sets `redirectTo` to `/profile`, but Supabase hash-based implicit flow ignores the path and lands at site root. Fixed with client-side detection: `onAuthStateChange` handles `PASSWORD_RECOVERY` event → redirect to `/profile`; fallback checks URL hash for `type=recovery` on init. Profile page detects recovery session via `amr` and prompts password change.
-
-### Navigation
-
-- [x] **TerminalTitle cross-shell nav**: all three shells show cross-domain links beside title — notes shows wiki|chat, wiki shows notes|chat, chat shows wiki|notes. `.chatNav`, `.chatNavLink`, `.chatNavDivider` styles in `TerminalTitle.module.scss`.
-- [x] **QuickControls in ChatShell**: `variant="chat"` hides MusicBar, SearchButton, BgModeToggle.
-- [x] **Dev auto-login**: `VITE_DEV_AUTH_EMAIL` + `VITE_DEV_AUTH_PASSWORD` in `.env.local` — `useAuth` silently calls `signInWithPassword` on mount in dev when no session. Fill in credentials in `.env.local`. Never committed.
-
----
-
-## Admin Panel
-
-- [x] `/admin` route → `WikiAdminPage` — gated on `role === "admin"` (shows a sign-in prompt if
-  logged out, "Access Denied" if logged in without the admin role). Three tabs:
-  - **Users** — list all profiles, filter by role (`all`/`pending`/`editor`/`admin`); role ladder
-    is `pending → editor → admin`, with Approve/Promote/Demote/Revoke actions per row
-    (`POST /api/admin/approve`, `POST /api/admin/revoke`)
-  - **Edit Log** — every wiki edit/submission (`slug`, `email`, PR link, timestamp) from the
-    `edit_log` table (`GET /api/admin/log`)
-  - **Page Locks** — view/add/remove page locks (`slug`, optional `reason`) that block concurrent
-    editing (`GET/POST /api/admin/locks`, `POST`/`DELETE /api/admin/lock`)
-- All admin endpoints live in `src/worker/admin.ts`, routed with `auth: "admin"` in the worker's
-  route table — the dispatcher rejects non-admins before the handler runs.
-
-### Future
-
-- [ ] Contributor dashboard (recent activity, stats)
-- [ ] Watchlist (get notified when bookmarked pages are edited) — needs Supabase `watchlist` table
-- [ ] Page metadata editing (description, tags) from hidden menu (`#`)
-- [ ] **Bookmarks: move off AppShell** — `AppShell` currently imports Supabase client for bookmarks, violating the "garden has no Supabase dependency" rule. Bookmarks should live entirely on `wiki.subsurfaces.net`; remove Supabase import from `AppShell` and `useBookmarks` hook from the main site
-- [x] **Supabase RLS audit**: RLS is active (confirmed by Leon 2026-07-12). This line previously
-  contradicted `docs/future.md`, which already marked it done with specific policies (own-row-only
-  bookmarks, authenticated insert/select edit_log, admin-only page_locks writes) — that was the
-  correct copy.
-- [ ] Wiki community features (comments, reactions)
+Three tabs: Users (role ladder pending, editor, admin; approve/promote/demote/revoke via
+`POST /api/admin/approve|revoke`), Edit Log (`GET /api/admin/log`) and Page Locks
+(`GET/POST/DELETE /api/admin/lock(s)`). All `/api/admin/*` routes are declared `auth: "admin"` in the
+Worker route table. Chat moderation (bans, rooms, pins) shares the same admin gate; see [`chat.md`](chat.md).
