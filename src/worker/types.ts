@@ -19,6 +19,7 @@ export interface NoteMeta {
   cover?: string
   poster?: string
   username?: string  // chatter pages carry the chat username
+  contentPath?: string  // vault-relative source path with original casing (prebuild)
 }
 
 export interface ProfileData {

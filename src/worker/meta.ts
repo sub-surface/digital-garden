@@ -96,10 +96,11 @@ export function injectMetaTags(html: string, meta: NoteMeta, slug: string, origi
     `<title>${escapeHtml(title)}</title>`,
   ].join("\n    ")
 
-  // Replace the static <title> and inject before </head>
+  // Replace the static <title> and inject before </head>. Function replacers on
+  // purpose: a string replacement interprets `$&`, `$'`, `$$` inside note text.
   return html
     .replace(/<title>[^<]*<\/title>/, "")
-    .replace("</head>", `    ${tags}\n  </head>`)
+    .replace("</head>", () => `    ${tags}\n  </head>`)
 }
 
 /**
@@ -133,5 +134,5 @@ export async function getPrerenderFragment(assetsFetcher: any, slug: string): Pr
  */
 export function injectPrerender(html: string, prerenderFragment: string | null): string {
   if (!prerenderFragment) return html
-  return html.replace('<div id="root"></div>', `<div id="root">${prerenderFragment}</div>`)
+  return html.replace('<div id="root"></div>', () => `<div id="root">${prerenderFragment}</div>`)
 }

@@ -46,7 +46,49 @@ export async function upstreamError(label: string, res: Response, clientMessage:
   return jsonResponse({ error: clientMessage }, status)
 }
 
+/** Parse a JSON request body. Returns a 400 Response on malformed input so
+ * handlers can write `const body = await readJson<T>(request); if (body instanceof Response) return body`.
+ * Only checks that the body is a JSON object — field validation stays with the handler. */
+export async function readJson<T extends object>(request: Request): Promise<Partial<T> | Response> {
+  try {
+    const body = await request.json()
+    if (body && typeof body === "object" && !Array.isArray(body)) return body as Partial<T>
+  } catch { /* fall through */ }
+  return jsonResponse({ error: "Invalid request body" }, 400)
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+/** IDs interpolated into PostgREST filters must be validated: an unencoded
+ * `x&id=neq.0` would otherwise widen a PATCH to every row. */
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_RE.test(value)
+}
+
+/** Cloudflare Turnstile siteverify. Fails closed (missing secret, network error, bad JSON). */
+export async function verifyTurnstile(env: Env, token: unknown, request: Request): Promise<boolean> {
+  if (!env.TURNSTILE_SECRET_KEY || typeof token !== "string" || !token) return false
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        secret: env.TURNSTILE_SECRET_KEY,
+        response: token,
+        remoteip: request.headers.get("CF-Connecting-IP") ?? undefined,
+      }),
+    })
+    const data = await res.json<{ success?: boolean }>()
+    return data.success === true
+  } catch (e) {
+    console.error("[upstream] turnstile verify failed:", e)
+    return false
+  }
+}
+
 // ─── External API helpers ────────────────────────────────────────────────────
+/** The content repository wiki submissions/edits open PRs against. */
+export const CONTENT_REPO = "/repos/sub-surface/digital-garden"
+
 export function ghApi(env: Env) {
   return (path: string, method: string, payload?: unknown) =>
     fetch(`https://api.github.com${path}`, {
@@ -81,25 +123,29 @@ export function supabaseRest(env: Env, path: string, method = "GET", body?: unkn
 // a short TTL: chat polls hit this constantly. Role/ban changes propagate
 // within TTL_MS; ban checks on message POST still hit the DB live.
 const AUTH_TTL_MS = 60_000
+// Rejected tokens are cached too (shorter): without this, a flood of garbage
+// bearer tokens costs 2-3 service-key Supabase round trips per request.
+const AUTH_NEGATIVE_TTL_MS = 15_000
 const AUTH_CACHE_MAX = 500
-const authCache = new Map<string, { user: AuthUser; expires: number }>()
+const authCache = new Map<string, { user: AuthUser | null; expires: number }>()
 
-function cacheGet(token: string): AuthUser | null {
+function cacheGet(token: string): AuthUser | null | undefined {
   const hit = authCache.get(token)
   if (hit && hit.expires > Date.now()) return hit.user
   if (hit) authCache.delete(token)
-  return null
+  return undefined
 }
 
-function cacheSet(token: string, user: AuthUser) {
+function cacheSet(token: string, user: AuthUser | null) {
   if (authCache.size >= AUTH_CACHE_MAX) authCache.clear() // crude but bounded
-  authCache.set(token, { user, expires: Date.now() + AUTH_TTL_MS })
+  authCache.set(token, { user, expires: Date.now() + (user ? AUTH_TTL_MS : AUTH_NEGATIVE_TTL_MS) })
 }
 
-/** Invalidate cached auth for a user (call after profile updates). */
+/** Invalidate cached auth for a user (call after profile/role/ban changes).
+ * In-isolate only: other isolates converge within AUTH_TTL_MS. */
 export function invalidateAuthCache(userId: string) {
   for (const [token, entry] of authCache) {
-    if (entry.user.id === userId) authCache.delete(token)
+    if (entry.user?.id === userId) authCache.delete(token)
   }
 }
 
@@ -140,8 +186,9 @@ export async function verifyAuth(
   if (!authHeader?.startsWith("Bearer ") || !env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return null
 
   const token = authHeader.slice(7)
+  if (!token || token.length > 4096) return null
   const cached = cacheGet(token)
-  if (cached) return cached
+  if (cached !== undefined) return cached
 
   // Fast path: API keys start with sk_ — skip JWT attempt
   if (!token.startsWith("sk_")) {
@@ -151,8 +198,14 @@ export async function verifyAuth(
     if (userRes.ok) {
       const user = await userRes.json<{ id: string; email: string }>()
       const authUser = await buildAuthUser(env, user.id, user.email)
+      // Don't negative-cache a profile-fetch failure: that's our outage, not a bad token.
       if (authUser) cacheSet(token, authUser)
       return authUser
+    }
+    // A JWT-shaped token that Supabase rejected is not an API key either.
+    if (token.split(".").length === 3) {
+      if (userRes.status === 401 || userRes.status === 403) cacheSet(token, null)
+      return null
     }
   }
 
@@ -162,7 +215,10 @@ export async function verifyAuth(
   const keyRes = await supabaseRest(env, `api_keys?key_hash=eq.${encodeURIComponent(keyHash)}&revoked_at=is.null&select=user_id`)
   if (!keyRes.ok) return null
   const keyRows = await keyRes.json<{ user_id: string }[]>()
-  if (!keyRows[0]) return null
+  if (!keyRows[0]) {
+    cacheSet(token, null)
+    return null
+  }
 
   // last_used_at bookkeeping — background work, must be registered with
   // waitUntil or the runtime may cancel it after the response is sent.

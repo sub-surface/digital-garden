@@ -1,10 +1,12 @@
 import { Env, ChatMessage, BanProfile, RouteCtx, AuthUser } from "./types"
-import { jsonResponse, supabaseRest, upstreamError } from "./lib"
+import { jsonResponse, supabaseRest, upstreamError, isUuid, invalidateAuthCache, readJson } from "./lib"
 import { getContentIndex, chatterImageForUsername, resolveMetaCaseInsensitive } from "./meta"
 
+/** Fails CLOSED: if the ban state can't be read, the caller's write is refused
+ * (thrown → dispatcher 500 with requestId) rather than silently allowed. */
 export async function checkBanStatus(env: Env, userId: string): Promise<{ banned: boolean; reason?: string }> {
   const res = await supabaseRest(env, `profiles?id=eq.${userId}&select=ban_type,ban_expires_at,ban_reason`)
-  if (!res.ok) return { banned: false }
+  if (!res.ok) throw new Error(`ban status lookup failed: ${res.status}`)
   const rows = await res.json<BanProfile[]>()
   const profile = rows[0]
   if (!profile || !profile.ban_type || profile.ban_type === "none") return { banned: false }
@@ -74,6 +76,11 @@ export async function handleChatMessageById({ env, match, auth }: RouteCtx): Pro
   const reactRes = await supabaseRest(env, `reactions?message_id=eq.${encodeURIComponent(id)}&select=emote,user_id`)
   const reactRows = reactRes.ok ? await reactRes.json<{ emote: string; user_id: string }[]>() : []
   return jsonResponse({ message: { ...m, profiles: authorProfile(m), reactions: groupReactions(reactRows, auth!.id) } })
+}
+
+function clampLimit(raw: string | null): number {
+  const n = parseInt(raw ?? "50", 10)
+  return Number.isFinite(n) ? Math.min(Math.max(n, 1), 100) : 50
 }
 
 function groupReactions(rows: { emote: string; user_id: string }[], currentUserId: string) {
@@ -174,8 +181,7 @@ export async function handleChatMessages(ctx: RouteCtx): Promise<Response> {
   if (!room) return jsonResponse({ error: "room parameter required" }, 400)
 
   const before = url.searchParams.get("before")
-  const rawLimit = parseInt(url.searchParams.get("limit") ?? "50", 10)
-  const limit = Math.min(isNaN(rawLimit) ? 50 : rawLimit, 100)
+  const limit = clampLimit(url.searchParams.get("limit"))
 
   let filter = `room_id=eq.${encodeURIComponent(room)}&deleted_at=is.null`
   if (before) filter += `&created_at=lt.${encodeURIComponent(before)}`
@@ -224,6 +230,7 @@ export async function handleChatReactions({ request, env, auth }: RouteCtx): Pro
   if (!body.message_id?.trim() || !body.emote?.trim()) {
     return jsonResponse({ error: "message_id and emote required" }, 400)
   }
+  if (body.emote.trim().length > 64) return jsonResponse({ error: "Invalid emote" }, 400)
 
   if (request.method === "POST") {
     const res = await supabaseRest(env, "reactions", "POST", {
@@ -256,8 +263,7 @@ export async function handleChatSearch({ env, url }: RouteCtx): Promise<Response
   const user = url.searchParams.get("user")
   const before = url.searchParams.get("before")
   const after = url.searchParams.get("after")
-  const rawLimit = parseInt(url.searchParams.get("limit") ?? "50", 10)
-  const limit = Math.min(isNaN(rawLimit) ? 50 : rawLimit, 100)
+  const limit = clampLimit(url.searchParams.get("limit"))
 
   const parts: string[] = [
     `body=ilike.*${encodeURIComponent(q)}*`,
@@ -406,50 +412,68 @@ export async function handleClaimBySlug({ env, match }: RouteCtx): Promise<Respo
   })
 }
 
-export async function handleChatBan({ request, env, url }: RouteCtx): Promise<Response> {
+export async function handleChatBan({ request, env, url, auth }: RouteCtx): Promise<Response> {
   const isBan = url.pathname === "/api/chat/ban"
 
-  let body: { user_id?: string; type?: string; duration_hours?: number; reason?: string }
-  try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
-  if (!body.user_id?.trim()) return jsonResponse({ error: "user_id required" }, 400)
+  const body = await readJson<{ user_id: string; type: string; duration_hours: number; reason: string }>(request)
+  if (body instanceof Response) return body
+  const targetId = body.user_id?.trim()
+  if (!isUuid(targetId)) return jsonResponse({ error: "user_id must be a user UUID" }, 400)
 
   if (isBan) {
-    if (!body.type || (body.type !== "temporary" && body.type !== "permanent")) {
+    if (body.type !== "temporary" && body.type !== "permanent") {
       return jsonResponse({ error: "type must be 'temporary' or 'permanent'" }, 400)
     }
-    const ban_expires_at = body.type === "temporary" && body.duration_hours
-      ? new Date(Date.now() + body.duration_hours * 3600000).toISOString()
-      : null
-    const targetId = body.user_id.trim()
+    if (targetId === auth!.id) return jsonResponse({ error: "You can't ban yourself" }, 400)
+    // A temporary ban without a valid duration used to store ban_expires_at=null,
+    // which checkBanStatus reads as a ban that never expires.
+    const hours = Number(body.duration_hours)
+    if (body.type === "temporary" && !(Number.isFinite(hours) && hours > 0 && hours <= 24 * 365)) {
+      return jsonResponse({ error: "duration_hours must be between 0 and 8760 for a temporary ban" }, 400)
+    }
+
+    const targetRes = await supabaseRest(env, `profiles?id=eq.${targetId}&select=role`)
+    if (!targetRes.ok) return upstreamError("ban target lookup", targetRes, "Failed to look up user")
+    const [target] = await targetRes.json<{ role: string }[]>()
+    if (!target) return jsonResponse({ error: "User not found" }, 404)
+    if (target.role === "admin") return jsonResponse({ error: "Admins can't be banned — demote first" }, 403)
+
+    const ban_expires_at = body.type === "temporary" ? new Date(Date.now() + hours * 3600000).toISOString() : null
     const res = await supabaseRest(env, `profiles?id=eq.${targetId}`, "PATCH", {
       ban_type: body.type,
       ban_expires_at,
-      ban_reason: body.reason ?? null,
+      ban_reason: typeof body.reason === "string" ? body.reason.slice(0, 500) : null,
     })
     if (!res.ok) return upstreamError("ban", res, "Failed to ban user")
+    invalidateAuthCache(targetId)
 
-    // Permanent ban: hard-delete messages + anonymise profile
+    // Permanent ban: hard-delete messages + anonymise profile. Each step is
+    // checked — a half-applied purge must be visible, not reported as ok.
     if (body.type === "permanent") {
-      await supabaseRest(env, `messages?user_id=eq.${targetId}`, "DELETE")
-      await supabaseRest(env, `reactions?user_id=eq.${targetId}`, "DELETE")
-      await supabaseRest(env, `profiles?id=eq.${targetId}`, "PATCH", {
-        username: "[deleted]",
-        avatar_url: null,
-        bio: null,
-        name_color: null,
-      })
+      const steps: [string, Promise<Response>][] = [
+        ["purge messages", supabaseRest(env, `messages?user_id=eq.${targetId}`, "DELETE")],
+        ["purge reactions", supabaseRest(env, `reactions?user_id=eq.${targetId}`, "DELETE")],
+        ["anonymise profile", supabaseRest(env, `profiles?id=eq.${targetId}`, "PATCH", {
+          username: null, avatar_url: null, bio: null, name_color: null,
+        })],
+      ]
+      for (const [label, p] of steps) {
+        const r = await p
+        if (!r.ok) return upstreamError(`permanent ban: ${label}`, r, `User banned, but ${label} failed — retry`)
+      }
     }
 
     return jsonResponse({ ok: true })
   }
 
   // unban
-  const res = await supabaseRest(env, `profiles?id=eq.${body.user_id.trim()}`, "PATCH", {
+  const res = await supabaseRest(env, `profiles?id=eq.${targetId}`, "PATCH", {
     ban_type: "none",
     ban_expires_at: null,
     ban_reason: null,
   })
   if (!res.ok) return upstreamError("unban", res, "Failed to unban user")
+  invalidateAuthCache(targetId)
   return jsonResponse({ ok: true })
 }
 

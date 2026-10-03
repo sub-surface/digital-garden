@@ -1,5 +1,5 @@
 import { RouteCtx } from "./types"
-import { jsonResponse, supabaseRest, upstreamError } from "./lib"
+import { jsonResponse, supabaseRest, upstreamError, readJson } from "./lib"
 
 export async function hashApiKey(key: string): Promise<string> {
   const data = new TextEncoder().encode(key)
@@ -18,8 +18,9 @@ export async function handleApiKeys({ request, env, url, auth }: RouteCtx): Prom
 
   // POST /api/keys — generate new key
   if (isKeyCollection && request.method === "POST") {
-    const body = await request.json<{ name?: string }>()
-    const name = (body.name ?? "").trim() || "API Key"
+    const body = await readJson<{ name: string }>(request)
+    if (body instanceof Response) return body
+    const name = (typeof body.name === "string" ? body.name.trim().slice(0, 80) : "") || "API Key"
     const rawBytes = crypto.getRandomValues(new Uint8Array(32))
     const rawKey = Array.from(rawBytes).map(b => b.toString(16).padStart(2, "0")).join("")
     const keyHash = await hashApiKey(rawKey)

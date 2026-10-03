@@ -53,7 +53,16 @@ export async function handleUpdateProfile({ request, env, auth, waitUntil }: Rou
     }
   }
   if (typeof body.bio === "string") updates.bio = body.bio.slice(0, 500)
-  if (typeof body.avatar_url === "string") updates.avatar_url = body.avatar_url.slice(0, 500)
+  if (typeof body.avatar_url === "string") {
+    // Only our own storage bucket (written by handleAvatarUpload) or empty. An
+    // arbitrary URL here is copied onto every chat message, making every reader's
+    // browser fetch an attacker-chosen host.
+    const avatar = body.avatar_url.trim()
+    if (avatar && !avatar.startsWith(`${env.SUPABASE_URL}/storage/v1/object/public/avatars/`)) {
+      return jsonResponse({ error: "avatar_url must be an uploaded avatar" }, 400)
+    }
+    updates.avatar_url = avatar ? avatar.slice(0, 500) : (null as any)
+  }
   if (body.name_color !== undefined) {
     if (body.name_color === null || body.name_color === "") {
       updates.name_color = null as any

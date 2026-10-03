@@ -1,6 +1,7 @@
 import { Env, ProfileData, RouteCtx } from "./types"
-import { ghApi, jsonResponse, supabaseRest, upstreamError } from "./lib"
-import { getContentIndex, chatterImageForUsername } from "./meta"
+import { CONTENT_REPO, ghApi, jsonResponse, readJson, supabaseRest, upstreamError, verifyTurnstile } from "./lib"
+import { getContentIndex, chatterImageForUsername, resolveSlugCaseInsensitive } from "./meta"
+import { escapeHtml } from "../lib/escape"
 
 /** Encode a user-supplied scalar as a safe YAML value. JSON strings are valid
  * YAML, so this neutralises quote/newline/key injection into frontmatter —
@@ -10,67 +11,155 @@ function yamlStr(value: string): string {
   return JSON.stringify(value.replace(/[\r\n]+/g, " ").trim())
 }
 
+/** Make user text inert inside an MDX body. Content files compile as MDX, so a
+ * raw `{expr}` or `<Tag>` in a submission is executable JSX once merged — a
+ * reviewed PR used to be the only defence. Backslash escapes are valid
+ * CommonMark for ASCII punctuation and MDX honours them. */
+function mdxText(value: string): string {
+  return value.replace(/[\\{}<>]/g, (c) => `\\${c}`)
+}
+
+function utf8Base64(text: string): string {
+  const bytes = new TextEncoder().encode(text)
+  let bin = ""
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(bin)
+}
+
+function notifyAdmin(env: Env, subject: string, text: string, html: string) {
+  if (!env.EMAIL) return
+  env.EMAIL.send({
+    from: { email: "system@subsurfaces.net", name: "Subsurface Wiki" },
+    to: "admin@subsurfaces.net",
+    subject,
+    text,
+    html,
+  }).catch((err) => console.error("Email send error:", err))
+}
+
+interface PrFile { path: string; base64: string; sha?: string; message: string }
+
+/** Branch off master, commit each file, open a PR. Every wiki write path goes
+ * through here. If any step after branch creation fails, the branch is deleted
+ * so failed submissions don't accumulate as orphan branches. */
+async function openPullRequest(
+  env: Env,
+  branch: string,
+  files: PrFile[],
+  pr: { title: string; body: string },
+): Promise<string> {
+  const gh = ghApi(env)
+  const refRes = await gh(`${CONTENT_REPO}/git/ref/heads/master`, "GET")
+  if (!refRes.ok) throw new Error(`get ref: ${refRes.status} ${(await refRes.text()).slice(0, 200)}`)
+  const { object: { sha: masterSha } } = await refRes.json<{ object: { sha: string } }>()
+
+  const branchRes = await gh(`${CONTENT_REPO}/git/refs`, "POST", { ref: `refs/heads/${branch}`, sha: masterSha })
+  if (!branchRes.ok) throw new Error(`create branch: ${branchRes.status} ${(await branchRes.text()).slice(0, 200)}`)
+
+  try {
+    for (const f of files) {
+      const res = await gh(`${CONTENT_REPO}/contents/${encodeURI(f.path)}`, "PUT", {
+        message: f.message, content: f.base64, branch, ...(f.sha ? { sha: f.sha } : {}),
+      })
+      if (!res.ok) throw new Error(`commit ${f.path}: ${res.status} ${(await res.text()).slice(0, 200)}`)
+    }
+    const prRes = await gh(`${CONTENT_REPO}/pulls`, "POST", { ...pr, head: branch, base: "master" })
+    if (!prRes.ok) throw new Error(`create PR: ${prRes.status} ${(await prRes.text()).slice(0, 200)}`)
+    return (await prRes.json<{ html_url: string }>()).html_url
+  } catch (err) {
+    await gh(`${CONTENT_REPO}/git/refs/heads/${branch}`, "DELETE")
+      .catch((e) => console.error(`[wiki] orphan branch cleanup failed for ${branch}:`, e))
+    throw err
+  }
+}
+
+function branchSuffix(): string {
+  return `${Date.now().toString(36)}-${Math.floor(Math.random() * 0xffff).toString(16).padStart(4, "0")}`
+}
+
+function emailSlug(email: string): string {
+  return email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase() || "editor"
+}
+
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024
+const MAX_CONTENT_CHARS = 200_000
+
+/** Magic-byte check of a base64 image. Returns its extension, or null. */
+function sniffImage(base64: string): string | null {
+  let head: string
+  try { head = atob(base64.slice(0, 16)) } catch { return null }
+  const b = (i: number) => head.charCodeAt(i)
+  if (b(0) === 0xff && b(1) === 0xd8) return "jpg"
+  if (b(0) === 0x89 && b(1) === 0x50) return "png"
+  if (head.startsWith("GIF")) return "gif"
+  if (head.startsWith("RIFF") && head.slice(8, 12) === "WEBP") return "webp"
+  return null
+}
+
+const SURVEY_SECTIONS: [string, [string, string][]][] = [
+  ["Metaphysics & Epistemology", [
+    ["apriori","A priori knowledge"],["abstractObjects","Abstract objects"],["analyticSynthetic","Analytic-synthetic distinction"],
+    ["epistemicJustification","Epistemic justification"],["externalWorld","External world"],["freeWill","Free will"],
+    ["knowledge","Knowledge"],["knowledgeClaims","Knowledge claims"],["mentalContent","Mental content"],["mind","Mind"],
+    ["perceptualExperience","Perceptual experience"],["personalIdentity","Personal identity"],["teletransporter","Teletransporter"],
+    ["time","Time"],["truth","Truth"],["vagueness","Vagueness"],
+  ]],
+  ["Value Theory (Ethics, Politics, & Aesthetics)", [
+    ["aestheticValue","Aesthetic value"],["eatingAnimals","Eating animals"],["experienceMachine","Experience machine"],
+    ["footbridge","Footbridge"],["gender","Gender"],["meaningOfLife","Meaning of life"],["metaEthics","Meta-ethics"],
+    ["moralJudgment","Moral judgment"],["moralMotivation","Moral motivation"],["moralPrinciples","Moral principles"],
+    ["normativeEthics","Normative ethics"],["politicalPhilosophy","Political philosophy"],["race","Race"],["trolleyProblem","Trolley problem"],
+  ]],
+  ["Logic, Language, & Science", [
+    ["lawsOfNature","Laws of nature"],["logic","Logic"],["newcomb","Newcomb's problem"],["properNames","Proper names"],["science","Science"],
+  ]],
+  ["Metaphilosophy & Religion", [
+    ["aimOfPhilosophy","Aim of philosophy"],["god","God"],["philosophicalMethods","Philosophical methods"],["philosophicalProgress","Philosophical progress"],
+  ]],
+]
+
 export async function handleSubmit({ request, env }: RouteCtx): Promise<Response> {
   if (!env.TURNSTILE_SECRET_KEY || !env.GITHUB_TOKEN) {
     return jsonResponse({ error: "Server misconfiguration" }, 500)
   }
 
-  let body: Record<string, any>
-  try {
-    body = await request.json()
-  } catch {
-    return jsonResponse({ error: "Invalid request body" }, 400)
-  }
+  const body = await readJson<Record<string, unknown>>(request)
+  if (body instanceof Response) return body
+  const str = (k: string) => (typeof body[k] === "string" ? (body[k] as string).trim() : "")
 
-  if (!body.name?.trim() || !body.username?.trim() || !body.turnstileToken) {
+  const name = str("name")
+  const username = str("username")
+  if (!name || !username || !body.turnstileToken) {
     return jsonResponse({ error: "Missing required fields" }, 400)
   }
+  if (name.length > 100 || username.length > 60) return jsonResponse({ error: "Name or username too long" }, 400)
 
-  const tsRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ secret: env.TURNSTILE_SECRET_KEY, response: body.turnstileToken }),
-  })
-  const tsData = await tsRes.json<{ success: boolean }>()
-  if (!tsData.success) {
+  const safeName = username.replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
+  if (!safeName) return jsonResponse({ error: "Username must contain a letter or digit" }, 400)
+
+  // Validate the image before spending a captcha or any GitHub calls on it.
+  const imageBase64 = str("imageBase64")
+  let imageExt: string | null = null
+  if (imageBase64) {
+    if (imageBase64.length * 0.75 > MAX_IMAGE_BYTES) return jsonResponse({ error: "Image too large — maximum 2 MB" }, 413)
+    imageExt = sniffImage(imageBase64)
+    if (!imageExt) return jsonResponse({ error: "Image must be JPEG, PNG, GIF or WebP" }, 400)
+  }
+
+  if (!(await verifyTurnstile(env, body.turnstileToken, request))) {
     return jsonResponse({ error: "Captcha validation failed" }, 400)
   }
 
-  const gh = ghApi(env)
-
   try {
-    const refRes = await gh("/repos/sub-surface/digital-garden/git/ref/heads/master", "GET")
-    if (!refRes.ok) {
-      const txt = await refRes.text()
-      throw new Error(`get ref: ${refRes.status} — ${txt}`)
-    }
-    const { object: { sha: mainSha } } = await refRes.json<{ object: { sha: string } }>()
-
-    const name = String(body.name).trim()
-    const username = String(body.username).trim()
-    const safeName = username.replace(/^[^a-zA-Z0-9]+/, "").replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
-    const branchName = `submit/${safeName}-${Date.now()}-${Math.floor(Math.random() * 0xffff).toString(16).padStart(4, "0")}`
-
-    const branchRes = await gh("/repos/sub-surface/digital-garden/git/refs", "POST", {
-      ref: `refs/heads/${branchName}`, sha: mainSha,
-    })
-    if (!branchRes.ok) {
-      const txt = await branchRes.text()
-      throw new Error(`create branch: ${branchRes.status} — ${txt}`)
-    }
-
-    let resolvedImageUrl = body.imageUrl || ""
-    if (body.imageBase64 && body.imageFilename) {
-      const rawExt = body.imageFilename.split(".").pop()?.toLowerCase() ?? ""
-      const ext = ["jpg", "jpeg", "png", "gif", "webp"].includes(rawExt) ? rawExt : "jpg"
-      const imgPath = `content/Media/Wiki/chatters/${safeName}.${ext}`
-      const imgRes = await gh(`/repos/sub-surface/digital-garden/contents/${imgPath}`, "PUT", {
+    const files: PrFile[] = []
+    let resolvedImageUrl = /^https:\/\//.test(str("imageUrl")) ? str("imageUrl") : ""
+    if (imageBase64 && imageExt) {
+      files.push({
+        path: `content/Media/Wiki/chatters/${safeName}.${imageExt}`,
+        base64: imageBase64,
         message: `wiki: add profile image for ${safeName}`,
-        content: body.imageBase64,
-        branch: branchName,
       })
-      if (!imgRes.ok) throw new Error(`commit image: ${imgRes.status}`)
-      resolvedImageUrl = `/content/Media/Wiki/chatters/${safeName}.${ext}`
+      resolvedImageUrl = `/content/Media/Wiki/chatters/${safeName}.${imageExt}`
     }
 
     const fm = [
@@ -79,69 +168,39 @@ export async function handleSubmit({ request, env }: RouteCtx): Promise<Response
       `description: ${yamlStr(`Philchat wiki profile for ${name}`)}`,
       "tags: [wiki, chatter]", "type: chatter",
       `username: ${yamlStr(username)}`,
-      body.pronouns ? `pronouns: ${yamlStr(String(body.pronouns))}` : null,
-      resolvedImageUrl ? `image: ${yamlStr(String(resolvedImageUrl))}` : null,
-      body.tradition ? `tradition: ${yamlStr(String(body.tradition))}` : null,
-      body.aos ? `aos: ${yamlStr(String(body.aos))}` : null,
-      body.influences ? `influences: ${yamlStr(String(body.influences))}` : null,
+      str("pronouns") ? `pronouns: ${yamlStr(str("pronouns"))}` : null,
+      resolvedImageUrl ? `image: ${yamlStr(resolvedImageUrl)}` : null,
+      str("tradition") ? `tradition: ${yamlStr(str("tradition"))}` : null,
+      str("aos") ? `aos: ${yamlStr(str("aos"))}` : null,
+      str("influences") ? `influences: ${yamlStr(str("influences"))}` : null,
       "draft: true", "---",
     ].filter(Boolean).join("\n")
 
-    const sectionDefs: [string, [string, string][]][] = [
-      ["Metaphysics & Epistemology", [
-        ["apriori","A priori knowledge"],["abstractObjects","Abstract objects"],["analyticSynthetic","Analytic-synthetic distinction"],
-        ["epistemicJustification","Epistemic justification"],["externalWorld","External world"],["freeWill","Free will"],
-        ["knowledge","Knowledge"],["knowledgeClaims","Knowledge claims"],["mentalContent","Mental content"],["mind","Mind"],
-        ["perceptualExperience","Perceptual experience"],["personalIdentity","Personal identity"],["teletransporter","Teletransporter"],
-        ["time","Time"],["truth","Truth"],["vagueness","Vagueness"],
-      ]],
-      ["Value Theory (Ethics, Politics, & Aesthetics)", [
-        ["aestheticValue","Aesthetic value"],["eatingAnimals","Eating animals"],["experienceMachine","Experience machine"],
-        ["footbridge","Footbridge"],["gender","Gender"],["meaningOfLife","Meaning of life"],["metaEthics","Meta-ethics"],
-        ["moralJudgment","Moral judgment"],["moralMotivation","Moral motivation"],["moralPrinciples","Moral principles"],
-        ["normativeEthics","Normative ethics"],["politicalPhilosophy","Political philosophy"],["race","Race"],["trolleyProblem","Trolley problem"],
-      ]],
-      ["Logic, Language, & Science", [
-        ["lawsOfNature","Laws of nature"],["logic","Logic"],["newcomb","Newcomb's problem"],["properNames","Proper names"],["science","Science"],
-      ]],
-      ["Metaphilosophy & Religion", [
-        ["aimOfPhilosophy","Aim of philosophy"],["god","God"],["philosophicalMethods","Philosophical methods"],["philosophicalProgress","Philosophical progress"],
-      ]],
-    ]
-
-    const sections = sectionDefs.map(([title, qs]) =>
-      `## ${title}\n` + qs.map(([k, l]) => `* **${l}:** ${body[k] || "[no answer]"}`).join("\n")
+    // Survey answers are single-line list items: a newline would let an answer start
+    // its own block (a heading, a fence) and restructure the page.
+    const sections = SURVEY_SECTIONS.map(([title, qs]) =>
+      `## ${title}\n` + qs.map(([k, l]) => `* **${l}:** ${mdxText(str(k).replace(/\s*\n\s*/g, " ")) || "[no answer]"}`).join("\n")
     ).join("\n\n")
 
-    const notes = body.additionalNotes ? `\n\n---\n## Additional Notes\n${body.additionalNotes}` : ""
-    const bodySection = body.bodyContent?.trim() ? `\n\n${body.bodyContent.trim()}\n\n---\n\n` : ""
-    const markdown = `${fm}\n\n# ${name}'s Profile\n\n${bodySection}${sections}${notes}\n`
+    const notes = str("additionalNotes") ? `\n\n---\n## Additional Notes\n${mdxText(str("additionalNotes"))}` : ""
+    const bodySection = str("bodyContent") ? `\n\n${mdxText(str("bodyContent"))}\n\n---\n\n` : ""
+    const markdown = `${fm}\n\n# ${mdxText(name)}'s Profile\n\n${bodySection}${sections}${notes}\n`
+    if (markdown.length > MAX_CONTENT_CHARS) return jsonResponse({ error: "Submission too long" }, 413)
 
-    const filePath = `content/Wiki/chatters/${safeName}.md`
-    const commitRes = await gh(`/repos/sub-surface/digital-garden/contents/${filePath}`, "PUT", {
+    files.push({
+      path: `content/Wiki/chatters/${safeName}.md`,
+      base64: utf8Base64(markdown),
       message: `wiki: add profile submission for ${safeName}`,
-      content: btoa(unescape(encodeURIComponent(markdown))),
-      branch: branchName,
     })
-    if (!commitRes.ok) throw new Error(`commit file: ${commitRes.status}`)
 
-    const prRes = await gh("/repos/sub-surface/digital-garden/pulls", "POST", {
+    const html_url = await openPullRequest(env, `submit/${safeName}-${branchSuffix()}`, files, {
       title: `Wiki profile: ${safeName}`,
-      head: branchName, base: "master",
       body: `New wiki profile submission for **${name.replace(/[*_`[\]]/g, "")}** (${safeName}).\n\nSubmitted via wiki.subsurfaces.net/wiki/submit`,
     })
-    if (!prRes.ok) throw new Error(`create PR: ${prRes.status}`)
-    const { html_url } = await prRes.json<{ html_url: string }>()
 
-    if (env.EMAIL) {
-      env.EMAIL.send({
-        from: { email: "system@subsurfaces.net", name: "Subsurface Wiki" },
-        to: "admin@subsurfaces.net",
-        subject: `New Profile Submission: ${safeName}`,
-        text: `A new profile has been submitted by ${name} (${safeName}).\n\nReview it here: ${html_url}`,
-        html: `<p>A new profile has been submitted (@${safeName}).</p><p><a href="${html_url}">Review Pull Request</a></p>`
-      }).catch(err => console.error("Email send error:", err))
-    }
+    notifyAdmin(env, `New Profile Submission: ${safeName}`,
+      `A new profile has been submitted by ${name} (${safeName}).\n\nReview it here: ${html_url}`,
+      `<p>A new profile has been submitted (@${escapeHtml(safeName)}).</p><p><a href="${html_url}">Review Pull Request</a></p>`)
 
     return jsonResponse({ prUrl: html_url })
   } catch (err) {
@@ -190,203 +249,119 @@ export async function handleUserProfile({ env, match }: RouteCtx): Promise<Respo
   })
 }
 
+function requireEditor(role: string): Response | null {
+  return role === "editor" || role === "admin" ? null : jsonResponse({ error: "Unauthorized" }, 403)
+}
+
+async function logEdit(env: Env, slug: string, userId: string, prUrl: string, editSummary: string) {
+  const res = await supabaseRest(env, "edit_log", "POST", {
+    slug, user_id: userId, pr_url: prUrl, edit_summary: editSummary || null,
+  })
+  // The PR exists either way; a missing log row is worth a loud log line, not a failed request.
+  if (!res.ok) console.error(`[wiki] edit_log insert failed (${res.status}) for ${prUrl}`)
+}
+
 export async function handleEdit({ request, env, auth }: RouteCtx): Promise<Response> {
-  if (auth!.role !== "editor" && auth!.role !== "admin") {
-    return jsonResponse({ error: "Unauthorized" }, 403)
-  }
+  const denied = requireEditor(auth!.role)
+  if (denied) return denied
 
-  let body: Record<string, any>
-  try { body = await request.json() } catch {
-    return jsonResponse({ error: "Invalid request body" }, 400)
-  }
-
-  if (!body.slug?.trim() || !body.content?.trim() || !body.turnstileToken) {
+  const body = await readJson<{ slug: string; content: string; turnstileToken: string; editSummary: string }>(request)
+  if (body instanceof Response) return body
+  if (typeof body.slug !== "string" || !body.slug.trim() || typeof body.content !== "string" || !body.content.trim()) {
     return jsonResponse({ error: "Missing required fields" }, 400)
   }
+  if (body.content.length > MAX_CONTENT_CHARS) return jsonResponse({ error: "Content too long" }, 413)
+  const editSummary = typeof body.editSummary === "string" ? body.editSummary.trim().slice(0, 200) : ""
 
-  // Verify Turnstile
-  const tsRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ secret: env.TURNSTILE_SECRET_KEY, response: body.turnstileToken }),
-  })
-  const tsData = await tsRes.json<{ success: boolean }>()
-  if (!tsData.success) return jsonResponse({ error: "Captcha validation failed" }, 400)
-
-  // Check page lock
-  const lockRes = await supabaseRest(env, `page_locks?slug=eq.${encodeURIComponent(body.slug)}`)
-  if (lockRes.ok) {
-    const locks = await lockRes.json<{ slug: string }[]>()
-    if (locks.length > 0) return jsonResponse({ error: "This page is locked" }, 403)
+  // Resolve through the content index: the request slug carries whatever casing
+  // the visitor's URL had, but GitHub paths are case-sensitive (`wiki/about`
+  // used to miss `content/Wiki/About.md`). The index also limits edits to
+  // published wiki notes — not essays, private notes, or arbitrary repo paths.
+  const index = await getContentIndex(env.ASSETS)
+  const slug = resolveSlugCaseInsensitive(index, body.slug.trim())
+  const contentPath = slug ? index[slug].contentPath : undefined
+  if (!slug || !contentPath || !/^wiki\//i.test(slug)) {
+    return jsonResponse({ error: "Only published wiki pages can be edited" }, 404)
   }
 
-  const gh = ghApi(env)
+  if (!(await verifyTurnstile(env, body.turnstileToken, request))) {
+    return jsonResponse({ error: "Captcha validation failed" }, 400)
+  }
+
+  // Fails closed: an unreadable lock table must not let edits through to locked pages.
+  // Case-insensitive: locks are keyed by whatever casing the admin typed.
+  const lockPattern = slug.replace(/[\\%_]/g, (c) => `\\${c}`)
+  const lockRes = await supabaseRest(env, `page_locks?slug=ilike.${encodeURIComponent(lockPattern)}&select=slug`)
+  if (!lockRes.ok) return upstreamError("page lock check", lockRes, "Could not check page lock")
+  if ((await lockRes.json<unknown[]>()).length > 0) return jsonResponse({ error: "This page is locked" }, 403)
 
   try {
-    // Resolve file path — try common patterns
-    const slug = body.slug as string
-    const filePath = `content/${slug.replace(/\s+/g, "-")}.md`
+    const filePath = `content/${contentPath}`
+    const fileRes = await ghApi(env)(`${CONTENT_REPO}/contents/${encodeURI(filePath)}?ref=master`, "GET")
+    if (!fileRes.ok) return upstreamError("edit source lookup", fileRes, "Could not find the source file on GitHub", 404)
+    const { sha } = await fileRes.json<{ sha: string }>()
 
-    // Get current file SHA (needed for update)
-    const fileRes = await gh(`/repos/sub-surface/digital-garden/contents/${filePath}?ref=master`, "GET")
-    if (!fileRes.ok) {
-      // Try with spaces instead of hyphens
-      const altPath = `content/${slug}.md`
-      const altRes = await gh(`/repos/sub-surface/digital-garden/contents/${altPath}?ref=master`, "GET")
-      if (!altRes.ok) {
-        return jsonResponse({ error: "Could not find the source file on GitHub" }, 404)
-      }
-      const altData = await altRes.json<{ sha: string; path: string }>()
-      return await createEditPR(gh, env, auth!, altData.path, altData.sha, body.content, slug, body.editSummary)
-    }
-    const fileData = await fileRes.json<{ sha: string; path: string }>()
-    return await createEditPR(gh, env, auth!, fileData.path, fileData.sha, body.content, slug, body.editSummary)
+    const html_url = await openPullRequest(env, `edit/${emailSlug(auth!.email)}-${branchSuffix()}`, [{
+      path: filePath,
+      base64: utf8Base64(body.content),
+      sha,
+      message: editSummary ? `wiki: edit ${slug} — ${editSummary}` : `wiki: edit ${slug}`,
+    }], {
+      title: `Wiki edit: ${slug.split("/").pop()?.replace(/-/g, " ")}`,
+      body: `Edit to **${slug}** by ${auth!.email}.${editSummary ? `\n\n**Summary:** ${editSummary}` : ""}\n\nSubmitted via wiki editor.`,
+    })
+
+    await logEdit(env, slug, auth!.id, html_url, editSummary)
+    notifyAdmin(env, `New Wiki Edit: ${slug}`,
+      `An edit to ${slug} was submitted by ${auth!.email}.\n\nReview it here: ${html_url}`,
+      `<p>An edit to <strong>${escapeHtml(slug)}</strong> was submitted by ${escapeHtml(auth!.email)}.</p><p><a href="${html_url}">Review Pull Request</a></p>`)
+
+    return jsonResponse({ prUrl: html_url })
   } catch (err) {
     console.error("Edit error:", err)
     return jsonResponse({ error: "Failed to create edit" }, 500)
   }
 }
 
-export async function createEditPR(
-  gh: ReturnType<typeof ghApi>,
-  env: Env,
-  auth: { id: string; email: string },
-  filePath: string,
-  fileSha: string,
-  content: string,
-  slug: string,
-  editSummary?: string,
-) {
-  // Get master SHA
-  const refRes = await gh("/repos/sub-surface/digital-garden/git/ref/heads/master", "GET")
-  if (!refRes.ok) throw new Error(`get ref: ${refRes.status}`)
-  const { object: { sha: masterSha } } = await refRes.json<{ object: { sha: string } }>()
-
-  const safeName = auth.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
-  const branchName = `edit/${safeName}-${Date.now().toString(36)}`
-
-  // Create branch
-  const branchRes = await gh("/repos/sub-surface/digital-garden/git/refs", "POST", {
-    ref: `refs/heads/${branchName}`, sha: masterSha,
-  })
-  if (!branchRes.ok) throw new Error(`create branch: ${branchRes.status}`)
-
-  // Commit updated file
-  const commitRes = await gh(`/repos/sub-surface/digital-garden/contents/${filePath}`, "PUT", {
-    message: editSummary ? `wiki: edit ${slug} — ${editSummary}` : `wiki: edit ${slug}`,
-    content: btoa(unescape(encodeURIComponent(content))),
-    sha: fileSha,
-    branch: branchName,
-  })
-  if (!commitRes.ok) throw new Error(`commit file: ${commitRes.status}`)
-
-  // Open PR
-  const prRes = await gh("/repos/sub-surface/digital-garden/pulls", "POST", {
-    title: `Wiki edit: ${slug.split("/").pop()?.replace(/-/g, " ")}`,
-    head: branchName,
-    base: "master",
-    body: `Edit to **${slug}** by ${auth.email}.${editSummary ? `\n\n**Summary:** ${editSummary}` : ""}\n\nSubmitted via wiki editor.`,
-  })
-  if (!prRes.ok) throw new Error(`create PR: ${prRes.status}`)
-  const { html_url } = await prRes.json<{ html_url: string }>()
-
-  // Log the edit
-  await supabaseRest(env, "edit_log", "POST", {
-    slug, user_id: auth.id, pr_url: html_url, edit_summary: editSummary || null,
-  })
-
-  if (env.EMAIL) {
-    env.EMAIL.send({
-      from: { email: "system@subsurfaces.net", name: "Subsurface Wiki" },
-      to: "admin@subsurfaces.net",
-      subject: `New Wiki Edit: ${slug}`,
-      text: `An edit to ${slug} was submitted by ${auth.email}.\n\nReview it here: ${html_url}`,
-      html: `<p>An edit to <strong>${slug}</strong> was submitted by ${auth.email}.</p><p><a href="${html_url}">Review Pull Request</a></p>`
-    }).catch(err => console.error("Email send error:", err))
-  }
-
-  return jsonResponse({ prUrl: html_url })
-}
-
 export async function handleNew({ request, env, auth }: RouteCtx): Promise<Response> {
-  if (auth!.role !== "editor" && auth!.role !== "admin") {
-    return jsonResponse({ error: "Unauthorized" }, 403)
-  }
+  const denied = requireEditor(auth!.role)
+  if (denied) return denied
 
-  let body: Record<string, any>
-  try { body = await request.json() } catch {
-    return jsonResponse({ error: "Invalid request body" }, 400)
-  }
-
-  if (!body.title?.trim() || !body.filePath?.trim() || !body.content?.trim() || !body.turnstileToken) {
+  const body = await readJson<{ title: string; filePath: string; content: string; turnstileToken: string; editSummary: string; articleType: string }>(request)
+  if (body instanceof Response) return body
+  const title = typeof body.title === "string" ? body.title.trim().slice(0, 200) : ""
+  if (!title || typeof body.filePath !== "string" || typeof body.content !== "string" || !body.content.trim()) {
     return jsonResponse({ error: "Missing required fields" }, 400)
   }
+  if (body.content.length > MAX_CONTENT_CHARS) return jsonResponse({ error: "Content too long" }, 413)
 
-  // Validate path is within content/Wiki/
-  const filePath = body.filePath as string
-  if (!filePath.startsWith("content/Wiki/") || filePath.includes("..")) {
+  // A markdown file under content/Wiki/ — no traversal, no empty segments.
+  const filePath = body.filePath.trim()
+  if (!/^content\/Wiki\/.+\.mdx?$/.test(filePath) || filePath.includes("..") || filePath.includes("//") || filePath.includes("\\")) {
     return jsonResponse({ error: "Invalid file path" }, 400)
   }
+  const editSummary = typeof body.editSummary === "string" ? body.editSummary.trim().slice(0, 200) : ""
+  const articleType = typeof body.articleType === "string" && body.articleType ? body.articleType.slice(0, 40) : "misc"
 
-  // Verify Turnstile
-  const tsRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ secret: env.TURNSTILE_SECRET_KEY, response: body.turnstileToken }),
-  })
-  const tsData = await tsRes.json<{ success: boolean }>()
-  if (!tsData.success) return jsonResponse({ error: "Captcha validation failed" }, 400)
-
-  const gh = ghApi(env)
+  if (!(await verifyTurnstile(env, body.turnstileToken, request))) {
+    return jsonResponse({ error: "Captcha validation failed" }, 400)
+  }
 
   try {
-    // Get master SHA
-    const refRes = await gh("/repos/sub-surface/digital-garden/git/ref/heads/master", "GET")
-    if (!refRes.ok) throw new Error(`get ref: ${refRes.status}`)
-    const { object: { sha: masterSha } } = await refRes.json<{ object: { sha: string } }>()
-
-    const safeName = auth!.email.split("@")[0].replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase()
-    const branchName = `new/${safeName}-${Date.now().toString(36)}`
-
-    // Create branch
-    const branchRes = await gh("/repos/sub-surface/digital-garden/git/refs", "POST", {
-      ref: `refs/heads/${branchName}`, sha: masterSha,
-    })
-    if (!branchRes.ok) throw new Error(`create branch: ${branchRes.status}`)
-
-    // Commit new file
-    const commitRes = await gh(`/repos/sub-surface/digital-garden/contents/${filePath}`, "PUT", {
-      message: `wiki: add ${body.title}`,
-      content: btoa(unescape(encodeURIComponent(body.content))),
-      branch: branchName,
-    })
-    if (!commitRes.ok) throw new Error(`commit file: ${commitRes.status}`)
-
-    // Open PR
-    const prRes = await gh("/repos/sub-surface/digital-garden/pulls", "POST", {
-      title: `Wiki new: ${body.title}`,
-      head: branchName,
-      base: "master",
-      body: `New wiki article: **${body.title}** (${body.articleType || "misc"}) by ${auth!.email}.${body.editSummary ? `\n\n**Summary:** ${body.editSummary}` : ""}\n\nSubmitted via wiki editor.`,
-    })
-    if (!prRes.ok) throw new Error(`create PR: ${prRes.status}`)
-    const { html_url } = await prRes.json<{ html_url: string }>()
-
-    // Log the creation
-    const slug = filePath.replace(/^content\//, "").replace(/\.md$/, "")
-    await supabaseRest(env, "edit_log", "POST", {
-      slug, user_id: auth!.id, pr_url: html_url, edit_summary: body.editSummary || null,
+    const html_url = await openPullRequest(env, `new/${emailSlug(auth!.email)}-${branchSuffix()}`, [{
+      path: filePath,
+      base64: utf8Base64(body.content),
+      message: `wiki: add ${title}`,
+    }], {
+      title: `Wiki new: ${title}`,
+      body: `New wiki article: **${title}** (${articleType}) by ${auth!.email}.${editSummary ? `\n\n**Summary:** ${editSummary}` : ""}\n\nSubmitted via wiki editor.`,
     })
 
-    if (env.EMAIL) {
-      env.EMAIL.send({
-        from: { email: "system@subsurfaces.net", name: "Subsurface Wiki" },
-        to: "admin@subsurfaces.net",
-        subject: `New Article: ${body.title}`,
-        text: `A new article "${body.title}" was submitted by ${auth!.email}.\n\nReview it here: ${html_url}`,
-        html: `<p>A new article <strong>${body.title}</strong> was submitted by ${auth!.email}.</p><p><a href="${html_url}">Review Pull Request</a></p>`
-      }).catch(err => console.error("Email send error:", err))
-    }
+    const slug = filePath.replace(/^content\//, "").replace(/\.mdx?$/, "")
+    await logEdit(env, slug, auth!.id, html_url, editSummary)
+    notifyAdmin(env, `New Article: ${title}`,
+      `A new article "${title}" was submitted by ${auth!.email}.\n\nReview it here: ${html_url}`,
+      `<p>A new article <strong>${escapeHtml(title)}</strong> was submitted by ${escapeHtml(auth!.email)}.</p><p><a href="${html_url}">Review Pull Request</a></p>`)
 
     return jsonResponse({ prUrl: html_url })
   } catch (err) {
@@ -407,11 +382,13 @@ export async function handleBookmarks({ request, env, url, auth }: RouteCtx): Pr
 
   // POST /api/bookmarks — add bookmark
   if (pathname === "/api/bookmarks" && request.method === "POST") {
-    let body: { slug?: string; title?: string }
-    try { body = await request.json() } catch { return jsonResponse({ error: "Invalid body" }, 400) }
-    if (!body.slug?.trim() || !body.title?.trim()) return jsonResponse({ error: "slug and title required" }, 400)
+    const body = await readJson<{ slug: string; title: string }>(request)
+    if (body instanceof Response) return body
+    if (typeof body.slug !== "string" || !body.slug.trim() || typeof body.title !== "string" || !body.title.trim()) {
+      return jsonResponse({ error: "slug and title required" }, 400)
+    }
     const res = await supabaseRest(env, "bookmarks", "POST", {
-      user_id: auth!.id, slug: body.slug.trim(), title: body.title.trim(),
+      user_id: auth!.id, slug: body.slug.trim().slice(0, 300), title: body.title.trim().slice(0, 300),
     })
     if (!res.ok) {
       // 409 = already exists (UNIQUE constraint) — treat as success
@@ -431,15 +408,18 @@ export async function handleBookmarks({ request, env, url, auth }: RouteCtx): Pr
 
   // POST /api/bookmarks/migrate — bulk-import from localStorage on first login
   if (pathname === "/api/bookmarks/migrate" && request.method === "POST") {
-    let body: { bookmarks?: { slug: string; title: string; addedAt: string }[] }
-    try { body = await request.json() } catch { return jsonResponse({ error: "Invalid body" }, 400) }
+    const body = await readJson<{ bookmarks: { slug: string; title: string; addedAt: string }[] }>(request)
+    if (body instanceof Response) return body
     if (!Array.isArray(body.bookmarks)) return jsonResponse({ error: "bookmarks array required" }, 400)
-    const valid = body.bookmarks.filter((b) => b.slug?.trim() && b.title?.trim()).slice(0, 200)
-    // Upsert all — ignore conflicts
-    for (const b of valid) {
-      await supabaseRest(env, "bookmarks", "POST", {
-        user_id: auth!.id, slug: b.slug.trim(), title: b.title.trim(),
-      })
+    const valid = body.bookmarks
+      .filter((b) => typeof b?.slug === "string" && b.slug.trim() && typeof b.title === "string" && b.title.trim())
+      .slice(0, 200)
+    // One bulk upsert instead of up to 200 sequential round trips; duplicates are ignored.
+    if (valid.length > 0) {
+      const res = await supabaseRest(env, "bookmarks?on_conflict=user_id,slug", "POST",
+        valid.map((b) => ({ user_id: auth!.id, slug: b.slug.trim().slice(0, 300), title: b.title.trim().slice(0, 300) })),
+        "resolution=ignore-duplicates,return=minimal")
+      if (!res.ok) return upstreamError("bookmark migrate", res, "Failed to import bookmarks")
     }
     return jsonResponse({ ok: true, migrated: valid.length })
   }
@@ -451,7 +431,8 @@ export async function handleLockStatus({ env, url }: RouteCtx): Promise<Response
   const slug = url.searchParams.get("slug")
   if (!slug || !env.SUPABASE_URL) return jsonResponse({ locked: false })
 
-  const res = await supabaseRest(env, `page_locks?slug=eq.${encodeURIComponent(slug)}&select=slug,reason`)
+  const pattern = slug.replace(/[\\%_]/g, (c) => `\\${c}`)
+  const res = await supabaseRest(env, `page_locks?slug=ilike.${encodeURIComponent(pattern)}&select=slug,reason`)
   if (!res.ok) return jsonResponse({ locked: false })
   const locks = await res.json<{ slug: string; reason: string }[]>()
   if (locks.length === 0) return jsonResponse({ locked: false })
