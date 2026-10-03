@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useFocusTrap } from "@/hooks/useFocusTrap"
 import styles from "./GameCabinet.module.scss"
 import { useProgramHost } from "./ProgramHostContext"
+import { readStoredInt, writeStored } from "./gameUtils"
 
 export type CabinetStatus = "ready" | "playing" | "won" | "lost"
 
@@ -56,11 +57,7 @@ export function GameCabinet({
   zen = false,
   controls,
 }: CabinetProps) {
-  const [best, setBest] = useState(() => {
-    if (!score?.bestKey || typeof localStorage === "undefined") return 0
-    const v = localStorage.getItem(score.bestKey)
-    return v ? parseInt(v, 10) || 0 : 0
-  })
+  const [best, setBest] = useState(() => (score?.bestKey ? readStoredInt(score.bestKey) : 0))
   const [isZen, setIsZen] = useState(false)
   const programHost = useProgramHost()
 
@@ -69,7 +66,7 @@ export function GameCabinet({
     if (!score?.bestKey) return
     if (score.value > best) {
       setBest(score.value)
-      localStorage.setItem(score.bestKey, String(score.value))
+      writeStored(score.bestKey, score.value)
     }
   }, [score?.value, score?.bestKey, best])
 

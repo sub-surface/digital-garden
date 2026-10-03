@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { sfx } from "@/lib/sfx"
 import { GameCabinet, type CabinetStatus } from "./GameCabinet"
+import { ignoreGameKey } from "./gameUtils"
+import { cssVarReader, startFrameLoop } from "./useGameLoop"
 import styles from "./SnakePage.module.scss"
 
 /**
@@ -29,6 +31,11 @@ const DIRS: Record<Dir, Cell> = {
 }
 const OPPOSITE: Record<Dir, Dir> = { up: "down", down: "up", left: "right", right: "left" }
 
+const KEY_DIRS: Record<string, Dir> = {
+  ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+  w: "up", s: "down", a: "left", d: "right",
+}
+
 const wrap = (n: number, max: number) => (n + max) % max
 const eq = (a: Cell, b: Cell) => a.x === b.x && a.y === b.y
 
@@ -51,7 +58,7 @@ export function SnakePage() {
   // mutable game state kept in refs so the loop doesn't churn React state
   const snake = useRef<Cell[]>([])
   const dir = useRef<Dir>("right")
-  const queued = useRef<Dir | null>(null)
+  const queued = useRef<Dir[]>([]) // up to two buffered turns, so a quick U-turn isn't dropped
   const seed = useRef<Cell>({ x: 0, y: 0 })
   const bloom = useRef<Cell | null>(null)
   const bloomTimer = useRef(0) // ms of slow-mo remaining
@@ -66,7 +73,7 @@ export function SnakePage() {
     ]
     snake.current = start
     dir.current = "right"
-    queued.current = null
+    queued.current = []
     seed.current = randomCell(start)
     bloom.current = null
     bloomTimer.current = 0
@@ -84,16 +91,15 @@ export function SnakePage() {
   // queue a turn (shared by keyboard + swipe); starts a game if not playing
   const steer = useCallback((nd: Dir) => {
     if (status !== "playing") { start(); return }
-    if (nd !== OPPOSITE[dir.current]) queued.current = nd
+    const q = queued.current
+    const ref = q.length ? q[q.length - 1] : dir.current
+    if (nd !== ref && nd !== OPPOSITE[ref] && q.length < 2) q.push(nd)
   }, [status, start])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const map: Record<string, Dir> = {
-        ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
-        w: "up", s: "down", a: "left", d: "right",
-      }
-      const nd = map[e.key]
+      if (ignoreGameKey(e)) return
+      const nd = KEY_DIRS[e.key.length === 1 ? e.key.toLowerCase() : e.key]
       if (nd) {
         e.preventDefault()
         steer(nd)
@@ -130,12 +136,8 @@ export function SnakePage() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    let raf = 0
     let acc = 0
-    let last = 0
-
-    const accent = () =>
-      getComputedStyle(document.documentElement).getPropertyValue("--color-accent-base").trim() || "#b4424c"
+    const accent = cssVarReader("--color-accent-base", "#b4424c")
 
     const stepInterval = () => {
       const ramp = Math.max(MIN_MS, BASE_MS - snake.current.length * 2)
@@ -143,7 +145,8 @@ export function SnakePage() {
     }
 
     const tick = () => {
-      if (queued.current) { dir.current = queued.current; queued.current = null }
+      const turn = queued.current.shift()
+      if (turn) dir.current = turn
       const head = snake.current[0]
       const d = DIRS[dir.current]
       const next: Cell = { x: wrap(head.x + d.x, COLS), y: wrap(head.y + d.y, ROWS) }
@@ -224,11 +227,7 @@ export function SnakePage() {
       ctx.globalAlpha = 1
     }
 
-    const frame = (t: number) => {
-      raf = requestAnimationFrame(frame)
-      if (!last) last = t
-      const dt = t - last
-      last = t
+    return startFrameLoop((dt) => {
       acc += dt
       if (bloomTimer.current > 0) bloomTimer.current = Math.max(0, bloomTimer.current - dt)
       if (acc >= stepInterval()) {
@@ -236,9 +235,7 @@ export function SnakePage() {
         tick()
       }
       draw()
-    }
-    raf = requestAnimationFrame(frame)
-    return () => cancelAnimationFrame(raf)
+    })
     // Loop reads game state via refs + setScore (functional); only `status`
     // gates start/stop. (Was also keyed on `score` for best-tracking, now in
     // the cabinet — dropping it stops the loop restarting on every point.)

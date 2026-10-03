@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useMemo } from "react"
+import { useDeferredValue, useEffect, useRef, useState, useMemo } from "react"
+import { ignoreGameKey } from "./gameUtils"
 import styles from "./PersianCarpetPage.module.scss"
 
 /**
@@ -645,10 +646,14 @@ export function PersianCarpetPage() {
   const [params, setParams] = useState<Params>(DEFAULTS)
   const paramsRef = useRef(params); paramsRef.current = params
 
+  // Weaving + a 1200px repaint is tens of ms: defer it so dragging a slider
+  // keeps the control responsive and React drops the intermediate values.
+  const deferredParams = useDeferredValue(params)
+
   // Memoize weave result so we can access it both for drawing and in the UI
   const weaveResult = useMemo(() => {
-    return weave(params)
-  }, [params])
+    return weave(deferredParams)
+  }, [deferredParams])
 
   // Derive canvas display constraints from aspect (for CSS)
   const dims = useMemo(() => {
@@ -670,15 +675,18 @@ export function PersianCarpetPage() {
       canvas.width = weaveResult.CW
       canvas.height = weaveResult.CH
     }
-    renderCarpet(ctx, weaveResult, params)
-  }, [weaveResult, params])
+    renderCarpet(ctx, weaveResult, deferredParams)
+  }, [weaveResult, deferredParams])
 
   // ── keyboard shortcuts ──
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return
+      // Skips text fields AND modifier chords (Ctrl+F / Ctrl+D used to flip the
+      // aspect / download a PNG instead of opening find / bookmarking).
+      if (ignoreGameKey(e)) return
       const k = e.key
-      if (k === " ") { e.preventDefault(); randomCarpet() }
+      // Space on a focused button must still activate that button.
+      if (k === " ") { if (e.target instanceof HTMLButtonElement) return; e.preventDefault(); randomCarpet() }
       else if (k === "ArrowLeft") setParams(prev => ({ ...prev, seed: Math.max(1, prev.seed - 1) }))
       else if (k === "ArrowRight") setParams(prev => ({ ...prev, seed: prev.seed + 1 }))
       else if (k.toLowerCase() === "d") downloadCarpet()

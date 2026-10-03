@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { startFrameLoop } from "./useGameLoop"
 import styles from "./SandPage.module.scss"
 
 /**
@@ -73,8 +74,9 @@ export function SandPage() {
             if (y + 1 < ROWS) {
               const below = idx(x, y + 1)
               if (grid[below] === EMPTY || grid[below] === WATER) { swap(i, below); continue }
-              for (const dx of Math.random() < 0.5 ? [-1, 1] : [1, -1]) {
-                const nx = x + dx
+              const s0 = Math.random() < 0.5 ? -1 : 1
+              for (let k2 = 0; k2 < 2; k2++) {
+                const nx = x + (k2 === 0 ? s0 : -s0)
                 if (nx >= 0 && nx < COLS) {
                   const d = idx(nx, y + 1)
                   if (grid[d] === EMPTY) { swap(i, d); break }
@@ -83,10 +85,10 @@ export function SandPage() {
             }
           } else if (m === WATER) {
             if (y + 1 < ROWS && grid[idx(x, y + 1)] === EMPTY) { swap(i, idx(x, y + 1)); continue }
-            const dir = Math.random() < 0.5 ? [-1, 1] : [1, -1]
+            const s0 = Math.random() < 0.5 ? -1 : 1
             let moved = false
-            for (const dx of dir) {
-              const nx = x + dx
+            for (let k2 = 0; k2 < 2; k2++) {
+              const nx = x + (k2 === 0 ? s0 : -s0)
               if (nx >= 0 && nx < COLS && grid[idx(nx, y)] === EMPTY) { swap(i, idx(nx, y)); moved = true; break }
             }
             if (moved) continue
@@ -132,26 +134,18 @@ export function SandPage() {
       ctx.putImageData(img, 0, 0)
     }
 
-    let raf = 0
     let acc = 0
-    let last = 0
     const STEP_MS = 28
-    const loop = (t: number) => {
-      raf = requestAnimationFrame(loop)
-      if (!last) last = t
-      acc += t - last
-      last = t
+    const stopLoop = startFrameLoop((dt) => {
+      acc += dt
       if (!pausedRef.current && acc >= STEP_MS) { stepSim(); acc = 0 }
       render()
-    }
-    raf = requestAnimationFrame(loop)
+    })
 
     // painting
     let painting = false
-    const paintAt = (clientX: number, clientY: number) => {
-      const r = canvas.getBoundingClientRect()
-      const cx = Math.floor(((clientX - r.left) / r.width) * COLS)
-      const cy = Math.floor(((clientY - r.top) / r.height) * ROWS)
+    let lastX = -1, lastY = -1 // previous stroke cell, so fast drags paint a line, not dots
+    const dab = (cx: number, cy: number) => {
       const rad = 2
       for (let dy = -rad; dy <= rad; dy++) {
         for (let dx = -rad; dx <= rad; dx++) {
@@ -159,14 +153,27 @@ export function SandPage() {
           if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue
           if (dx * dx + dy * dy > rad * rad + 1) continue
           // don't overwrite walls unless erasing/painting wall
-          grid[idx(nx, ny)] = brushRef.current
+          const i = idx(nx, ny)
+          if (grid[i] === WALL && brushRef.current !== WALL && brushRef.current !== EMPTY) continue
+          grid[i] = brushRef.current
         }
       }
     }
-    const down = (e: MouseEvent) => { painting = true; paintAt(e.clientX, e.clientY) }
+    const paintAt = (clientX: number, clientY: number) => {
+      const r = canvas.getBoundingClientRect()
+      const cx = Math.floor(((clientX - r.left) / r.width) * COLS)
+      const cy = Math.floor(((clientY - r.top) / r.height) * ROWS)
+      if (lastX < 0) dab(cx, cy)
+      else {
+        const n = Math.max(Math.abs(cx - lastX), Math.abs(cy - lastY), 1)
+        for (let k = 1; k <= n; k++) dab(Math.round(lastX + ((cx - lastX) * k) / n), Math.round(lastY + ((cy - lastY) * k) / n))
+      }
+      lastX = cx; lastY = cy
+    }
+    const down = (e: MouseEvent) => { painting = true; lastX = -1; paintAt(e.clientX, e.clientY) }
     const move = (e: MouseEvent) => { if (painting) paintAt(e.clientX, e.clientY) }
-    const up = () => { painting = false }
-    const tStart = (e: TouchEvent) => { painting = true; if (e.touches[0]) paintAt(e.touches[0].clientX, e.touches[0].clientY) }
+    const up = () => { painting = false; lastX = -1 }
+    const tStart = (e: TouchEvent) => { painting = true; lastX = -1; if (e.touches[0]) paintAt(e.touches[0].clientX, e.touches[0].clientY) }
     const tMove = (e: TouchEvent) => { if (painting && e.touches[0]) { e.preventDefault(); paintAt(e.touches[0].clientX, e.touches[0].clientY) } }
     canvas.addEventListener("mousedown", down)
     window.addEventListener("mousemove", move)
@@ -174,15 +181,17 @@ export function SandPage() {
     canvas.addEventListener("touchstart", tStart, { passive: true })
     canvas.addEventListener("touchmove", tMove, { passive: false })
     canvas.addEventListener("touchend", up)
+    canvas.addEventListener("touchcancel", up)
 
     return () => {
-      cancelAnimationFrame(raf)
+      stopLoop()
       canvas.removeEventListener("mousedown", down)
       window.removeEventListener("mousemove", move)
       window.removeEventListener("mouseup", up)
       canvas.removeEventListener("touchstart", tStart)
       canvas.removeEventListener("touchmove", tMove)
       canvas.removeEventListener("touchend", up)
+      canvas.removeEventListener("touchcancel", up)
     }
   }, [])
 

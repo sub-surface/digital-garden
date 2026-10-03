@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { cssVarReader, startFrameLoop } from "./useGameLoop"
 import styles from "./BoidsPage.module.scss"
 
 /**
@@ -43,13 +44,12 @@ export function BoidsPage() {
     const FLEE = 90
     const FLEE2 = FLEE * FLEE
 
-    const accent = () =>
-      getComputedStyle(document.documentElement).getPropertyValue("--color-accent-base").trim() || "#b4424c"
+    const accent = cssVarReader("--color-accent-base", "#b4424c")
 
-    let raf = 0
-    const step = () => {
-      raf = requestAnimationFrame(step)
-
+    // Every increment below is scaled by `k` (frames-at-60Hz elapsed), so the flock
+    // moves at the same speed on 120/144 Hz displays as on 60 Hz ones instead of
+    // running 2-2.4x fast.
+    const step = (k: number) => {
       // adjust population if the slider changed
       if (boids.length !== countRef.current) {
         if (countRef.current > boids.length) {
@@ -59,9 +59,6 @@ export function BoidsPage() {
           boids.length = countRef.current
         }
       }
-
-      ctx.clearRect(0, 0, W, H)
-      const col = accent()
 
       for (const b of boids) {
         let ax = 0, ay = 0          // alignment
@@ -83,14 +80,14 @@ export function BoidsPage() {
 
         if (n > 0) {
           ax /= n; ay /= n
-          b.vx += (ax - b.vx) * 0.04
-          b.vy += (ay - b.vy) * 0.04
+          b.vx += (ax - b.vx) * 0.04 * k
+          b.vy += (ay - b.vy) * 0.04 * k
           cx = cx / n - b.x; cy = cy / n - b.y
-          b.vx += cx * 0.0009
-          b.vy += cy * 0.0009
+          b.vx += cx * 0.0009 * k
+          b.vy += cy * 0.0009 * k
         }
-        b.vx += sx * 0.9
-        b.vy += sy * 0.9
+        b.vx += sx * 0.9 * k
+        b.vy += sy * 0.9 * k
 
         // flee the cursor
         if (mouse.active) {
@@ -99,8 +96,8 @@ export function BoidsPage() {
           if (d2 < FLEE2 && d2 > 0) {
             const f = (FLEE2 - d2) / FLEE2
             const d = Math.sqrt(d2)
-            b.vx += (dx / d) * f * 0.9
-            b.vy += (dy / d) * f * 0.9
+            b.vx += (dx / d) * f * 0.9 * k
+            b.vy += (dy / d) * f * 0.9 * k
           }
         }
 
@@ -108,29 +105,36 @@ export function BoidsPage() {
         const sp = Math.hypot(b.vx, b.vy)
         if (sp > MAXV) { b.vx = (b.vx / sp) * MAXV; b.vy = (b.vy / sp) * MAXV }
 
-        b.x += b.vx; b.y += b.vy
+        b.x += b.vx * k; b.y += b.vy * k
         // wrap
         if (b.x < 0) b.x += W; else if (b.x > W) b.x -= W
         if (b.y < 0) b.y += H; else if (b.y > H) b.y -= H
-
-        // draw as a little oriented triangle
-        const ang = Math.atan2(b.vy, b.vx)
-        ctx.save()
-        ctx.translate(b.x, b.y)
-        ctx.rotate(ang)
-        ctx.globalAlpha = 0.8
-        ctx.fillStyle = col
-        ctx.beginPath()
-        ctx.moveTo(5, 0)
-        ctx.lineTo(-3, 2.4)
-        ctx.lineTo(-3, -2.4)
-        ctx.closePath()
-        ctx.fill()
-        ctx.restore()
       }
+    }
+
+    // draw each boid as a little oriented triangle, batched into one path
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H)
+      ctx.globalAlpha = 0.8
+      ctx.fillStyle = accent()
+      ctx.beginPath()
+      for (const b of boids) {
+        const sp = Math.hypot(b.vx, b.vy) || 1
+        const ux = b.vx / sp, uy = b.vy / sp // heading
+        const nx = -uy, ny = ux              // its normal
+        ctx.moveTo(b.x + ux * 5, b.y + uy * 5)
+        ctx.lineTo(b.x - ux * 3 + nx * 2.4, b.y - uy * 3 + ny * 2.4)
+        ctx.lineTo(b.x - ux * 3 - nx * 2.4, b.y - uy * 3 - ny * 2.4)
+        ctx.closePath()
+      }
+      ctx.fill()
       ctx.globalAlpha = 1
     }
-    raf = requestAnimationFrame(step)
+
+    const stopLoop = startFrameLoop((dt) => {
+      step(Math.min(dt, 50) / (1000 / 60))
+      draw()
+    })
 
     const rectXY = (e: { clientX: number; clientY: number }) => {
       const r = canvas.getBoundingClientRect()
@@ -146,7 +150,7 @@ export function BoidsPage() {
     canvas.addEventListener("touchend", onLeave)
 
     return () => {
-      cancelAnimationFrame(raf)
+      stopLoop()
       canvas.removeEventListener("mousemove", onMove)
       canvas.removeEventListener("mouseleave", onLeave)
       canvas.removeEventListener("touchmove", onTouch)

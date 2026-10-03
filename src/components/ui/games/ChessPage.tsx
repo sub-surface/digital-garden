@@ -23,7 +23,7 @@ function downloadBlob(blob: Blob, filename: string) {
 }
 
 export function ChessPage() {
-  const [game, setGame] = useState(new Chess())
+  const [game, setGame] = useState(() => new Chess())
   const [playerColor, setPlayerColor] = useState<"white" | "black">("white")
   const [boardOrientation, setBoardOrientation] = useState<"white" | "black">("white")
   const [exporting, setExporting] = useState<"pgn" | "gif" | null>(null)

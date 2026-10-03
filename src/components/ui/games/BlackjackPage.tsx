@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { sfx } from "@/lib/sfx"
+import { readStoredInt, writeStored } from "./gameUtils"
 import styles from "./BlackjackPage.module.scss"
 
 /**
@@ -41,10 +42,7 @@ function handValue(cards: Card[]): number {
 const isBlackjack = (cards: Card[]) => cards.length === 2 && handValue(cards) === 21
 
 export function BlackjackPage() {
-  const [chips, setChips] = useState(() => {
-    const v = typeof localStorage !== "undefined" ? localStorage.getItem("bj-chips") : null
-    return v ? parseInt(v, 10) : 100
-  })
+  const [chips, setChips] = useState(() => readStoredInt("bj-chips", 100))
   const [bet, setBet] = useState(10)
   const [deck, setDeck] = useState<Card[]>([])
   const [player, setPlayer] = useState<Card[]>([])
@@ -63,7 +61,7 @@ export function BlackjackPage() {
 
   const saveChips = useCallback((n: number) => {
     setChips(n)
-    localStorage.setItem("bj-chips", String(n))
+    writeStored("bj-chips", n)
   }, [])
 
   const settle = useCallback((p: Card[], d: Card[], betAmt: number) => {

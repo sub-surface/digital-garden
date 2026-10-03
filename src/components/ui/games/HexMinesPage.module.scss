@@ -23,6 +23,7 @@
   cursor: pointer;
   border-radius: 4px;
   &:hover { border-color: var(--color-accent-base); color: var(--color-accent-base); }
+  &[data-active] { border-color: var(--color-accent-base); color: var(--color-accent-base); }
 }
 
 .board {

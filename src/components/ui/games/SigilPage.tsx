@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { GameCabinet, type CabinetStatus } from "./GameCabinet"
+import { readStoredInt, writeStored } from "./gameUtils"
 import styles from "./SigilPage.module.scss"
 
 /**
@@ -109,9 +110,12 @@ export function SigilPage() {
     const ctx = canvas.getContext("2d")!
     const size = canvas.clientWidth
     const dpr = window.devicePixelRatio || 1
-    if (canvas.width !== size * dpr) {
-      canvas.width = size * dpr
-      canvas.height = size * dpr
+    // Round so a fractional DPR doesn't make this test fail (and clear the
+    // canvas) on every call.
+    const px = Math.round(size * dpr)
+    if (canvas.width !== px || canvas.height !== px) {
+      canvas.width = px
+      canvas.height = px
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, size, size)
@@ -390,9 +394,8 @@ export function SigilPage() {
       const totalLen = [...board.paths.values()].reduce((s, p) => s + p.length, 0)
       const optimality = Math.round((board.plateLength / Math.max(1, totalLen)) * 100)
       const bestKey = `sigil.best.${board.n}`
-      const prev = parseInt(localStorage.getItem(bestKey) ?? "0", 10) || 0
-      if (optimality > prev) localStorage.setItem(bestKey, String(optimality))
-      if (board.seed === todaySeed()) localStorage.setItem(`sigil.daily.${board.seed}`, "1")
+      if (optimality > readStoredInt(bestKey)) writeStored(bestKey, optimality)
+      if (board.seed === todaySeed()) writeStored(`sigil.daily.${board.seed}`, 1)
       requestAnimationFrame(drawBoard)
     }
     bump()
@@ -436,7 +439,7 @@ export function SigilPage() {
 
   const totalLen = [...board.paths.values()].reduce((s, p) => s + p.length, 0)
   const optimality = status === "won" ? Math.round((board.plateLength / Math.max(1, totalLen)) * 100) : 0
-  const dailyDone = typeof localStorage !== "undefined" && localStorage.getItem(`sigil.daily.${todaySeed()}`) === "1"
+  const dailyDone = readStoredInt(`sigil.daily.${todaySeed()}`) === 1
 
   return (
     <GameCabinet

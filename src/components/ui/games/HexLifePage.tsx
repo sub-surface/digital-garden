@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { useStore } from "@/store"
 import styles from "./HexLifePage.module.scss"
 import { useProgramHost } from "./ProgramHostContext"
+import { cssVarReader, startFrameLoop } from "./useGameLoop"
 
 /**
  * Hex Life — a fullscreen cellular-automaton playground on a hexagonal grid
@@ -181,10 +182,8 @@ export function HexLifePage() {
     }
     resize()
 
-    const accentVar = () =>
-      getComputedStyle(document.documentElement).getPropertyValue("--color-accent-base").trim() || "#b4424c"
-    const surfaceVar = () =>
-      getComputedStyle(document.documentElement).getPropertyValue("--color-bg-surface").trim() || "#1a1a1f"
+    const accentVar = cssVarReader("--color-accent-base", "#b4424c")
+    const surfaceVar = cssVarReader("--color-bg-surface", "#1a1a1f")
 
     const step = () => {
       const cols = colsRef.current, rows = rowsRef.current
@@ -225,6 +224,22 @@ export function HexLifePage() {
       const cm = colorModeRef.current
       let live_count = 0
 
+      // Dead cells (and live ones in the single-colour modes) are accumulated
+      // into one Path2D each and filled once — a per-cell beginPath/fill made
+      // this the heaviest thing on the page at small hex sizes.
+      const perCell = cm === "age" || cm === "rainbow"
+      const deadPath = new Path2D()
+      const livePath = new Path2D()
+      const addHex = (path: CanvasPath, cx: number, cy: number) => {
+        for (let i = 0; i < 6; i++) {
+          const ang = Math.PI / 180 * (60 * i - 90)
+          const px = cx + R * 0.9 * Math.cos(ang)
+          const py = cy + R * 0.9 * Math.sin(ang)
+          if (i === 0) path.moveTo(px, py); else path.lineTo(px, py)
+        }
+        path.closePath()
+      }
+
       for (let y = 0; y < rows; y++) {
         const cy = vh * y + R + pan.y
         if (cy < -R || cy > canvas.clientHeight + R) continue
@@ -232,39 +247,33 @@ export function HexLifePage() {
           const cx = hw * (x + (y & 1 ? 1 : 0.5)) + pan.x
           if (cx < -R || cx > canvas.clientWidth + R) continue
           const age = g[y * cols + x]
-          // hex path
-          ctx.beginPath()
-          for (let i = 0; i < 6; i++) {
-            const ang = Math.PI / 180 * (60 * i - 90)
-            const px = cx + R * 0.9 * Math.cos(ang)
-            const py = cy + R * 0.9 * Math.sin(ang)
-            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py)
-          }
-          ctx.closePath()
-          if (age) {
-            live_count++
-            if (cm === "accent") ctx.fillStyle = live
-            else if (cm === "mono") ctx.fillStyle = "#e8e8ea"
-            else if (cm === "age") ctx.fillStyle = hsl(0, 0, Math.min(35 + age * 4, 92))
-            else ctx.fillStyle = hsl((x * 7 + y * 11) % 360, 70, 60) // rainbow by position
+          if (!age) { addHex(deadPath, cx, cy); continue }
+          live_count++
+          if (perCell) {
+            ctx.beginPath()
+            addHex(ctx, cx, cy)
+            ctx.fillStyle = cm === "age"
+              ? hsl(0, 0, Math.min(35 + age * 4, 92))
+              : hsl((x * 7 + y * 11) % 360, 70, 60) // rainbow by position
             ctx.fill()
-          } else {
-            ctx.fillStyle = cell
-            ctx.globalAlpha = 0.22
-            ctx.fill()
-            ctx.globalAlpha = 1
-          }
+          } else addHex(livePath, cx, cy)
         }
+      }
+
+      ctx.fillStyle = cell
+      ctx.globalAlpha = 0.22
+      ctx.fill(deadPath)
+      ctx.globalAlpha = 1
+      if (!perCell) {
+        ctx.fillStyle = cm === "mono" ? "#e8e8ea" : live
+        ctx.fill(livePath)
       }
       return live_count
     }
 
-    let raf = 0, acc = 0, last = 0, frameCount = 0
-    const loop = (t: number) => {
-      raf = requestAnimationFrame(loop)
-      if (!last) last = t
-      acc += t - last
-      last = t
+    let acc = 0, frameCount = 0
+    const stopLoop = startFrameLoop((dt) => {
+      acc += dt
       const stepMs = 1000 / Math.max(1, speedRef.current)
       let advanced = false
       if (stepFlag.current) { step(); stepFlag.current = false; advanced = true; acc = 0 }
@@ -277,8 +286,7 @@ export function HexLifePage() {
         if (!pausedRef.current || stepFlag.current) setGen((v) => v + 1)
         setPop(lc)
       }
-    }
-    raf = requestAnimationFrame(loop)
+    })
 
     // --- interaction: paint + pan ---
     let mode: "none" | "paint" | "erase" | "pan" = "none"
@@ -362,10 +370,14 @@ export function HexLifePage() {
     canvas.addEventListener("touchstart", tStart, { passive: true })
     canvas.addEventListener("touchmove", tMove, { passive: false })
     canvas.addEventListener("touchend", up)
-    window.addEventListener("resize", resize)
+    // ResizeObserver, not window resize: an OS-shell window or the controls
+    // panel can change the canvas box without the viewport changing.
+    const ro = new ResizeObserver(resize)
+    ro.observe(canvas)
 
     return () => {
-      cancelAnimationFrame(raf)
+      stopLoop()
+      ro.disconnect()
       canvas.removeEventListener("mousedown", down)
       window.removeEventListener("mousemove", move)
       window.removeEventListener("mouseup", up)
@@ -374,7 +386,6 @@ export function HexLifePage() {
       canvas.removeEventListener("touchstart", tStart)
       canvas.removeEventListener("touchmove", tMove)
       canvas.removeEventListener("touchend", up)
-      window.removeEventListener("resize", resize)
     }
   }, [allocGrid])
 

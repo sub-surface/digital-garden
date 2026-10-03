@@ -180,11 +180,17 @@ export function botMove(state: HexoState): { q: number; r: number } | null {
   let best: [number, number] | null = null
   let bestScore = -Infinity
 
+  // One scratch copy of the board, mutated and restored per probe — cloning the
+  // whole stone map for every candidate was O(candidates x stones) per bot move.
+  const probe = new Map(state.stones)
+
   for (const [q, r] of cells) {
     // 1. immediate win?
-    const mineNext = new Map(state.stones)
-    mineNext.set(key(q, r), me)
-    if (checkWin(mineNext, q, r, me)) return { q, r }
+    const k = key(q, r)
+    probe.set(k, me)
+    const wins = checkWin(probe, q, r, me)
+    probe.delete(k)
+    if (wins) return { q, r }
 
     // 2/3. combined offence + defence score.
     const offence = cellScore(state.stones, q, r, me)
@@ -201,9 +207,11 @@ export function botMove(state: HexoState): { q: number; r: number } | null {
   // 2 (hard guarantee): if the opponent has an immediate win anywhere in the
   // candidate set, block it outright even if the blended score chose elsewhere.
   for (const [q, r] of cells) {
-    const oppNext = new Map(state.stones)
-    oppNext.set(key(q, r), opp)
-    if (checkWin(oppNext, q, r, opp)) return { q, r }
+    const k = key(q, r)
+    probe.set(k, opp)
+    const blocks = checkWin(probe, q, r, opp)
+    probe.delete(k)
+    if (blocks) return { q, r }
   }
 
   return best ? { q: best[0], r: best[1] } : null

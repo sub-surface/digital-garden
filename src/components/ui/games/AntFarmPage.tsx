@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { cssVarReader, startFrameLoop } from "./useGameLoop"
 import styles from "./AntFarmPage.module.scss"
 
 /**
@@ -144,17 +145,16 @@ export function AntFarmPage() {
     }
 
     // render
-    let raf = 0
     let acc = 0
-    let last = 0
     const STEP_MS = 22
 
-    const cssVar = (n: string, fb: string) =>
-      getComputedStyle(document.documentElement).getPropertyValue(n).trim() || fb
+    const accentVar = cssVarReader("--color-accent-base", "#b4424c")
+    const textVar = cssVarReader("--color-text", "#e0e0e0")
 
     const draw = () => {
       ctx.clearRect(0, 0, W, H)
-      const accent = cssVar("--color-accent-base", "#b4424c")
+      const accent = accentVar()
+      const antColor = textVar() // read once per frame, not once per ant
 
       // pheromone fields as faint washes
       // food trail (accent), home trail (muted)
@@ -197,7 +197,7 @@ export function AntFarmPage() {
       // ants
       for (const a of ants) {
         ctx.globalAlpha = 0.95
-        ctx.fillStyle = a.laden ? "#5a9e5a" : cssVar("--color-text", "#e0e0e0")
+        ctx.fillStyle = a.laden ? "#5a9e5a" : antColor
         ctx.beginPath()
         ctx.arc(a.x, a.y, a.laden ? 2.1 : 1.6, 0, Math.PI * 2)
         ctx.fill()
@@ -205,15 +205,11 @@ export function AntFarmPage() {
       ctx.globalAlpha = 1
     }
 
-    const loop = (t: number) => {
-      raf = requestAnimationFrame(loop)
-      if (!last) last = t
-      acc += t - last
-      last = t
+    const stopLoop = startFrameLoop((dt) => {
+      acc += dt
       if (!pausedRef.current && acc >= STEP_MS) { stepSim(); acc = 0 }
       draw()
-    }
-    raf = requestAnimationFrame(loop)
+    })
 
     // click to drop a food cache
     const onClick = (e: MouseEvent) => {
@@ -226,7 +222,7 @@ export function AntFarmPage() {
     canvas.addEventListener("click", onClick)
 
     return () => {
-      cancelAnimationFrame(raf)
+      stopLoop()
       canvas.removeEventListener("click", onClick)
     }
   }, [])

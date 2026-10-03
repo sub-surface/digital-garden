@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react"
+import { startFrameLoop } from "./useGameLoop"
 import styles from "./ProgressionsPage.module.scss"
 
 /**
@@ -415,13 +416,10 @@ export function ProgressionsPage() {
       }
     }
 
-    let raf = 0, acc = 0, last = 0
+    let acc = 0
     const MAX_STEPS_PER_FRAME = 12   // cap so a slow frame can't spiral
-    const loop = (t: number) => {
-      raf = requestAnimationFrame(loop)
-      if (!last) last = t
-      acc += t - last
-      last = t
+    const stopLoop = startFrameLoop((dt) => {
+      acc += dt
       const stepMs = 1000 / Math.max(1, speedRef.current)
       let stepped = false
       if (runningRef.current) {
@@ -447,8 +445,7 @@ export function ProgressionsPage() {
         setBest(bestRef.current)
         setStats(statsRef.current)
       }
-    }
-    raf = requestAnimationFrame(loop)
+    })
 
     // --- interaction: drag to pan, scroll to zoom, click (no drag) to seed ---
     let dragging = false, moved = false
@@ -465,19 +462,22 @@ export function ProgressionsPage() {
       }
       return [Math.floor(lx / cell), Math.floor(ly / cell)]
     }
-    const down = (e: MouseEvent) => {
+    // Pointer events (not mouse events): the canvas is touch-action:none, so on a
+    // phone a drag would otherwise do nothing at all — no pan, no seeding.
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return
       dragging = true; moved = false
       start = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }
     }
-    const move = (e: MouseEvent) => {
+    const move = (e: PointerEvent) => {
       if (!dragging) return
       const dx = e.clientX - start.x, dy = e.clientY - start.y
       if (Math.abs(dx) + Math.abs(dy) > 3) moved = true
       view.x = start.vx + dx; view.y = start.vy + dy
       viewDirty = true
     }
-    const up = (e: MouseEvent) => {
-      if (dragging && !moved) {
+    const up = (e: PointerEvent) => {
+      if (dragging && !moved && e.type === "pointerup") {
         const [x, y] = cellAt(e.clientX, e.clientY)
         if (inB(x, y) && gridRef.current[idx(x, y)] === 0) {
           gridRef.current[idx(x, y)] = turnRef.current
@@ -504,18 +504,23 @@ export function ProgressionsPage() {
       viewDirty = true
     }
 
-    canvas.addEventListener("mousedown", down)
-    window.addEventListener("mousemove", move)
-    window.addEventListener("mouseup", up)
+    canvas.addEventListener("pointerdown", down)
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", up)
+    window.addEventListener("pointercancel", up)
     canvas.addEventListener("wheel", wheel, { passive: false })
-    window.addEventListener("resize", resize)
+    // ResizeObserver, not window resize: the stage can change size on its own
+    // (OS-shell window resize, layout reflow).
+    const ro = new ResizeObserver(resize)
+    ro.observe(canvas)
     return () => {
-      cancelAnimationFrame(raf)
-      canvas.removeEventListener("mousedown", down)
-      window.removeEventListener("mousemove", move)
-      window.removeEventListener("mouseup", up)
+      stopLoop()
+      ro.disconnect()
+      canvas.removeEventListener("pointerdown", down)
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", up)
+      window.removeEventListener("pointercancel", up)
       canvas.removeEventListener("wheel", wheel)
-      window.removeEventListener("resize", resize)
     }
   }, [stepOnce, longestRun])
 

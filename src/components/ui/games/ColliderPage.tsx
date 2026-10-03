@@ -86,9 +86,14 @@ export function ColliderPage() {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext("2d")!
+    const s = stateRef.current
+    cancelAnimationFrame(s.raf) // direct calls (pointer-move) must not stack rAF chains
     const w = canvas.clientWidth, h = canvas.clientHeight
     const dpr = window.devicePixelRatio || 1
-    if (canvas.width !== w * dpr) { canvas.width = w * dpr; canvas.height = h * dpr }
+    // Round: at fractional DPR `w * dpr` is never an integer, so the old
+    // `canvas.width !== w * dpr` test re-assigned (and cleared) the canvas every call.
+    const pw = Math.round(w * dpr), ph = Math.round(h * dpr)
+    if (canvas.width !== pw || canvas.height !== ph) { canvas.width = pw; canvas.height = ph }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, w, h)
 
@@ -97,7 +102,6 @@ export function ColliderPage() {
     const accent = css("--color-secondary") || "#424cb4"
     const muted = css("--color-text-muted") || "#8e8e93"
     const faint = css("--color-border") || "#2a2a30"
-    const s = stateRef.current
     const now = performance.now()
 
     // frame + faint field hint (sparse direction dashes — enough to read the
@@ -166,16 +170,22 @@ export function ColliderPage() {
     return () => { ro.disconnect(); cancelAnimationFrame(state.raf) }
   }, [draw, seed])
 
-  const onPointerMove = useCallback((e: React.PointerEvent) => {
+  const aimAt = useCallback((e: React.PointerEvent) => {
     const canvas = canvasRef.current!
     const rect = canvas.getBoundingClientRect()
     const ex = rect.width * 0.06, ey = rect.height / 2
     stateRef.current.aim = Math.atan2(e.clientY - rect.top - ey, e.clientX - rect.left - ex)
-    draw()
-  }, [draw])
+  }, [])
 
-  const fire = useCallback(() => {
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    aimAt(e)
+    draw()
+  }, [aimAt, draw])
+
+  const fire = useCallback((e: React.PointerEvent) => {
     if (status !== "playing" || shots <= 0) return
+    // Touch has no hover, so no pointermove ever set the aim: take it from the tap itself.
+    aimAt(e)
     const canvas = canvasRef.current!
     const w = canvas.clientWidth, h = canvas.clientHeight
     const s = stateRef.current
@@ -212,7 +222,7 @@ export function ColliderPage() {
     }
     cancelAnimationFrame(s.raf)
     s.raf = requestAnimationFrame(draw)
-  }, [status, shots, polarity, draw])
+  }, [status, shots, polarity, draw, aimAt])
 
   const nextPlate = useCallback(() => {
     if (status === "won") setLevel(l => Math.min(6, l + 1))

@@ -54,6 +54,11 @@ function HexoBoard({ state, onPlace, annotations, setAnnotations, wide }: BoardP
   const [zoom, setZoom] = useState(1)
   const [hover, setHover] = useState<string | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
+  // Live mirrors for the wheel handler, so it can compose zoom + pan without
+  // calling setPan from inside a setZoom updater (updaters must be pure —
+  // StrictMode double-invokes them, which applied the pan correction twice).
+  const zoomRef = useRef(zoom); zoomRef.current = zoom
+  const panRef = useRef(pan); panRef.current = pan
 
   // Gesture state. button 0 = left (pan / place), button 2 = right (annotate).
   const gesture = useRef<{
@@ -190,18 +195,19 @@ function HexoBoard({ state, onPlace, annotations, setAnnotations, wide }: BoardP
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12
-      setZoom((z) => {
-        const nz = Math.max(0.5, Math.min(2.5, z * factor))
-        // keep the point under the cursor stable
-        const rect = svg.getBoundingClientRect()
-        const vx = ((e.clientX - rect.left) / rect.width) * vbW - cx0
-        const vy = ((e.clientY - rect.top) / rect.height) * vbH - cy0
-        setPan((p) => ({
-          x: vx - (vx - p.x) * (nz / z),
-          y: vy - (vy - p.y) * (nz / z),
-        }))
-        return nz
-      })
+      const z = zoomRef.current
+      const p = panRef.current
+      const nz = Math.max(0.5, Math.min(2.5, z * factor))
+      // keep the point under the cursor stable
+      const rect = svg.getBoundingClientRect()
+      const vx = ((e.clientX - rect.left) / rect.width) * vbW - cx0
+      const vy = ((e.clientY - rect.top) / rect.height) * vbH - cy0
+      const np = { x: vx - (vx - p.x) * (nz / z), y: vy - (vy - p.y) * (nz / z) }
+      // update the mirrors now so several wheel events in one frame compose
+      zoomRef.current = nz
+      panRef.current = np
+      setZoom(nz)
+      setPan(np)
     }
     svg.addEventListener("wheel", onWheel, { passive: false })
     return () => svg.removeEventListener("wheel", onWheel)
@@ -228,6 +234,7 @@ function HexoBoard({ state, onPlace, annotations, setAnnotations, wide }: BoardP
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerCancel={() => { gesture.current = null }}
       onPointerLeave={() => { if (!gesture.current) setHover(null) }}
       onContextMenu={(e) => e.preventDefault()}
     >

@@ -28,8 +28,11 @@ function squareToIndex(square: string): number {
 }
 
 /** Static evaluation from the side-to-move's perspective (negamax convention). */
-function evaluate(game: Chess): number {
-  if (game.isCheckmate()) return -100000 // side to move is mated
+function evaluate(game: Chess, depth: number): number {
+  // Side to move is mated. `depth` is the plies still unsearched, so a mate found
+  // sooner (more depth left) scores worse for the mated side — without it every
+  // mate scored the same and the bot could shuffle past a mate-in-1 forever.
+  if (game.isCheckmate()) return -(100000 + depth)
   if (game.isDraw() || game.isStalemate()) return 0
 
   let score = 0
@@ -57,7 +60,7 @@ function orderMoves(moves: Move[]): Move[] {
 }
 
 function negamax(game: Chess, depth: number, alpha: number, beta: number): number {
-  if (depth === 0 || game.isGameOver()) return evaluate(game)
+  if (depth === 0 || game.isGameOver()) return evaluate(game, depth)
   let best = -Infinity
   for (const move of orderMoves(game.moves({ verbose: true }) as Move[])) {
     game.move(move)

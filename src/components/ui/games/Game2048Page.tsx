@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { sfx } from "@/lib/sfx"
 import { GameCabinet, type CabinetStatus } from "./GameCabinet"
+import { ignoreGameKey } from "./gameUtils"
 import styles from "./Game2048Page.module.scss"
 
 /**
@@ -62,6 +63,11 @@ const rotateCW = (b: Board): Board => b[0].map((_, c) => b.map((row) => row[c]).
 const rotateCCW = (b: Board): Board => b[0].map((_, c) => b.map((row) => row[SIZE - 1 - c]))
 
 type Dir = "left" | "right" | "up" | "down"
+
+const KEY_DIRS: Record<string, Dir> = {
+  ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down",
+  a: "left", d: "right", w: "up", s: "down",
+}
 
 function moveBoard(b: Board, dir: Dir): [Board, number, boolean] {
   let work = b.map((r) => [...r])
@@ -129,11 +135,8 @@ export function Game2048Page() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const map: Record<string, Dir> = {
-        ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down",
-        a: "left", d: "right", w: "up", s: "down",
-      }
-      const dir = map[e.key]
+      if (ignoreGameKey(e)) return
+      const dir = KEY_DIRS[e.key.length === 1 ? e.key.toLowerCase() : e.key]
       if (dir) { e.preventDefault(); apply(dir) }
     }
     window.addEventListener("keydown", onKey)

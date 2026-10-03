@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { sfx } from "@/lib/sfx"
+import { ignoreGameKey, readStoredInt, writeStored } from "./gameUtils"
+import { cssVarReader, useGameLoop } from "./useGameLoop"
 import styles from "./TetrisPage.module.scss"
 
 /**
@@ -68,18 +70,24 @@ function rotate(active: Active): number[][] {
   return active.cells.map(([x, y]) => [cx - (y - cy), cy + (x - cx)])
 }
 
-const collides = (grid: Grid, cells: number[][]) =>
-  cells.some(([x, y]) => x < 0 || x >= COLS || y >= ROWS || (y >= 0 && grid[y][x] !== 0))
+// Optional (dx, dy) offset lets the ghost-piece probe slide a piece down
+// without allocating a shifted copy of its cells every frame.
+const collides = (grid: Grid, cells: number[][], dx = 0, dy = 0) =>
+  cells.some(([cx, cy]) => {
+    const x = cx + dx, y = cy + dy
+    return x < 0 || x >= COLS || y >= ROWS || (y >= 0 && grid[y][x] !== 0)
+  })
+
+// per-type opacity so pieces are distinguishable in monochrome
+const ALPHA = [0, 1, 0.85, 0.7, 0.6, 0.5, 0.42, 0.34]
+const accent = cssVarReader("--color-accent-base", "#b4424c")
 
 export function TetrisPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [status, setStatus] = useState<"ready" | "playing" | "paused" | "over">("ready")
   const [score, setScore] = useState(0)
   const [lines, setLines] = useState(0)
-  const [best, setBest] = useState(() => {
-    const v = typeof localStorage !== "undefined" ? localStorage.getItem("tetris-best") : null
-    return v ? parseInt(v, 10) : 0
-  })
+  const [best, setBest] = useState(() => readStoredInt("tetris-best"))
 
   const grid = useRef<Grid>(emptyGrid())
   const active = useRef<Active | null>(null)
@@ -87,6 +95,15 @@ export function TetrisPage() {
   const next = useRef<string>("I")
   const dropAcc = useRef(0)
   const level = useRef(1)
+  // Score / lines are ref-authoritative so game-over (which can land in the same
+  // event as a hard drop or line clear) persists the true final score — a
+  // state-mirroring effect lags a render behind and dropped those last points.
+  const scoreRef = useRef(0)
+  const linesRef = useRef(0)
+  const addScore = useCallback((n: number) => {
+    scoreRef.current += n
+    setScore(scoreRef.current)
+  }, [])
 
   const pull = () => {
     if (bag.current.length === 0) bag.current = makeBag()
@@ -100,6 +117,8 @@ export function TetrisPage() {
     active.current = spawn(pull())
     dropAcc.current = 0
     level.current = 1
+    scoreRef.current = 0
+    linesRef.current = 0
     setScore(0); setLines(0)
   }, [])
 
@@ -124,13 +143,10 @@ export function TetrisPage() {
     }
     if (cleared > 0) {
       sfx.play(cleared === 4 ? "tetris" : "clear")
-      const pts = [0, 100, 300, 500, 800][cleared] * level.current
-      setScore((s) => s + pts)
-      setLines((l) => {
-        const nl = l + cleared
-        level.current = Math.floor(nl / 10) + 1
-        return nl
-      })
+      addScore([0, 100, 300, 500, 800][cleared] * level.current)
+      linesRef.current += cleared
+      level.current = Math.floor(linesRef.current / 10) + 1
+      setLines(linesRef.current)
     }
 
     // next piece
@@ -139,21 +155,15 @@ export function TetrisPage() {
     const na = spawn(t)
     if (collides(g, na.cells)) {
       setStatus("over")
-      setBest((b) => {
-        const nb = Math.max(b, scoreRef.current)
-        localStorage.setItem("tetris-best", String(nb))
-        return nb
-      })
+      setBest((b) => Math.max(b, scoreRef.current))
+      writeStored("tetris-best", Math.max(readStoredInt("tetris-best"), scoreRef.current))
       sfx.play("death")
       active.current = null
       return
     }
     active.current = na
-  }, [])
-
-  // keep a ref of score for the game-over closure
-  const scoreRef = useRef(0)
-  useEffect(() => { scoreRef.current = score }, [score])
+    dropAcc.current = 0 // fresh piece gets a full gravity interval
+  }, [addScore])
 
   const move = useCallback((dx: number, dy: number): boolean => {
     const a = active.current
@@ -183,13 +193,14 @@ export function TetrisPage() {
     if (!active.current) return // no piece in play — nothing to drop
     let dropped = 0
     while (move(0, 1)) dropped++
-    if (dropped > 0) setScore((s) => s + dropped * 2)
+    if (dropped > 0) addScore(dropped * 2)
     lockAndClear()
-  }, [move, lockAndClear])
+  }, [move, lockAndClear, addScore])
 
   // input
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (ignoreGameKey(e)) return
       if (status === "ready" || status === "over") {
         if (e.key === " " || e.key === "Enter") { e.preventDefault(); start() }
         return
@@ -202,74 +213,25 @@ export function TetrisPage() {
       switch (e.key) {
         case "ArrowLeft": case "a": e.preventDefault(); if (move(-1, 0)) sfx.play("move"); break
         case "ArrowRight": case "d": e.preventDefault(); if (move(1, 0)) sfx.play("move"); break
-        case "ArrowDown": case "s": e.preventDefault(); if (move(0, 1)) setScore((sc) => sc + 1); break
+        case "ArrowDown": case "s": e.preventDefault(); if (move(0, 1)) addScore(1); break
         case "ArrowUp": case "w": e.preventDefault(); tryRotate(); break
         case " ": e.preventDefault(); hardDrop(); break
       }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [status, start, move, tryRotate, hardDrop])
+  }, [status, start, move, tryRotate, hardDrop, addScore])
 
   // game loop + render
-  useEffect(() => {
+  const idleDrawn = useRef<string | null>(null) // status whose static frame is already on the canvas
+  useGameLoop((dt) => {
     const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-    let raf = 0
-    let last = 0
+    const ctx = canvas?.getContext("2d")
+    if (!canvas || !ctx) return
 
-    const accent = () =>
-      getComputedStyle(document.documentElement).getPropertyValue("--color-accent-base").trim() || "#b4424c"
-
-    // per-type opacity so pieces are distinguishable in monochrome
-    const ALPHA = [0, 1, 0.85, 0.7, 0.6, 0.5, 0.42, 0.34]
-
-    const draw = () => {
-      const cw = canvas.width / COLS
-      const ch = canvas.height / ROWS
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      const col = accent()
-
-      // settled blocks
-      const g = grid.current
-      for (let y = 0; y < ROWS; y++) {
-        for (let x = 0; x < COLS; x++) {
-          if (g[y][x]) {
-            ctx.globalAlpha = ALPHA[g[y][x]]
-            ctx.fillStyle = col
-            ctx.fillRect(x * cw + 1, y * ch + 1, cw - 2, ch - 2)
-          }
-        }
-      }
-
-      // ghost + active piece
-      const a = active.current
-      if (a) {
-        // ghost
-        let gy = 0
-        while (!collides(g, a.cells.map(([x, y]) => [x, y + gy + 1]))) gy++
-        ctx.globalAlpha = 0.12
-        ctx.fillStyle = col
-        a.cells.forEach(([x, y]) => {
-          if (y + gy >= 0) ctx.fillRect(x * cw + 1, (y + gy) * ch + 1, cw - 2, ch - 2)
-        })
-        // active
-        ctx.globalAlpha = ALPHA[a.id]
-        a.cells.forEach(([x, y]) => {
-          if (y >= 0) ctx.fillRect(x * cw + 1, y * ch + 1, cw - 2, ch - 2)
-        })
-      }
-      ctx.globalAlpha = 1
-    }
-
-    const loop = (t: number) => {
-      raf = requestAnimationFrame(loop)
-      if (!last) last = t
-      const dt = t - last
-      last = t
-      if (status === "playing" && active.current) {
+    if (status === "playing") {
+      idleDrawn.current = null
+      if (active.current) {
         dropAcc.current += dt
         const interval = Math.max(80, 600 - (level.current - 1) * 55)
         if (dropAcc.current >= interval) {
@@ -277,11 +239,46 @@ export function TetrisPage() {
           if (!move(0, 1)) lockAndClear()
         }
       }
-      draw()
+    } else if (idleDrawn.current === status) {
+      return // ready / paused / over: nothing moves, so don't repaint 60x a second
+    } else {
+      idleDrawn.current = status
     }
-    raf = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(raf)
-  }, [status, move, lockAndClear])
+
+    const cw = canvas.width / COLS
+    const ch = canvas.height / ROWS
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    const col = accent()
+
+    // settled blocks
+    const g = grid.current
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (g[y][x]) {
+          ctx.globalAlpha = ALPHA[g[y][x]]
+          ctx.fillStyle = col
+          ctx.fillRect(x * cw + 1, y * ch + 1, cw - 2, ch - 2)
+        }
+      }
+    }
+
+    // ghost + active piece
+    const a = active.current
+    if (a) {
+      let gy = 0
+      while (!collides(g, a.cells, 0, gy + 1)) gy++
+      ctx.globalAlpha = 0.12
+      ctx.fillStyle = col
+      a.cells.forEach(([x, y]) => {
+        if (y + gy >= 0) ctx.fillRect(x * cw + 1, (y + gy) * ch + 1, cw - 2, ch - 2)
+      })
+      ctx.globalAlpha = ALPHA[a.id]
+      a.cells.forEach(([x, y]) => {
+        if (y >= 0) ctx.fillRect(x * cw + 1, y * ch + 1, cw - 2, ch - 2)
+      })
+    }
+    ctx.globalAlpha = 1
+  })
 
   return (
     <div className={styles.tetrisContainer}>
@@ -323,7 +320,7 @@ export function TetrisPage() {
         <button disabled={status !== "playing"} onClick={() => { if (move(-1, 0)) sfx.play("move") }} aria-label="Move left">←</button>
         <button disabled={status !== "playing"} onClick={tryRotate} aria-label="Rotate">⟳</button>
         <button disabled={status !== "playing"} onClick={() => { if (move(1, 0)) sfx.play("move") }} aria-label="Move right">→</button>
-        <button disabled={status !== "playing"} onClick={() => { if (move(0, 1)) setScore((s) => s + 1) }} aria-label="Soft drop">↓</button>
+        <button disabled={status !== "playing"} onClick={() => { if (move(0, 1)) addScore(1) }} aria-label="Soft drop">↓</button>
         <button disabled={status !== "playing"} onClick={hardDrop} aria-label="Hard drop">⤓</button>
       </div>
     </div>

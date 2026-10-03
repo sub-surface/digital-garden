@@ -66,6 +66,8 @@ export function HexMinesPage() {
   const [cells, setCells] = useState<Map<string, Cell>>(() => buildCells())
   const [status, setStatus] = useState<"ready" | "playing" | "won" | "lost">("ready")
   const [seeded, setSeeded] = useState(false)
+  // Touch has no right-click: this toggle makes a tap place/remove a flag instead.
+  const [flagMode, setFlagMode] = useState(false)
 
   const reset = useCallback(() => {
     setCells(buildCells())
@@ -172,13 +174,25 @@ export function HexMinesPage() {
     <GameCabinet
       title="Hex Mines"
       blurb="Minesweeper on hexes — six neighbours each. Click to reveal, right-click to flag."
-      status={status}
+      // "ready" means "board untouched", not "waiting behind a Start overlay" —
+      // the cabinet overlays (and blocks) the board for every non-"playing"
+      // status, and Start only re-ran reset(), so a fresh board was unclickable.
+      status={status === "ready" ? "playing" : status}
       onStart={reset}
       endMessage={status === "won" ? "swept" : status === "lost" ? "boom" : undefined}
       hint="click reveal · right-click flag"
       controls={
         <>
           <span className={styles.mineCount}>mines <strong>{mineCount}</strong></span>
+          <button
+            className={styles.newBtn}
+            data-active={flagMode || undefined}
+            aria-pressed={flagMode}
+            onClick={() => setFlagMode((f) => !f)}
+            title="Flag mode: tap to flag instead of reveal (for touch)"
+          >
+            {flagMode ? "flagging" : "flag"}
+          </button>
           <button className={styles.newBtn} onClick={reset}>New</button>
         </>
       }
@@ -195,7 +209,7 @@ export function HexMinesPage() {
             <g
               key={k}
               className={styles.cellGroup}
-              onClick={() => playable && reveal(k)}
+              onClick={() => { if (playable) { if (flagMode) flag(k); else reveal(k) } }}
               onContextMenu={(e) => { e.preventDefault(); if (playable) flag(k) }}
             >
               <polygon
