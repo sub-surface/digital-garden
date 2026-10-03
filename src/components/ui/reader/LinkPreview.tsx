@@ -95,14 +95,14 @@ function extractFirstImage(md: string): string {
  * Resolve an internal link exactly as the browser will, and keep it only if it
  * stays on this origin. Regex checks lose to the URL parser: `/\host` and
  * `/\/host` normalise to `//host` (backslash is a slash in http URLs), and the
- * parser also strips tabs/newlines. Returning the parsed path means the href we
- * emit is the one the browser actually navigates to.
+ * parser also strips tabs/newlines. Return the ABSOLUTE validated URL, never
+ * the parsed path: `/.//host` is same-origin, but its normalised pathname is
+ * `//host`, which re-parses as protocol-relative if emitted as a relative href.
  */
 function sameOriginPath(path: string): string | null {
   try {
     const url = new URL(path, window.location.origin)
-    if (url.origin !== window.location.origin) return null
-    return url.pathname + url.search + url.hash
+    return url.origin === window.location.origin ? url.href : null
   } catch {
     return null
   }
