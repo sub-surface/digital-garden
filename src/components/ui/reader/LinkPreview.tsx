@@ -104,12 +104,15 @@ function mdToBodyHtml(md: string): string {
   if (src.length > 600) src = src.slice(0, 600).replace(/\s\S*$/, "")
   return escapeHtml(src)
     .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target: string, alias?: string) => {
-      const href = "/" + target.trim().replace(/\s+/g, "-")
+      // Strip leading slashes: "/" + "/evil.com" would be a protocol-relative,
+      // off-site link wearing the internal-link style.
+      const href = "/" + target.trim().replace(/^\/+/, "").replace(/\s+/g, "-")
       return `<a href="${escapeAttr(href)}" class="internal-link">${alias || target}</a>`
     })
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, label: string, href: string) =>
       `<a href="${escapeAttr(href)}" class="external-link" target="_blank" rel="noopener">${label}</a>`)
-    .replace(/\[([^\]]+)\]\(\/([^)\s]+)\)/g, (_, label: string, href: string) =>
+    // Site-relative only: `(?!\/)` rejects `//host` protocol-relative URLs.
+    .replace(/\[([^\]]+)\]\(\/(?!\/)([^)\s]+)\)/g, (_, label: string, href: string) =>
       `<a href="/${escapeAttr(href)}" class="internal-link">${label}</a>`)
     .replace(/^#{1,6}\s+(.+)$/gm, "<strong>$1</strong>")  // headings → bold
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
