@@ -32,6 +32,8 @@ Zero (refrain, *oida*) · One (sun, puddle, point, ox, glass) · Two What Is an 
 
 **Deliberately left out of the hub** (for satellites or later): Flusser's program; Mullarkey's refraction; Ferraris' hysteresis; Willowism by name; the CMB; Galton/mean faces; Begotten, Not Made in full; Genesis 3:5–7 in Zero.
 
+**Session 5 (2026-10-16), reading pass:** hub enriched from *The Speculative Turn* intro, Wolfendale, Brassier ch. 7, Meillassoux (arche-fossil as starlight) and Ferraris; all new quotes checked against the texts. Satellites started: `Writing/The-Watchtower-and-the-Mirror.md` (full first draft, `draft: true`) and `Writing/Delayed-Rays.md` (opening + argued outline, `draft: true`). Open for Leon: whether to take the Brassier parting ("the trace is the affirmation") further; Ferraris thinks writing beat images, and Delayed Rays argues against that; covers for both satellites.
+
 **Still [C] in the essay:** the wording of Davidson's quote; the Kofman characterisation; Lakoff and Johnson's examples; the Eddington details (Sobral is confirmed by the Commons record).
 
 ## 0.0 Session 4 (2026-10-15): reset
