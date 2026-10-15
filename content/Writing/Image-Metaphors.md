@@ -21,6 +21,8 @@ quote-author: — Aristotle, Metaphysics, 980a21–27 (trans. W. D. Ross)
 image: "Media/Escherpuddle.jpg"
 ---
 
+An essay I've been thinking about for the last 7 years (as of September 2026).
+
 ![Escherpuddle](Media/Escherpuddle.jpg)
 
 > I spent my first year of uni trying to find philosophy that "gets over language" in favour of the image - only to find that both are modes of representation which dissolve into the multiplicity of *difference and repetition*.

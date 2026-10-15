@@ -15,9 +15,10 @@ draft: true
 date: 2026-10-15
 quote: For now we see through a glass, darkly; but then face to face.
 quote-author: — 1 Corinthians 13:12 (KJV)
+image: "Media/Writing/watchtower-cover.jpg"
 ---
 
-> *A satellite of [[Writing/Image-Metaphors|What Is an Image?]], expanding its sixth section. First draft: the arguments are in place, the prose is not finished.*
+> *A satellite of [[Writing/Image-Metaphors|What Is an Image?]], expanding its sixth section. First draft: the arguments are in place, the prose is not finished. Cover: the convex mirror in Jan van Eyck's [Arnolfini Portrait](https://en.wikipedia.org/wiki/Arnolfini_Portrait) (1434), National Gallery, London.*
 
 <div className="dropcap">
 
@@ -118,6 +119,8 @@ The parent essay argues the opposite, that metaphor is always literal: "I see wh
 Back to the half of the word that the School of Speculative Documentary leaves out.
 
 The mirror isn't a better watchtower. It doesn't let you see further. What it does is put you in the picture. You can't look into a mirror without being looked back at, and you can't see what's behind you in it without seeing yourself first. Paul's promise, read in full, isn't only that we'll see clearly: "now I know in part; but then shall I know even as also I am known." Knowledge, in the mirror half of speculation, runs both ways.
+
+The most famous mirror in painting already knew this. On the back wall of Jan van Eyck's *Arnolfini Portrait* (1434) hangs a small convex mirror, and in it the room turns round: we see the couple from behind, and beyond them, in the doorway, two small figures looking in, one of whom is usually taken to be the painter. Above the mirror, in an elaborate legal hand, he wrote *Johannes de eyck fuit hic*, "Jan van Eyck was here". It's a witness's signature, and it's also a trace: the one who made the image is inside it, marked by the scene he marked. The watchtower can't show you that. Only the mirror can.
 
 Photography has always half-known this. Susan Sontag worried that to photograph people is "to violate them, by seeing them as they never see themselves, by having knowledge of them they can never have" ([[Books/On Photography|On Photography]], 1977). That's the watchtower: knowledge taken from a height, without return. But a trace isn't a one-way thing. The light that marks a sensor has first touched the person in front of it, and the person behind the camera is standing in the same light. Everyone with a phone is now on both sides of that exchange many times a day; the photographer is no longer a special case, just the most self-conscious one.
 

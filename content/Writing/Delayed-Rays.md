@@ -14,9 +14,10 @@ draft: true
 date: 2026-10-15
 quote: Lightning and thunder require time; the light of the stars requires time; deeds, though done, still require time to be seen and heard.
 quote-author: — Friedrich Nietzsche, The Gay Science §125
+image: "Media/Writing/delayed-rays-cover.jpg"
 ---
 
-> *A satellite of [[Writing/Image-Metaphors|What Is an Image?]], expanding the second half of its sixth section. This is a scaffold: the opening is drafted, the rest is an argued outline with its quotations in place. Companion: [[Writing/The-Watchtower-and-the-Mirror|The Watchtower and the Mirror]].*
+> *A satellite of [[Writing/Image-Metaphors|What Is an Image?]], expanding the second half of its sixth section. This is a scaffold: the opening is drafted, the rest is an argued outline with its quotations in place. Companion: [[Writing/The-Watchtower-and-the-Mirror|The Watchtower and the Mirror]]. Cover: the [Hubble Ultra Deep Field](https://en.wikipedia.org/wiki/Hubble_Ultra-Deep_Field) (NASA, ESA, S. Beckwith and the HUDF team, 2004), a patch of sky in which nearly every point of light is a galaxy, some seen as they were more than thirteen billion years ago.*
 
 <div className="dropcap">
 
@@ -84,4 +85,3 @@ One disagreement to flag at the outset. Ferraris thinks the twentieth century go
 - Governing figure is hysteresis; every section should show an effect outliving a cause, or failing to.
 - Keep the parent essay's rule: each image carries an argument (Wolfendale's warning against "performative phenomenology").
 - Don't valorise the photographer; everyone is an image-maker now.
-- Possible cover: a long exposure of stars, or the Planck CMB map (ESA, check licence).
