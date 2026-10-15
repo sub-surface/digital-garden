@@ -62,6 +62,32 @@ export function useHotkeys() {
       }
       if (isCheatSheetOpen) return
 
+      // Reader mode (main + wiki). Size/width keys only act while reading, and
+      // never with a modifier — Ctrl/Cmd +/- must stay the browser's zoom.
+      const readerShell = shell === "main" || shell === "wiki"
+      if (readerShell && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const store = useStore.getState()
+        const key = e.key
+        if (key === "f" || key === "F") {
+          e.preventDefault()
+          store.toggleReaderMode()
+          return
+        }
+        if (store.isReaderMode) {
+          const action =
+            key === "=" || key === "+" ? () => store.cycleReaderScale(1)
+            : key === "-" || key === "_" ? () => store.cycleReaderScale(-1)
+            : key === "]" ? () => store.cycleReaderMeasure(1)
+            : key === "[" ? () => store.cycleReaderMeasure(-1)
+            : null
+          if (action) {
+            e.preventDefault()
+            action()
+            return
+          }
+        }
+      }
+
       switch (e.key.toLowerCase()) {
         case "/":
           e.preventDefault()

@@ -276,6 +276,30 @@
   background: none !important;
 }
 
+// A wikilink whose page isn't written yet (remark-wikilinks `isMissingTarget`).
+// Still a link (its 404 page lists who wants it, and the wiki offers to start
+// it) but visibly provisional: muted, dotted, with a small open-circle mark.
+.missing-link {
+  color: var(--color-text-muted) !important;
+  text-decoration: underline dotted !important;
+  text-decoration-color: color-mix(in srgb, var(--color-text-muted) 60%, transparent) !important;
+  text-underline-offset: 0.2em;
+  box-shadow: none !important;
+  border-bottom: none !important;
+
+  &::after {
+    content: "°";
+    margin-left: 0.05em;
+    font-family: var(--font-code);
+    font-size: 0.8em;
+    opacity: 0.6;
+  }
+
+  &:hover {
+    color: var(--color-primary) !important;
+  }
+}
+
 // ── Note embeds (![[Note]]) ──
 
 .note-embed {

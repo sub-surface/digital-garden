@@ -77,6 +77,9 @@ export function usePanelClick() {
       // Don't intercept clicks on toolbar, search, etc.
       if (target.closest("[data-panel-ignore]")) return
       if (anchor.getAttribute("target") === "_blank") return
+      // A page that isn't written yet would open an empty panel card; let it
+      // navigate to the not-written-yet page instead.
+      if (anchor.hasAttribute("data-missing")) return
 
       // Skip special protocols (already handled music: above)
       if (href.includes("://") && !href.startsWith(window.location.origin)) return

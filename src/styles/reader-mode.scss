@@ -30,10 +30,22 @@
   }
 
   // Hide ambient chrome (direct children only) + the article's nav side column.
-  > [data-panel-ignore],
+  // QuickControls opts out (`data-reader-keep`): it carries the reader steppers
+  // and the exit button, so it stays, quietly, at reduced opacity until hovered.
+  > [data-panel-ignore]:not([data-reader-keep]),
   .article-toc,
   .body-side-group {
     display: none !important;
+  }
+
+  > [data-reader-keep] {
+    opacity: 0.35;
+    transition: opacity var(--duration-normal, 0.2s) var(--ease-default, ease);
+
+    &:hover,
+    &:focus-within {
+      opacity: 1;
+    }
   }
 
   // …but keep the mobile CornerMenu reachable: on mobile it's the *only* control
@@ -85,4 +97,57 @@
       content: none !important;
     }
   }
+}
+
+// ── Reader quick controls (QuickControls → ReaderToggle) ──
+// Rendered everywhere ReaderToggle is, but the steppers only exist while
+// reading. Global (not a module) because ReaderToggle reuses QuickControls'
+// global `.quick-icon-btn` look.
+.reader-quick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.reader-quick__steppers {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  padding-left: 0.4rem;
+  margin-left: 0.2rem;
+  border-left: 1px solid color-mix(in srgb, var(--color-overlay-tint) 15%, transparent);
+
+  .quick-icon-btn {
+    min-width: 24px;
+    font-family: var(--font-code);
+    font-size: 0.75rem;
+
+    sup {
+      font-size: 0.6em;
+    }
+
+    &:disabled {
+      opacity: 0.2;
+      cursor: default;
+    }
+  }
+}
+
+.reader-quick__value {
+  min-width: 3.2em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.reader-quick__sep {
+  width: 1px;
+  height: 1em;
+  margin: 0 0.3rem;
+  background: color-mix(in srgb, var(--color-overlay-tint) 15%, transparent);
+}
+
+.reader-quick__exit {
+  margin-left: 0.3rem;
+  font-size: 1rem !important;
 }

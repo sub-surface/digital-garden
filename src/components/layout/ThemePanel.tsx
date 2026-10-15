@@ -313,6 +313,8 @@ export function ThemePanel() {
           <button className={styles.ghostBtn} onClick={toggleReaderMode}>
             {isReaderMode ? "Exit reader mode" : "Enter reader mode"}
           </button>
+
+          <p className={styles.emptyNote}>Keys: <kbd>F</kbd> reader mode · <kbd>−</kbd> <kbd>+</kbd> text size · <kbd>[</kbd> <kbd>]</kbd> width</p>
         </div>
       ) : (
         <div className={styles.tabContent}>

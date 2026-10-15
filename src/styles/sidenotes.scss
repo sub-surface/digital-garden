@@ -171,6 +171,51 @@
   }
 }
 
+// ── Phones / touch: inline toggle for NoteLayout too ──
+// Notes normally show footnotes only in the bottom "Footnotes" section, read
+// via the hover preview on desktop. Touch has no hover, so tapping a marker
+// used to jump to the foot of the page (the landing page's footnote sits under
+// thousands of words). The plugin already emits the checkbox/label/aside
+// triplet for notes, so reuse the article's tap-to-expand card here and drop
+// the now-redundant section.
+
+@media (max-width: $bp-phone), (hover: none) {
+  .note-layout {
+    .footnote-marker {
+      display: none;
+    }
+
+    .sidenote-toggle {
+      display: inline !important;
+    }
+
+    .sidenote {
+      display: none !important;
+      margin: var(--space-3) 0;
+      padding: var(--space-4);
+      background: var(--color-bg-surface);
+      border-radius: 6px;
+      border-left: 2px solid var(--color-primary);
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: var(--color-text-muted);
+
+      p {
+        margin-bottom: var(--space-2);
+        &:last-child { margin-bottom: 0; }
+      }
+    }
+
+    .sidenote-checkbox:checked + .sidenote-toggle + .sidenote {
+      display: block !important;
+    }
+
+    .footnotes-section {
+      display: none;
+    }
+  }
+}
+
 // ── Narrow viewports: inline toggle for ArticleLayout ──
 
 @media (max-width: $article-narrow) {

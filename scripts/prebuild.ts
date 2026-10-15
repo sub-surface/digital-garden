@@ -295,7 +295,9 @@ function emitBrokenLinks({ linkMap, resolveLink }: Model) {
     for (const raw of rawLinks) {
       if (MEDIA_EXT.test(raw)) continue
       if (!resolveLink(raw)) {
-        console.warn(`  [broken link] ${slug} → [[${raw}]]`)
+        // Per-link lines only on request: hundreds of intentional "wanted page"
+        // links (e.g. Wiki/Proposed-Articles) used to bury every other message.
+        if (process.env.VERBOSE_LINKS === "true") console.warn(`  [broken link] ${slug} → [[${raw}]]`)
         ;(brokenBySlug[slug] ??= []).push(raw)
         brokenCount++
       }
@@ -308,7 +310,13 @@ function emitBrokenLinks({ linkMap, resolveLink }: Model) {
     ),
   })
   if (brokenCount > 0) {
-    console.warn(`  ${brokenCount} broken wikilink(s) found — see public/broken-links.json`)
+    const top = Object.entries(brokenBySlug)
+      .sort(([, a], [, b]) => b.length - a.length)
+      .slice(0, 5)
+      .map(([s, links]) => `${s} (${links.length})`)
+      .join(", ")
+    console.warn(`  ${brokenCount} wanted-page link(s) across ${Object.keys(brokenBySlug).length} note(s) — most in: ${top}`)
+    console.warn(`  (rendered as missing-link markers; full list in public/broken-links.json, or VERBOSE_LINKS=true)`)
   } else {
     console.log(`  broken-links.json generated (0 broken)`)
   }

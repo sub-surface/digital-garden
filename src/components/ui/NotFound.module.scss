@@ -86,3 +86,40 @@
     transform: translateX(2px);
   }
 }
+
+// ── Wanted page (a 404 that other pages link to) ──
+
+.wantedTitle {
+  font-family: var(--font-header);
+  font-size: 1.8rem;
+  margin-bottom: var(--space-4);
+  color: var(--color-text);
+}
+
+.wantedList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-8);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-4);
+  max-width: 520px;
+  font-size: 0.9rem;
+}
+
+.more {
+  opacity: 0.5;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+a.button {
+  display: inline-block;
+  text-decoration: none;
+}

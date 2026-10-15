@@ -483,6 +483,9 @@ That's a precise version of the "death of the image" that's neither lament nor s
 | C37 | Two kinds of sourceless light: from sources that no longer exist (photograph, starlight, CMB) vs light that never had a source (generative images); virtual worlds have moved from the first to the second | 5 | 5 | 4 | 3 | B (thesis) | live |
 | C38 | The oldest image (the CMB, "surface of last scattering") was first received as noise and survives in TV static, so the poor image and the first image are mixed together | 4 | 4 | 3 | 3 | B (ending) | live (verify the figures) |
 
+### Hysteresis (Leon, 2026-10-15)
+"Delayed Rays" recalls **Maurizio Ferraris on *hysteresis***: the tendency for effects to outlive their causes. Images take part in hysteretical behaviour all the time, and it overlaps with the documentary questions (the document as a trace that persists after the act it records). In the library: Ferraris, *Hysteresis: Metaphysics of the Web* (notes in the SR folder; Harman's preface PDF), *Documentality*, and *Brief History of New Realism*. The likely move is to make **hysteresis the satellite's governing concept**: "delayed rays" is the image's hysteresis, and C37's two sourceless lights are two hysteretic regimes (the effect outliving a cause that existed, vs an effect with no cause in the scene). Ferraris' documentality also gives the documentary strand a realist backbone ("social objects are inscribed acts"), which suits realism without authority. To read before Pass C. **Ledger C39** (hysteresis as the image's temporal structure; I4 N4 S3 D2; home B; parked until read).
+
 ### Funnel to a writing plan (next passes)
 The ledger and the question list (§0.6) now hold everything. Proposed passes:
 1. **Pass A, answer the questions.** You answer what's left in §0.6 (photographer, machines, reader questions); I fold the answers into the ledger and retire or sharpen claims.

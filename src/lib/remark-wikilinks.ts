@@ -11,6 +11,7 @@ import { toHtml } from "hast-util-to-html"
 import { escapeAttr } from "./escape"
 import { videoEmbedFromUrl, VIDEO_IFRAME_ALLOW } from "./videoEmbed"
 import { slug as headingSlug } from "github-slugger"
+import { buildSlugResolver, type SlugResolver } from "./slug"
 
 /**
  * Prebuild-generated manifests, re-read whenever prebuild rewrites them. The
@@ -35,6 +36,32 @@ function readManifest<T>(file: string, fallback: T): T {
 }
 
 const getSlugMap = () => readManifest<Record<string, string>>("slug-map.json", {})
+
+/**
+ * Resolver over every content-index key (notes + synthesized system pages),
+ * rebuilt only when the index object changes. Mirrors prebuild's resolveLink,
+ * so a link the build log calls broken is the one the page marks as missing.
+ */
+let resolverFor: { index: object; resolver: SlugResolver } | null = null
+function getResolver(): SlugResolver | null {
+  const index = readManifest<Record<string, unknown>>("content-index.json", {})
+  // No index yet (fresh checkout before prebuild): mark nothing as missing.
+  if (Object.keys(index).length === 0) return null
+  if (resolverFor?.index !== index) resolverFor = { index, resolver: buildSlugResolver(Object.keys(index)) }
+  return resolverFor.resolver
+}
+
+/** Route-shaped targets that aren't notes but do exist (tag / folder listings). */
+const ROUTE_PREFIX = /^(tags?|folder)\//i
+
+/** True when a wikilink target resolves to nothing, i.e. a page not written yet. */
+export function isMissingTarget(rawTarget: string, map: Record<string, string>): boolean {
+  if (!rawTarget || ROUTE_PREFIX.test(rawTarget)) return false
+  const lookup = rawTarget.toLowerCase().replace(/\s+/g, "-")
+  if (map[lookup]) return false
+  const resolver = getResolver()
+  return resolver ? resolver.resolve(rawTarget) === null : false
+}
 
 const MEDIA_EXTS = /\.(png|jpe?g|gif|svg|webp|avif|mp4|webm|mp3|wav|pdf)$/i
 const WIKILINK_RE = /(!)?\[\[([^\[\]\|#\\]+)?(#[^\[\]\|#\\]+)?(\|[^\[\]#]*)?\]\]/g
@@ -204,11 +231,19 @@ export function remarkWikilinks(opts: { embedDepth?: number } = {}) {
           // a raw `#Some Heading` anchor never matched one.
           const href = `/${resolvedSlug.replace(/\s+/g, "-")}${anchor ? `#${headingSlug(anchor.slice(1))}` : ""}`
 
+          // A page that doesn't exist yet stays a link (it may be written later,
+          // and the wiki can offer to create it) but is marked, Wikipedia-style,
+          // so readers know before they click.
+          const missing = isMissingTarget(rawTarget, map)
           newNodes.push({
             type: "link",
             url: href,
             children: [{ type: "text", value: displayText }],
-            data: { hProperties: { className: "internal-link" } },
+            data: {
+              hProperties: missing
+                ? { className: "internal-link missing-link", "data-missing": "true", "data-no-preview": "true", title: `Not written yet: ${rawTarget}` }
+                : { className: "internal-link" },
+            },
           })
         }
 

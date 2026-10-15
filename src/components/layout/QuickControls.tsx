@@ -161,6 +161,7 @@ export function QuickControls({ variant = "full", immersive }: QuickControlsProp
       data-variant={variant}
       data-immersive={isImmersive || undefined}
       data-panel-ignore
+      data-reader-keep
       style={rightOffset ? { right: `${rightOffset}px` } : undefined}
     >
       <ArcadeBackButton />

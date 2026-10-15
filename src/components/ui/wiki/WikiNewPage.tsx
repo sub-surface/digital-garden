@@ -96,7 +96,10 @@ export function WikiNewPage() {
   const [showAuth, setShowAuth] = useState(false)
   const [step, setStep] = useState(1)
   const [articleType, setArticleType] = useState<ArticleType>("philosopher")
-  const [title, setTitle] = useState("")
+  // `/new?title=…` (from a not-written-yet link's 404 page) pre-fills the title.
+  const [title, setTitle] = useState(() =>
+    typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("title") ?? "",
+  )
   const [content, setContent] = useState("")
   const [turnstileToken, setTurnstileToken] = useState("")
   const [submitting, setSubmitting] = useState(false)

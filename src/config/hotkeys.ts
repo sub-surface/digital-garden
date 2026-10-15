@@ -17,7 +17,7 @@ export interface Hotkey {
   /** Human-readable action. */
   label: string
   /** Grouping in the cheat sheet. */
-  group: "Navigation" | "Appearance" | "Media" | "Help"
+  group: "Navigation" | "Reading" | "Appearance" | "Media" | "Help"
   /** Restrict to these shells; undefined = all. */
   shell?: Shell[]
 }
@@ -30,6 +30,12 @@ export const HOTKEYS: Hotkey[] = [
   { key: "p", keys: ["Ctrl", "P"], label: "Open terminal", group: "Navigation", shell: ["main", "wiki", "chat"] },
   { key: "p", keys: ["Ctrl", "Shift", "P"], label: "Command palette", group: "Navigation", shell: ["main", "wiki", "chat"] },
   { key: "r", keys: ["R"], label: "Random note", group: "Navigation", shell: ["main", "wiki"] },
+  // Reading — size/width keys apply while reader mode is on
+  { key: "f", keys: ["F"], label: "Reader mode", group: "Reading", shell: ["main", "wiki"] },
+  { key: "=", keys: ["+"], label: "Larger text (reader)", group: "Reading", shell: ["main", "wiki"] },
+  { key: "-", keys: ["−"], label: "Smaller text (reader)", group: "Reading", shell: ["main", "wiki"] },
+  { key: "]", keys: ["]"], label: "Wider column (reader)", group: "Reading", shell: ["main", "wiki"] },
+  { key: "[", keys: ["["], label: "Narrower column (reader)", group: "Reading", shell: ["main", "wiki"] },
   // Appearance
   { key: "\\", keys: ["\\"], label: "Theme panel", group: "Appearance" },
   { key: "b", keys: ["B"], label: "Cycle background", group: "Appearance", shell: ["main"] },
@@ -40,7 +46,7 @@ export const HOTKEYS: Hotkey[] = [
 ]
 
 /** Cheat-sheet display order. */
-export const HOTKEY_GROUPS: Hotkey["group"][] = ["Navigation", "Appearance", "Media", "Help"]
+export const HOTKEY_GROUPS: Hotkey["group"][] = ["Navigation", "Reading", "Appearance", "Media", "Help"]
 
 /** Hotkeys visible for a given shell (for the cheat sheet). */
 export function hotkeysForShell(shell: Shell): Hotkey[] {

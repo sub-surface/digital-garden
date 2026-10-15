@@ -245,6 +245,22 @@ const PERSISTED_KEYS = [
   "chessBot", "chatDensity", "chatFontScale", "chatTerminal", "bgOpacity",
 ] as const
 
+/** Reader typography steps (ThemePanel steppers, QuickControls, `[ ] - =` keys). */
+export const READER_MEASURE_STEPS = [50, 60, 70, 80, 90, 100, 110, 120] as const
+export const READER_SCALE_STEPS = [0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.2, 1.35, 1.5, 1.7] as const
+
+/**
+ * The next step from `current` in direction `dir`, clamped at the ends. Works
+ * for values that aren't on the list (persisted from older step sets): it moves
+ * to the nearest step that is strictly bigger / smaller, never backwards.
+ */
+export function stepReader(steps: readonly number[], current: number, dir: 1 | -1): number {
+  const eps = 1e-9
+  if (dir > 0) return steps.find((v) => v > current + eps) ?? steps[steps.length - 1]
+  for (let k = steps.length - 1; k >= 0; k--) if (steps[k] < current - eps) return steps[k]
+  return steps[0]
+}
+
 export const useStore = create<GardenStore>()(
   persist(
     (set) => ({
@@ -296,20 +312,9 @@ export const useStore = create<GardenStore>()(
       readerMeasureCh: legacy("reader-measure", (v) => parseInt(v, 10) || 80, 80),
       readerScale: legacy("reader-scale", (v) => parseFloat(v) || 1, 1),
       cycleReaderMeasure: (dir) =>
-        set((s) => {
-          const steps = [70, 80, 90, 100]
-          const i = steps.includes(s.readerMeasureCh) ? steps.indexOf(s.readerMeasureCh) : 1
-          const next = steps[Math.min(steps.length - 1, Math.max(0, i + dir))]
-          return { readerMeasureCh: next }
-        }),
+        set((s) => ({ readerMeasureCh: stepReader(READER_MEASURE_STEPS, s.readerMeasureCh, dir) })),
       cycleReaderScale: (dir) =>
-        set((s) => {
-          const steps = [0.95, 1, 1.1, 1.2, 1.35]
-          // includes-guard (not Math.max(1, …)) so index 0 cycles correctly
-          const i = steps.includes(s.readerScale) ? steps.indexOf(s.readerScale) : 1
-          const next = steps[Math.min(steps.length - 1, Math.max(0, i + dir))]
-          return { readerScale: next }
-        }),
+        set((s) => ({ readerScale: stepReader(READER_SCALE_STEPS, s.readerScale, dir) })),
 
       // Search
       isCheatSheetOpen: false,
