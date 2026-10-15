@@ -197,3 +197,21 @@ on 3. the name mentions are fine they're not identifiable. we can also un-redact
 The proposed commit shape you offer makes sense, if there's any final changes you'd like to make to the OG system let me know, i dont mind regenerating all the og images before we push. Thanks for your help! You're a brilliant companion:)
 
 *[Claude fixed the KaTeX warnings (two wiki pages used display math to centre quotations; now pullquotes). It letterboxed the landing cards at 2.39:1, set covers for both essays (the transformer diagram, and a new horizontal "three suns" composition from the Decision figures), published this colophon and the workbench with the names restored, and developed the seeds. The CMB is the "surface of last scattering": the oldest image, first received as noise. Hyperstition is replaced by premediation and Willowism's "images act in virtue of possibility". Satellite B gets a thesis: two kinds of sourceless light.]*
+
+**Leon (2026-10-15, night):**
+
+push it, then let's start on reader mode and mobile footnote fix, missing-page markers sound doable today. 
+
+I really appreciate your thoughts above, premediation feels more suitable or at least respectable as an idea, and the "delayed rays" actually reminds me of Maurizio Ferraris on Hysteresis, or the tendency for effects to outlive their causes (lots to play with there) - This hysteretical behaviour is one images take part in all the time, and coincides with much of the documentary ideas we were discussing. 
+
+On the writing plan, that sounds great - let me know when you think the best time to start on it is (probably after getting the rest done)
+
+*[Claude pushed, then built reader-mode controls, inline footnotes on phones, and missing-page markers with a "not written yet" 404. It noted Ferraris' hysteresis as the candidate governing concept for "Delayed Rays".]*
+
+**Leon:**
+
+Great work, let's try get more of the central image metaphor essay complete by actually making the proposed changes from the workbench - use your askquestionstool to clear up the decisions that need to be made, we dont have to do it all in one go and its paramount that my voice is preserved while you still stay critical and constructive like a good companion in the writing:) What do you think?
+
+**Leon (answers):** On who writes: we have a lot of my actual voice for you to work with from the colophon etc. so dont worry about framing it as a draft so much as just getting the ideas we have down in a sensible and complete way. I think we're very much ready to just write it, and I'll flag if it looks or feels off. On the aim paragraph: turn it into the question. On the verb trap: plant a sidenote now. On section One: all four stations. On the reductive moves: fix all four. On light/camera: Bergson sidenote. On Rorty: keep the irony and add the fairness, maybe also mentioning how part of the motivation of this essay and inquiry is in the sheer ubiquity of visual metaphor among even its staunchest advesaries. On numbering: write "What Is an Image?" fully now.
+
+*[Claude wrote Zero's close (the refrain, oida), One's four stations (sun, puddle, point, ox) and the glass, a full new section Two, "What Is an Image?", and the repaired Image of Thought (now Three). Leon's existing prose was kept apart from the four agreed fixes and small line edits.]*
