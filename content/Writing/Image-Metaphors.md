@@ -264,18 +264,26 @@ I promised to come back to the dead metaphor, so here is the objection at full s
 
 [^davidson]: Donald Davidson, "What Metaphors Mean", *Critical Inquiry* 5 (1978). Davidson's point is that a metaphor's force lies in what it makes us notice, not in some second, hidden meaning.
 
-It's a good objection, and I think it's wrong, for three reasons that come from three very different places.
+I want to keep Davidson's premise and refuse his conclusion. Metaphors do mean literally. But the literal is far stranger than he allows, because there was never a second, figurative level hovering over it. The split between a proper sense and a figurative one is the copy theory again, at the scale of the word: a literal original, and a figurative image of it worn thin with use. Deleuze and Guattari, reading Kafka, refuse the split outright:
 
-The first is historical. [Hans Blumenberg](https://en.wikipedia.org/wiki/Hans_Blumenberg) spent a career showing that some metaphors can't be cashed out into concepts at all: they *orient* thinking rather than decorate it, and when they change, the thinking changes with them. His study of light as a metaphor for truth (1957) follows it from Plato's light, which makes things visible, through the blinding light of revelation, to the Enlightenment's lamp, something *we* carry into the dark corners. Each is a different theory of knowledge wearing the same figure. A dead metaphor doesn't keep changing its mind.
+> Kafka deliberately kills all metaphor, all symbolism, all signification, no less than all designation. Metamorphosis is the contrary of metaphor. There is no longer any proper sense or figurative sense, but only a distribution of states that is part of the range of the word. [...] It is no longer a question of a resemblance between the comportment of an animal and that of a man; it is even less a question of a simple wordplay. [...] The animal does not speak "like" a man but pulls from the language tonalities lacking in signification; the words themselves are not "like" the animals but in their own way climb about, bark and roam around, being properly linguistic dogs, insects, or mice.  
+—Deleuze & Guattari, *Kafka: Toward a Minor Literature* (1975)
 
-The second is Derrida's. In "White Mythology" he argues that philosophy can't step outside its metaphors to survey them, because the very concept of a concept is drawn from the field it would survey. Metaphysics, for him, is metaphor rubbed smooth, like a coin whose face has worn away while it goes on circulating at full value. The worn coin is still money. And the metaphor philosophy keeps returning to, Derrida notes, is the sun's: the heliotrope, the flower that turns to the light, is his name for metaphor itself.
+Gregor Samsa doesn't become *like* an insect. In *A Thousand Plateaus* they put it flatly: "There is no 'like' here [...] The plane of consistency is the abolition of all metaphor; all that consists is Real."
 
-The third is cognitive. George Lakoff and Mark Johnson showed in *Metaphors We Live By* (1980) that [conceptual metaphors](https://en.wikipedia.org/wiki/Conceptual_metaphor) organise inference, not just vocabulary. If UNDERSTANDING IS SEEING, then a lot follows without anyone deciding it should: clarity is truth, obscurity is error, an argument has a "point of view", and the knower stands outside the scene, looking in. Dead metaphors do logical work. That's precisely what makes them hard to see.
+So my claim isn't that dead metaphors are secretly alive. It's that **metaphor is always literal**. "I see what you mean" isn't a picture of knowing borrowed from the eye; it reports a real composition between two practices, the eye's and the mind's, both of them cuts in a flow, both of them ways of being affected. When the phrase misleads us it isn't because it's figurative. It's because we've taken one literal relation (what eyes do) for the whole of another (what knowing does).[^replies]
+
+[^replies]: There are other good replies to Davidson, and I'd keep them as allies rather than arguments. Hans Blumenberg showed that some metaphors are "absolute": they *orient* thought rather than decorate it, and the light metaphor keeps changing its mind (Plato's light that makes things visible, revelation's light that blinds, the Enlightenment's lamp that *we* carry). Derrida's "White Mythology" argues that metaphysics is metaphor rubbed smooth, like a coin whose face has worn away while it goes on circulating at full value, and that philosophy's master metaphor is the sun's (the heliotrope). And George Lakoff and Mark Johnson showed in *Metaphors We Live By* (1980) that [conceptual metaphors](https://en.wikipedia.org/wiki/Conceptual_metaphor) organise inference: if UNDERSTANDING IS SEEING, then clarity is truth and the knower stands outside the scene. All three still assume the literal/figurative split that Deleuze refuses; they just give the figure more power.
+
+Deleuze makes the same point about images directly, in the second of his cinema books. Most of what we perceive, he says, is cliché, and "even metaphors are sensory-motor evasions, and furnish us with something to say when we no longer know what to do". Against the cliché he sets another kind of image:
+
+> [...] a pure optical-sound image, the whole image without metaphor, brings out the thing in itself, literally, in its excess of horror or beauty, in its radical or unjustifiable character [...]. I thought I was seeing convicts: the factory is a prison, school is a prison, literally, not metaphorically. You do not have the image of a prison following one of a school: that would simply be pointing out a resemblance, a confused relation between two clear images. On the contrary, it is necessary to discover the separate elements and relations that elude us at the heart of an unclear image: to show how and in what sense school is a prison, housing estates are examples of prostitution, bankers killers, photographs tricks — literally, without metaphor.  
+—Gilles Deleuze, *Cinema 2: The Time-Image* (1985)
+
+*Photographs tricks, literally.* Not a figure for deception but a description of what they do, the way Hito Steyerl can call a blurred phone feed from a war zone a "true document" of uncertainty. This is also why Deleuze and Guattari, introducing their machines, ask of their own concept "in anything more than a metaphorical sense?" and answer yes, and why Walton warns us against "watering down this suggestion". Neither is defending a metaphor. Both are refusing the distinction that would let a metaphor be dismissed.
 
 ![Foucault's quadrilateral of language from The Order of Things, drawn over a dusk roofline](Media/Foucault_Language_1.jpg)
 > *[[Michel Foucault|Foucault]]'s quadrilateral of language from* The Order of Things*, drawn over a dusk roofline. Attribution, articulation, designation, derivation. In the classical age the tropes, metaphor among them, sit at one corner of the table of language, not outside it.*
-
-There's a fourth reason, and it was already in the second section. When Deleuze and Guattari say the image is a machine, they ask, of their own concept, "in anything more than a metaphorical sense?" and answer yes. When Walton says we see through photographs, he warns us against "watering down this suggestion". Two traditions that agree on almost nothing both refuse to let their optical claims be read as figures of speech. They know what Davidson's objection would cost them.
 
 The linguistic turn tried to settle all this by moving house: from the mirror to the text (Derrida) or to the conversation (Rorty). But a change of medium isn't an escape. Language, too, is a mode of representation, and it dissolves into difference and repetition along with the image (which is roughly the sentence I put at the top of this essay in my first year of university, before I understood it). The disagreement worth having isn't between pictures and words, it's between two ideas of difference: Derrida's *différance*, which *defers*, always postponing the meaning it promises, and Deleuze's difference, which *produces*, making something each time it repeats.
 
@@ -322,3 +330,98 @@ If the image isn't a metaphor, then the question becomes how philosophy managed 
 
 ## The image as representation
 
+The short answer is that a machine became a model. In 1690 John Locke described the understanding as a room with the lights off:
+
+> I pretend not to teach, but to inquire; and therefore cannot but confess here again, that external and internal sensation are the only passages I can find of knowledge to the understanding. These alone, as far as I can discover, are the windows by which light is let into this DARK ROOM. For, methinks, the understanding is not much unlike a closet wholly shut from light, with only some little openings left, to let in external visible resemblances, or ideas of things without: which, would they but stay there, and lie so orderly as to be found upon occasion, it would very much resemble the understanding of a man [...].  
+—John Locke, [*An Essay Concerning Human Understanding*](https://www.gutenberg.org/ebooks/10615) II.xi.17 (1690)
+
+The mind is a camera obscura, and ideas are "visible resemblances" let in through little holes.[^crary] But notice Locke's wish: *would they but stay there*. The trouble with the dark room is that its pictures don't stay; take away the light and they're gone. A century and a half later that wish was granted, chemically. Photography is the camera obscura with its images *fixed*, and from then on the mind's favourite model had a material double that could be filed, printed and produced in court.
+
+[^crary]: Jonathan Crary's *Techniques of the Observer* (1990) argues that from the seventeenth century to the early nineteenth the camera obscura wasn't just a device but the dominant model of what an observer *is*: a detached interior, receiving an exterior through an aperture.
+
+Marx borrowed the same machine to explain how ideas go wrong:
+
+> If in all ideology men and their circumstances appear upside-down as in a camera obscura, this phenomenon arises just as much from their historical life-process as the inversion of objects on the retina does from their physical life-process.  
+—Marx & Engels, [*The German Ideology*](https://www.marxists.org/archive/marx/works/1845/german-ideology/ch01a.htm) (1846)
+
+Ideology is the inverted image, and critique turns it the right way up. It's a powerful figure and it has the same problem the Mohists flagged two thousand years earlier: an inversion pre-supposes an upright original, somewhere, against which the image counts as upside-down. Sarah Kofman's reading of the passage (*Camera Obscura: Of Ideology*, 1973) presses exactly there. To diagnose the inversion Marx needs a view from nowhere that sees the world the right way up, and that view is the most ideological thing in the passage. The inversion, again, isn't a loss to be corrected; it's the trace of the image's making.
+
+By the time photography arrived, then, the image had three jobs it never applied for: model of the mind (Locke), model of error (Marx) and, soon, model of proof. Fox Talbot called his book of photographs *[The Pencil of Nature](https://www.gutenberg.org/ebooks/33447)* (1844): nature drawing itself, no hand involved. André Bazin, a century later, noticed where that idea comes from:
+
+> Here one should really examine the psychology of relics and souvenirs which likewise enjoy the advantages of a transfer of reality stemming from the "mummy-complex." Let us merely note in passing that the Holy Shroud of Turin combines the features alike of relic and photograph.  
+—André Bazin, "The Ontology of the Photographic Image" (1945)
+
+An image "not made by hands", the *acheiropoieton*, is the oldest kind of holy image there is, and photography inherited its authority. Plato had drawn the same line in the *Republic*. In Book VI the sun is the image the Good "begat in his own likeness"; in Book X a man turning a mirror round and round can "make the sun and the heavens" in an instant, and that man is the painter, banished from the city. Begotten images are holy and made images are idols, and photography, nature's own pencil, got to count as begotten. That's how a picture became evidence, and why, as Hito Steyerl puts it, documents "reek of authority, certification, expertise and concentrate epistemological hierarchies".[^steyerl]
+
+[^steyerl]: Hito Steyerl, "Documentary Uncertainty" (2007). I wrote about Steyerl's way out of this in [[The-Uncertainty-Principle|The Uncertainty Principle]]. W. J. T. Mitchell describes the whole arc as our evolution "from creatures 'made in the image' of a creator to creatures who make themselves and their world in their own image".
+
+![Foucault's classical quadrilateral from The Order of Things, drawn over a path in low sun and long shadows](Media/Foucault_Quadrilateral_1.jpg)
+> *Foucault's classical quadrilateral, drawn over a path in low sun. "Visibility of" and "representability of beings" are its first terms: in the classical age, to know a thing was to find its place on the table of representation.*
+
+Why would philosophy want the image to be a copy? Here's my best guess, and it's meant generously. A copy can be held at a distance, checked against an original, corrected and thrown away, all without the knower being changed by it. Nick Land says of Descartes' ego that it "finds an immaculate relation to the profane world through representation, by means of which its being is reserved from the hazards of contact in the very exercise of knowing". Iain Hamilton Grant, writing about living systems, describes the same structure as a system that maintains "its overall identity despite a constant turnover of its components". Put them together and the copy theory looks less like a mistake than an immune system. Recognition keeps the knower intact while the world's images come and go, each one checked against what "everybody knows" and absorbed as the same.
+
+That isn't stupid in itself. Organisms need membranes, and Spinoza would call it the mind's *conatus*, its striving to go on being what it is. Stupidity, in Deleuze's sense, begins when the membrane forgets there's an outside, and treats every encounter as a recognition. A copy can't wound you. A trace can. That's what made photography so explosive: it industrialised traces, images that *are* contacts, and then a whole culture insisted on reading them as copies.
+
+<blockquote className="pullquote">A copy is an image that has been told to stay.</blockquote>
+
+# ⁖ Six
+
+## Speculation, and the Deaths of the Image
+
+The word for knowing in a mirror is *speculation*. Its roots run to *specula*, a watchtower, and *speculum*, a mirror, and to Paul's glass, *per speculum in aenigmate*.[^speculum] Kant gave the word its modern edge. The whole *Critique of Pure Reason* is, among other things, a limit set on "speculative cognition", the attempt to know things beyond any possible experience of them. But read in good faith, Kant never says that what lies beyond is unreal:
+
+> [...] even if we cannot cognize these same objects as things in themselves, we at least must be able to think them as things in themselves. For otherwise there would follow the absurd proposition that there is an appearance without anything that appears.  
+—Immanuel Kant, [[Wiki/Texts/Critique of Pure Reason (Kant)|*Critique of Pure Reason*]], Bxxvi (trans. Guyer & Wood)
+
+[^speculum]: The School of Speculative Documentary takes its name from the watchtower half: Max Pinckers traces *speculate* to "*specula* 'watchtower', from *specere* 'to look'", and defines speculative documentary as "based on conjecture rather than knowledge", a construction "that resists probability in order to create a new world". The mirror half, *speculum*, never comes up. I think it's the better half.
+
+To be real is not to be known. That's Kant's own position, not an objection to it. And Kant's illusions are real too: transcendental illusion "does not cease even though it is uncovered", he says, "just as little as the astronomer can prevent the rising moon from appearing larger to him, even when he is not deceived by this illusion". Spinoza's sun stays in the water; Kant's moon stays large on the horizon. Deleuze credits Kant with exactly this: "For the concept of error, he substituted that of illusion." He only faults him for keeping thought "upright", which, in an essay about inverted images, is a pun worth leaving where it is.
+
+This matters for the speculative realists, who made "correlationism" their target. Quentin Meillassoux defines it as "the idea according to which we only ever have access to the correlation between thinking and being, and never to either term considered apart from the other". That's a fair picture of a lot of philosophy after Kant, and a less fair picture of Kant, who explicitly refused to collapse the limit of knowing into a limit of being. The photograph is a good test case. It's a trace of something that was there whether or not anyone knew it, and even whether or not anyone looked. Barthes calls it "the absolute Particular, the sovereign Contingency, matte and somehow stupid, the *This*". A real thing, known or not.
+
+And it keeps its contingency. A photograph fixes *that* something happened without making it necessary that it did. The event could have gone otherwise; the shutter could have closed a moment later, or not at all. Deleuze warns against the "possible" understood as "an image of the real, while the real is supposed to resemble the possible", a picture of what happened projected backwards as if it had always been waiting. A photograph refuses that picture. It doesn't show what had to be; it keeps, permanently, something that might not have been.
+
+That's also why the image keeps dying and never quite stays dead. Nietzsche's madman, announcing the death of God, already knew the structure:
+
+> Lightning and thunder require time; the light of the stars requires time; deeds, though done, still require time to be seen and heard.  
+—Friedrich Nietzsche, *The Gay Science* §125
+
+Light outlives its source. Barthes, borrowing the thought from Sontag, says a photograph of someone missing "will touch me like the delayed rays of a star". Photography's critics have announced its death so often that Geoffrey Batchen, as Andrew Dewdney reports, counted "a number of distinct points of death plunged into the body of photography", and Dewdney himself calls what's left "zombie photography". Those are deaths of one kind: light still arriving from sources that have gone.
+
+There is a newer kind. Generative images are not dependent, as Steyerl puts it, "on the actual impact of photons on a sensor, or on emulsion"; they are averages of what has already been pictured, and "they replace likenesses with likelinesses". The old worry was light from a dead star. The new one is light with no star at all. What the mean image pictures is the possible in exactly the sense Deleuze warned about, the probable, the already-resembled. The speculative documentary, "a construction that resists probability", is its counter-machine: images that admit they are made, and stay true to something anyway. Steyerl, looking at a blurred phone feed from the Iraq invasion, found that "these pictures do not really represent anything [...] But amazingly, we can still speak of truth with regard to them."[^satellites]
+
+[^satellites]: Speculation, Kant in good faith and the speculative realists get their own essay; so do the deaths of the image, the mean image and the long history of light that outlives its source. This section is the short version of both.
+
+There's an ethics folded into this as well. Susan Sontag worried that the camera is predatory, that to photograph people is "to violate them, by seeing them as they never see themselves, by having knowledge of them they can never have" ([[Books/On Photography|On Photography]], 1977). But a trace runs both ways. The light that marks a sensor has first touched the person in front of it, and the photographer standing in the same light is being marked too. Paul's promise wasn't only to see face to face; it was to "know even as also I am known". A documentary that took that seriously wouldn't become any less uncertain. It would just stop pretending the knowing only goes one way.
+
+<blockquote className="pullquote">An image is light that outlives its source.</blockquote>
+
+# ⁛ Seven
+
+## Light, Bent
+
+I started this essay with a confession: a first year at university spent looking for a philosophy that would "get over language" in favour of the image. Plato tells a story about confessions like that. The poet Stesichorus slandered Helen and was struck blind for it; he wrote a recantation, a *palinode*, saying she had never gone to Troy at all, "and when he had completed his poem [...] immediately his sight returned to him". (In the *Republic*, Plato adds that the Greeks fought over "the shadow of Helen", an image, "in ignorance of the truth"; the most famous war in Greek memory was fought over a picture.) Barthes, halfway through *Camera Lucida*, makes his palinode too.
+
+Here is mine. There was nothing to get over. The image doesn't need rescuing from language, any more than language from the image, because neither was ever a copy of the world. Both are cuts in it, and both dissolve into the multiplicity of *difference and repetition*. I wanted the image to be closer to things than words are. It is close to things, but not by resembling them. It's close the way a footprint is close to a foot.
+
+![One of the 1919 eclipse plates, with the positions of stars around the eclipsed sun marked](https://upload.wikimedia.org/wikipedia/commons/3/37/1919_eclipse_positive.jpg)
+> *A negative from the Sobral expedition, 29 May 1919, reproduced in Dyson, Eddington and Davidson's report (public domain, via [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:1919_eclipse_positive.jpg)). The stars nearest the darkened sun appear slightly out of place.*
+
+On 29 May 1919, expeditions led by Arthur Eddington and Frank Dyson photographed a total eclipse from Sobral in Brazil and the island of Príncipe off Africa. With the sun's glare blocked, the stars beside it could be photographed, and their positions compared with where they sat when the sun was elsewhere in the sky. They had moved, very slightly, by about the amount Einstein had predicted: their light had been bent by the mass of the sun it passed.[^eddington] An eclipse at the beginning of this essay, then, and an eclipse at the end. Socrates looked at the sun in water to save his eyes; Eddington's plates looked past it, at the stars, and found the light *bent by what it passed*. Not a mirror, not a copy, but a record of a difference, left in the light by the thing it went by.
+
+[^eddington]: The plates were argued over for years (Eddington was accused of preferring the data that agreed with Einstein), which makes them, appropriately, a case study in testimony and myth as well as in physics.
+
+That, as near as I can put it, is what an image is. And it's what a wound is too. Barthes found the word for the photograph that gets through: the *punctum*, "this wound, this prick, this mark made by a pointed instrument".[^punctum] The two questions this essay has been asking turn out to be one. Every image is a mark made in a surface by something that touched it, and some of them we feel.
+
+[^punctum]: Barthes, *Camera Lucida* §10. More on the punctum, and on what it would mean for a machine to be pricked by one, in [[Attention & Difference]].
+
+There is one more scene in the Bible about seeing face to face, older than Paul's. Jacob wrestles all night with a stranger who, when he can't win, touches the hollow of Jacob's thigh and puts it out of joint. At dawn Jacob names the place:
+
+> And Jacob called the name of the place Peniel: for I have seen God face to face, and my life is preserved. And as he passed over Penuel the sun rose upon him, and he halted upon his thigh.  
+—[Genesis 32:30–31](https://www.biblegateway.com/passage/?search=Genesis+32%3A24-31&version=KJV) (KJV)
+
+Face to face, then, but only after the wound, and walking away from it limping, into the sun. Not the sun of the *Republic*, stared at in its own proper place, nor the sun in the puddle, safely inverted, but a sun that rises *on* someone, warm on the skin, touching what it lights. The image was never the light's copy. It's what the light does to whatever it reaches, and what it reaches keeps the mark.
+
+So, one last time, the question I can't stop asking, and I hope you can't either:
+
+<blockquote className="pullquote">What is an image?</blockquote>

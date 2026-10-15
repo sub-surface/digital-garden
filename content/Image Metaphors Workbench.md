@@ -23,6 +23,17 @@ This section supersedes §4 (v1), §9 (v2) and §13's v2.1 delta. Everything bel
 - the Commonplace *(private)*: extended excerpts in context, by section (was §15).
 - [[Image Metaphors Colophon]]: provenance seed, your messages verbatim (was the colophon seed).
 
+## 0.−1 Draft status (2026-10-16): first full pass written
+
+All eight sections now exist in the live essay (about 11k words). Structure as written:
+Zero (refrain, *oida*) · One (sun, puddle, point, ox, glass) · Two What Is an Image? (M87, Mitchell, the cut, Spinoza IIp17s, Scruton/Walton, diagrams) · Three Thought of Image (Eggleston, Deleuze, Spinoza, Rorty and realism without authority) · Four Not a Metaphor (**metaphor is always literal**: Davidson's premise, Deleuze's conclusion via *Kafka*, *A Thousand Plateaus*, *Cinema 2*; the hands; Thomas's wound) · Five Representation (Locke's dark room, Marx/Kofman, Talbot, Bazin's Shroud, begotten/made, the copy as immune system) · Six Speculation and the Deaths of the Image (Kant in good faith, Meillassoux, contingency, Nietzsche's starlight, zombie and mean images, speculative documentary, reciprocity) · Seven Light, Bent (palinode, Eddington 1919, punctum, Peniel; ends on the open question).
+
+**Decisions Claude made that Leon should confirm:** the final figure is the 1919 eclipse plus Peniel (deferred in round 6; chosen because the eclipse bookends the essay and Genesis 32:31 has "the sun rose upon him"); the palinode recants the first-year hope in the epigraph; Six compresses the two satellites ("The Watchtower and the Mirror", "Delayed Rays").
+
+**Deliberately left out of the hub** (for satellites or later): Flusser's program; Mullarkey's refraction; Ferraris' hysteresis; Willowism by name; the CMB; Galton/mean faces; Begotten, Not Made in full; Genesis 3:5–7 in Zero.
+
+**Still [C] in the essay:** the wording of Davidson's quote; the Kofman characterisation; Lakoff and Johnson's examples; the Eddington details (Sobral is confirmed by the Commons record).
+
 ## 0.0 Session 4 (2026-10-15): reset
 
 ### Palinode
