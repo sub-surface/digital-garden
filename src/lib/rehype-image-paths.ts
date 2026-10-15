@@ -3,6 +3,7 @@ import type { Root, Element } from "hast"
 import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "url"
+import { videoEmbedFromUrl, VIDEO_IFRAME_ALLOW } from "./videoEmbed"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -38,9 +39,42 @@ export function rehypeImagePaths() {
   const dimensions = loadDimensions()
 
   return (tree: Root) => {
-    visit(tree, "element", (node: Element) => {
+    visit(tree, "element", (node: Element, _index, parent) => {
       if (node.tagName === "img" && node.properties) {
         const src = node.properties.src as string
+
+        // `![](https://www.youtube.com/watch?v=…)` is the video syntax content/
+        // uses; as an <img> it rendered a broken image. Rewrite it into the same
+        // `.video-embed` wrapper remark-wikilinks emits. A video alone in its
+        // paragraph replaces the <p> (a <div> may not sit inside a <p>);
+        // otherwise it becomes an inline-safe <span>.
+        const embed = src ? videoEmbedFromUrl(src) : null
+        if (embed) {
+          const iframe: Element = {
+            type: "element",
+            tagName: "iframe",
+            properties: {
+              src: embed.src,
+              title: (node.properties.alt as string) || `${embed.provider} video`,
+              loading: "lazy",
+              allow: VIDEO_IFRAME_ALLOW,
+              allowFullScreen: true,
+            },
+            children: [],
+          }
+          const soleChildOfParagraph =
+            parent?.type === "element" &&
+            parent.tagName === "p" &&
+            parent.children.every(
+              (c) => c === node || (c.type === "text" && !c.value.trim()),
+            )
+          const target = soleChildOfParagraph ? (parent as Element) : node
+          target.tagName = soleChildOfParagraph ? "div" : "span"
+          target.properties = { className: ["video-embed"] }
+          target.children = [iframe]
+          return
+        }
+
         if (src && !src.startsWith("http") && !src.startsWith("/") && !src.startsWith("data:")) {
           const stripped = src.replace(/^[Mm]edia\//, "")
           node.properties.src = `/content/Media/${stripped}`

@@ -3,6 +3,7 @@ import { useMemo, useRef } from "react"
 import type { NoteMetadata } from "@/types/content"
 import { isLandableNote } from "@/hooks/useRandomNote"
 import { classifyLayout } from "@/lib/layout"
+import styles from "./Query.module.scss"
 
 const pillStyle: React.CSSProperties = {
   display: "inline-block",
@@ -24,7 +25,9 @@ interface QueryProps {
   filter?: string   // e.g. "type=book" or "tag=philosophy" or "folder=Wiki"
   sort?: string     // "date" | "title" | "-date" | "-title" | "random"
   limit?: number
-  display?: "list" | "grid" | "table"
+  display?: "list" | "grid" | "table" | "cards"
+  /** Comma-separated slugs to leave out (case-insensitive), e.g. templates. */
+  exclude?: string
   /**
    * Restrict to "landable" notes (exclude system/shelf/landing pages and private
    * notes). Defaults on for random sort (where stubs are noise), off otherwise.
@@ -100,23 +103,61 @@ function formatDate(raw: string): string {
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })
 }
 
-export function Query({ filter, sort = "-date", limit = 10, display = "list", notesOnly }: QueryProps) {
+/** Frontmatter image → URL the browser can load (mirrors rehype-image-paths). */
+function imageSrc(raw?: string): string | null {
+  if (!raw) return null
+  if (/^https?:\/\//i.test(raw) || raw.startsWith("/")) return raw
+  return `/content/Media/${raw.replace(/^(content\/)?Media\//i, "")}`
+}
+
+function kindLabel(note: NoteMetadata): string {
+  if (note.type) return note.type
+  return note.slug.toLowerCase().startsWith("writing/") ? "essay" : classifyLayout(note.slug, note)
+}
+
+function EssayCard({ note, lead }: { note: NoteMetadata; lead: boolean }) {
+  const src = imageSrc(note.image)
+  const initial = note.title.replace(/^[^\p{L}\p{N}]+/u, "").charAt(0).toUpperCase() || "·"
+  return (
+    <a href={`/${note.slug}`} className={`internal-link ${styles.card} ${lead ? styles.lead : ""}`}>
+      <div className={styles.media}>
+        {src
+          ? <img src={src} alt="" loading="lazy" decoding="async" />
+          : <div className={styles.plate} aria-hidden="true"><span className={styles.initial}>{initial}</span></div>}
+      </div>
+      <div className={styles.body}>
+        <span className={styles.kicker}>
+          {kindLabel(note)}{note.date ? ` · ${new Date(note.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : ""}
+        </span>
+        <span className={styles.title}>{note.title}</span>
+        {note.description && <span className={styles.description}>{note.description}</span>}
+        {note.readingTime ? <span className={styles.meta}>{note.readingTime} min read</span> : null}
+      </div>
+    </a>
+  )
+}
+
+export function Query({ filter, sort = "-date", limit = 10, display = "list", notesOnly, exclude }: QueryProps) {
   const contentIndex = useStore(s => s.contentIndex)
   // One stable seed per mount, so random sort doesn't reshuffle on every render.
   const seedRef = useRef(((Date.now() & 0xffff) ^ 0x9e37) | 1)
 
   const isRandom = sort === "random"
-  const landable = notesOnly ?? isRandom
+  const isCards = display === "cards"
+  // Cards are a showcase: hide stubs/system pages and drafts unless asked otherwise.
+  const landable = notesOnly ?? (isRandom || isCards)
 
   const results = useMemo(() => {
     if (!contentIndex) return []
+    const excluded = new Set((exclude ?? "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean))
     let notes = Object.entries(contentIndex)
       .filter(([slug, meta]) => !landable || isLandableNote(slug, meta))
+      .filter(([slug, meta]) => !excluded.has(slug.toLowerCase()) && !(isCards && meta.draft))
       .map(([, meta]) => meta)
     if (filter) notes = applyFilter(notes, filter)
     notes = isRandom ? shuffle(notes, seedRef.current) : applySort(notes, sort)
     return notes.slice(0, limit)
-  }, [contentIndex, filter, sort, limit, landable, isRandom])
+  }, [contentIndex, filter, sort, limit, landable, isRandom, exclude, isCards])
 
   if (!contentIndex) return <div className="note-loading">Loading...</div>
   if (results.length === 0) return <p style={{ opacity: 0.5, fontFamily: 'var(--font-code)', fontSize: '0.85rem' }}>No results.</p>
@@ -143,6 +184,14 @@ export function Query({ filter, sort = "-date", limit = 10, display = "list", no
           ))}
         </tbody>
       </table>
+    )
+  }
+
+  if (isCards) {
+    return (
+      <div className={styles.cards}>
+        {results.map((n, i) => <EssayCard key={n.slug} note={n} lead={i === 0 && results.length > 2} />)}
+      </div>
     )
   }
 

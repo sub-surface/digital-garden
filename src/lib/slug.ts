@@ -99,7 +99,18 @@ export function buildSlugResolver(
  * derive the name here.
  */
 export function ogCardName(slug: string): string {
-  return `${normalizeSlug(slug).replace(/\//g, "-").toLowerCase()}.png`
+  return `${ogCardBase(slug)}.png`
+}
+
+/** Card filename without extension. Photo cards are JPEG, typographic cards PNG. */
+export function ogCardBase(slug: string): string {
+  return normalizeSlug(slug).replace(/\//g, "-").toLowerCase()
+}
+
+/** Every filename a note's card may have, in preference order. */
+export function ogCardFiles(slug: string): string[] {
+  const base = ogCardBase(slug)
+  return [`${base}.jpg`, `${base}.png`]
 }
 
 /**

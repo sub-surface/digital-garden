@@ -1,3 +1,5 @@
+import { VIDEO_FRAME_HOSTS } from "../lib/videoEmbed"
+
 export function addSecurityHeaders(headers: Headers) {
   // CSP: allow own origin, Google Fonts, Turnstile, Supabase, external images
   headers.set("Content-Security-Policy", [
@@ -8,7 +10,8 @@ export function addSecurityHeaders(headers: Headers) {
     "img-src 'self' data: blob: https:",
     // wss: — Supabase Realtime connects over WebSocket; https: alone blocks it
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
-    "frame-src https://challenges.cloudflare.com",
+    // Turnstile + the video players videoEmbed.ts emits (VIDEO_FRAME_HOSTS)
+    `frame-src https://challenges.cloudflare.com ${VIDEO_FRAME_HOSTS.join(" ")}`,
     "media-src 'self' blob: https:",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",

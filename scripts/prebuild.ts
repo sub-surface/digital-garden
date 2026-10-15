@@ -53,6 +53,8 @@ interface NoteMeta {
   image?: string
   cover?: string
   poster?: string
+  /** `og-layout: bleed` → full-bleed image OG card (default for image notes is split) */
+  ogLayout?: "split" | "bleed"
   username?: string
   author?: string
   director?: string
@@ -202,6 +204,7 @@ function scan(): Model {
       image: (data.image || data.cover || data.poster) as string | undefined,
       cover: (data.cover || data.poster) as string | undefined,
       poster: (data.poster || data.cover) as string | undefined,
+      ogLayout: data["og-layout"] === "bleed" || data["og-layout"] === "split" ? data["og-layout"] : undefined,
       username: data.username as string | undefined,
       author: data.author as string | undefined,
       director: data.director as string | undefined,

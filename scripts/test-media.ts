@@ -3,6 +3,8 @@ import { musicAssetUrl } from "../src/lib/musicAsset"
 import { handleMusicAsset } from "../src/worker/media"
 import { addSecurityHeaders } from "../src/worker/security"
 import type { RouteCtx } from "../src/worker/types"
+import { videoEmbedFromUrl, VIDEO_FRAME_HOSTS } from "../src/lib/videoEmbed"
+import { parseMarkdown } from "../src/lib/markdown"
 import {
   DEFAULT_MUSIC_EFFECTS,
   equalPowerCurves,
@@ -45,6 +47,32 @@ assert.match(
   /font-src 'self' data: https:\/\/fonts\.gstatic\.com/,
   "embedded rendered fonts must remain CSP-compatible",
 )
+
+// Video embeds: the CSP must allow every player host videoEmbed.ts emits, or
+// the iframes are silently blocked in production (they were, until 2026-10).
+const csp = security.get("Content-Security-Policy") ?? ""
+for (const host of VIDEO_FRAME_HOSTS) {
+  assert(csp.includes(host), `CSP frame-src must allow ${host}`)
+}
+assert.equal(videoEmbedFromUrl("https://www.youtube.com/watch?v=C-M2hs3sXGo&t=3")?.src, "https://www.youtube-nocookie.com/embed/C-M2hs3sXGo")
+assert.equal(videoEmbedFromUrl("https://youtu.be/C-M2hs3sXGo")?.id, "C-M2hs3sXGo")
+assert.equal(videoEmbedFromUrl("https://www.youtube-nocookie.com/embed/C-M2hs3sXGo?rel=0")?.id, "C-M2hs3sXGo")
+assert.equal(videoEmbedFromUrl("https://www.youtube.com/shorts/abcdef123")?.id, "abcdef123")
+assert.equal(videoEmbedFromUrl("https://vimeo.com/76979871")?.src, "https://player.vimeo.com/video/76979871")
+assert.equal(videoEmbedFromUrl("https://www.youtube.com/@newplace2frown"), null)
+assert.equal(videoEmbedFromUrl("https://example.com/watch?v=C-M2hs3sXGo"), null)
+assert.equal(videoEmbedFromUrl("Media/photo.jpg"), null)
+
+{
+  // `![](youtube)` — the syntax content/ uses — must become a player, alone in
+  // its paragraph (no <div> inside <p>), not a broken <img>.
+  const { html } = await parseMarkdown("![How Not To Be Seen](https://www.youtube.com/watch?v=C-M2hs3sXGo)\n")
+  assert.match(html, /<div class="video-embed"><iframe src="https:\/\/www\.youtube-nocookie\.com\/embed\/C-M2hs3sXGo"/)
+  assert.doesNotMatch(html, /<img/)
+  assert.doesNotMatch(html, /<p>\s*<div/)
+  const inline = (await parseMarkdown("See ![clip](https://youtu.be/C-M2hs3sXGo) here.\n")).html
+  assert.match(inline, /<span class="video-embed"><iframe/)
+}
 
 const originalFetch = globalThis.fetch
 let upstreamUrl = ""

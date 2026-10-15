@@ -1,5 +1,5 @@
 import { NoteMeta } from "./types"
-import { buildSlugResolver, ogCardName, prerenderFileName, slugFromPathname as sharedSlugFromPathname, type SlugResolver } from "../lib/slug"
+import { buildSlugResolver, ogCardName, ogCardFiles, prerenderFileName, slugFromPathname as sharedSlugFromPathname, type SlugResolver } from "../lib/slug"
 import { escapeAttr, escapeHtml } from "../lib/escape"
 
 // In-memory cache — survives for the lifetime of the Worker instance.
@@ -8,6 +8,33 @@ import { escapeAttr, escapeHtml } from "../lib/escape"
 let contentIndexCache: Record<string, NoteMeta> | null = null
 let resolverCache: SlugResolver | null = null
 const prerenderCache = new Map<string, string>()
+// Card filenames present in public/og (written by scripts/og-gen.ts). null =
+// not loaded / unavailable, in which case we keep the pre-manifest behaviour.
+let ogManifestCache: Set<string> | null = null
+
+export async function getOgManifest(assetsFetcher: any): Promise<Set<string> | null> {
+  if (!assetsFetcher) return null
+  if (ogManifestCache) return ogManifestCache
+  try {
+    const res = await assetsFetcher.fetch("https://assets.internal/og/manifest.json")
+    if (res.ok) ogManifestCache = new Set(await res.json() as string[])
+  } catch (e) {
+    console.error("og manifest fetch failed (falling back to raw images):", e)
+  }
+  return ogManifestCache
+}
+
+/**
+ * Absolute URL for a frontmatter image. Frontmatter uses "Media/x.jpg", bare
+ * filenames, "/content/Media/x.jpg" or full URLs; the old `${origin}${thumbnail}`
+ * glued "Media/x.jpg" straight onto the origin ("https://subsurfaces.netMedia/…").
+ */
+export function absoluteMediaUrl(src: string, origin: string): string {
+  if (/^https?:\/\//i.test(src)) return src
+  if (src.startsWith("/")) return `${origin}${src}`
+  const file = src.replace(/^(content\/)?Media\//i, "")
+  return `${origin}/content/Media/${file.split("/").map(encodeURIComponent).join("/")}`
+}
 
 export async function getContentIndex(assetsFetcher: any): Promise<Record<string, NoteMeta>> {
   if (!assetsFetcher) return {};
@@ -61,7 +88,7 @@ export function resolveMetaCaseInsensitive(index: Record<string, NoteMeta>, slug
   return key ? index[key] : null
 }
 
-export function injectMetaTags(html: string, meta: NoteMeta, slug: string, origin: string): string {
+export function injectMetaTags(html: string, meta: NoteMeta, slug: string, origin: string, ogCards: Set<string> | null = null): string {
   const isWiki = origin.includes("wiki.subsurfaces.net")
   const siteName = isWiki ? "Philchat Wiki" : "Sub-Surface Territories"
   const title = meta.title ? `${meta.title} — ${siteName}` : siteName
@@ -75,11 +102,18 @@ export function injectMetaTags(html: string, meta: NoteMeta, slug: string, origi
     .replace(/[*_`~]+/g, "")
     .replace(/\s+/g, " ")
     .trim()
-  const ogCard = ogCardName(slug)
   const thumbnail = meta.image || meta.cover || meta.poster
-  const ogImage = thumbnail
-    ? (thumbnail.startsWith("http") ? thumbnail : `${origin}${thumbnail}`)
-    : `${origin}/og/${ogCard}`
+  // Prefer the generated card (it composes the header image with the title):
+  // photo cards are .jpg, typographic ones .png. Fall back to the raw image, then
+  // to the .png path (pre-manifest behaviour).
+  const listedCard = ogCards ? ogCardFiles(slug).find((f) => ogCards.has(f)) : undefined
+  const ogCard = listedCard ?? ogCardName(slug)
+  const hasCard = ogCards ? Boolean(listedCard) : !thumbnail
+  const ogImage = hasCard
+    ? `${origin}/og/${ogCard}`
+    : thumbnail
+      ? absoluteMediaUrl(thumbnail, origin)
+      : `${origin}/og/${ogCard}`
   const canonical = `${origin}/${slug === "index" ? "" : slug}`
 
   const tags = [
@@ -87,6 +121,11 @@ export function injectMetaTags(html: string, meta: NoteMeta, slug: string, origi
     `<meta property="og:title" content="${escapeAttr(title)}" />`,
     `<meta property="og:description" content="${escapeAttr(description)}" />`,
     `<meta property="og:image" content="${escapeAttr(ogImage)}" />`,
+    ...(hasCard ? [
+      `<meta property="og:image:width" content="1200" />`,
+      `<meta property="og:image:height" content="630" />`,
+    ] : []),
+    `<meta property="og:image:alt" content="${escapeAttr(meta.title ?? siteName)}" />`,
     `<meta property="og:url" content="${escapeAttr(canonical)}" />`,
     `<meta property="og:type" content="website" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,

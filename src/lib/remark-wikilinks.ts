@@ -9,6 +9,7 @@ import { gfm } from "micromark-extension-gfm"
 import { toHast } from "mdast-util-to-hast"
 import { toHtml } from "hast-util-to-html"
 import { escapeAttr } from "./escape"
+import { videoEmbedFromUrl, VIDEO_IFRAME_ALLOW } from "./videoEmbed"
 import { slug as headingSlug } from "github-slugger"
 
 /**
@@ -37,7 +38,6 @@ const getSlugMap = () => readManifest<Record<string, string>>("slug-map.json", {
 
 const MEDIA_EXTS = /\.(png|jpe?g|gif|svg|webp|avif|mp4|webm|mp3|wav|pdf)$/i
 const WIKILINK_RE = /(!)?\[\[([^\[\]\|#\\]+)?(#[^\[\]\|#\\]+)?(\|[^\[\]#]*)?\]\]/g
-const VIDEO_ID_RE = /^[\w-]{6,20}$/
 
 /**
  * Read the source of a resolved slug via its index `contentPath`. Slugs are
@@ -130,17 +130,13 @@ export function remarkWikilinks(opts: { embedDepth?: number } = {}) {
               type: "html",
               value: `<img src="${src}" alt="${escapeAttr(alias || rawTarget)}" class="note-image" />`,
             })
-          } else if (rawTarget.includes("youtube.com") || rawTarget.includes("youtu.be")) {
-            const videoId = rawTarget.includes("v=")
-              ? rawTarget.split("v=")[1].split("&")[0]
-              : rawTarget.split("/").pop()?.split("?")[0] ?? ""
-            newNodes.push(VIDEO_ID_RE.test(videoId)
-              ? { type: "html", value: `<div class="video-embed"><iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe></div>` }
-              : { type: "text", value: match[0] })
-          } else if (rawTarget.includes("vimeo.com")) {
-            const videoId = rawTarget.split("/").pop()?.split("?")[0] ?? ""
-            newNodes.push(/^\d+$/.test(videoId)
-              ? { type: "html", value: `<div class="video-embed"><iframe src="https://player.vimeo.com/video/${videoId}" frameborder="0" allowfullscreen></iframe></div>` }
+          } else if (/youtube\.com|youtu\.be|vimeo\.com/.test(rawTarget)) {
+            const embed = videoEmbedFromUrl(rawTarget)
+            newNodes.push(embed
+              ? {
+                  type: "html",
+                  value: `<div class="video-embed"><iframe src="${embed.src}" title="${escapeAttr(alias || `${embed.provider} video`)}" loading="lazy" allow="${VIDEO_IFRAME_ALLOW}" allowfullscreen></iframe></div>`,
+                }
               : { type: "text", value: match[0] })
           } else {
             // ── Note embed ──

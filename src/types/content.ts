@@ -20,6 +20,7 @@ export interface NoteMetadata {
   image?: string
   cover?: string
   poster?: string
+  ogLayout?: "split" | "bleed"  // OG card layout for image notes (frontmatter `og-layout`)
   author?: string
   director?: string
   year?: number

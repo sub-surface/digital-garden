@@ -24,7 +24,10 @@
 import fs from "node:fs"
 import path from "node:path"
 import { execFileSync } from "node:child_process"
-import { ogCardName } from "../src/lib/slug"
+import assert from "node:assert/strict"
+import { ogCardFiles } from "../src/lib/slug"
+import { injectMetaTags, absoluteMediaUrl } from "../src/worker/meta"
+import { inScope } from "./og-gen"
 
 const ROOT = path.resolve(import.meta.dirname, "..")
 const OG_DIR = path.join(ROOT, "public", "og")
@@ -59,7 +62,7 @@ if (isIgnored("public/og/__ignore-probe__.png")) {
 
 // ── 2. Every card on disk must be tracked ────────────────────────────────────
 const onDisk = fs.existsSync(OG_DIR)
-  ? fs.readdirSync(OG_DIR).filter((f) => f.endsWith(".png")).sort()
+  ? fs.readdirSync(OG_DIR).filter((f) => /\.(png|jpg)$/.test(f)).sort()
   : []
 
 const tracked = new Set(
@@ -80,6 +83,44 @@ if (untracked.length > 0) {
   failures++
 }
 
+// ── 2b. The manifest must list exactly the cards on disk ─────────────────────
+// The Worker only points og:image at cards in public/og/manifest.json; a stale
+// manifest would silently fall back to raw images (or point at missing cards).
+const manifestPath = path.join(OG_DIR, "manifest.json")
+if (fs.existsSync(manifestPath)) {
+  const listed = (JSON.parse(fs.readFileSync(manifestPath, "utf8")) as string[]).slice().sort()
+  const drift = listed.length !== onDisk.length || listed.some((f, i) => f !== onDisk[i])
+  if (drift) {
+    console.error(
+      "FAIL public/og/manifest.json is out of sync with the cards on disk.\n" +
+      "     Regenerate with: PROCESS_OG=true npm run prebuild (og-gen rewrites it).",
+    )
+    failures++
+  }
+  if (!tracked.has("manifest.json") && git(["ls-files", "public/og/manifest.json"]).trim() === "") {
+    console.error("FAIL public/og/manifest.json is not tracked by git — the Worker can't see it in production.")
+    failures++
+  }
+}
+
+// ── 2c. Meta injection prefers committed cards, and never emits a broken URL ─
+{
+  const origin = "https://subsurfaces.net"
+  const note = { title: "T", image: "Media/Escherpuddle.jpg" }
+  const card = ogCardFiles("Writing/Image-Metaphors")[0] // the .jpg photo card
+  const withCard = injectMetaTags("<head></head>", note, "Writing/Image-Metaphors", origin, new Set([card]))
+  assert.match(withCard, new RegExp(`og:image" content="${origin}/og/${card.replace(/[.&]/g, "\\$&")}"`))
+  assert.match(withCard, /og:image:width" content="1200"/)
+  const noCard = injectMetaTags("<head></head>", note, "Writing/Image-Metaphors", origin, new Set())
+  assert.match(noCard, /og:image" content="https:\/\/subsurfaces\.net\/content\/Media\/Escherpuddle\.jpg"/)
+  assert.equal(absoluteMediaUrl("https://x.org/a.jpg", origin), "https://x.org/a.jpg")
+  assert.equal(absoluteMediaUrl("/content/Media/a.jpg", origin), `${origin}/content/Media/a.jpg`)
+  assert.equal(absoluteMediaUrl("Lancaster (2).jpeg", origin), `${origin}/content/Media/Lancaster%20(2).jpeg`)
+  assert.equal(inScope("Wiki/Concepts/Double-Bind", "main"), false)
+  assert.equal(inScope("Writing/Image-Metaphors", "main"), true)
+  assert.equal(inScope("wiki/about", "wiki"), true)
+}
+
 // ── 3. Advisory: index coverage ──────────────────────────────────────────────
 // Card naming comes from the shared helper, so this can't drift from the
 // generators or the Worker (ROADMAP §28.16).
@@ -89,9 +130,11 @@ if (fs.existsSync(INDEX_PATH)) {
     { draft?: boolean; private?: boolean }
   >
   const missing = Object.entries(index)
-    .filter(([, note]) => !note.draft && !note.private)
-    .map(([slug]) => ogCardName(slug))
-    .filter((file) => !tracked.has(file))
+    // Cards are generated for the main site only (og-gen --scope=main default);
+    // wiki pages fall back to their raw image / the site card by design.
+    .filter(([slug, note]) => !note.draft && !note.private && inScope(slug, "main"))
+    .filter(([slug]) => !ogCardFiles(slug).some((f) => tracked.has(f)))
+    .map(([slug]) => ogCardFiles(slug)[1])
 
   if (missing.length > 0) {
     console.warn(

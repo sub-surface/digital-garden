@@ -1,6 +1,6 @@
 import { Env, RouteCtx } from "./types"
 import { corsHeaders, applyApiHeaders, jsonResponse, verifyAuth } from "./lib"
-import { getContentIndex, slugFromPathname, resolveSlugCaseInsensitive, injectMetaTags, getPrerenderFragment, injectPrerender } from "./meta"
+import { getContentIndex, getOgManifest, slugFromPathname, resolveSlugCaseInsensitive, injectMetaTags, getPrerenderFragment, injectPrerender } from "./meta"
 import { handleAuthMe, handleUpdateProfile, handleAvatarUpload, handleRegister } from "./auth"
 import { handleSubmit, handleEdit, handleNew, handleBookmarks, handleLockStatus, handleUserProfile } from "./wiki"
 import {
@@ -145,7 +145,7 @@ export default {
     const html = await response.text()
     const isWiki = url.hostname.includes("wiki.subsurfaces.net")
     const requestSlug = slugFromPathname(url.pathname, isWiki)
-    const index = await getContentIndex(env.ASSETS)
+    const [index, ogCards] = await Promise.all([getContentIndex(env.ASSETS), getOgManifest(env.ASSETS)])
     // Meta tags must be built from the CANONICAL slug, not the casing the visitor
     // happened to use: `/og/<slug>.png` is a static asset and CF serves those
     // case-sensitively, so `/abbas` would emit og:image=/og/abbas.png → 404 while
@@ -156,7 +156,7 @@ export default {
 
     const prerenderHtml = await getPrerenderFragment(env.ASSETS, canonicalSlug)
 
-    let injected = injectMetaTags(html, meta ?? {}, canonicalSlug, url.origin)
+    let injected = injectMetaTags(html, meta ?? {}, canonicalSlug, url.origin, ogCards)
     if (prerenderHtml) {
       injected = injectPrerender(injected, prerenderHtml)
     }
