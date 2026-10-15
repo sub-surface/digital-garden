@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" font-family="ui-monospace, 'IBM Plex Mono', Consolas, monospace">
+  <desc>Mirror and map: the two jobs that "representation" ran together. A mirror gives likeness (the same shape again, inverted across a surface). A map gives relation (how things stand to one another, resembling nothing). A composite lays one over the other, a photograph with a diagram drawn on it, so that neither does the other's job.</desc>
+
+  <!-- ============ MIRROR ============ -->
+  <g transform="translate(30,30)">
+    <text x="100" y="0" font-size="11" letter-spacing="1.5" fill="#9a9aa2" text-anchor="middle">MIRROR</text>
+    <text x="100" y="15" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">likeness · the same again</text>
+    <!-- a hill and a tree, reflected -->
+    <g stroke="#8a8a92" stroke-width="1.3" fill="none">
+      <path d="M20,140 Q 70,70 120,140"/>
+      <line x1="150" y1="140" x2="150" y2="84"/>
+      <line x1="150" y1="100" x2="134" y2="84"/>
+      <line x1="150" y1="100" x2="166" y2="84"/>
+    </g>
+    <line x1="0" y1="140" x2="200" y2="140" stroke="#427ab4" stroke-width="1.2"/>
+    <g stroke="#8a8a92" stroke-width="1.3" fill="none" opacity="0.45">
+      <path d="M20,140 Q 70,210 120,140"/>
+      <line x1="150" y1="140" x2="150" y2="196"/>
+      <line x1="150" y1="180" x2="134" y2="196"/>
+      <line x1="150" y1="180" x2="166" y2="196"/>
+    </g>
+    <text x="100" y="240" font-size="8.5" fill="#9a9aa2" opacity="0.7" text-anchor="middle">the puddle, Plato's water,</text>
+    <text x="100" y="253" font-size="8.5" fill="#9a9aa2" opacity="0.7" text-anchor="middle">the "glassy essence"</text>
+  </g>
+
+  <!-- ============ MAP ============ -->
+  <g transform="translate(280,30)">
+    <text x="100" y="0" font-size="11" letter-spacing="1.5" fill="#9a9aa2" text-anchor="middle">MAP</text>
+    <text x="100" y="15" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">relation · resembles nothing</text>
+    <g stroke="#8a8a92" stroke-width="1" opacity="0.85">
+      <line x1="40" y1="70" x2="100" y2="110"/>
+      <line x1="100" y1="110" x2="165" y2="66"/>
+      <line x1="100" y1="110" x2="70" y2="176"/>
+      <line x1="100" y1="110" x2="150" y2="170"/>
+      <line x1="40" y1="70" x2="70" y2="176"/>
+      <line x1="150" y1="170" x2="165" y2="66"/>
+    </g>
+    <g fill="#8a8a92">
+      <circle cx="40" cy="70" r="3.5"/><circle cx="165" cy="66" r="3.5"/>
+      <circle cx="70" cy="176" r="3.5"/><circle cx="150" cy="170" r="3.5"/>
+    </g>
+    <circle cx="100" cy="110" r="5" fill="none" stroke="#427ab4" stroke-width="1.4"/>
+    <text x="100" y="240" font-size="8.5" fill="#9a9aa2" opacity="0.7" text-anchor="middle">Spinoza's order and connection,</text>
+    <text x="100" y="253" font-size="8.5" fill="#9a9aa2" opacity="0.7" text-anchor="middle">Peirce's "analogy of relations"</text>
+  </g>
+
+  <!-- ============ COMPOSITE ============ -->
+  <g transform="translate(530,30)">
+    <text x="100" y="0" font-size="11" letter-spacing="1.5" fill="#9a9aa2" text-anchor="middle">COMPOSITE</text>
+    <text x="100" y="15" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">likeness × relation</text>
+    <!-- photograph: hatched field -->
+    <rect x="10" y="40" width="180" height="150" fill="none" stroke="#8a8a92" stroke-width="1" opacity="0.7"/>
+    <g stroke="#8a8a92" stroke-width="0.8" opacity="0.28">
+      <line x1="10" y1="60" x2="30" y2="40"/><line x1="10" y1="90" x2="60" y2="40"/><line x1="10" y1="120" x2="90" y2="40"/>
+      <line x1="10" y1="150" x2="120" y2="40"/><line x1="10" y1="180" x2="150" y2="40"/><line x1="20" y1="190" x2="170" y2="40"/>
+      <line x1="50" y1="190" x2="190" y2="50"/><line x1="80" y1="190" x2="190" y2="80"/><line x1="110" y1="190" x2="190" y2="110"/>
+      <line x1="140" y1="190" x2="190" y2="140"/><line x1="170" y1="190" x2="190" y2="170"/>
+    </g>
+    <!-- the photographed thing: a pylon -->
+    <line x1="100" y1="190" x2="100" y2="70" stroke="#8a8a92" stroke-width="2.2"/>
+    <g stroke="#8a8a92" stroke-width="0.9" opacity="0.7">
+      <line x1="100" y1="76" x2="22" y2="190"/><line x1="100" y1="76" x2="178" y2="190"/>
+    </g>
+    <!-- the diagram drawn over it -->
+    <g stroke="#427ab4" stroke-width="1.2" fill="none">
+      <line x1="100" y1="64" x2="46" y2="110"/><line x1="100" y1="64" x2="154" y2="110"/>
+      <line x1="46" y1="110" x2="100" y2="160"/><line x1="154" y1="110" x2="100" y2="160"/>
+    </g>
+    <g fill="#427ab4">
+      <circle cx="100" cy="64" r="3"/><circle cx="46" cy="110" r="3"/><circle cx="154" cy="110" r="3"/><circle cx="100" cy="160" r="3"/>
+    </g>
+    <text x="100" y="240" font-size="8.5" fill="#9a9aa2" opacity="0.7" text-anchor="middle">the diagram found in</text>
+    <text x="100" y="253" font-size="8.5" fill="#9a9aa2" opacity="0.7" text-anchor="middle">the photograph, not laid on it</text>
+  </g>
+</svg>

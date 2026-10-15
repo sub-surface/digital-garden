@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 380" font-family="ui-monospace, 'IBM Plex Mono', Consolas, monospace">
+  <desc>Inversion as trace. Left: a stereoscope makes depth out of the disparity between two flat, slightly different pictures, not out of their likeness. Right: the candle in the eye of the ox, upright outside and inverted on the retina. In both, the flat opposition on the surface (left/right, upright/inverted) is produced by a difference in depth that the surface cannot show.</desc>
+  <defs>
+    <marker id="invArr" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0.5 L7,4 L0,7.5 z" fill="#8a8a92"/>
+    </marker>
+  </defs>
+
+  <!-- ============ A · STEREOSCOPE ============ -->
+  <g transform="translate(20,20)">
+    <text x="20" y="14" font-size="11" letter-spacing="1.5" fill="#9a9aa2">A · STEREOSCOPE</text>
+    <text x="340" y="14" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="end">Deleuze, D&amp;R p. 51</text>
+
+    <!-- surface row: two flat pictures, slightly offset contents -->
+    <text x="20" y="46" font-size="8.5" fill="#9a9aa2" opacity="0.7">surface · an even, flat opposition</text>
+    <rect x="40" y="58" width="120" height="84" fill="none" stroke="#8a8a92" stroke-width="1"/>
+    <rect x="200" y="58" width="120" height="84" fill="none" stroke="#8a8a92" stroke-width="1"/>
+    <g stroke="#8a8a92" stroke-width="1.2" fill="none">
+      <rect x="78" y="80" width="34" height="34"/>
+      <rect x="216" y="80" width="34" height="34"/>
+    </g>
+    <g stroke="#427ab4" stroke-width="1.2" fill="none">
+      <circle cx="122" cy="98" r="7"/>
+      <circle cx="296" cy="98" r="7"/>
+    </g>
+    <text x="100" y="156" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">left</text>
+    <text x="260" y="156" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">right</text>
+    <text x="180" y="104" font-size="12" fill="#9a9aa2" text-anchor="middle">≠</text>
+
+    <line x1="100" y1="164" x2="160" y2="214" stroke="#8a8a92" stroke-width="1" opacity="0.6" marker-end="url(#invArr)"/>
+    <line x1="260" y1="164" x2="200" y2="214" stroke="#8a8a92" stroke-width="1" opacity="0.6" marker-end="url(#invArr)"/>
+
+    <!-- depth: tiered planes -->
+    <text x="20" y="236" font-size="8.5" fill="#9a9aa2" opacity="0.7">depth · "coexistent, tiered, mobile planes"</text>
+    <g fill="none" stroke-width="1.2">
+      <path d="M110,262 L230,262 L262,282 L142,282 Z" stroke="#8a8a92" opacity="0.4"/>
+      <path d="M122,286 L218,286 L246,304 L150,304 Z" stroke="#8a8a92" opacity="0.7"/>
+      <path d="M136,308 L204,308 L226,324 L158,324 Z" stroke="#427ab4"/>
+    </g>
+    <text x="180" y="350" font-size="11" letter-spacing="1.5" fill="#9a9aa2" text-anchor="middle">DEPTH FROM DISPARITY</text>
+  </g>
+
+  <!-- divider -->
+  <line x1="380" y1="30" x2="380" y2="360" stroke="#8a8a92" stroke-width="1" opacity="0.2"/>
+
+  <!-- ============ B · THE OX'S EYE ============ -->
+  <g transform="translate(400,20)">
+    <text x="0" y="14" font-size="11" letter-spacing="1.5" fill="#9a9aa2">B · THE EYE OF THE OX</text>
+    <text x="340" y="14" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="end">Descartes, Optics V</text>
+
+    <!-- upright candle -->
+    <g stroke="#8a8a92" stroke-width="1.3" fill="none">
+      <rect x="40" y="150" width="14" height="58"/>
+      <line x1="47" y1="150" x2="47" y2="142"/>
+    </g>
+    <path d="M47,124 C 40,134 41,141 47,142 C 53,141 54,134 47,124 Z" fill="none" stroke="#427ab4" stroke-width="1.3"/>
+
+    <!-- rays to the pupil and crossing -->
+    <g stroke="#8a8a92" stroke-width="1" opacity="0.5">
+      <line x1="47" y1="124" x2="190" y2="166"/>
+      <line x1="47" y1="208" x2="190" y2="166"/>
+      <line x1="190" y1="166" x2="290" y2="196"/>
+      <line x1="190" y1="166" x2="290" y2="136"/>
+    </g>
+
+    <!-- the eye: a circle with lens -->
+    <circle cx="240" cy="166" r="56" fill="none" stroke="#8a8a92" stroke-width="1.3"/>
+    <ellipse cx="192" cy="166" rx="6" ry="16" fill="none" stroke="#8a8a92" stroke-width="1.1"/>
+    <text x="240" y="98" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">an excised eye in a shutter</text>
+
+    <!-- inverted candle on the retina -->
+    <g transform="translate(286,166) scale(0.55)">
+      <g stroke="#8a8a92" stroke-width="2" fill="none">
+        <rect x="-7" y="-52" width="14" height="58"/>
+        <line x1="0" y1="6" x2="0" y2="14"/>
+      </g>
+      <path d="M0,32 C -7,22 -6,15 0,14 C 6,15 7,22 0,32 Z" fill="none" stroke="#427ab4" stroke-width="2"/>
+    </g>
+
+    <text x="47" y="232" font-size="8.5" fill="#9a9aa2" opacity="0.7" text-anchor="middle">upright</text>
+    <text x="300" y="232" font-size="8.5" fill="#9a9aa2" opacity="0.7" text-anchor="middle">inverted</text>
+    <text x="0" y="276" font-size="8.5" fill="#9a9aa2" opacity="0.7">surface · upright against inverted</text>
+    <text x="0" y="292" font-size="8.5" fill="#9a9aa2" opacity="0.7">depth · something happened at the point</text>
+    <text x="170" y="350" font-size="11" letter-spacing="1.5" fill="#9a9aa2" text-anchor="middle">INVERSION AS TRACE</text>
+  </g>
+</svg>

@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" font-family="ui-monospace, 'IBM Plex Mono', Consolas, monospace">
+  <desc>The cut. A continuous flow of light passes through a point and is kept as an inverted trace on a surface. The trace can then be taken up in two ways: as likeness (an icon, resembling what it came from) or as relation (a diagram, mapping how things stand to one another). Likeness is one use of an image, not its essence.</desc>
+  <defs>
+    <marker id="cutArr" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0.5 L7,4 L0,7.5 z" fill="#8a8a92"/>
+    </marker>
+    <marker id="cutArrAccent" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0.5 L7,4 L0,7.5 z" fill="#427ab4"/>
+    </marker>
+  </defs>
+
+  <!-- FLOW: the world's light, continuous -->
+  <text x="40" y="34" font-size="11" letter-spacing="1.5" fill="#9a9aa2">FLOW</text>
+  <text x="40" y="48" font-size="8.5" fill="#9a9aa2" opacity="0.6">hylè · a continual material flow</text>
+  <!-- an upright figure (the thing), drawn as a simple tree -->
+  <g stroke="#8a8a92" stroke-width="1.5" fill="none">
+    <line x1="80" y1="210" x2="80" y2="130"/>
+    <line x1="80" y1="150" x2="58" y2="128"/>
+    <line x1="80" y1="150" x2="102" y2="128"/>
+    <line x1="80" y1="170" x2="64" y2="156"/>
+    <line x1="80" y1="170" x2="96" y2="156"/>
+  </g>
+  <!-- rays from top and bottom of the figure through the point -->
+  <g stroke="#8a8a92" stroke-width="1" opacity="0.55">
+    <line x1="80" y1="128" x2="250" y2="170"/>
+    <line x1="80" y1="210" x2="250" y2="170"/>
+    <line x1="58" y1="128" x2="250" y2="170"/>
+    <line x1="102" y1="128" x2="250" y2="170"/>
+  </g>
+  <g stroke="#8a8a92" stroke-width="1" opacity="0.55">
+    <line x1="250" y1="170" x2="390" y2="204"/>
+    <line x1="250" y1="170" x2="390" y2="136"/>
+    <line x1="250" y1="170" x2="390" y2="211"/>
+    <line x1="250" y1="170" x2="390" y2="196"/>
+  </g>
+
+  <!-- THE CUT: a wall with a point -->
+  <line x1="250" y1="70" x2="250" y2="164" stroke="#8a8a92" stroke-width="2.5"/>
+  <line x1="250" y1="176" x2="250" y2="270" stroke="#8a8a92" stroke-width="2.5"/>
+  <circle cx="250" cy="170" r="4" fill="none" stroke="#427ab4" stroke-width="1.5"/>
+  <text x="250" y="56" font-size="11" letter-spacing="1.5" fill="#9a9aa2" text-anchor="middle">CUT</text>
+  <text x="250" y="292" font-size="8.5" fill="#9a9aa2" opacity="0.7" text-anchor="middle">"the explanation lies in the point"</text>
+
+  <!-- TRACE: the surface that keeps the cut, figure inverted -->
+  <line x1="390" y1="90" x2="390" y2="250" stroke="#8a8a92" stroke-width="2"/>
+  <g stroke="#427ab4" stroke-width="1.5" fill="none" transform="translate(400,0)">
+    <line x1="0" y1="136" x2="0" y2="204"/>
+    <line x1="0" y1="187" x2="-14" y2="205"/>
+    <line x1="0" y1="187" x2="14" y2="205"/>
+    <line x1="0" y1="170" x2="-10" y2="182"/>
+    <line x1="0" y1="170" x2="10" y2="182"/>
+  </g>
+  <text x="410" y="74" font-size="11" letter-spacing="1.5" fill="#9a9aa2" text-anchor="middle">TRACE</text>
+  <text x="410" y="270" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">inverted: the mark of its making</text>
+
+  <!-- Two uses of the trace -->
+  <path d="M432,150 C 500,120 520,96 566,90" fill="none" stroke="#427ab4" stroke-width="1.2" marker-end="url(#cutArrAccent)"/>
+  <path d="M432,190 C 500,220 520,244 566,250" fill="none" stroke="#427ab4" stroke-width="1.2" marker-end="url(#cutArrAccent)"/>
+
+  <!-- LIKENESS: icon, a mirrored pair -->
+  <g transform="translate(580,52)">
+    <rect x="0" y="0" width="140" height="78" fill="none" stroke="#8a8a92" stroke-width="1" opacity="0.6"/>
+    <line x1="0" y1="39" x2="140" y2="39" stroke="#8a8a92" stroke-width="1" stroke-dasharray="2 3" opacity="0.6"/>
+    <g stroke="#8a8a92" stroke-width="1.2" fill="none">
+      <line x1="70" y1="36" x2="70" y2="12"/>
+      <line x1="70" y1="18" x2="62" y2="10"/>
+      <line x1="70" y1="18" x2="78" y2="10"/>
+    </g>
+    <g stroke="#8a8a92" stroke-width="1.2" fill="none" opacity="0.5">
+      <line x1="70" y1="42" x2="70" y2="66"/>
+      <line x1="70" y1="60" x2="62" y2="68"/>
+      <line x1="70" y1="60" x2="78" y2="68"/>
+    </g>
+    <text x="70" y="98" font-size="11" letter-spacing="1.5" fill="#9a9aa2" text-anchor="middle">LIKENESS</text>
+    <text x="70" y="111" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">icon · resembles</text>
+  </g>
+
+  <!-- RELATION: diagram, nodes and edges -->
+  <g transform="translate(580,210)">
+    <rect x="0" y="0" width="140" height="78" fill="none" stroke="#8a8a92" stroke-width="1" opacity="0.6"/>
+    <g stroke="#8a8a92" stroke-width="1" opacity="0.8">
+      <line x1="30" y1="22" x2="70" y2="40"/>
+      <line x1="70" y1="40" x2="110" y2="20"/>
+      <line x1="70" y1="40" x2="52" y2="62"/>
+      <line x1="70" y1="40" x2="104" y2="60"/>
+      <line x1="30" y1="22" x2="52" y2="62"/>
+    </g>
+    <g fill="#8a8a92">
+      <circle cx="30" cy="22" r="3"/><circle cx="70" cy="40" r="3.5"/><circle cx="110" cy="20" r="3"/>
+      <circle cx="52" cy="62" r="3"/><circle cx="104" cy="60" r="3"/>
+    </g>
+    <text x="70" y="98" font-size="11" letter-spacing="1.5" fill="#9a9aa2" text-anchor="middle">RELATION</text>
+    <text x="70" y="111" font-size="8.5" fill="#9a9aa2" opacity="0.6" text-anchor="middle">diagram · maps</text>
+  </g>
+</svg>
