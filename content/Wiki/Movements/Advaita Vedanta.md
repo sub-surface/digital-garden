@@ -28,8 +28,7 @@ core_texts:
 
 The fundamental thesis of Advaita is captured in Shankara's celebrated verse summary:
 
-$$\text{"Brahma satyam jagan-mithyā jīvo brahmaiva nāparaḥ"}$$
-$$\text{(Brahman alone is real; the empirical world is illusory; the individual self is non-different from Brahman.)}$$
+<blockquote className="pullquote">*Brahma satyam jagan-mithyā jīvo brahmaiva nāparaḥ*<br />(Brahman alone is real; the empirical world is illusory; the individual self is non-different from Brahman.)</blockquote>
 
 Against rival dualist (*Dvaita*) and qualified non-dualist (*Vishishtadvaita*) systems, Advaita establishes an absolute metaphysical monism: reality is devoid of internal distinctions (*svagata-bheda*), differences between members of the same class (*sajātīya-bheda*), and differences from other classes (*vijātīya-bheda*).
 

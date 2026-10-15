@@ -14,6 +14,7 @@ growth: becoming
 quote: To every man, to every woman, the universe is just a setting to the absolute little picture of himself, herself... A picture! A Kodak snap, in a universal film of snaps.
 quote-author: — Deleuze, Quoting D.H. Lawrence in Anti-Oedipus p.251
 private: false
+image: "Media/Writing/decision-cover.png"
 ---
 
 # Decision Was Never Final

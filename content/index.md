@@ -47,7 +47,7 @@ You can use `?` to see a list of keyboard shortcuts.
 
 **Some places to get started:**[^1]
 
-<Query filter="folder=Writing" sort="-date" limit="8" display="list" />
+<Query filter="folder=Writing" sort="-date" limit="7" display="cards" exclude="Writing/Writing-Template" />
 
 ```telescopic
 - This is an 

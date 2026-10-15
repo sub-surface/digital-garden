@@ -9,6 +9,7 @@ growth: larval
 published: "true"
 quote: The soul never thinks without a mental image.
 quote-author: — Aristotle, De Anima
+image: "https://upload.wikimedia.org/wikipedia/commons/8/8f/The-Transformer-model-architecture.png"
 ---
 
   

@@ -31,8 +31,7 @@ key_concepts:
 
 Reacting against [[Immanuel Kant]]'s unbridgeable dualism between the phenomenal realm of experience and the unknowable *noumena* (the thing-in-itself, *Ding an sich*), Hegel argued that thought and reality are immanently united. In his famous dictum from the *Philosophy of Right*:
 
-$$\text{"Was vernünftig ist, das ist wirklich; und was wirklich ist, das ist vernünftig."}$$
-$$\text{(What is rational is actual; and what is actual is rational.)}$$
+<blockquote className="pullquote">"Was vernünftig ist, das ist wirklich; und was wirklich ist, das ist vernünftig."<br />(What is rational is actual; and what is actual is rational.)</blockquote>
 
 ---
 
@@ -82,7 +81,7 @@ The *Phenomenology* charts the education (*Bildung*) of human consciousness as i
 
 In Chapter IV of the *Phenomenology*, Hegel introduces the celebrated dialectic of **Lordship and Bondage**:
 
-$$\text{"Self-consciousness achieves its satisfaction only in another self-consciousness." (§175)}$$
+<blockquote className="pullquote">"Self-consciousness achieves its satisfaction only in another self-consciousness." (§175)</blockquote>
 
 To achieve certainty of its own freedom, an emerging self-consciousness demands **Recognition** (*Anerkennung*) from another. This provokes a primordial **Life-and-Death Struggle**:
 * Each combatant must risk their physical life to prove that their consciousness is free from mere biological animal survival.

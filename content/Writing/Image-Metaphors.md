@@ -1,5 +1,5 @@
 ---
-title: the image as supreme metaphor for knowledge
+title: "What Is an Image? Or: The Supreme Metaphor for Knowledge"
 description: An essay I've been thinking about for the last 7 years (as of September 2026).  
 tags:
   - Philosophy
@@ -9,7 +9,7 @@ tags:
   - knowledge
   - metaphors
   - semiosis
-  - occularcentrism
+  - ocularcentrism
 id: blog
 layout: article
 type: essay
@@ -21,7 +21,7 @@ quote-author: — Aristotle, Metaphysics, 980a21–27 (trans. W. D. Ross)
 image: "Media/Escherpuddle.jpg"
 ---
 
-> # I spent my first year of uni trying to find philosophy that "gets over language" in favour of the image - only to find that both are modes of representation which dissolve into the multiplicity of *difference and repetition*.
+> I spent my first year of uni trying to find philosophy that "gets over language" in favour of the image - only to find that both are modes of representation which dissolve into the multiplicity of *difference and repetition*.
 
 ![Escherpuddle](Media/Escherpuddle.jpg)
 
@@ -47,27 +47,27 @@ As a photographer often working in the documentary mode, I reluctantly endorse t
 
 The problem comes, as many do, in the failure to recognise the *radical autonomy* of things. I find comfort in colleagues of mine working on what's known as the "Speculative school of Documentary"[^2], a fascinating and nuanced turn where the *image-as-testimony* morphs and contorts (kicking and screaming) into the *image-as-mythology*. Fortunately for us lovers of myths, this turn presents a wonderful opportunity to craft the demise of all those who came before: catastrophe, eschatology, the breakdown of narrative and representation as such are all at stake in this case - for we cannot take the death of the image lightly, though *it has already died before*... 
 
-The aim of this essay is to challenge a pervasive bias (one which I recognise in myself), by looking at how (un-)knowing use of visual metaphor in philosophy has shaped our understanding of knowledge itself and, in turn, shaped our understanding of what images are doing in high-stakes world of visual communication, science, documentary, journalism, and, indeed, philosophy.
+The aim of this essay is to challenge a pervasive bias (one which I recognise in myself), by looking at how (un-)knowing use of visual metaphor in philosophy has shaped our understanding of knowledge itself and, in turn, shaped our understanding of what images are doing in the high-stakes world of visual communication, science, documentary, journalism, and, indeed, philosophy.
 
-[^2]: You can find their call to action [here](https://schoolofspeculativedocumentary.org) and from Max Pincker's PhD thesis, "[Speculative Documentary Photography](https://biblio.ugent.be/publication/8706389)" Published 2021. 
+[^2]: You can find their call to action [here](https://schoolofspeculativedocumentary.org) and from Max Pinckers' PhD thesis, "[Speculative Documentary Photography](https://biblio.ugent.be/publication/8706389)" Published 2021. 
 
 # ⁖ One
 
 ## The History of The Image
 
-The light of the sun impinges on us, it arrives "fully formed", radiant and perfect. Though, as those who enjoy eclipses know, it is much beyond our physical capacity to apprehend. Our biological faculties, exhausted by the impedence of those photons, buckle and fizz in near-unison when we try. Despite this, the desire to have the sun's unblemished image remains with us beyond all our failed attempts, why?  
+The light of the sun impinges on us, it arrives "fully formed", radiant and perfect. Though, as those who enjoy eclipses know, it is much beyond our physical capacity to apprehend. Our biological faculties, exhausted by the impedance of those photons, buckle and fizz in near-unison when we try. Despite this, the desire to have the sun's unblemished image remains with us beyond all our failed attempts, why?  
 
 ![D&G](Media/Deleuze_1.jpg)  
 
 > *As goodness stands in the intelligible realm to intelligence and the things we know, so the sun stands in the visible realm to sight and the things we see.*  
 —Plato, *The Republic*
 
-Before plato, the Chinese philosopher Mozi, founder of the Mohist school, described the mechanism behind the formation of images by pinhole:  
+Around the time of Plato, the later Mohists — followers of the Chinese philosopher Mozi — described the mechanism behind the formation of images by pinhole:  
 
 <blockquote className="pullquote"> The image is inverted; at the crossing there is a point, and the image extends in length. The explanation lies in the point.  </blockquote>
 
 
-At the risk of taking this too literally, let's consider this description applied to the production of images *de facto*. We have an inverted image, an extension, a point, and an explanation. Note that "inverted" here pre-supposes a primary image produced by nature, which the pinhole acts on to produce the inversion. I'd like you, dear reader, to hold this mechanistic image in your mind as we go further - the process is mirroring the canonical epistemé in an honest way: our representation here is not wholly faithful, and the Mohists hold no pretense that it is - the explanation lies in the point.  
+At the risk of taking this too literally, let's consider this description applied to the production of images *de facto*. We have an inverted image, an extension, a point, and an explanation. Note that "inverted" here pre-supposes a primary image produced by nature, which the pinhole acts on to produce the inversion. I'd like you, dear reader, to hold this mechanistic image in your mind as we go further - the process is mirroring the canonical epistemé in an honest way: our representation here is not wholly faithful, and the Mohists hold no pretence that it is - the explanation lies in the point.  
 
 But what is this point? This aperture through which the whole world flows, becoming—inverted, extended? Well, dear reader, our answer becomes evident in the first chapter of Difference & Repetition, a passage [[Attention & Difference|I have used before]], but I'll use it again: 
 
@@ -82,12 +82,12 @@ Attentive readers will note the issue.
 
 The clearest description of what has gone wrong here belongs, unsurprisingly, to Deleuze. In [[Difference & Repetition]], he argues that philosophy has, almost without noticing, modelled thinking on an act of recognition: a subject (light) encounters an object (camera), matches it against a concept already possessed (becoming-inverted), and calls this matching "knowledge." Deleuze names this the dogmatic image of thought (Deleuze, 1994, ch. 3) — and the word image is not incidental. Recognition presupposes exactly the visual scene the Mohists describe: a clear object, positively identified, held steady before an inner eye. The metaphor of vision attempts to illustrate an independently arrived-at theory of knowledge, while supplying the explanation of this view with its own album of images to draw from.
 
-> A new image of thought — or rather, a liberation of thought from those images which imprison it: this is what I had already sought t discover in Proust. Here, however, in Difference and Repetition, this search is autonomous and it becomes the condition for the discovery of these two concepts. [...] the rhizome in opposition to the tree, a rhizome-thought instead of an arborescent thought.  
+> A new image of thought — or rather, a liberation of thought from those images which imprison it: this is what I had already sought to discover in Proust. Here, however, in Difference and Repetition, this search is autonomous and it becomes the condition for the discovery of these two concepts. [...] the rhizome in opposition to the tree, a rhizome-thought instead of an arborescent thought.  
 *—Gilles Deleuze, Preface to Difference & Repetition*
 
-Spinoza offers a resource for thinking past this without simply inverting it into another representationalism. In the Ethics, *mind* and *body* are *not* two substances that must somehow resemble or correspond to one another; they are *one substance* expressed under two attributes, such that "the order and connexion of ideas is the same as the order and connexion of things" (Spinoza, Ethics, IIp7, trans. Curley, 1996). 
+Spinoza offers a resource for thinking past this without simply inverting it into another representationalism. In the Ethics, *mind* and *body* are *not* two substances that must somehow resemble or correspond to one another; they are *one substance* expressed under two attributes, such that "the order and connection of ideas is the same as the order and connection of things" (Spinoza, Ethics, IIp7, trans. Curley, 1996). 
 
-Take note what this does not say: it *does not say that ideas depict, mirror, or resemble things*. It says they are *parallel articulations* of a *single* expressive order. This is the ontological move we need to free the camera obscura from the grasp of identity and negation. Representation, on this model, was never a relation of likeness between an inner picture and an outer object. Treating it as two, assuming the mind-image and world-image are distinct substances as opposed to different attributes of the one, is the distinct error ailling a painful majority of the thinkers in the rest of this essay. Neither the mind nor body alone satisfy the representational descriptions or rules set out by these thinkers, and thereby always leaves them at odds with the world.
+Take note what this does not say: it *does not say that ideas depict, mirror, or resemble things*. It says they are *parallel articulations* of a *single* expressive order. This is the ontological move we need to free the camera obscura from the grasp of identity and negation. Representation, on this model, was never a relation of likeness between an inner picture and an outer object. Treating it as two, assuming the mind-image and world-image are distinct substances as opposed to different attributes of the one, is the distinct error ailing a painful majority of the thinkers in the rest of this essay. Neither the mind nor body alone satisfies the representational descriptions or rules set out by these thinkers, and thereby always leaves them at odds with the world.
 
 Deleuze continues,
 
@@ -97,10 +97,10 @@ Deleuze continues,
 
 It is worth noting, if only to forestall the objection that this is a purely continental complaint, that Richard Rorty makes structurally the same argument from within the analytic/pragmatic tradition. Philosophy and the Mirror of Nature (1979) traces the idea of mind as a "glassy essence," an inner arena that mirrors an outer world with greater or lesser accuracy, and argues that epistemology as a discipline is largely the history of polishing this mirror rather than questioning whether the mind is the kind of thing that could have a surface at all. Two very different philosophical cultures arrive, independently, at the same diagnosis: the trouble is not any particular theory of knowledge, but the visual scene those theories keep restaging.
 
-Ammusingly, Rorty's immunity to this mistake is speculative at best:  
+Amusingly, Rorty's immunity to this mistake is speculative at best:  
 > I argue that when extended in a certain way they let us see truth as, in James's phrase, "what it is better for us to believe," rather than as "the accurate representation of reality." Or, to put the point less provocatively, they show us that the notion of "accurate representation" is simply an automatic and empty compliment which we pay to those beliefs which are successful in helping us do what we want to do. 
 
-I hope you can **see** the irony in his turns of phrase here, that representation would be **shown** to be an empty compliment in the face of practicality.
+I hope you can **see** the irony in his turns of phrase here, that representation would be **shown** to be an empty compliment in the face of practice.
 
 # ⁖ Three
 
