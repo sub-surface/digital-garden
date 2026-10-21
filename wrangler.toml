@@ -23,7 +23,7 @@ binding = "ASSETS"
 run_worker_first = true
 
 [vars]
-NODE_VERSION = "20"
+NODE_VERSION = "24"
 
 [build]
 command = "npm run build"
