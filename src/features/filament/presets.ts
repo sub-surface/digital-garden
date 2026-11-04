@@ -180,7 +180,20 @@ export interface Cloud {
   vy: Float32Array
   /** Used by isolated FMM worlds; Cosmos treats both arrays as equal-mass. */
   m: Float32Array
+  /**
+   * Where each particle came from, for the Origin lens and for brightness:
+   * see {@link TAG}. Optional — Cosmos clouds carry none.
+   */
+  tag?: Float32Array
 }
+
+/** Particle origins. Dark matter is drawn faint; light comes from stars. */
+export const TAG = {
+  dark: 0,
+  stars: 1,
+  companion: 2,
+  infall: 3,
+} as const
 
 type Rng = () => number
 
@@ -290,6 +303,7 @@ function allocate(n: number, withMass: boolean): Cloud {
     vx: new Float32Array(n),
     vy: new Float32Array(n),
     m: withMass ? new Float32Array(n) : new Float32Array(0),
+    tag: new Float32Array(n),
   }
 }
 
@@ -318,12 +332,15 @@ export function makeInitialState(
     switch (preset) {
       case "disc":
         layDisc(c, 0, n, rnd, { cx: 0, cy: 0, bvx: 0, bvy: 0, rd: 0.28, mass: 1, sign: 1, heat: 0.09 })
+        c.tag!.fill(TAG.stars)
         break
 
       case "collision": {
         const half = n >> 1
         layDisc(c, 0, half, rnd, { cx: -0.62, cy: -0.18, bvx: 0.42, bvy: 0.05, rd: 0.2, mass: 0.5, sign: 1, heat: 0.08 })
         layDisc(c, half, n, rnd, { cx: 0.62, cy: 0.18, bvx: -0.42, bvy: -0.05, rd: 0.2, mass: 0.5, sign: -1, heat: 0.08 })
+        c.tag!.fill(TAG.stars, 0, half)
+        c.tag!.fill(TAG.companion, half, n)
         break
       }
 
@@ -338,6 +355,8 @@ export function makeInitialState(
         const hvy = (-fSat * svy) / (1 - fSat)
         layDisc(c, 0, host, rnd, { cx: hx, cy: 0, bvx: 0, bvy: hvy, rd: 0.24, mass: 1 - fSat, sign: 1, heat: 0.1 })
         laySatellite(c, host, n, rnd, { cx: hx + sx, cy: 0, bvx: 0, bvy: hvy + svy, rs: 0.045, mass: fSat })
+        c.tag!.fill(TAG.stars, 0, host)
+        c.tag!.fill(TAG.companion, host, n)
         break
       }
 

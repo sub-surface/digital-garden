@@ -171,6 +171,10 @@ export class Fmm {
   boxHalf = 1
 
   private n = 0
+  /** Total mass and centre of mass, for particles outside the box. */
+  private totalMass = 0
+  private comX = 0
+  private comY = 0
   readonly stats: FmmStats = { cells: 0, nearPairs: 0, translations: 0 }
 
   constructor(order: number) {
@@ -297,6 +301,10 @@ export class Fmm {
     const x0 = this.boxCx - this.boxHalf
     const y0 = this.boxCy - this.boxHalf
     const p2 = p * 2
+    const edge = h * 0.5
+    let mt = 0
+    let mx = 0
+    let my = 0
 
     for (let c = 0; c < cells; c++) {
       const s = cellStart[c]
@@ -307,8 +315,16 @@ export class Fmm {
       const o = c * p2
       for (let k = s; k < e; k++) {
         const mk = m[k]
-        const zr = x[k] - cx
-        const zi = y[k] - cy
+        mt += mk
+        mx += mk * x[k]
+        my += mk * y[k]
+        // An escaper clamped into a border cell is expanded as if it sat on
+        // the cell's edge: its far field is slightly misplaced, but the series
+        // stays convergent. Expanding it where it really is would not.
+        let zr = x[k] - cx
+        let zi = y[k] - cy
+        zr = zr > edge ? edge : zr < -edge ? -edge : zr
+        zi = zi > edge ? edge : zi < -edge ? -edge : zi
         // running power (z_j - z_c)^k, accumulated with mass
         let pr = mk
         let pi = 0
@@ -321,6 +337,9 @@ export class Fmm {
         }
       }
     }
+    this.totalMass = mt
+    this.comX = mt > 0 ? mx / mt : 0
+    this.comY = mt > 0 ? my / mt : 0
   }
 
   /** Roll multipoles up the tree, level by level. */
@@ -546,6 +565,18 @@ export class Fmm {
   }
 
   /**
+   * Far field for a particle outside the box, where no local expansion
+   * converges: the whole system as a point at its centre of mass. Anything
+   * that far out sees little else.
+   */
+  private escaperPull(xi: number, yi: number, G: number): [number, number] {
+    const dx = this.comX - xi
+    const dy = this.comY - yi
+    const w = (G * this.totalMass) / Math.max(1e-12, dx * dx + dy * dy)
+    return [dx * w, dy * w]
+  }
+
+  /**
    * Accelerations for the mass particles themselves: the smooth far field from
    * the leaf's local expansion, plus a direct sum over the nine-cell near
    * neighbourhood. Arrays are in {@link sort} order; results are written in the
@@ -584,9 +615,16 @@ export class Fmm {
       const ccx = x0 + (gxOf[c] + 0.5) * h
       const ccy = y0 + (gyOf[c] + 0.5) * h
       const co = c * p2
+      const edge = h * 0.5
       for (let i = s; i < e; i++) {
         const ur = x[i] - ccx
         const ui = y[i] - ccy
+        if (ur > edge || ur < -edge || ui > edge || ui < -edge) {
+          const [ex, ey] = this.escaperPull(x[i], y[i], G)
+          ax[i] = ex
+          ay[i] = ey
+          continue
+        }
         let fr = L[co + (p - 1) * 2]
         let fi = L[co + (p - 1) * 2 + 1]
         for (let t = p - 2; t >= 0; t--) {
@@ -712,6 +750,12 @@ export class Fmm {
 
       const ur = xi - (x0 + (gx + 0.5) * h)
       const ui = yi - (y0 + (gy + 0.5) * h)
+      if (ur > h * 0.5 || ur < -h * 0.5 || ui > h * 0.5 || ui < -h * 0.5) {
+        const [ex, ey] = this.escaperPull(xi, yi, G)
+        ax[i] = ex
+        ay[i] = ey
+        continue
+      }
       let fr = L[co + (p - 1) * 2]
       let fi = L[co + (p - 1) * 2 + 1]
       for (let t = p - 2; t >= 0; t--) {

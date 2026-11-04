@@ -435,6 +435,43 @@
 
 // --- lens bar + instruments -------------------------------------------------
 
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+
+  [data-current] {
+    color: var(--color-text);
+  }
+
+  button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+    text-underline-offset: 0.2em;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--color-accent);
+    }
+  }
+
+  &[data-moving] {
+    opacity: 0.55;
+  }
+}
+
 // Left, under the toolbar: the top-right corner belongs to the site's own
 // QuickControls, which float over every immersive page.
 .lensBar {

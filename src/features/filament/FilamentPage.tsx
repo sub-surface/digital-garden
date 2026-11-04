@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 import { useProgramHost } from "@/components/ui/games/ProgramHostContext"
-import { DARK_MATTER, ISO_MYR, PRESETS, type DarkMatter, type PresetName } from "./presets"
+import { DARK_MATTER, PRESETS, type DarkMatter, type PresetName } from "./presets"
 import { COSMOLOGIES, formatAge, type CosmologyName } from "./cosmology"
 import {
   FIDELITY_ORDER,
@@ -11,11 +11,13 @@ import {
 } from "./quality"
 import { lensesFor, type Rgb } from "./palettes"
 import { InstrumentPanel } from "./Instruments"
-import { Legend, ProbeTip, ScaleBar, Timeline } from "./Hud"
+import { Breadcrumb, fmtMass, Legend, ProbeTip, ScaleBar, Timeline } from "./Hud"
 import type {
   FromWorker,
+  HaloCard,
   Instruments,
   LensName,
+  LevelName,
   ProbeReading,
   SimParams,
   SimStats,
@@ -71,9 +73,21 @@ const fmt = (n: number) =>
 const fmtZ = (z: number) => (z >= 100 ? z.toFixed(0) : z >= 10 ? z.toFixed(1) : z.toFixed(2))
 
 /** Isolated-world time in physical units. */
-const fmtMyr = (t: number) => {
-  const myr = t * ISO_MYR
+const fmtMyr = (t: number, myrPerUnit: number) => {
+  const myr = t * myrPerUnit
   return myr >= 1000 ? `${(myr / 1000).toFixed(2)} Gyr` : `${myr.toFixed(0)} Myr`
+}
+
+/** A deep link, read once: `?seed=…&z=…&halo=…`. */
+function readLink(): { seed: number | null; z: number | null; halo: number | null } {
+  if (typeof window === "undefined") return { seed: null, z: null, halo: null }
+  const q = new URLSearchParams(window.location.search)
+  const num = (k: string) => {
+    const v = q.get(k)
+    const n = v === null ? NaN : Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  return { seed: num("seed"), z: num("z"), halo: num("halo") }
 }
 
 export function FilamentPage() {
@@ -94,7 +108,10 @@ export function FilamentPage() {
   const [darkMatter, setDarkMatter] = useState<DarkMatter>("cold")
   const [amplitude, setAmplitude] = useState(1)
   const [amplitudeDraft, setAmplitudeDraft] = useState(1)
-  const [seed, setSeed] = useState(() => (Math.random() * 0xffffffff) >>> 0)
+  const linkRef = useRef(readLink())
+  const [seed, setSeed] = useState(() => linkRef.current.seed ?? (Math.random() * 0xffffffff) >>> 0)
+  const [level, setLevel] = useState<LevelName>("web")
+  const [focus, setFocus] = useState<HaloCard | null>(null)
   const [stats, setStats] = useState<SimStats | null>(null)
   const [instruments, setInstruments] = useState<Instruments | null>(null)
   const [probe, setProbe] = useState<{ reading: ProbeReading; x: number; y: number } | null>(null)
@@ -106,7 +123,8 @@ export function FilamentPage() {
 
   const profile = useMemo(() => fidelityProfile(fidelity, isPhone), [fidelity, isPhone])
   const info = useMemo(() => PRESETS.find((p) => p.name === preset) ?? PRESETS[0], [preset])
-  const lenses = useMemo(() => lensesFor(info.cosmological), [info.cosmological])
+  const inWeb = info.cosmological && level === "web"
+  const lenses = useMemo(() => lensesFor(inWeb), [inWeb])
   const activeLens = lenses.some((l) => l.name === lens) ? lens : "density"
   const cosmo = COSMOLOGIES[cosmology]
 
@@ -238,6 +256,13 @@ export function FilamentPage() {
         case "instruments":
           setInstruments(msg.data)
           return
+        case "level":
+          // The worker moved the camera between worlds; follow it.
+          viewRef.current = msg.view ? { ...msg.view } : { zoom: 1, panX: 0, panY: 0, autoFit: true }
+          setLevel(msg.level)
+          setFocus(msg.focus)
+          setInstruments(null)
+          return
         case "probe": {
           const at = probeClientRef.current
           setProbe(msg.reading && at ? { reading: msg.reading, x: at.x, y: at.y } : null)
@@ -263,6 +288,12 @@ export function FilamentPage() {
     // Forget any geometry the previous worker was told about, then re-send it.
     geomRef.current = { w: 0, h: 0 }
     measure()
+    // A deep link to a halo: the worker runs the web to its epoch and dives.
+    const link = linkRef.current
+    if (link.halo !== null && paramsRef.current.preset === "cosmos") {
+      worker.postMessage({ t: "goto", z: link.z ?? 0, halo: link.halo } satisfies ToWorker)
+      linkRef.current = { ...link, halo: null }
+    }
     return () => {
       worker.onmessage = null
       worker.onerror = null
@@ -290,6 +321,30 @@ export function FilamentPage() {
     const id = setTimeout(() => setAmplitude(amplitudeDraft), 350)
     return () => clearTimeout(id)
   }, [amplitudeDraft, amplitude])
+
+  // The address bar always names what is on screen, so a halo can be shared.
+  useEffect(() => {
+    if (programHost.embedded || typeof window === "undefined") return
+    const q = new URLSearchParams(window.location.search)
+    q.set("seed", String(seed))
+    if (focus) {
+      q.set("z", focus.z.toFixed(3))
+      q.set("halo", String(focus.id))
+    } else {
+      q.delete("z")
+      q.delete("halo")
+    }
+    const next = `${window.location.pathname}?${q.toString()}${window.location.hash}`
+    if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(window.history.state, "", next)
+    }
+  }, [focus, programHost.embedded, seed])
+
+  // A new universe starts on the web.
+  useEffect(() => {
+    setLevel(preset === "cosmos" ? "web" : "halo")
+    setFocus(null)
+  }, [preset, seed, profile, cosmology, darkMatter, amplitude])
 
   // --- paint loop -----------------------------------------------------------
   useEffect(() => {
@@ -463,7 +518,7 @@ export function FilamentPage() {
       v.autoFit = false
       // The periodic box tiles the plane, so Cosmos may pull back to show
       // several copies of itself, but no further than the worker will draw.
-      const next = Math.max(paramsRef.current.preset === "cosmos" ? 0.4 : 0.05, Math.min(400, v.zoom * factor))
+      const next = Math.max(statsRef.current?.level === "web" && paramsRef.current.preset === "cosmos" ? 0.4 : 0.05, Math.min(400, v.zoom * factor))
       const applied = next / v.zoom
       if (Math.abs(applied - 1) < 1e-6) return false
       const b = bufferPixels({ clientX, clientY })
@@ -521,8 +576,12 @@ export function FilamentPage() {
   }, [post])
   useEffect(() => () => cancelAnimationFrame(probeRafRef.current), [])
 
+  /** Where a single-pointer press began, to tell a click from a drag. */
+  const pressRef = useRef<{ x: number; y: number; t: number } | null>(null)
+
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
+      pressRef.current = pointersRef.current.size === 0 ? { x: e.clientX, y: e.clientY, t: performance.now() } : null
       stopProbe()
       ;(e.target as Element).setPointerCapture?.(e.pointerId)
       pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -584,11 +643,25 @@ export function FilamentPage() {
   )
 
   const endDrag = useCallback((e: React.PointerEvent) => {
+    // A click (not a drag) on the web dives into the halo beneath it.
+    const press = pressRef.current
+    pressRef.current = null
+    if (
+      e.type === "pointerup" &&
+      press &&
+      pointersRef.current.size === 1 &&
+      Math.hypot(e.clientX - press.x, e.clientY - press.y) < 5 &&
+      performance.now() - press.t < 500 &&
+      statsRef.current?.level === "web"
+    ) {
+      const b = bufferPixels(e)
+      post({ t: "dive", at: { x: b.x, y: b.y } })
+    }
     pointersRef.current.delete(e.pointerId)
     pinchRef.current = null
     const remaining = [...pointersRef.current.values()]
     dragRef.current = remaining.length === 1 ? remaining[0] : null
-  }, [])
+  }, [bufferPixels, post])
 
   const resetView = useCallback(() => {
     viewRef.current = { zoom: 1, panX: 0, panY: 0, autoFit: true }
@@ -655,7 +728,10 @@ export function FilamentPage() {
       if (e.ctrlKey || e.metaKey || e.altKey) return
       const target = e.target as HTMLElement
       if (target.closest("input, textarea, select, [contenteditable]")) return
-      if (e.key === " " && target.tagName !== "BUTTON") {
+      if (e.key === "Escape" && level !== "web" && info.cosmological) {
+        e.preventDefault()
+        post({ t: "ascend" })
+      } else if (e.key === " " && target.tagName !== "BUTTON") {
         e.preventDefault()
         togglePause()
       } else if (e.key === "i" || e.key === "I") {
@@ -669,7 +745,7 @@ export function FilamentPage() {
         cycleLens(-1)
       }
     },
-    [cycleLens, togglePause],
+    [cycleLens, info.cosmological, level, post, togglePause],
   )
 
   // --- readout --------------------------------------------------------------
@@ -681,7 +757,8 @@ export function FilamentPage() {
       if (stats.epoch && !stats.done) clock.push(stats.epoch)
       clock.push(`D = ${stats.growth.toFixed(3)}`)
     } else {
-      clock.push(`t = ${fmtMyr(stats.time)}`)
+      clock.push(`t = ${fmtMyr(stats.time, stats.units.myr)}`)
+      if (focus) clock.push(`halo seen at z = ${fmtZ(focus.z)}`)
     }
     if (stats.quasars > 0 && activeLens === "density") clock.push(`${stats.quasars} quasar${stats.quasars > 1 ? "s" : ""}`)
   }
@@ -736,7 +813,7 @@ export function FilamentPage() {
       data-fullbleed
       data-embedded={programHost.embedded || undefined}
       data-instruments={instrumentsOpen || undefined}
-      data-timeline={info.cosmological || undefined}
+      data-timeline={inWeb || undefined}
       onKeyDown={onRootKeyDown}
     >
       <canvas
@@ -789,6 +866,13 @@ export function FilamentPage() {
               ↺
             </button>
           </div>
+
+          <Breadcrumb
+            world={info.cosmological ? null : info.label}
+            focus={info.cosmological ? focus : null}
+            moving={!!stats?.moving}
+            onAscend={() => post({ t: "ascend" })}
+          />
         </div>
 
         {controlsOpen && (
@@ -1002,13 +1086,17 @@ export function FilamentPage() {
 
       <div className={styles.bottomRight}>
         <Legend lens={activeLens} accent={accent} />
-        <ScaleBar cssPerWorld={cssPerWorld} cosmological={info.cosmological} />
+        <ScaleBar cssPerWorld={cssPerWorld} kpcPerWorld={stats?.units.kpc ?? 0} comoving={inWeb} />
       </div>
 
-      {info.cosmological && stats?.cosmological && <Timeline cosmology={cosmo} a={stats.a} />}
+      {inWeb && stats?.cosmological && <Timeline cosmology={cosmo} a={stats.a} />}
 
       <div className={styles.gestureHint} aria-hidden="true">
-        drag to pan · scroll to zoom · hover to probe · space pauses · L lens · I instruments
+        {inWeb
+          ? "click a ringed halo to dive · drag to pan · scroll to zoom · space pauses · L lens · I instruments"
+          : info.cosmological
+            ? "esc returns to the web · drag to pan · scroll to zoom · space pauses · L lens"
+            : "drag to pan · scroll to zoom · hover to probe · space pauses · L lens · I instruments"}
       </div>
 
       {probe && <ProbeTip reading={probe.reading} x={probe.x} y={probe.y} />}

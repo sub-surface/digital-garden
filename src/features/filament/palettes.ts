@@ -189,6 +189,19 @@ export function streamHue(streams: number): number {
   return streams <= 1 ? 0 : Math.min(1, Math.log(streams) / Math.log(STREAM_TOP))
 }
 
+/** Halo dark matter, stars, companion, infalling dark matter. */
+const ORIGIN_STOPS: Rgb[] = [
+  [0.36, 0.42, 0.86],
+  [1.0, 0.8, 0.5],
+  [0.42, 0.95, 0.62],
+  [0.66, 0.4, 0.92],
+]
+
+/** Hue for a particle origin tag (0–3). */
+export function originHue(tag: number): number {
+  return (Math.max(0, Math.min(3, tag)) + 0.5) / 4
+}
+
 /** Approaching → at rest → receding. */
 const DOPPLER_STOPS: Rgb[] = [
   [0.25, 0.5, 1.0],
@@ -209,6 +222,8 @@ export function lensHue(lens: LensName, h: number, accent: Rgb): Rgb {
       return ramp(DOPPLER_STOPS, h)
     case "streams":
       return ramp(STREAM_STOPS, h)
+    case "origin":
+      return ORIGIN_STOPS[Math.min(3, Math.floor(h * 4))]
     default:
       return accent
   }
@@ -216,7 +231,7 @@ export function lensHue(lens: LensName, h: number, accent: Rgb): Rgb {
 
 /** Lenses that colour by a second quantity. */
 export function lensHasHue(lens: LensName): boolean {
-  return lens === "web" || lens === "flow" || lens === "potential" || lens === "doppler" || lens === "streams"
+  return lens === "web" || lens === "flow" || lens === "potential" || lens === "doppler" || lens === "streams" || lens === "origin"
 }
 
 /**
@@ -353,6 +368,14 @@ export const LENSES: LensInfo[] = [
     description:
       "Line-of-sight velocity along the vertical, as a spectrograph would measure it. A rotating disc shows the classic dipole: one side approaching, one receding.",
     scale: ["approaching", "at rest", "receding"],
+    cosmological: false,
+  },
+  {
+    name: "origin",
+    label: "Origin",
+    description:
+      "Where each particle came from. In a zoom-in: the halo's own dark matter, the stars of its disc, and dark matter still falling in from the web. In the lab worlds: which galaxy each star began in.",
+    scale: ["halo", "stars", "companion", "infall"],
     cosmological: false,
   },
 ]

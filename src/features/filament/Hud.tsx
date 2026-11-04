@@ -1,9 +1,8 @@
 import { memo, useMemo } from "react"
 import { A_REC, accelerationOnset, ageOf, formatAge, PATCH_MPC, type Cosmology } from "./cosmology"
-import { ISO_KPC } from "./presets"
 import { WEB_LABELS } from "./analysis"
 import { LENSES, lensGradient, type Rgb } from "./palettes"
-import type { LensName, ProbeReading } from "./protocol"
+import type { HaloCard, LensName, ProbeReading } from "./protocol"
 import styles from "./FilamentPage.module.scss"
 
 /**
@@ -64,6 +63,62 @@ export const Timeline = memo(function Timeline({ cosmology, a }: { cosmology: Co
   )
 })
 
+const SUPERSCRIPT = "⁰¹²³⁴⁵⁶⁷⁸⁹"
+
+/** A mass in solar masses as a × 10ⁿ M☉. */
+export function fmtMass(m: number): string {
+  if (!(m > 0)) return "—"
+  const e = Math.floor(Math.log10(m))
+  const mant = m / Math.pow(10, e)
+  const sup = String(e).split("").map((d) => SUPERSCRIPT[Number(d)]).join("")
+  return `${mant.toFixed(1)} × 10${sup} M☉`
+}
+
+/**
+ * Where we are in the descent. Each crumb above the current one climbs back.
+ */
+export const Breadcrumb = memo(function Breadcrumb({
+  world,
+  focus,
+  moving,
+  onAscend,
+}: {
+  /** A lab world's name, or null for the cosmic web. */
+  world: string | null
+  focus: HaloCard | null
+  moving: boolean
+  onAscend: () => void
+}) {
+  if (world) {
+    return (
+      <nav className={styles.breadcrumb} aria-label="Where you are">
+        <span>Lab</span>
+        <span aria-hidden="true">›</span>
+        <span data-current>{world}</span>
+      </nav>
+    )
+  }
+  return (
+    <nav className={styles.breadcrumb} aria-label="Where you are" data-moving={moving || undefined}>
+      {focus ? (
+        <button type="button" onClick={onAscend} title="Back to the cosmic web (Esc)">
+          The web
+        </button>
+      ) : (
+        <span data-current>The web</span>
+      )}
+      {focus && (
+        <>
+          <span aria-hidden="true">›</span>
+          <span data-current title={`${focus.members.toLocaleString()} particles, found at z = ${focus.z.toFixed(2)}`}>
+            Halo {focus.id} · {fmtMass(focus.massSun)}
+          </span>
+        </>
+      )}
+    </nav>
+  )
+})
+
 /** Round a length to 1, 2 or 5 × 10ⁿ. */
 function niceLength(target: number): number {
   const mag = Math.pow(10, Math.floor(Math.log10(target)))
@@ -77,17 +132,20 @@ function niceLength(target: number): number {
  */
 export const ScaleBar = memo(function ScaleBar({
   cssPerWorld,
-  cosmological,
+  kpcPerWorld,
+  comoving,
 }: {
   cssPerWorld: number
-  cosmological: boolean
+  kpcPerWorld: number
+  comoving: boolean
 }) {
-  if (!(cssPerWorld > 0)) return null
-  const unitsPerWorld = cosmological ? PATCH_MPC : ISO_KPC
-  const unitsPerCss = unitsPerWorld / cssPerWorld
-  const length = niceLength(unitsPerCss * 110)
-  const px = length / unitsPerCss
-  const label = cosmological ? `${length} Mpc comoving` : `${length} kpc`
+  if (!(cssPerWorld > 0) || !(kpcPerWorld > 0)) return null
+  // One scale for every level of the descent, switching to Mpc when it helps.
+  const kpcPerCss = kpcPerWorld / cssPerWorld
+  const length = niceLength(kpcPerCss * 110)
+  const px = length / kpcPerCss
+  const value = length >= 1000 ? `${length / 1000} Mpc` : `${length} kpc`
+  const label = comoving ? `${value} comoving` : value
   return (
     <div className={styles.scaleBar} aria-hidden="true">
       <span className={styles.scaleRule} style={{ width: `${px}px` }} />
@@ -127,7 +185,15 @@ export function ProbeTip({ reading, x, y }: { reading: ProbeReading; x: number; 
     if (reading.phi !== undefined) rows.push(`φ = ${signed(reading.phi, 1)} σ`)
     if (reading.theta !== undefined) rows.push(`∇·v = ${signed(reading.theta)} H`)
   } else {
-    rows.push(`${(reading.x * ISO_KPC).toFixed(1)}, ${(reading.y * ISO_KPC).toFixed(1)} kpc`)
+    rows.push(`${(reading.x * reading.units.kpc).toFixed(1)}, ${(reading.y * reading.units.kpc).toFixed(1)} kpc`)
+  }
+  const h = reading.halo
+  if (h) {
+    rows.unshift(
+      `Halo ${h.id} · ${fmtMass(h.massSun)}`,
+      `r ≈ ${h.radiusKpc.toFixed(0)} kpc · σ ≈ ${h.sigmaKms.toFixed(0)} km/s · ${h.members.toLocaleString()} particles`,
+      `${h.spin > 0.3 ? "rotating" : h.spin > 0.12 ? "slowly turning" : "dispersion-supported"} (spin ${h.spin.toFixed(2)}) · click to dive`,
+    )
   }
   return (
     <div className={styles.probe} style={{ transform: `translate(${x + 14}px, ${y + 14}px)` }} aria-hidden="true">

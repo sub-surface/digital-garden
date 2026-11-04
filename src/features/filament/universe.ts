@@ -12,7 +12,7 @@
  */
 
 import { Fmm, applyPerm, chooseDepth, MAX_DEPTH } from "./fmm"
-import { makeInitialState, type Cloud, type PresetName } from "./presets"
+import { makeInitialState, type Cloud, type InitialState, type PresetName } from "./presets"
 
 export interface UniverseOptions {
   preset: PresetName
@@ -22,6 +22,13 @@ export interface UniverseOptions {
   order: number
   /** Multiplier on the preset's softening length. */
   softening: number
+  /** A ready-made world (a zoom-in), used instead of the preset. */
+  initial?: InitialState
+  /**
+   * Tidal tensor of the outside universe, [T_xx, T_xy, T_yy]: every particle
+   * feels a = −T·r about the origin, the linear stretch of a distant field.
+   */
+  tidal?: [number, number, number]
 }
 
 export interface UniverseStats {
@@ -48,6 +55,8 @@ export class Universe {
   /** Elapsed time, code units. */
   time = 0
 
+  /** External tidal tensor [T_xx, T_xy, T_yy], or null for an island universe. */
+  private readonly tidal: [number, number, number] | null
   private softeningBase = 0.004
   private softeningScale = 1
   private ax!: Float32Array
@@ -76,7 +85,8 @@ export class Universe {
     this.nTracer = opts.nTracer
     this.softeningScale = opts.softening
 
-    const init = makeInitialState(opts.preset, opts.seed, opts.nMass, opts.nTracer)
+    const init = opts.initial ?? makeInitialState(opts.preset, opts.seed, opts.nMass, opts.nTracer)
+    this.tidal = opts.tidal ?? null
     this.masses = init.masses
     this.tracers = init.tracers
     this.dt = init.dt
@@ -178,7 +188,9 @@ export class Universe {
       Math.min(MAX_DEPTH, this.maxUsefulDepth(), chooseDepth(n) + this.depthAdj),
     )
     const perm = fmm.sort(masses.x, masses.y, n, depth)
-    for (const arr of [masses.x, masses.y, masses.vx, masses.vy, masses.m]) {
+    const arrays = [masses.x, masses.y, masses.vx, masses.vy, masses.m]
+    if (masses.tag) arrays.push(masses.tag)
+    for (const arr of arrays) {
       applyPerm(arr, this.scratch, perm, n)
       arr.set(this.scratch.subarray(0, n))
     }
@@ -188,6 +200,18 @@ export class Universe {
     fmm.evalMasses(masses.x, masses.y, masses.m, this.ax, this.ay, 1, eps * eps)
     if (this.nTracer > 0) {
       fmm.evalTracers(tracers.x, tracers.y, this.nTracer, this.tax, this.tay, 1)
+    }
+    if (this.tidal) {
+      const [txx, txy, tyy] = this.tidal
+      for (const [c, n, ax, ay] of [
+        [masses, this.nMass, this.ax, this.ay],
+        [tracers, this.nTracer, this.tax, this.tay],
+      ] as const) {
+        for (let i = 0; i < n; i++) {
+          ax[i] -= txx * c.x[i] + txy * c.y[i]
+          ay[i] -= txy * c.x[i] + tyy * c.y[i]
+        }
+      }
     }
 
     const s = this.stats

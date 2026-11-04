@@ -20,7 +20,10 @@
 
 import { Universe } from "./universe"
 import { Cosmos } from "./cosmos"
-import { A_REC, cmbGlow, COSMOLOGIES, PATCH_MPC, type Afterglow } from "./cosmology"
+import { A_REC, cmbGlow, COSMOLOGIES, HUBBLE_TIME_GYR, PATCH_MPC, type Afterglow } from "./cosmology"
+import { COSMO_KMS, findHalos, haloMassSun, type Halo } from "./halos"
+import { zoomWorld } from "./zoom"
+import { ISO_KMS, ISO_KPC, ISO_MYR } from "./presets"
 import { wrapPeriodic } from "./particle-mesh"
 import { depositCic, resampleConservative, timedDecay } from "./density-raster"
 import { SheetRaster } from "./sheet"
@@ -40,18 +43,22 @@ import {
   buildLogTone,
   LOG_TONE,
   lensHasHue,
+  originHue,
   signedHue,
   streamHue,
   type Rgb,
 } from "./palettes"
 import type {
   FromWorker,
+  HaloCard,
   LensName,
+  LevelName,
   ProbeReading,
   SimParams,
   SimStats,
   ToWorker,
   ViewParams,
+  WorldUnits,
 } from "./protocol"
 
 /** Brightness of a massive particle relative to a tracer. */
@@ -80,6 +87,20 @@ const KERNEL_NEIGHBOURS = 7
 const KERNEL_MAX_PX = 5
 /** Coarse cell, in pixels, for the isolated-world local density estimate. */
 const COARSE_PX = 8
+/** Brightness by particle origin: dark matter is faint, light is stars. */
+const TAG_WEIGHT = [0.45, 2.2, 2.2, 0.45]
+/** Haloes worth a ring, and how many. */
+const RING_MIN_MEMBERS = 40
+const RING_MAX = 90
+/** Seconds for a dive or an ascent. */
+const FLIGHT_MS = 1400
+/** Seconds the last web frame lingers over the zoom-in as it spins up. */
+const FADE_MS = 700
+/** Region framed at the end of a dive, in halo radii (the zoom's extent). */
+const DIVE_FRAME = 2.25
+
+const WEB_UNITS: WorldUnits = { kpc: PATCH_MPC * 1000, kms: COSMO_KMS, myr: HUBBLE_TIME_GYR * 1000 }
+const LAB_UNITS: WorldUnits = { kpc: ISO_KPC, kms: ISO_KMS, myr: ISO_MYR }
 
 const ctx = globalThis as unknown as {
   postMessage(msg: FromWorker, transfer?: Transferable[]): void
@@ -148,11 +169,47 @@ let isoHistory = { t: [] as number[], virial: [] as number[], r10: [] as number[
 let angularZero: number | null = null
 let probeAt: { x: number; y: number } | null = null
 
+// --- the descent ------------------------------------------------------------
+let level: LevelName = "web"
+let units: WorldUnits = WEB_UNITS
+/** Haloes in the web, most massive first, and the epoch they were found at. */
+let catalogue: Halo[] = []
+let catalogueA = 0
+let lastCatalogue = -Infinity
+let hoverHalo = -1
+/** The halo below the web, and its card. */
+let focus: HaloCard | null = null
+/** The web's camera as it was when we dived, restored on the way back up. */
+let webView: ViewParams | null = null
+/** A camera flight across the web: in on a dive, out on an ascent. */
+let flight: {
+  dir: 1 | -1
+  t0: number
+  fromX: number
+  fromY: number
+  fromZoom: number
+  toX: number
+  toY: number
+  toZoom: number
+  halo: Halo | null
+} | null = null
+/** The last web frame, faded out over the first moments of a zoom-in. */
+let fadeFrom: Uint32Array | null = null
+let fadeT0 = 0
+/** Deep link waiting for the cosmos to reach its epoch. */
+let pendingGoto: { a: number; id: number } | null = null
+
+/** True while the cosmic web is the world on screen. */
+function inWeb(): boolean {
+  return level === "web" && cosmos !== null
+}
+
 const stats: SimStats = {
   stepMs: 0, drawMs: 0, analysisMs: 0, cells: 0, depth: 0, nearPairs: 0, translations: 0,
   speedup: 1, scale: 1, cosmological: false, a: 1, z: 0, time: 0, growth: 1,
   epoch: "", done: false, quasars: 0, bursts: 0, solver: "fmm",
   particles: 0, peakCellMass: 0, occupiedCells: 0,
+  level: "web", focus: null, haloes: 0, units: WEB_UNITS, moving: false,
 }
 
 /** xorshift32 — the worker's own stream, for presentation only. */
@@ -167,8 +224,8 @@ function rand(): number {
 function activeLens(): LensName {
   const lens = params?.lens ?? "density"
   if (lens === "density") return lens
-  if (cosmos) return lens === "doppler" ? "density" : lens
-  return lens === "doppler" ? lens : "density"
+  if (inWeb()) return lens === "doppler" || lens === "origin" ? "density" : lens
+  return lens === "doppler" || lens === "origin" ? lens : "density"
 }
 
 // ---------------------------------------------------------------------------
@@ -248,7 +305,7 @@ let bursts: Burst[] = []
 let burstTotal = 0
 
 function forEachDensityCell(cb: (mass: number, x: number, y: number, size: number) => void): void {
-  if (cosmos) cosmos.forEachDensityCell(cb)
+  if (inWeb()) cosmos!.forEachDensityCell(cb)
   else uni?.forEachDensityCell(cb)
 }
 
@@ -271,8 +328,9 @@ function scanEvents(dtSec: number): void {
     bursts.length = 0
     return
   }
-  const cosmological = !!cosmos
-  const boxHalf = cosmos ? cosmos.half : uni!.boxHalf
+  const cosmological = inWeb()
+  if (!cosmological && !uni) return
+  const boxHalf = cosmological ? cosmos!.half : uni!.boxHalf
 
   let peak = 0
   forEachDensityCell((mass) => {
@@ -336,7 +394,7 @@ function scanEvents(dtSec: number): void {
 
 /** Rebuild the density palette only when the afterglow has visibly moved. */
 function syncGlow(): void {
-  const lit = !!cosmos && params?.events && activeLens() === "density"
+  const lit = inWeb() && params?.events && activeLens() === "density"
   const glow: Afterglow = lit ? cmbGlow(aShow) : { strength: 0, r: 0, g: 0, b: 0 }
   const key = Math.round(glow.strength * 96) * 128 + Math.round(glow.g * 64)
   if (key === glowKey) return
@@ -399,8 +457,8 @@ function analyse(advancing: boolean): void {
   const t0 = performance.now()
   const lens = activeLens()
 
-  if (cosmos && analysis) {
-    const c = cosmos
+  if (inWeb() && analysis) {
+    const c = cosmos!
     const an = analysis
     binDown(c.pm.cellMass, c.pm.size, analysisMass, an.n)
     an.load(analysisMass)
@@ -529,9 +587,9 @@ function rasterToWorld(px: number, py: number): { x: number; y: number } {
   const scale = stats.scale
   let x = (px - rw * 0.5) / scale + frameCx + view.panX
   let y = (rh * 0.5 - py) / scale + frameCy + view.panY
-  if (cosmos) {
-    x = wrapPeriodic(x, cosmos.half)
-    y = wrapPeriodic(y, cosmos.half)
+  if (inWeb()) {
+    x = wrapPeriodic(x, cosmos!.half)
+    y = wrapPeriodic(y, cosmos!.half)
   }
   return { x, y }
 }
@@ -539,10 +597,17 @@ function rasterToWorld(px: number, py: number): { x: number; y: number } {
 function postProbe(): void {
   if (!probeAt || rw === 0 || (!cosmos && !uni)) return
   const { x, y } = rasterToWorld(probeAt.x, probeAt.y)
-  const reading: ProbeReading = { x, y, cosmological: !!cosmos }
-  if (cosmos && analysis) {
+  const reading: ProbeReading = { x, y, cosmological: inWeb(), units }
+  if (inWeb()) {
+    const h = haloAt(x, y)
+    const was = hoverHalo
+    hoverHalo = h ? h.id : -1
+    if (h) reading.halo = haloCard(h)
+    if (was !== hoverHalo) kick(true)
+  }
+  if (inWeb() && analysis) {
     const n = analysis.n
-    const half = cosmos.half
+    const half = cosmos!.half
     const ix = Math.min(n - 1, Math.max(0, Math.floor(((x + half) / (2 * half)) * n)))
     const iy = Math.min(n - 1, Math.max(0, Math.floor(((y + half) / (2 * half)) * n)))
     const i = iy * n + ix
@@ -555,6 +620,205 @@ function postProbe(): void {
 }
 
 // ---------------------------------------------------------------------------
+// The descent
+// ---------------------------------------------------------------------------
+
+function haloCard(h: Halo): HaloCard {
+  const c = cosmos!
+  return {
+    id: h.id,
+    members: h.members.length,
+    massSun: haloMassSun(h.members.length, c.grid),
+    radiusKpc: h.radius * catalogueA * PATCH_MPC * 1000,
+    sigmaKms: h.sigma * COSMO_KMS,
+    spin: h.spin,
+    z: 1 / catalogueA - 1,
+  }
+}
+
+/** Re-run friends-of-friends on the web as it stands. */
+function refreshCatalogue(): void {
+  const c = cosmos!
+  catalogue = findHalos(c.x, c.y, c.vx, c.vy, c.grid, c.a, c.half)
+    .filter((h) => h.members.length >= RING_MIN_MEMBERS)
+    .slice(0, RING_MAX)
+  catalogueA = c.a
+  lastCatalogue = clock
+}
+
+/** Ring radius of a halo, in world units, at the current scale. */
+function ringRadius(h: Halo): number {
+  return Math.max(2.2 * h.radius, 7 / Math.max(1e-6, stats.scale))
+}
+
+/** The halo whose ring contains world point (x, y), if any; smallest ring wins. */
+function haloAt(x: number, y: number): Halo | null {
+  if (!cosmos) return null
+  let best: Halo | null = null
+  let bestR = Infinity
+  for (const h of catalogue) {
+    const r = ringRadius(h)
+    const dx = wrapPeriodic(x - h.x, cosmos.half)
+    const dy = wrapPeriodic(y - h.y, cosmos.half)
+    if (dx * dx + dy * dy < r * r && r < bestR) {
+      best = h
+      bestR = r
+    }
+  }
+  return best
+}
+
+/** Begin a dive into `h`: build its zoom-in now, fly the camera in. */
+function dive(h: Halo): void {
+  const p = params!
+  const c = cosmos!
+  const z = zoomWorld(c, h, Math.max(3000, p.nMass), p.seed)
+  uni = new Universe({
+    preset: "disc",
+    seed: p.seed,
+    nMass: z.nMass,
+    nTracer: 0,
+    order: p.order,
+    softening: p.softening,
+    initial: z.initial,
+    tidal: z.tidal,
+  })
+  focus = haloCard(h)
+  webView = { ...view }
+  const fromX = wrapPeriodic(view.panX, c.half)
+  const fromY = wrapPeriodic(view.panY, c.half)
+  flight = {
+    dir: 1,
+    t0: performance.now(),
+    fromX,
+    fromY,
+    fromZoom: Math.max(COSMOS_MIN_ZOOM, view.zoom),
+    toX: fromX + wrapPeriodic(h.x - fromX, c.half),
+    toY: fromY + wrapPeriodic(h.y - fromY, c.half),
+    toZoom: 1 / (DIVE_FRAME * h.radius),
+    halo: h,
+  }
+  units = z.units
+  quasars = []
+  bursts = []
+}
+
+/** The dive has landed: hand the screen to the zoom-in. */
+function land(): void {
+  level = "halo"
+  flight = null
+  frameCx = 0
+  frameCy = 0
+  frameHalf = DIVE_FRAME
+  view = { zoom: 1, panX: 0, panY: 0, autoFit: true }
+  autoGain = 0
+  accum.fill(0)
+  hueAccum.fill(0)
+  isoHistory = { t: [], virial: [], r10: [], r50: [], r90: [] }
+  angularZero = null
+  analysisDirty = true
+  glowKey = -1
+  lutKey = ""
+  fadeT0 = performance.now()
+  ctx.postMessage({ t: "level", level, focus })
+}
+
+/** Back up to the web, flying the camera out to where it was. */
+function ascend(): void {
+  if (level !== "halo" || !cosmos || !focus) return
+  const h = catalogue.find((k) => k.id === focus!.id)
+  const back = webView ?? { zoom: 1, panX: 0, panY: 0, autoFit: true }
+  const cx = h ? h.x : wrapPeriodic(back.panX, cosmos.half)
+  const cy = h ? h.y : wrapPeriodic(back.panY, cosmos.half)
+  const toX = wrapPeriodic(back.panX, cosmos.half)
+  const toY = wrapPeriodic(back.panY, cosmos.half)
+  flight = {
+    dir: -1,
+    t0: performance.now(),
+    fromX: toX + wrapPeriodic(cx - toX, cosmos.half),
+    fromY: toY + wrapPeriodic(cy - toY, cosmos.half),
+    fromZoom: h ? 1 / (DIVE_FRAME * h.radius) : back.zoom * 8,
+    toX,
+    toY,
+    toZoom: Math.max(COSMOS_MIN_ZOOM, back.zoom),
+    halo: null,
+  }
+  level = "web"
+  uni = null
+  focus = null
+  units = WEB_UNITS
+  view = { ...back }
+  quasars = []
+  bursts = []
+  glowKey = -1
+  lutKey = ""
+  analysisDirty = true
+  ctx.postMessage({ t: "level", level, focus: null, view: back })
+}
+
+/** Camera for the web: the page's view, or a flight in progress. */
+function webCamera(c: Cosmos): { x: number; y: number; zoom: number } {
+  if (!flight) {
+    return {
+      x: wrapPeriodic(view.panX, c.half),
+      y: wrapPeriodic(view.panY, c.half),
+      zoom: Math.max(COSMOS_MIN_ZOOM, view.zoom),
+    }
+  }
+  const f = Math.min(1, (performance.now() - flight.t0) / FLIGHT_MS)
+  // Ease in and out; zoom moves exponentially so every octave takes as long.
+  const e = f * f * (3 - 2 * f)
+  return {
+    x: flight.fromX + (flight.toX - flight.fromX) * e,
+    y: flight.fromY + (flight.toY - flight.fromY) * e,
+    zoom: Math.exp(Math.log(flight.fromZoom) + (Math.log(flight.toZoom) - Math.log(flight.fromZoom)) * e),
+  }
+}
+
+/** An antialiased ring, added onto the frame. */
+function ring(out: Uint32Array, cx: number, cy: number, r: number, k: number, cr: number, cg: number, cb: number): void {
+  const steps = Math.max(24, Math.ceil(2 * Math.PI * r * 1.5))
+  for (let s = 0; s < steps; s++) {
+    const t = (s / steps) * Math.PI * 2
+    const px = cx + Math.cos(t) * r - 0.5
+    const py = cy + Math.sin(t) * r - 0.5
+    const x0 = Math.floor(px)
+    const y0 = Math.floor(py)
+    const fx = px - x0
+    const fy = py - y0
+    for (let q = 0; q < 4; q++) {
+      const x = x0 + (q & 1)
+      const y = y0 + (q >> 1)
+      if (x < 0 || y < 0 || x >= rw || y >= rh) continue
+      const w = k * ((q & 1) ? fx : 1 - fx) * ((q >> 1) ? fy : 1 - fy)
+      const i = y * rw + x
+      const v = out[i]
+      out[i] =
+        (Math.min(255, ((v >>> 24) & 255) + 255 * w) << 24) |
+        (Math.min(255, ((v >> 16) & 255) + cb * w) << 16) |
+        (Math.min(255, ((v >> 8) & 255) + cg * w) << 8) |
+        Math.min(255, (v & 255) + cr * w)
+    }
+  }
+}
+
+/** Halo markers on the web: thin rings, brighter for the one under the pointer. */
+function drawRings(out: Uint32Array, c: Cosmos, camX: number, camY: number, scale: number): void {
+  if (!params!.events || catalogue.length === 0 || flight) return
+  const top = catalogue[0].members.length
+  for (const h of catalogue) {
+    const sx = wrapPeriodic(h.x - camX, c.half) * scale + rw * 0.5
+    const sy = rh * 0.5 - wrapPeriodic(h.y - camY, c.half) * scale
+    const r = ringRadius(h) * scale
+    if (sx < -r || sy < -r || sx > rw + r || sy > rh + r) continue
+    const hot = h.id === hoverHalo
+    const k = hot ? 0.95 : 0.16 + 0.34 * Math.sqrt(h.members.length / top)
+    ring(out, sx, sy, r, k, 205, 225, 255)
+    if (hot) ring(out, sx, sy, r + 2.5, 0.35, 205, 225, 255)
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
@@ -562,7 +826,17 @@ function reset(): void {
   const p = params!
   cosmos = null
   uni = null
+  catalogue = []
+  catalogueA = 0
+  lastCatalogue = -Infinity
+  hoverHalo = -1
+  focus = null
+  flight = null
+  fadeFrom = null
+  webView = null
   if (p.preset === "cosmos") {
+    level = "web"
+    units = WEB_UNITS
     const c = new Cosmos({
       seed: p.seed,
       grid: p.grid,
@@ -599,6 +873,8 @@ function reset(): void {
     })
     frameHalf = uni.extent
     analysis = null
+    level = "halo"
+    units = LAB_UNITS
   }
   frameCx = 0
   frameCy = 0
@@ -682,7 +958,8 @@ function spikes(out: Uint32Array, cx: number, cy: number, len: number, cr: numbe
  * from a coarse count of particles per screen cell. Sparse regions become
  * smooth fields; dense ones keep their full, pixel-sharp resolution.
  */
-function splatParticles(u: Universe, scale: number, ox: number, oy: number, doppler: boolean): void {
+function splatParticles(u: Universe, scale: number, ox: number, oy: number, hueLens: "doppler" | "origin" | null): void {
+  const doppler = hueLens !== null
   const cw = Math.ceil(rw / COARSE_PX)
   const ch = Math.ceil(rh / COARSE_PX)
   if (cw !== coarseW || ch !== coarseH) {
@@ -708,7 +985,10 @@ function splatParticles(u: Universe, scale: number, ox: number, oy: number, dopp
   const h2Scale = KERNEL_NEIGHBOURS / Math.PI
   for (const { c, n, weight } of clouds) {
     const { x: cx, y: cy, vy } = c
+    const tags = c.tag && c.tag.length === n ? c.tag : null
     for (let i = 0; i < n; i++) {
+      const tag = tags ? tags[i] : -1
+      const wPart = tag >= 0 ? weight * TAG_WEIGHT[tag | 0] : weight
       const sx = cx[i] * scale + ox
       const sy = oy - cy[i] * scale
       if (sx < -KERNEL_MAX_PX || sx >= rw + KERNEL_MAX_PX || sy < -KERNEL_MAX_PX || sy >= rh + KERNEL_MAX_PX) continue
@@ -716,14 +996,15 @@ function splatParticles(u: Universe, scale: number, ox: number, oy: number, dopp
       const gy = Math.min(ch - 1, Math.max(0, (sy * invC) | 0))
       const density = Math.max(1, coarse[gy * cw + gx]) * perPx
       const h = Math.min(KERNEL_MAX_PX, Math.sqrt(h2Scale / density))
-      const hue = doppler ? signedHue(vy[i], HUE_SCALE.doppler) : 0
+      const hue =
+        hueLens === "doppler" ? signedHue(vy[i], HUE_SCALE.doppler) : hueLens === "origin" ? originHue(Math.max(0, tag)) : 0
       if (h < 1.25) {
-        depositCic(accum, rw, rh, sx, sy, weight)
-        if (doppler) depositCic(hueAccum, rw, rh, sx, sy, weight * hue)
+        depositCic(accum, rw, rh, sx, sy, wPart)
+        if (doppler) depositCic(hueAccum, rw, rh, sx, sy, wPart * hue)
         continue
       }
       // (1 − r²/h²)², which integrates to πh²/3 over the disc.
-      const norm = (3 * weight) / (Math.PI * h * h)
+      const norm = (3 * wPart) / (Math.PI * h * h)
       const invH2 = 1 / (h * h)
       const y0 = Math.max(0, Math.ceil(sy - h))
       const y1 = Math.min(rh - 1, Math.floor(sy + h))
@@ -769,11 +1050,11 @@ function sampleHue(px: number, py: number, scale: number, cx: number, cy: number
 function renderCosmos(c: Cosmos, out: Uint32Array): void {
   const p = params!
   const lens = activeLens()
-  const zoom = Math.max(COSMOS_MIN_ZOOM, view.zoom)
-  const scale = (Math.min(rw, rh) * 0.5 * zoom) / frameHalf
+  const cam = webCamera(c)
+  const scale = Math.min(rw, rh) * 0.5 * cam.zoom
   stats.scale = scale
-  const camX = wrapPeriodic(view.panX, c.half)
-  const camY = wrapPeriodic(view.panY, c.half)
+  const camX = cam.x
+  const camY = cam.y
 
   // Display vertices: within a FastPM step every particle moves on a straight
   // line linear in D, so this interpolation *is* the drift.
@@ -833,7 +1114,8 @@ function renderCosmos(c: Cosmos, out: Uint32Array): void {
     }
   }
 
-  if (!p.events || lens !== "density") return
+  drawRings(out, c, camX, camY, scale)
+  if (!p.events || lens !== "density" || flight) return
   const toScreen = (wx: number, wy: number): [number, number] => [
     wrapPeriodic(wx - camX, c.half) * scale + rw * 0.5,
     rh * 0.5 - wrapPeriodic(wy - camY, c.half) * scale,
@@ -877,8 +1159,9 @@ function renderIsolated(u: Universe, out: Uint32Array, elapsedSeconds: number, a
   const oy = rh * 0.5 + (frameCy + view.panY) * scale
   stats.scale = scale
 
-  const doppler = lens === "doppler"
-  splatParticles(u, scale, ox, oy, doppler)
+  const hueLens = lens === "doppler" || lens === "origin" ? lens : null
+  const doppler = hueLens !== null
+  splatParticles(u, scale, ox, oy, hueLens)
   syncLensLut()
 
   // Paused redraws are fresh static reconstructions. They must not brighten
@@ -933,6 +1216,27 @@ function renderIsolated(u: Universe, out: Uint32Array, elapsedSeconds: number, a
     autoGain += (want - autoGain) * ease
   }
 
+  // The web's last frame lingers a moment over the zoom-in as it spins up.
+  if (fadeFrom && fadeFrom.length === out.length) {
+    const f = (performance.now() - fadeT0) / FADE_MS
+    if (f >= 1) {
+      fadeFrom = null
+    } else {
+      const k = 1 - f * f
+      for (let i = 0; i < out.length; i++) {
+        const a = fadeFrom[i]
+        const b = out[i]
+        let o = 0
+        for (let sh = 0; sh < 32; sh += 8) {
+          const va = (a >>> sh) & 255
+          const vb = (b >>> sh) & 255
+          o |= Math.round(vb + (va - vb) * k) << sh
+        }
+        out[i] = o >>> 0
+      }
+    }
+  }
+
   if (!p.events || lens !== "density") return
   drawEvents(out, (x, y) => [x * scale + ox, oy - y * scale], 1)
 }
@@ -957,7 +1261,7 @@ function tick(): void {
 }
 
 function finished(): boolean {
-  return !!cosmos && cosmos.done && playhead >= 1
+  return inWeb() && cosmos!.done && playhead >= 1
 }
 
 function runTick(): void {
@@ -972,9 +1276,28 @@ function runTick(): void {
   renderRequested = false
 
   const t0 = performance.now()
-  if (advancing) {
-    if (cosmos) advanceCosmos(cosmos, dtSec, params.substeps)
-    else for (let s = 0; s < params.substeps; s++) uni!.step()
+  if (pendingGoto && inWeb()) {
+    // Deep link: fast-forward the web to the linked epoch, then dive.
+    const c = cosmos!
+    const t = performance.now()
+    while (!c.done && c.a < pendingGoto.a && performance.now() - t < 120) c.step()
+    aShow = c.a
+    playhead = playheadOf(c, aShow)
+    if (c.done || c.a >= pendingGoto.a) {
+      refreshCatalogue()
+      const want = pendingGoto.id
+      pendingGoto = null
+      const h = catalogue.find((k) => k.members.includes(want)) ?? catalogue[0]
+      if (h) dive(h)
+    }
+  } else if (advancing && !flight) {
+    if (inWeb()) advanceCosmos(cosmos!, dtSec, params.substeps)
+    else if (uni) for (let s = 0; s < params.substeps; s++) uni.step()
+  }
+  if (flight && flight.dir === 1 && performance.now() - flight.t0 >= FLIGHT_MS) land()
+  else if (flight && flight.dir === -1 && performance.now() - flight.t0 >= FLIGHT_MS) flight = null
+  if (inWeb() && !flight && (catalogueA === 0 || (advancing && clock - lastCatalogue > 1.2 && Math.log(cosmos!.a / catalogueA) > 0.04))) {
+    if (cosmos!.a > 0.06) refreshCatalogue()
   }
   const t1 = performance.now()
 
@@ -992,16 +1315,29 @@ function runTick(): void {
   const buf = pool.pop()!
   const out = new Uint32Array(buf)
   const t2 = performance.now()
-  if (cosmos) renderCosmos(cosmos, out)
-  else renderIsolated(uni!, out, dtSec, advancing)
+  if (inWeb() || (flight && cosmos)) {
+    renderCosmos(cosmos!, out)
+    // Keep the frame a dive is leaving, to fade from on landing.
+    if (flight && flight.dir === 1) {
+      if (!fadeFrom || fadeFrom.length !== out.length) fadeFrom = new Uint32Array(out.length)
+      fadeFrom.set(out)
+    }
+  } else {
+    renderIsolated(uni!, out, dtSec, advancing)
+  }
   const t3 = performance.now()
 
   if (advancing || stats.stepMs === 0) stats.stepMs = t1 - t0
   stats.drawMs = t3 - t2
   stats.quasars = quasars.length
   stats.bursts = burstTotal
-  if (cosmos) {
-    const c = cosmos
+  stats.level = level
+  stats.focus = focus
+  stats.haloes = catalogue.length
+  stats.units = units
+  stats.moving = flight !== null || pendingGoto !== null
+  if (inWeb()) {
+    const c = cosmos!
     const pm = c.pm.stats
     stats.cosmological = true
     stats.solver = "pm"
@@ -1037,6 +1373,11 @@ function runTick(): void {
     stats.growth = 1
     stats.done = false
     stats.epoch = ""
+    if (cosmos) {
+      // Below the web, the cosmic clock stands still at the epoch we left.
+      stats.a = aShow
+      stats.z = 1 / aShow - 1
+    }
   }
 
   ctx.postMessage({ t: "frame", buf, w: rw, h: rh, stats: { ...stats } }, [buf])
@@ -1051,8 +1392,8 @@ function kick(force = false): void {
     faulted ||
     pool.length === 0 ||
     rw === 0 ||
-    (params?.substeps === 0 && !renderRequested) ||
-    (finished() && !renderRequested)
+    (params?.substeps === 0 && !renderRequested && !flight && !pendingGoto && !fadeFrom) ||
+    (finished() && level === "web" && !renderRequested && !flight)
   ) return
   scheduled = true
   setTimeout(tick, 0)
@@ -1158,7 +1499,7 @@ ctx.addEventListener("message", (e: MessageEvent<ToWorker>) => {
         probeAt = msg.at
         if (!probeAt) {
           ctx.postMessage({ t: "probe", reading: null })
-        } else if (!wasProbing && cosmos && (!webValid || !phiValid)) {
+        } else if (!wasProbing && inWeb() && (!webValid || !phiValid)) {
           // The first probe needs fields the current lens may not compute.
           analysisDirty = true
           kick(true)
@@ -1167,6 +1508,35 @@ ctx.addEventListener("message", (e: MessageEvent<ToWorker>) => {
         }
         break
       }
+
+      case "dive": {
+        if (!inWeb() || flight || rw === 0) break
+        const at = rasterToWorld(msg.at.x, msg.at.y)
+        const h = haloAt(at.x, at.y)
+        if (h) {
+          dive(h)
+          kick(true)
+        }
+        break
+      }
+
+      case "ascend":
+        if (!flight) ascend()
+        kick(true)
+        break
+
+      case "goto":
+        if (cosmos) {
+          pendingGoto = { a: 1 / (1 + Math.max(0, msg.z)), id: msg.halo | 0 }
+          if (level !== "web") {
+            level = "web"
+            uni = null
+            focus = null
+            units = WEB_UNITS
+          }
+        }
+        kick(true)
+        break
 
       case "resize":
         if (msg.w > 0 && msg.h > 0 && (msg.w !== rw || msg.h !== rh)) resize(msg.w, msg.h)

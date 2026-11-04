@@ -38,6 +38,8 @@ import { K_BINS, kBin, kBinCentre } from "../src/features/filament/spectrum"
 import { HUE_BINS, buildLensPalette, lensGradient } from "../src/features/filament/palettes"
 import { Cosmos } from "../src/features/filament/cosmos"
 import { SheetRaster } from "../src/features/filament/sheet"
+import { findHalos, friendsOfFriends, measureHalo, progenitors } from "../src/features/filament/halos"
+import { zoomWorld } from "../src/features/filament/zoom"
 import { fft2, ParticleMesh } from "../src/features/filament/particle-mesh"
 import {
   depositCic,
@@ -657,6 +659,130 @@ for (const preset of ["disc", "collision", "stream", "collapse"] as const) {
     `  sheet     uniform lattice exact to ${flatErr.toExponential(1)} · periodic camera ${periodErr.toExponential(1)} · ` +
       `pan roll ${rollErr.toExponential(1)}`,
   )
+}
+
+
+// ---------------------------------------------------------------------------
+// The descent: haloes, zoom-ins, and a solver that survives escapers
+// ---------------------------------------------------------------------------
+
+// Friends-of-friends on a field with known answers: two tight clumps (one
+// straddling the periodic edge) and a sprinkling of loners.
+{
+  const rnd = mulberry32(31)
+  const n = 600
+  const x = new Float32Array(n)
+  const y = new Float32Array(n)
+  for (let i = 0; i < n; i++) {
+    if (i < 200) {
+      x[i] = 0.3 + (rnd() - 0.5) * 0.02
+      y[i] = -0.2 + (rnd() - 0.5) * 0.02
+    } else if (i < 350) {
+      // Across the x = ±1 seam.
+      x[i] = (rnd() < 0.5 ? 0.995 : -0.995) + (rnd() - 0.5) * 0.008
+      y[i] = 0.5 + (rnd() - 0.5) * 0.02
+    } else {
+      x[i] = -1 + 2 * rnd()
+      y[i] = -1 + 2 * rnd()
+    }
+  }
+  const groups = friendsOfFriends(x, y, n, 0.01, 24)
+  const sizes = groups.map((g) => g.length).sort((a, b) => b - a)
+  if (sizes.length !== 2 || sizes[0] !== 200 || sizes[1] !== 150) {
+    fail(`friends-of-friends found ${JSON.stringify(sizes)}, expected [200, 150]`)
+  }
+  const zero = new Float32Array(n)
+  const seam = groups.find((g) => g.length === 150)
+  const h = seam ? measureHalo(seam, x, y, zero, zero, 1) : null
+  if (!h || Math.abs(Math.abs(h.x) - 0.995) > 0.01) fail(`seam halo centred at ${h?.x.toFixed(3)}, expected ±0.995`)
+  console.log(`  haloes    FoF ${JSON.stringify(sizes)} · seam-straddling centre ${h?.x.toFixed(3)}`)
+}
+
+// On a real run: haloes form, grow, and keep their Lagrangian identity.
+{
+  const c = new Cosmos({ seed: 9, grid: 128, meshSize: 128 })
+  while (!c.done && c.a < 0.6) c.step()
+  const early = findHalos(c.x, c.y, c.vx, c.vy, c.grid, c.a)
+  while (!c.done) c.step()
+  const late = findHalos(c.x, c.y, c.vx, c.vy, c.grid, c.a)
+  const massEarly = early.reduce((s, h) => s + h.members.length, 0) / c.n
+  const massLate = late.reduce((s, h) => s + h.members.length, 0) / c.n
+  if (!(late.length > 0 && massLate > massEarly)) {
+    fail(`haloes did not grow: ${(massEarly * 100).toFixed(1)}% → ${(massLate * 100).toFixed(1)}% of mass`)
+  }
+  const tree = progenitors(late.slice(0, 1), early, c.n)[0]
+  if (early.length === 0) fail("no haloes at z = 0.67 to trace back to")
+  if (!(tree.main !== null && tree.fraction > 0.1)) {
+    fail(`largest halo today has no clear progenitor (${tree.fraction.toFixed(2)})`)
+  }
+
+  // Zoom into the biggest: mass sums to one, the frame is at rest, and the
+  // halo starts near virial equilibrium.
+  const big = late[0]
+  const zw = zoomWorld(c, big, 3000, 1)
+  const m = zw.initial.masses
+  let mass = 0, px = 0, py = 0, mx = 0
+  for (let i = 0; i < zw.nMass; i++) {
+    mass += m.m[i]
+    px += m.m[i] * m.vx[i]
+    py += m.m[i] * m.vy[i]
+    mx += m.m[i] * m.x[i]
+  }
+  if (Math.abs(mass - 1) > 1e-4) fail(`zoom-in mass ${mass.toFixed(5)}`)
+  if (Math.hypot(px, py) > 1e-5 || Math.abs(mx) > 1e-5) fail("zoom-in not in its centre-of-mass frame")
+  const u = new Universe({
+    preset: "disc", seed: 1, nMass: zw.nMass, nTracer: 0, order: 4, softening: 1,
+    initial: zw.initial, tidal: zw.tidal,
+  })
+  for (let s = 0; s < 150; s++) u.step()
+  let bad = 0
+  for (let i = 0; i < u.nMass; i++) if (!Number.isFinite(u.masses.x[i]) || !Number.isFinite(u.masses.vx[i])) bad++
+  const d = isolatedDiagnostics(u.masses, u.nMass)
+  if (bad > 0) fail(`${bad} non-finite particles in the zoom-in`)
+  if (!(d.virial > 0.3 && d.virial < 3)) fail(`zoom-in virial ratio ${d.virial.toFixed(2)} after 150 steps`)
+  if (!(zw.units.kpc > 1 && zw.units.kms > 1 && zw.units.myr > 1)) fail("zoom-in units are not physical")
+  console.log(
+    `  zoom-in   ${late.length} haloes today (${(massLate * 100).toFixed(0)}% of mass) · progenitor share ` +
+      `${(tree.fraction * 100).toFixed(0)}% · ${zw.nMass} particles, Q ${d.virial.toFixed(2)} · ` +
+      `1 unit = ${zw.units.kpc.toFixed(0)} kpc, ${zw.units.kms.toFixed(0)} km/s, ${zw.units.myr.toFixed(0)} Myr`,
+  )
+}
+
+// An escaper far outside the tree's box: its pull must be the whole system's
+// monopole, not a local expansion evaluated far outside its convergence disc.
+{
+  const n = 400
+  const rnd = mulberry32(5)
+  const x = new Float32Array(n)
+  const y = new Float32Array(n)
+  const m = new Float32Array(n).fill(1 / n)
+  for (let i = 0; i < n - 1; i++) {
+    x[i] = (rnd() - 0.5) * 0.5
+    y[i] = (rnd() - 0.5) * 0.5
+  }
+  x[n - 1] = 9
+  y[n - 1] = 0
+  const fmm = new Fmm(6)
+  fmm.setBox(0, 0, 0.3)
+  const perm = fmm.sort(x, y, n, 4)
+  const sx = new Float32Array(n), sy = new Float32Array(n), sm = new Float32Array(n)
+  for (let k = 0; k < n; k++) {
+    sx[k] = x[perm[k]]
+    sy[k] = y[perm[k]]
+    sm[k] = m[perm[k]]
+  }
+  fmm.build(sx, sy, sm)
+  const ax = new Float32Array(n)
+  const ay = new Float32Array(n)
+  fmm.evalMasses(sx, sy, sm, ax, ay, 1, 1e-6)
+  const k = [...perm].indexOf(n - 1)
+  const expect = -(1 - 1 / n) / 9
+  const err = Math.abs(ax[k] / expect - 1)
+  let worst = 0
+  for (let i = 0; i < n; i++) worst = Math.max(worst, Math.hypot(ax[i], ay[i]))
+  if (!(err < 0.05)) fail(`escaper pull off by ${(err * 100).toFixed(1)}%`)
+  if (!(worst < 100)) fail(`an escaper made the field explode: max |a| ${worst.toExponential(2)}`)
+  console.log(`  escaper   monopole pull within ${(err * 100).toFixed(2)}% · max |a| ${worst.toFixed(1)}`)
 }
 
 

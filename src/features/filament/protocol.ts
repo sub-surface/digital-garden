@@ -24,7 +24,37 @@ import type { DensityPdf, WebCensus, WebClass } from "./analysis"
  * How the field is coloured. Brightness is always surface density; a lens adds
  * a second quantity as hue, so structure stays legible under every reading.
  */
-export type LensName = "density" | "streams" | "web" | "flow" | "potential" | "redshift" | "doppler"
+export type LensName = "density" | "streams" | "web" | "flow" | "potential" | "redshift" | "doppler" | "origin"
+
+/**
+ * The three nested scales of the descent: the cosmic web, one halo's
+ * zoom-in, and the black hole at its centre.
+ */
+export type LevelName = "web" | "halo" | "nucleus"
+
+/** What one code unit of the current world is, physically. */
+export interface WorldUnits {
+  /** kpc per code length (comoving in the web, physical below it). */
+  kpc: number
+  /** km/s per code velocity. */
+  kms: number
+  /** Myr per code time. */
+  myr: number
+}
+
+/** A halo as the page shows it: hover card, breadcrumb, URL. */
+export interface HaloCard {
+  /** Smallest lattice index among members; stable, and deep-linkable. */
+  id: number
+  members: number
+  massSun: number
+  radiusKpc: number
+  sigmaKms: number
+  /** Rotational support, 0 (hot) to 1 (cold disc). */
+  spin: number
+  /** Redshift at which the halo was found. */
+  z: number
+}
 
 export interface SimParams {
   preset: PresetName
@@ -82,6 +112,12 @@ export type ToWorker =
   /** Read the field under a raster pixel; null stops probing. */
   | { t: "probe"; at: { x: number; y: number } | null }
   | { t: "replay" }
+  /** Dive into whatever lies under a raster pixel (a halo, a nucleus). */
+  | { t: "dive"; at: { x: number; y: number } }
+  /** Back up one level. */
+  | { t: "ascend" }
+  /** Deep link: run Cosmos to redshift z, then dive into the halo holding lattice index `halo`. */
+  | { t: "goto"; z: number; halo: number }
   | { t: "stop" }
 
 export interface SimStats {
@@ -128,6 +164,16 @@ export interface SimStats {
   quasars: number
   /** Starbursts / supernovae fired since the run began. */
   bursts: number
+
+  /** Where in the descent the view is. */
+  level: LevelName
+  /** The halo being explored, below the web. */
+  focus: HaloCard | null
+  /** Haloes in the current catalogue. */
+  haloes: number
+  units: WorldUnits
+  /** True while a dive or ascent is animating. */
+  moving: boolean
 }
 
 /** Measurements of the periodic box, posted a few times a second. */
@@ -183,11 +229,16 @@ export interface ProbeReading {
   phi?: number
   /** ∇·v / H, if the flow lens is active. */
   theta?: number
+  /** A halo under the pointer, which a click would dive into. */
+  halo?: HaloCard
+  units: WorldUnits
 }
 
 export type FromWorker =
   | { t: "frame"; buf: ArrayBuffer; w: number; h: number; stats: SimStats }
   | { t: "instruments"; data: Instruments }
   | { t: "probe"; reading: ProbeReading | null }
+  /** The descent changed level; the page resets its camera to match. */
+  | { t: "level"; level: LevelName; focus: HaloCard | null; view?: ViewParams }
   | { t: "ready" }
   | { t: "fault"; message: string }
