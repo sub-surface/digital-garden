@@ -98,7 +98,7 @@ const GAMES: GameCard[] = [
     href: "filament",
     name: "FILAMENT",
     blurb:
-      "A periodic universe from recombination to now, on a real ΛCDM clock. Up to a quarter-million fully gravitating particles form a multiscale cosmic web under a fast particle-mesh solver; isolated galaxies retain exact 2D Fast Multipole gravity. Watch the CMB fade, the dark ages pass, and quasars light at cosmic noon.",
+      "One continuous zoom from the cosmic web to a black hole. A universe from recombination to now on a real ΛCDM clock, drawn from its folded dark-matter sheet; scroll into any halo and it is resimulated as a galaxy on the fast multipole method; keep going and its heart is a black hole on exact geodesics. Scrub cosmic time; time runs in the deepest layer you can see.",
     live: true,
     section: "featured",
   },
@@ -106,7 +106,7 @@ const GAMES: GameCard[] = [
     href: "filament?level=nucleus",
     name: "GEODESIC",
     blurb:
-      "The bottom of FILAMENT's descent: a black hole, exactly. Throw bodies onto Schwarzschild geodesics and watch rosettes precess and plunges freeze at the horizon; look through a lensing camera at the shadow and its photon ring; drop a probe and compare its clock with yours. Climb out to the cosmic web.",
+      "The bottom of FILAMENT's descent: a black hole, exactly. S-stars on their wide ellipses, and near the hole rosettes that precess, zoom-whirls, and plunges that freeze at the horizon, all on Schwarzschild geodesics; the shadow at 3√3 M and a gas ring blazing blue on its approaching side. Throw your own bodies in. To arrive here from the cosmic web, open FILAMENT and keep zooming.",
     live: true,
     section: "featured",
   },

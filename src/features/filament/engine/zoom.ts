@@ -25,7 +25,7 @@ import { PATCH_MPC } from "./cosmology"
 import type { Cosmos } from "./cosmos"
 import { COSMO_KMS, environmentTide, type Halo } from "./halos"
 import { wrapPeriodic } from "./particle-mesh"
-import { TAG, type Cloud, type InitialState } from "./presets"
+import { TAG, type Cloud, type InitialState } from "./ics"
 
 /** Region kept around the halo, in halo radii. */
 const REGION = 2.5

@@ -16,9 +16,10 @@
  * checks cover FastPM's exact linear growth, the recombination spectrum, σ₈,
  * a full recombination-to-today run, and the sheet renderer's mass and tiling.
  */
-import { Fmm, applyPerm, directAccel, chooseDepth } from "../src/features/filament/fmm"
-import { Universe } from "../src/features/filament/universe"
-import { PATCH_SOURCE, makeInitialState, type DarkMatter } from "../src/features/filament/presets"
+import { Fmm, applyPerm, directAccel, chooseDepth } from "../src/features/filament/engine/fmm"
+import { Universe } from "../src/features/filament/engine/universe"
+import { PATCH_SOURCE, type DarkMatter } from "../src/features/filament/engine/ics"
+import { makeInitialState } from "./filament-fixtures"
 import {
   A_REC,
   ageOf,
@@ -27,30 +28,32 @@ import {
   sampleGrowth,
   sourceFor,
   HUBBLE_TIME_GYR,
-} from "../src/features/filament/cosmology"
+} from "../src/features/filament/engine/cosmology"
 import {
   MeshAnalysis,
   densityPdf,
   depositPeriodic,
   isolatedDiagnostics,
-} from "../src/features/filament/analysis"
-import { K_BINS, kBin, kBinCentre } from "../src/features/filament/spectrum"
-import { HUE_BINS, buildLensPalette, lensGradient } from "../src/features/filament/palettes"
-import { Cosmos } from "../src/features/filament/cosmos"
-import { SheetRaster } from "../src/features/filament/sheet"
-import { findHalos, friendsOfFriends, measureHalo, progenitors } from "../src/features/filament/halos"
-import { zoomWorld } from "../src/features/filament/zoom"
+} from "../src/features/filament/engine/analysis"
+import { K_BINS, kBin, kBinCentre } from "../src/features/filament/engine/spectrum"
+import { HUE_BINS, buildLensPalette, lensGradient } from "../src/features/filament/render/palettes"
+import { Cosmos } from "../src/features/filament/engine/cosmos"
+import { SheetRaster } from "../src/features/filament/render/sheet"
+import { findHalos, friendsOfFriends, measureHalo, progenitors } from "../src/features/filament/engine/halos"
+import { zoomWorld } from "../src/features/filament/engine/zoom"
 import {
   B_CRIT, HORIZON, ISCO, MARGINALLY_BOUND, circularOrbit, deflection, effectivePotential, infall, infallEta,
   infallRedshift, makeBody, measurePrecession, properStep, stepCoordinate, stepProper, type Body,
-} from "../src/features/filament/geodesic"
-import { fft2, ParticleMesh } from "../src/features/filament/particle-mesh"
+} from "../src/features/filament/engine/geodesic"
+import { fft2, ParticleMesh } from "../src/features/filament/engine/particle-mesh"
 import {
   depositCic,
   resampleConservative,
   timedDecay,
-} from "../src/features/filament/density-raster"
+} from "../src/features/filament/render/density-raster"
 import { mulberry32 } from "../src/lib/composer/rng"
+import { Camera, type Stack } from "../src/features/filament/layers/layer"
+import { NucleusLayer } from "../src/features/filament/layers/nucleus"
 import { execFileSync } from "node:child_process"
 
 if (process.env.SKIP_FILAMENT === "true" || process.env.SKIP_FILAMENT === "1") {
@@ -429,7 +432,7 @@ for (const n of [8, 32]) {
 // ---------------------------------------------------------------------------
 
 for (const preset of ["disc", "collision", "stream", "collapse"] as const) {
-  const u = new Universe({ preset, seed: 4242, nMass: 2000, nTracer: 1000, order: 4, softening: 1 })
+  const u = new Universe({ initial: makeInitialState(preset, 4242, 2000, 1000), order: 4, softening: 1 })
   const steps = 600
   const r0 = u.rmsRadius()
   for (let i = 0; i < steps; i++) u.step()
@@ -735,7 +738,7 @@ for (const preset of ["disc", "collision", "stream", "collapse"] as const) {
   if (Math.abs(mass - 1) > 1e-4) fail(`zoom-in mass ${mass.toFixed(5)}`)
   if (Math.hypot(px, py) > 1e-5 || Math.abs(mx) > 1e-5) fail("zoom-in not in its centre-of-mass frame")
   const u = new Universe({
-    preset: "disc", seed: 1, nMass: zw.nMass, nTracer: 0, order: 4, softening: 1,
+    order: 4, softening: 1,
     initial: zw.initial, tidal: zw.tidal,
   })
   for (let s = 0; s < 150; s++) u.step()
@@ -984,6 +987,96 @@ for (const preset of ["disc", "collision", "stream", "collapse"] as const) {
   )
 }
 
+// The camera through nested frames: every change of frame must be exact, a
+// zoom must hold the point beneath it fixed across a change of frame, and the
+// hand-over between frames must follow the zoom both ways — over the fifteen
+// orders of magnitude from the web to the hole.
+{
+  const fake = (extent: number) => ({ kind: "web" as const, extent, units: { kpc: 1, kms: 1, myr: 1 }, step() {}, render() {} })
+  const layersFake = [fake(1), fake(2.25), fake(5e4)]
+  const anchors = [
+    { x: 0, y: 0, unit: 1 },
+    { x: 0.98, y: -0.37, unit: 0.0135 },
+    { x: 0.012, y: -0.004, unit: 1.4e-14 },
+  ]
+  const fakeStack: Stack = {
+    layer: (j) => layersFake[j] ?? null,
+    anchor: (j) => anchors[j],
+    attached: (j) => j >= 0 && j < 3,
+    periodic: (j) => j === 0,
+  }
+  const W = 800, H = 500
+  const cam = new Camera(fakeStack)
+  cam.scale = 0.5 * H
+  let worst = 0
+  // Fly from the whole web down to the hole, always aiming at the anchors.
+  const target = { x: 0.98 + 0.0135 * 0.012, y: -0.37 + 0.0135 * -0.004 }
+  cam.x = 0.9
+  cam.y = -0.3
+  let steps = 0
+  while (cam.depth < 2 || cam.fill(2, W, H) < 100) {
+    const v0 = cam.viewIn(0, W, H)
+    // Pull toward the hole in web coordinates, then zoom about the centre.
+    const dx = target.x - v0.x
+    const dy = target.y - v0.y
+    cam.pan((-dx * v0.scale) * 0.2, (dy * v0.scale) * 0.2)
+    const before = cam.viewIn(0, W, H)
+    cam.zoomAt(W * 0.5, H * 0.5, 1.3, W, H)
+    cam.normalise(W, H)
+    const after = cam.viewIn(0, W, H)
+    worst = Math.max(worst, Math.abs(after.x - before.x) * after.scale, Math.abs(after.y - before.y) * after.scale)
+    if (++steps > 400) break
+  }
+  if (cam.depth !== 2) fail(`camera never handed over to the deepest frame (depth ${cam.depth} after ${steps} zooms)`)
+  // Round trip: down to the hole and back to the web is the identity.
+  const deep = cam.viewIn(2, W, H)
+  const top = cam.viewIn(0, W, H)
+  cam.moveTo(0, W, H)
+  const again = cam.viewIn(2, W, H)
+  const trip = Math.max(Math.abs(again.x - deep.x), Math.abs(again.y - deep.y)) * deep.scale
+  cam.moveTo(2, W, H)
+  // Zoom back out: the camera climbs frames as the fill drops.
+  let out = 0
+  while (cam.depth > 0 && out++ < 400) {
+    cam.zoomAt(W * 0.5, H * 0.5, 1 / 1.3, W, H)
+    cam.normalise(W, H)
+  }
+  if (cam.depth !== 0) fail("camera never climbed back to the web")
+  if (!(worst < 1e-3)) fail(`zoom about the centre drifted ${worst.toExponential(2)} px across frames`)
+  // Held in the web frame, the hole's position is only good to ~1e-16 of the
+  // box — a few M — which is exactly why the camera lives in the deepest frame.
+  if (!(trip < 2)) fail(`frame round trip off by ${trip.toExponential(2)} px at the hole`)
+  console.log(
+    `  camera    ${steps} zooms web → hole (${(Math.log10(top.scale / (0.5 * H))).toFixed(1)} decades) · ` +
+      `fixed point ${worst.toExponential(1)} px · round trip ${trip.toExponential(1)} px · climbs back ✓`,
+  )
+}
+
+// The nucleus: S-stars stay bound for many orbits on the Kepler clock, the
+// view renders without holes, and the shadow is where light capture puts it.
+{
+  const nuc = new NucleusLayer(4.3e6, null)
+  const W = 320, H = 200
+  const half = 42
+  const view = { x: 0, y: 0, scale: (0.5 * H) / half, w: W, h: H }
+  const out = new Uint32Array(W * H)
+  for (let k = 0; k < 120; k++) nuc.step(1 / 60, 1, view)
+  nuc.render(out, view, { lens: "orbits", exposure: 1, accent: [0.4, 0.5, 0.7], events: true, trails: 0.9, dt: 1 / 60, fading: false })
+  let zeros = 0
+  for (let i = 0; i < out.length; i++) if (out[i] === 0) zeros++
+  if (zeros > 0) fail(`nucleus left ${zeros} pixels undrawn`)
+  // The shadow: a pixel at b = 5.0 M is black, one at b = 5.5 M is not.
+  const px = (b: number) => out[Math.round(H / 2) * W + Math.round(W / 2 + b * view.scale)] & 0xffffff
+  if (px(4.6) !== 0) fail("inside 3√3 M is not black")
+  if (px(5.6) === 0) fail("just outside 3√3 M is black")
+  const stars = nuc.bodies.filter((b) => b.name.startsWith("S"))
+  const wide = { x: 0, y: 0, scale: (0.5 * H) / 5e4, w: W, h: H }
+  for (let k = 0; k < 600; k++) nuc.step(1 / 30, 3, wide)
+  const lost = stars.filter((b) => b.captured || !(b.r > 100 && b.r < 1e5))
+  if (lost.length) fail(`${lost.length} S-stars left their orbits on the Kepler clock`)
+  console.log(`  nucleus   shadow edge at 3√3 M ✓ · ${stars.length} S-stars bound after ${(nuc.time / (2 * Math.PI * Math.pow(24300, 1.5))).toFixed(1)} S2 orbits`)
+}
+
 // Palettes: tables are fully populated, legends parse.
 {
   const lut = new Uint32Array(HUE_BINS * 256)
@@ -1002,5 +1095,7 @@ if (failures > 0) {
 console.log(
   `FMM: ${clouds.length} distributions × 4 orders vs direct N² — converges as expected, depth-independent.\n` +
     `Cosmos: FastPM linear exactness, σ₈, recombination spectrum, full nonlinear run, sheet mass and tiling.\n` +
-    `Instruments: spectrum vs linear theory, T-web, potential, flow, PDF, virial, rotation curve.`,
+    `Instruments: spectrum vs linear theory, T-web, potential, flow, PDF, virial, rotation curve.
+` +
+    `Descent: nested camera frames web → hole, the shadow, S-stars on the Kepler clock.`,
 )

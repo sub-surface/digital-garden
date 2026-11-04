@@ -1,5 +1,5 @@
 /**
- * FILAMENT — the isolated worlds: discs, mergers, streams and collapses.
+ * FILAMENT — a galaxy's own N-body world, on the fast multipole method.
  *
  * Kept separate from `sim.worker.ts` so the physics is headlessly testable
  * (`scripts/test-fmm.ts`). The worker owns pixels, events and the camera; this
@@ -12,18 +12,14 @@
  */
 
 import { Fmm, applyPerm, chooseDepth, MAX_DEPTH } from "./fmm"
-import { makeInitialState, type Cloud, type InitialState, type PresetName } from "./presets"
+import type { Cloud, InitialState } from "./ics"
 
 export interface UniverseOptions {
-  preset: PresetName
-  seed: number
-  nMass: number
-  nTracer: number
+  /** The world to evolve: a zoom-in cut from the web (`zoom.ts`). */
+  initial: InitialState
   order: number
-  /** Multiplier on the preset's softening length. */
+  /** Multiplier on the world's own softening length. */
   softening: number
-  /** A ready-made world (a zoom-in), used instead of the preset. */
-  initial?: InitialState
   /**
    * Tidal tensor of the outside universe, [T_xx, T_xy, T_yy]: every particle
    * feels a = −T·r about the origin, the linear stretch of a distant field.
@@ -81,11 +77,11 @@ export class Universe {
   }
 
   constructor(opts: UniverseOptions) {
-    this.nMass = opts.nMass
-    this.nTracer = opts.nTracer
+    const init = opts.initial
+    this.nMass = init.masses.x.length
+    this.nTracer = init.tracers.x.length
     this.softeningScale = opts.softening
 
-    const init = opts.initial ?? makeInitialState(opts.preset, opts.seed, opts.nMass, opts.nTracer)
     this.tidal = opts.tidal ?? null
     this.masses = init.masses
     this.tracers = init.tracers
@@ -93,11 +89,11 @@ export class Universe {
     this.softeningBase = init.softening
     this.extent = init.extent
 
-    this.ax = new Float32Array(opts.nMass)
-    this.ay = new Float32Array(opts.nMass)
-    this.tax = new Float32Array(opts.nTracer)
-    this.tay = new Float32Array(opts.nTracer)
-    this.scratch = new Float32Array(Math.max(opts.nMass, 1))
+    this.ax = new Float32Array(this.nMass)
+    this.ay = new Float32Array(this.nMass)
+    this.tax = new Float32Array(this.nTracer)
+    this.tay = new Float32Array(this.nTracer)
+    this.scratch = new Float32Array(Math.max(this.nMass, 1))
     this.fmm = new Fmm(opts.order)
 
     // Prime the accelerations so the first half-kick is not a free fall.
@@ -116,6 +112,11 @@ export class Universe {
 
   private get softening(): number {
     return this.softeningBase * this.softeningScale
+  }
+
+  /** Plummer softening length: the smallest scale this world resolves. */
+  get softeningLength(): number {
+    return this.softening
   }
 
   /**

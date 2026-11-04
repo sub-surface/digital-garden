@@ -14,8 +14,8 @@
  * and the potential are read *on* the structure, never instead of it.
  */
 
-import type { Afterglow } from "./cosmology"
-import type { LensName, LevelName } from "./protocol"
+import type { Afterglow } from "../engine/cosmology"
+import type { LensName, LevelName } from "../protocol"
 
 export type Rgb = [number, number, number]
 
@@ -319,9 +319,9 @@ export const LENSES: LensInfo[] = [
     name: "density",
     label: "Density",
     description:
-      "Surface density. In Cosmos it is drawn from the dark-matter sheet itself, on a log scale from a tenth of the mean to six hundred times it; in the isolated worlds, on an asinh stretch, the way survey images show faint arms and bright cores together.",
+      "Surface density. In the web it is drawn from the dark-matter sheet itself, on a log scale from a tenth of the mean to six hundred times it; in a galaxy, from its stars and dark matter with kernels sized to the local crowding, the way survey images show faint arms and bright cores together.",
     scale: ["empty", "dense"],
-    levels: ["web", "halo"],
+    levels: ["web", "galaxy"],
   },
   {
     name: "streams",
@@ -364,53 +364,33 @@ export const LENSES: LensInfo[] = [
     levels: ["web"],
   },
   {
+    name: "orbits",
+    label: "Face-on",
+    description:
+      "Looking down on the hole's equatorial plane. Bodies follow exact Schwarzschild geodesics in the distant observer's time: S-stars far out, and near the hole a precessing rosette, a zoom-whirl, an orbit just outside the last stable one, and a plunge that freezes at the horizon. Seen face-on, the gas ring's light is shifted only by gravity and time dilation. The sky behind is bent through the exact deflection angle: the shadow at 3√3 M, and the host galaxy drawn into an Einstein ring. Click to place an orbit; drag to throw a body.",
+    scale: ["horizon 2M", "photon 3M", "ISCO 6M"],
+    levels: ["nucleus"],
+  },  {
     name: "doppler",
     label: "Doppler",
     description:
-      "Line-of-sight velocity along the vertical, as a spectrograph would measure it. A rotating disc shows the classic dipole: one side approaching, one receding.",
+      "Line-of-sight velocity along the vertical, as a spectrograph below the picture would measure it. A rotating disc shows the classic dipole: one side approaching, one receding. Around the black hole the shift is relativistic, g = √(1 − 3M/r)/(1 + Ωx): the approaching side of the gas ring blazes blue, the receding side dims to red.",
     scale: ["approaching", "at rest", "receding"],
-    levels: ["halo"],
+    levels: ["galaxy", "nucleus"],
   },
   {
     name: "origin",
     label: "Origin",
     description:
-      "Where each particle came from. In a zoom-in: the halo's own dark matter, the stars of its disc, and dark matter still falling in from the web. In the lab worlds: which galaxy each star began in.",
+      "Where each particle came from: the halo's own dark matter, the stars of its disc, and dark matter still falling in from the web.",
     scale: ["halo", "stars", "companion", "infall"],
-    levels: ["halo"],
+    levels: ["galaxy"],
   },
+
 ]
 
-LENSES.push(
-  {
-    name: "orbits",
-    label: "Orbits",
-    description:
-      "The equatorial plane from above, with test bodies on exact Schwarzschild geodesics, in the distant observer's time. Click to place a circular orbit; drag to throw a body. The horizon is 2M, the photon sphere 3M (dashed), the last stable orbit 6M.",
-    scale: ["horizon 2M", "photon 3M", "ISCO 6M"],
-    levels: ["nucleus"],
-  },
-  {
-    name: "shadow",
-    label: "Shadow",
-    description:
-      "What a camera 40M from the hole sees: every ray bent through the exact deflection angle. The galaxy behind wraps into an Einstein ring; rays aimed inside b = 3√3 M fall in, leaving the shadow, 2.6 times the horizon's size.",
-    scale: ["shadow", "photon ring", "sky"],
-    levels: ["nucleus"],
-  },
-  {
-    name: "clocks",
-    label: "Clocks",
-    description:
-      "A probe dropped from rest, flashing home at fixed intervals of its own time. From afar its flashes stretch and redden and it never arrives; riding along, it crosses the horizon at a finite time and meets r = 0 soon after. Click to drop from a new height.",
-    scale: ["blue", "redshifted"],
-    levels: ["nucleus"],
-  },
-)
-
-export function lensesFor(level: LevelName, cosmic = true): LensInfo[] {
-  // Lab worlds are halo-level but have no cosmic web above them.
-  return LENSES.filter((l) => l.levels.includes(level) && (cosmic || level !== "web"))
+export function lensesFor(level: LevelName): LensInfo[] {
+  return LENSES.filter((l) => l.levels.includes(level))
 }
 
 /** CSS gradient for a lens legend, drawn from the very ramp the worker uses. */

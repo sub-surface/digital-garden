@@ -1,42 +1,38 @@
 /**
  * The FILAMENT page/worker contract.
  *
- * Everything expensive — integration, force solve, halo finding, analysis,
- * splatting — happens in the worker. The main thread only ever hands over
- * parameters and blits a finished pixel buffer, so a 40 ms simulation step
- * never touches the site's frame budget, its scroll, or its other canvases.
+ * Everything expensive (integration, force solve, halo finding, analysis,
+ * rasterising) happens in the worker, and so does the camera: the page sends
+ * gestures — pan by these pixels, zoom by this factor about that point — and
+ * the worker moves one camera through the nested layers (`layers/layer.ts`).
+ * The main thread only blits finished pixel buffers.
  *
  * Pixel buffers are *transferred*, not copied, and handed straight back after
- * being drawn. Two of them circulate, which is enough for the worker to be
- * computing frame n+1 while the page paints frame n, and few enough that the
- * pool doubles as backpressure: if the page stalls, the worker runs out of
- * buffers and stops rendering instead of queueing frames nobody will see.
+ * being drawn. Two circulate: enough for the worker to compute frame n+1 while
+ * the page paints frame n, few enough that the pool doubles as backpressure.
  *
  * Instruments (spectra, censuses, profiles) travel separately, a few times a
- * second, as plain arrays: they change at the analysis cadence, not per frame.
+ * second, as plain arrays.
  */
 
-import type { CosmologyName } from "./cosmology"
-import type { DarkMatter, PresetName } from "./presets"
-import type { DensityPdf, WebCensus, WebClass } from "./analysis"
-import type { NucleusReadout } from "./nucleus"
+import type { CosmologyName } from "./engine/cosmology"
+import type { DarkMatter } from "./engine/ics"
+import type { DensityPdf, WebCensus, WebClass } from "./engine/analysis"
+import type { NucleusReadout } from "./layers/nucleus"
 
 /**
- * How the field is coloured. Brightness is always surface density; a lens adds
- * a second quantity as hue, so structure stays legible under every reading.
+ * How the field is coloured. Brightness is always the light (or mass); a lens
+ * adds a second quantity as hue, so structure stays legible under every one.
  */
 export type LensName =
   | "density" | "streams" | "web" | "flow" | "potential" | "redshift"
   | "doppler" | "origin"
-  | "orbits" | "shadow" | "clocks"
+  | "orbits"
 
-/**
- * The three nested scales of the descent: the cosmic web, one halo's
- * zoom-in, and the black hole at its centre.
- */
-export type LevelName = "web" | "halo" | "nucleus"
+/** The three nested scales: the cosmic web, one halo's galaxy, its black hole. */
+export type LevelName = "web" | "galaxy" | "nucleus"
 
-/** What one code unit of the current world is, physically. */
+/** What one code unit of a layer is, physically. */
 export interface WorldUnits {
   /** kpc per code length (comoving in the web, physical below it). */
   kpc: number
@@ -61,193 +57,167 @@ export interface HaloCard {
 }
 
 export interface SimParams {
-  preset: PresetName
   seed: number
+  /** Massive particles a galaxy may spend (dark matter + stars). */
   nMass: number
-  nTracer: number
-  /** Cosmos: width of the Lagrangian lattice; particles = grid². */
+  /** The web's Lagrangian lattice width (particles = grid²) and force mesh. */
   grid: number
-  /** Cosmos: width of the periodic force mesh. */
   meshSize: number
-  /** Expansion order p — the accuracy dial. Higher is slower and truer. */
+  /** FMM expansion order for galaxies. */
   order: number
-  /**
-   * Playback rate; 0 pauses. Isolated worlds take this many leapfrog steps
-   * per frame; Cosmos advances its clock this many times faster than ▶.
-   */
+  /** Playback rate; 0 pauses. */
   substeps: number
-  /** Multiplier on the preset's softening length. */
-  softening: number
-  /** Brightness multiplier for the density tone map. */
+  /** Brightness multiplier. */
   exposure: number
   /** Trail persistence authored at 60 Hz; the worker converts it to wall time. */
   trails: number
-  /** Draw quasars, starbursts and the recombination afterglow. */
+  /** Draw quasars, starbursts, the recombination afterglow and halo rings. */
   events: boolean
-  /** Colouring of the field. */
   lens: LensName
-  /** Background universe for Cosmos. */
   cosmology: CosmologyName
-  /** Free-streaming species for Cosmos. */
   darkMatter: DarkMatter
-  /** σ₈ for Cosmos: rms linear contrast today in 8 Mpc top-hats. */
+  /** σ₈: rms linear contrast today in 8 Mpc top-hats. */
   amplitude: number
   /** Measure and post instrument readings. */
   instruments: boolean
 }
 
-export interface ViewParams {
-  /** Zoom multiplier over the framed extent. */
-  zoom: number
-  /** Pan offset in world units. */
-  panX: number
-  panY: number
-  /** Follow the particle distribution automatically. */
-  autoFit: boolean
+/** Where to go once the world exists: a deep link. */
+export interface Destination {
+  /** Redshift to run the web to. */
+  z: number
+  /** Lattice index of a member of the halo to descend into; −1 for the heaviest. */
+  halo: number
+  /** Carry on down to its black hole. */
+  nucleus: boolean
 }
 
+type Px = { x: number; y: number }
+
 export type ToWorker =
-  | { t: "start"; params: SimParams; view: ViewParams; accent: [number, number, number] }
+  | { t: "start"; params: SimParams; accent: [number, number, number]; destination?: Destination; lone?: boolean }
   | { t: "params"; params: Partial<SimParams>; reseed?: boolean }
-  | { t: "view"; view: ViewParams }
   | { t: "accent"; accent: [number, number, number] }
   | { t: "resize"; w: number; h: number }
   | { t: "recycle"; buf: ArrayBuffer }
+  /** Pan the camera by a drag of (dx, dy) raster pixels. */
+  | { t: "pan"; dx: number; dy: number }
+  /** Zoom by `factor` about raster pixel `at`. */
+  | { t: "zoom"; at: Px; factor: number }
+  /** Frame the current layer whole. */
+  | { t: "home" }
   /** Read the field under a raster pixel; null stops probing. */
-  | { t: "probe"; at: { x: number; y: number } | null }
-  | { t: "replay" }
-  /** Dive into whatever lies under a raster pixel (a halo, a nucleus). */
-  | { t: "dive"; at: { x: number; y: number } }
-  /** Back up one level. */
-  | { t: "ascend" }
-  /** Scrub the web's history to scale factor a (backwards replays from a snapshot). */
+  | { t: "probe"; at: Px | null }
+  /** A click: dive into the halo or the galaxy's heart under it, or place an orbit. */
+  | { t: "click"; at: Px }
+  /** In the nucleus: a press at `from` released at `to`, raster pixels — a throw. */
+  | { t: "launch"; from: Px; to: Px }
+  /** Climb to the layer above (`to` names one further up). */
+  | { t: "ascend"; to?: LevelName }
+  /** Scrub the web's history to scale factor a. */
   | { t: "seek"; a: number }
-  /** Deep link: run Cosmos to redshift z, then dive into the halo holding lattice index `halo`. */
-  | { t: "goto"; z: number; halo: number; nucleus?: boolean }
-  /** Go straight to a black hole (the arcade's GEODESIC entry): Sgr A*. */
-  | { t: "nucleus" }
-  /** In the nucleus: a press at `from` released at `to`, raster pixels. */
-  | { t: "launch"; from: { x: number; y: number }; to: { x: number; y: number } }
-  /** Whose clock the clocks view keeps: the distant observer's, or the faller's. */
-  | { t: "clockFrame"; frame: "far" | "rider" }
+  | { t: "goto"; destination: Destination }
+  | { t: "replay" }
   | { t: "stop" }
 
 export interface SimStats {
-  /** Wall-clock milliseconds for the last physics step. */
   stepMs: number
-  /** Wall-clock milliseconds for the last splat + tone map. */
   drawMs: number
-  /** Wall-clock milliseconds for the last analysis pass. */
   analysisMs: number
-  /** Force cells in the active tree or periodic mesh. */
+  /** Force cells, tree depth, near pairs, translations of the layer in view. */
   cells: number
   depth: number
-  /** Direct pairs summed by FMM; zero for the particle mesh. */
   nearPairs: number
-  /** FMM translations or the particle mesh's estimated FFT butterflies. */
   translations: number
-  /**
-   * How many times more pairwise work the naive O(N²) sum would have been,
-   * counting an M2L translation as its p² complex multiply-adds.
-   */
   speedup: number
-  solver: "fmm" | "pm"
-  /** Total integrated particle count. */
+  solver: "fmm" | "pm" | "geodesic"
   particles: number
-  /** Fraction of total mass in the densest force cell. */
   peakCellMass: number
-  occupiedCells: number
-  /** Raster pixels per world unit — lets the page turn drag pixels into world pan. */
-  scale: number
 
-  /** True while the cosmological integrator is in charge. */
+  /** The web's epoch: scale factor, redshift, age (1/H₀), growth, named epoch. */
   cosmological: boolean
-  /** Scale factor, redshift, and cosmic time (in units of 1/H₀). */
   a: number
   z: number
   time: number
-  /** Linear growth factor D(a), D(today) = 1. */
   growth: number
-  /** Named epoch, for the readout. */
   epoch: string
-  /** Set once the run reaches the present day. */
   done: boolean
-  /** Currently active quasars. */
   quasars: number
-  /** Starbursts / supernovae fired since the run began. */
   bursts: number
 
-  /** Where in the descent the view is. */
+  /** The layer the camera is in, and the layers that exist beneath the web. */
   level: LevelName
-  /** The halo being explored, below the web. */
+  stack: LevelName[]
+  /** Whose clock is running: the deepest layer on screen. */
+  running: LevelName
+  /** The halo whose galaxy is built, if any. */
   focus: HaloCard | null
-  /** Haloes in the current catalogue. */
-  haloes: number
-  units: WorldUnits
-  /** True while a dive or ascent is animating. */
+  /** The black hole's mass, if one is built. */
+  holeMass: number | null
+  /** Clocks of the deeper layers: galaxy time (code units) and hole time (M). */
+  galaxyTime: number
+  galaxyMyr: number
+  holeTime: number
+  holeSeconds: number
+  /** kpc per raster pixel, at the camera's layer; and whether that is comoving. */
+  kpcPerPx: number
+  comoving: boolean
+  /** True while the camera is flying itself, or the web is being run on. */
   moving: boolean
+  /** A black hole with no universe above it (the arcade's GEODESIC). */
+  lone: boolean
+  /** Zoom is at its limit here, and why ("" if not). */
+  limit: string
 }
 
-/** Measurements of the periodic box, posted a few times a second. */
+/** Measurements of the periodic box. */
 export interface CosmicInstruments {
   kind: "cosmic"
   a: number
-  /** Integer wavenumber of each populated spectrum bin. */
   k: number[]
-  /** Measured Δ²(k), CIC-deconvolved. */
   measured: number[]
-  /** Linear-theory Δ²(k) for this realisation, D(a)² · Δ²_lin,today. 0 where none. */
   linear: number[]
-  /** Poisson shot-noise floor 2πk²/N. */
   shot: number[]
-  /** Wavenumber at which linear Δ² crosses 1, or null if nowhere in range. */
   kNL: number | null
-  /** Measured growth of the largest modes, against the D(a) curve. */
   growth: { lnA: number[]; measured: number[] }
   growthTheory: { lnA: number[]; D: number[] }
   pdf: DensityPdf
   web: WebCensus | null
 }
 
-/** Measurements of an isolated system, posted a few times a second. */
-export interface IsolatedInstruments {
-  kind: "isolated"
-  /** Code time of each history sample. */
+/** Measurements of a galaxy. */
+export interface GalaxyInstruments {
+  kind: "galaxy"
   t: number[]
   virial: number[]
   r10: number[]
   r50: number[]
   r90: number[]
   rotation: { r: number[]; vPhi: number[]; vCirc: number[] }
-  /** |L − L₀| / Σm|r||v| since the start of the run. */
   angularDrift: number
-  /** |Σmv| / Σm|v|. */
   momentumDrift: number
   units: WorldUnits
 }
 
-/** The black hole: the selected orbit's well and the infall clocks. */
+/** The black hole: the selected orbit's well, and the infall clocks. */
 export interface NucleusInstruments extends NucleusReadout {
   kind: "nucleus"
   massSun: number
   units: WorldUnits
+  /** Coordinate time elapsed, M. */
+  time: number
 }
 
-export type Instruments = CosmicInstruments | IsolatedInstruments | NucleusInstruments
+export type Instruments = CosmicInstruments | GalaxyInstruments | NucleusInstruments
 
 /** What lies under the pointer. */
 export interface ProbeReading {
-  /** World coordinates (code units). */
   x: number
   y: number
   cosmological: boolean
-  /** Density contrast δ on the force mesh. */
   delta?: number
-  /** T-web class, if the web has been measured. */
   web?: WebClass
-  /** Peculiar potential in σ, if measured. */
   phi?: number
-  /** ∇·v / H, if the flow lens is active. */
   theta?: number
   /** A halo under the pointer, which a click would dive into. */
   halo?: HaloCard
@@ -258,7 +228,5 @@ export type FromWorker =
   | { t: "frame"; buf: ArrayBuffer; w: number; h: number; stats: SimStats }
   | { t: "instruments"; data: Instruments }
   | { t: "probe"; reading: ProbeReading | null }
-  /** The descent changed level; the page resets its camera to match. */
-  | { t: "level"; level: LevelName; focus: HaloCard | null; view?: ViewParams }
   | { t: "ready" }
   | { t: "fault"; message: string }

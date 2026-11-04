@@ -1,8 +1,8 @@
 import { memo, useMemo, useRef } from "react"
-import { A_REC, accelerationOnset, ageOf, formatAge, PATCH_MPC, type Cosmology } from "./cosmology"
-import { WEB_LABELS } from "./analysis"
-import { LENSES, lensGradient, type Rgb } from "./palettes"
-import type { HaloCard, LensName, LevelName, ProbeReading } from "./protocol"
+import { A_REC, accelerationOnset, ageOf, formatAge, PATCH_MPC, type Cosmology } from "../engine/cosmology"
+import { WEB_LABELS } from "../engine/analysis"
+import { LENSES, lensGradient, type Rgb } from "../render/palettes"
+import type { HaloCard, LensName, LevelName, ProbeReading } from "../protocol"
 import styles from "./FilamentPage.module.scss"
 
 /**
@@ -128,77 +128,54 @@ export function fmtMass(m: number): string {
 }
 
 /**
- * Where we are in the descent. Each crumb above the current one climbs back.
+ * Where the camera is in the descent: one crumb per layer built beneath it.
+ * A crumb above the current one flies the camera back up to it.
  */
 export const Breadcrumb = memo(function Breadcrumb({
-  world,
-  focus,
+  stack,
   level,
+  focus,
+  holeMass,
+  lone,
   moving,
   onAscend,
 }: {
-  /** A lab world's name, or null for the cosmic web. */
-  world: string | null
-  focus: HaloCard | null
+  stack: LevelName[]
   level: LevelName
+  focus: HaloCard | null
+  holeMass: number | null
+  lone: boolean
   moving: boolean
-  onAscend: () => void
+  onAscend: (to: LevelName) => void
 }) {
-  const hole = level === "nucleus" && (
-    <>
-      <span aria-hidden="true">›</span>
-      <span data-current>Black hole</span>
-    </>
-  )
-  if (level === "nucleus" && !focus) {
-    return (
-      <nav className={styles.breadcrumb} aria-label="Where you are">
-        <button type="button" onClick={onAscend} title="Up to the cosmic web (Esc)">
-          {world ?? "The web"}
-        </button>
-        <span aria-hidden="true">›</span>
-        <span data-current>Sgr A* · 4.3 × 10⁶ M☉</span>
-      </nav>
-    )
-  }
-  if (world) {
-    return (
-      <nav className={styles.breadcrumb} aria-label="Where you are">
-        <span>Lab</span>
-        <span aria-hidden="true">›</span>
-        {level === "nucleus" ? (
-          <button type="button" onClick={onAscend}>{world}</button>
-        ) : (
-          <span data-current>{world}</span>
-        )}
-        {hole}
-      </nav>
-    )
-  }
+  const label = (l: LevelName) =>
+    l === "web" ? "The web" : l === "galaxy" ? (focus ? `Halo ${focus.id} · ${fmtMass(focus.massSun)}` : "Galaxy") : `Black hole · ${fmtMass(holeMass ?? 0)}`
+  const short = (l: LevelName) => (l === "web" ? "The web" : l === "galaxy" ? (focus ? `Halo ${focus.id}` : "Galaxy") : "Black hole")
+  const here = stack.indexOf(level)
   return (
     <nav className={styles.breadcrumb} aria-label="Where you are" data-moving={moving || undefined}>
-      {focus ? (
-        <button type="button" onClick={onAscend} title="Back to the cosmic web (Esc)">
-          The web
-        </button>
-      ) : (
-        <span data-current>The web</span>
-      )}
-      {focus && (
+      {lone && (
         <>
+          <a href="?" title="Start from the cosmic web instead">FILAMENT</a>
           <span aria-hidden="true">›</span>
-          {level === "nucleus" ? (
-            <button type="button" onClick={onAscend} title="Back up to the halo (Esc)">
-              Halo {focus.id}
-            </button>
-          ) : (
-            <span data-current title={`${focus.members.toLocaleString()} particles, found at z = ${focus.z.toFixed(2)}`}>
-              Halo {focus.id} · {fmtMass(focus.massSun)}
-            </span>
-          )}
-          {hole}
+          <span data-current>Sgr A* · {fmtMass(holeMass ?? 0)}</span>
         </>
       )}
+      {!lone &&
+        stack.map((l, k) => (
+          <span key={l} className={styles.crumb}>
+            {k > 0 && <span aria-hidden="true">›</span>}
+            {k < here ? (
+              <button type="button" onClick={() => onAscend(l)} title={`Back up to ${short(l).toLowerCase()} (Esc climbs one)`}>
+                {short(l)}
+              </button>
+            ) : k === here ? (
+              <span data-current>{label(l)}</span>
+            ) : (
+              <span data-below title="Built beneath the camera; zoom in to reach it">{short(l)}</span>
+            )}
+          </span>
+        ))}
     </nav>
   )
 })

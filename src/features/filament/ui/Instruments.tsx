@@ -1,10 +1,10 @@
 import { memo } from "react"
-import { A_REC, PATCH_MPC } from "./cosmology"
-import { WEB_LABELS } from "./analysis"
-import { lensHue, type Rgb } from "./palettes"
+import { A_REC, PATCH_MPC } from "../engine/cosmology"
+import { WEB_LABELS } from "../engine/analysis"
+import { lensHue, type Rgb } from "../render/palettes"
 import { Plot, decadeTicks, niceTicks, type Series } from "./Plot"
-import type { CosmicInstruments, Instruments, IsolatedInstruments, NucleusInstruments } from "./protocol"
-import { HORIZON, ISCO, PHOTON_SPHERE } from "./geodesic"
+import type { CosmicInstruments, Instruments, GalaxyInstruments, NucleusInstruments } from "../protocol"
+import { HORIZON, ISCO, PHOTON_SPHERE } from "../engine/geodesic"
 import styles from "./Instruments.module.scss"
 
 /**
@@ -177,10 +177,8 @@ function Cosmic({ data, accent }: { data: CosmicInstruments; accent: Rgb }) {
   )
 }
 
-function Isolated({ data }: { data: IsolatedInstruments }) {
-  const ISO_MYR = data.units.myr
-  const ISO_KPC = data.units.kpc
-  const ISO_KMS = data.units.kms
+function Galaxy({ data }: { data: GalaxyInstruments }) {
+  const { myr: ISO_MYR, kpc: ISO_KPC, kms: ISO_KMS } = data.units
   const t = data.t.map((v) => v * ISO_MYR)
   const tMax = Math.max(1, t[t.length - 1] ?? 1)
   const qMax = Math.max(1.5, ...data.virial) * 1.05
@@ -275,24 +273,27 @@ function Nucleus({ data }: { data: NucleusInstruments }) {
   const secPerM = data.units.myr * 3.156e13
   const o = data.orbit
   const c = data.clocks
+  const rMax = o ? Math.max(60, o.r_[o.r_.length - 1]) : 60
+  const ticks = [2, 3, 6, 10, 20, 50, 100, 300, 1000, 3000, 10000, 30000].filter((v) => v <= rMax)
   return (
     <>
       <p className={styles.caption}>
         A black hole of {data.massSun.toExponential(1).replace("e+", " × 10^")} M☉: one M of length is{" "}
-        {(data.units.kpc * 3.0857e16).toExponential(2)} km, one M of time {fmtSeconds(secPerM)}.
+        {(data.units.kpc * 3.0857e16).toExponential(2)} km, one M of time {fmtSeconds(secPerM)}. Its clock has run{" "}
+        {fmtSeconds(data.time * secPerM)}, at a pace set by the scale on screen.
       </p>
-      {o && data.mode === "orbits" && (
+      {o && (
         <Figure
-          title="The well this orbit lives in"
-          caption={`V(r) = (1 − 2M/r)(1 + L²/r²) for the selected body (L = ${o.L.toFixed(2)} M). It moves where its energy line E² = ${(o.E * o.E).toFixed(4)} lies above the curve; the hump that Newton lacks is what swallows orbits inside ${ISCO} M. ${o.captured ? "This one went over it." : `Now at r = ${o.r.toFixed(1)} M.`}`}
+          title={`The well ${o.name === "placed" || o.name === "thrown" ? "this orbit" : o.name} lives in`}
+          caption={`V(r) = (1 − 2M/r)(1 + L²/r²) for the selected body (L = ${o.L.toFixed(2)} M). It moves where its energy line E² = ${(o.E * o.E).toFixed(4)} lies above the curve; the hump that Newton lacks is what swallows orbits inside ${ISCO} M. ${o.captured ? "This one went over it." : `Now at r = ${o.r < 100 ? o.r.toFixed(1) : Math.round(o.r).toLocaleString()} M.`} Click a body to select it.`}
         >
           <Plot
             label="Effective potential and orbital energy against radius"
-            x={{ domain: [HORIZON, 60], log: true, ticks: [2, 3, 6, 10, 20, 40].map((v) => ({ v, label: String(v) })), label: "r, M" }}
+            x={{ domain: [HORIZON, rMax], log: true, ticks: ticks.map((v) => ({ v, label: v >= 1000 ? `${v / 1000}k` : String(v) })), label: "r, M" }}
             y={{ domain: [Math.min(0.75, o.E * o.E - 0.05), Math.max(1.05, o.E * o.E + 0.03)], ticks: niceTicks(0.8, 1.05, 3), label: "V, E²" }}
             series={[
               { kind: "line", x: o.r_, y: o.V, tone: "muted" },
-              { kind: "line", x: [HORIZON, 60], y: [o.E * o.E, o.E * o.E], tone: "accent", dash: "dashed" },
+              { kind: "line", x: [HORIZON, rMax], y: [o.E * o.E, o.E * o.E], tone: "accent", dash: "dashed" },
               { kind: "points", x: [Math.max(HORIZON, o.r)], y: [o.E * o.E], tone: "accent" },
             ]}
             rules={[
@@ -302,32 +303,28 @@ function Nucleus({ data }: { data: NucleusInstruments }) {
           />
         </Figure>
       )}
-      {c && (
-        <Figure
-          title="Two clocks"
-          caption={`Dropped from ${c.r0.toFixed(1)} M. Its own clock reads ${c.tau.toFixed(1)} M (${fmtSeconds(c.tau * secPerM)}); the distant one ${Number.isFinite(c.t) ? `${c.t.toFixed(1)} M` : "∞"}. Light from it arrives stretched ${Number.isFinite(c.redshift) ? `${c.redshift.toFixed(2)}×` : "without limit"}. On its own clock it reaches r = 0 after ${c.tauTotal.toFixed(1)} M — ${fmtSeconds(c.tauTotal * secPerM)} — and never, on ours.`}
-        >
-          <Plot
-            label="Proper time against coordinate time for the fall"
-            x={{ domain: [0, Math.max(10, ...c.curveT.filter(Number.isFinite)) * 1.05], ticks: niceTicks(0, Math.max(10, ...c.curveT.filter(Number.isFinite)), 4), label: "distant clock t, M" }}
-            y={{ domain: [0, c.tauTotal * 1.05], ticks: niceTicks(0, c.tauTotal, 3), label: "τ, M" }}
-            series={[
-              { kind: "line", x: c.curveT, y: c.curveTau, tone: "muted" },
-              { kind: "points", x: [Number.isFinite(c.t) ? c.t : NaN], y: [c.tau], tone: "accent" },
-            ]}
-            rules={[{ axis: "y", v: c.curveTau[c.curveTau.length - 1], label: "horizon" }]}
-          />
-        </Figure>
-      )}
-      {data.mode === "shadow" && (
-        <Figure title="The shadow">
-          <p className={styles.caption}>
-            Light aimed within b = 3√3 M ≈ 5.20 M of the hole spirals in, so the shadow is 2.6 times wider than the
-            horizon — the ring the Event Horizon Telescope photographed around M87* and Sgr A*. Just outside it, rays
-            loop the photon sphere once, twice, many times, stacking ever-thinner copies of the whole sky.
-          </p>
-        </Figure>
-      )}
+      <Figure
+        title="Two clocks"
+        caption={`A probe dropped from rest at ${c.r0} M, flashing home. Its own clock reads ${c.tau.toFixed(1)} M (${fmtSeconds(c.tau * secPerM)}); the distant one ${Number.isFinite(c.t) ? `${c.t.toFixed(1)} M` : "∞"}. Its light arrives stretched ${Number.isFinite(c.redshift) ? `${c.redshift.toFixed(2)}×` : "without limit"}. On its own clock it reaches r = 0 after ${c.tauTotal.toFixed(1)} M — ${fmtSeconds(c.tauTotal * secPerM)} — and on ours, never: watch the plunging body in the view freeze and redden at the horizon.`}
+      >
+        <Plot
+          label="Proper time against coordinate time for the fall"
+          x={{ domain: [0, Math.max(10, ...c.curveT.filter(Number.isFinite)) * 1.05], ticks: niceTicks(0, Math.max(10, ...c.curveT.filter(Number.isFinite)), 4), label: "distant clock t, M" }}
+          y={{ domain: [0, c.tauTotal * 1.05], ticks: niceTicks(0, c.tauTotal, 3), label: "τ, M" }}
+          series={[
+            { kind: "line", x: c.curveT, y: c.curveTau, tone: "muted" },
+            { kind: "points", x: [Number.isFinite(c.t) ? c.t : NaN], y: [c.tau], tone: "accent" },
+          ]}
+          rules={[{ axis: "y", v: c.curveTau[c.curveTau.length - 1], label: "horizon" }]}
+        />
+      </Figure>
+      <Figure title="The shadow">
+        <p className={styles.caption}>
+          Light aimed within b = 3√3 M ≈ 5.20 M of the hole spirals in, so the shadow is 2.6 times wider than the
+          horizon: the dark disc the Event Horizon Telescope photographed in M87* and Sgr A*. Just outside it, rays that
+          looped the photon sphere pile up into a thin bright ring.
+        </p>
+      </Figure>
     </>
   )
 }
@@ -341,5 +338,5 @@ export const InstrumentPanel = memo(function InstrumentPanel({
 }) {
   if (!data) return <p className={styles.caption}>Taking the first measurements…</p>
   if (data.kind === "nucleus") return <Nucleus data={data} />
-  return data.kind === "cosmic" ? <Cosmic data={data} accent={accent} /> : <Isolated data={data} />
+  return data.kind === "cosmic" ? <Cosmic data={data} accent={accent} /> : <Galaxy data={data} />
 })

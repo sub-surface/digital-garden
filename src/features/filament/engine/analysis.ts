@@ -28,7 +28,7 @@
 
 import { fft2 } from "./particle-mesh"
 import { K_BINS, cicWindow2, kBin } from "./spectrum"
-import type { Cloud } from "./presets"
+import type { Cloud } from "./ics"
 
 export type WebClass = 0 | 1 | 2
 export const WEB_LABELS = ["void", "filament", "node"] as const

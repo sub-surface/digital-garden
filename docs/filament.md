@@ -1,28 +1,82 @@
 # FILAMENT — the descent
 
 Living doc for `src/features/filament` (route `/filament`, arcade "featured").
-Status as of 2026-11-04: M1–M3 landed in 0aaeca1 (formation redshift and
-the Lab drawer still open). Tick boxes as milestones land; each milestone ends
-green on `npm run check` and is committed on its own.
+Status as of 2026-11-04: M1–M4 landed, and the whole feature was reframed as
+one continuous zoom (below). Tick boxes as milestones land; each milestone
+ends green on `npm run check` and is committed on its own.
 
-**Testing rule:** the owner's PC overheats. Never verify FILAMENT in a browser
-or preview server. Physics goes in `scripts/test-fmm.ts`
-(`FORCE_FILAMENT=1 npx tsx scripts/test-fmm.ts`); looks go through headless
-PNG renders in `scratch/` (`scratch/render-cosmos.ts` is the template).
+**Testing rule:** the owner's PC runs hot. Physics goes in
+`scripts/test-fmm.ts` (`FORCE_FILAMENT=1 npx tsx scripts/test-fmm.ts`); looks
+go through headless PNG renders first — `scratch/drive-filament.ts` runs the
+real worker in Node with stubbed `postMessage` and writes frames along a
+scripted descent (`descent` or `lone` mode). A browser pass is allowed, but
+only once, at the end of a piece of work.
 
 ---
 
-## What exists (d88ca9f)
+## Architecture (the reframe, 2026-11-04)
 
-| Module | Role |
-|---|---|
-| `cosmos.ts` | Periodic 180 Mpc box. Lagrangian lattice, σ₈-normalised Zel'dovich ICs, FastPM KDK in ln D, displacement-integrated (float32 precision). |
-| `sheet.ts` | Phase-space sheet renderer: triangle deposits, top-left scanline, mass-conserving Gouraud, periodic tiling, stream count. |
-| `particle-mesh.ts` | Spectral, deconvolved PM force (2 FFTs/solve). |
-| `universe.ts` + `fmm.ts` + `presets.ts` | Isolated worlds on the FMM (symmetric near field). |
-| `cosmology.ts` | Friedmann backgrounds, `CosmicHistory` (D, G_p, G_f, age tables). |
-| `analysis.ts` | P(k), T-web, potential, flow, PDF, isolated virial/rotation curve. |
-| `sim.worker.ts` | Loop, playback clock, events, rasters. `protocol.ts` is the contract. |
+FILAMENT is **one camera moving through a stack of nested layers**. There
+are no separate worlds, flights or level switches: the zoom is the
+navigation.
+
+```
+src/features/filament/
+  engine/   physics, DOM-free and tested: cosmology, cosmos (FastPM),
+            particle-mesh, fmm, universe (a galaxy's FMM world), halos (FoF),
+            zoom (resimulation ICs), geodesic (Schwarzschild), analysis,
+            spectrum, ics (shared cloud/IC vocabulary)
+  render/   pixels: sheet (phase-space sheet), density-raster, palettes,
+            draw (rings, sprites, crossfade), events (quasars, starbursts)
+  layers/   layer.ts (Layer, View, Camera, Stack), web.ts, galaxy.ts,
+            nucleus.ts — each layer owns its state, clock, render, analysis
+  ui/       FilamentPage, Hud, Instruments, Plot, quality, styles
+  sim.worker.ts   camera + stack manager + compositor + messages
+  protocol.ts     page ↔ worker contract (gestures in, frames out)
+```
+
+**Frames, not absolute coordinates.** Each child layer sits at an anchor in
+its parent with a fixed ratio of units (web unit = half the box; galaxy unit
+= the halo radius, origin at the halo centre; nucleus unit = M, origin at
+the galaxy's stellar centre). The camera is held in the deepest frame it has
+entered (`Camera.normalise`, enter at fill 0.5, leave below 0.35), so its
+position never needs more than float64 gives one frame. Web → horizon is ~15
+decades; the camera test flies it and round-trips to 0.04 px.
+
+**Only the branch under the camera exists** (the quadtree idea, as nesting).
+A galaxy is built when the halo under the screen centre would fill 6% of the
+screen, dropped below 2.5% or once off screen (one is cached for a quick
+return); a black hole is built when the galaxy is magnified ×3 about its
+heart. Zooming in near a child pulls the camera toward its anchor, so a
+descent stays on course; between the galaxy's softening length and the
+S-stars the zoom runs 6× faster (nothing lives at those scales in the model).
+
+**Crossfades** over about an octave of each child's fill (galaxy 0.3–0.85,
+nucleus 0.12–0.5), with a brightness-preserving blend.
+
+**The clock runs only in the deepest layer on screen.** The web holds still
+while a galaxy is visible; the galaxy while its hole is. Returning to the web
+resumes it; if the web then moves on, its cached galaxy is stale and dropped.
+The hole's own clock is *Keplerian*: coordinate time per wall second goes as
+(view radius)^3/2, so S-stars and the innermost orbits both turn at a
+watchable pace.
+
+**The nucleus is one honest top-down view** (the ray-traced 3D camera was
+too slow and did not look good; it was removed): S-stars after the real ones
+around Sgr A* (in one plane), a zoo of relativistic orbits, a Novikov–Thorne
+gas ring (face-on: g = √(1−3/r); Doppler lens: g/(1 + Ωx)), and the sky
+behind bent through the exact α(b) — black shadow at 3√3 M, photon ring, the
+host galaxy's portrait drawn into an Einstein ring at 2√D = 50 M (a thin-lens
+stylisation, documented in the file). Clocks and V_eff are instrument cards.
+
+**Removed:** the lab presets (disc / encounter / stream / collapse — they live
+on as test fixtures in `scripts/filament-fixtures.ts`), level flights and
+fades, the three nucleus modes, the 3D tracer.
+
+**Entry points:** `/filament` (the web); `?seed&z&halo[&level=nucleus]` runs
+the web to z, then flies down (≈15 s fast-forward to z = 0 at grid 256);
+`?level=nucleus` alone is GEODESIC — Sgr A* on its own, instantly (the
+breadcrumb links back to the web).
 
 ## The idea
 
@@ -65,13 +119,13 @@ Seed an isolated FMM world from the halo as measured:
       continuous across the descent. Velocity unit fixed by the 2D virial
       theorem ⟨v²⟩ = GM/2 on the halo's members. Disc scale 0.1 R — about 3×
       a real disc, so it is resolved; say so wherever sizes are quoted.
-- [ ] The old presets become the "Lab" drawer (controlled experiments).
+- [x] ~~The old presets become the "Lab" drawer~~ — dropped in the reframe;
+      they survive as test fixtures.
 
 ### M3 — The descent
-- [x] Camera dive: exponential zoom on the halo over ~1.5 s while the level-2
-      world spins up; reverse on ascend. Cosmos keeps its state.
-- [x] Breadcrumb (Web › Halo 17 › Nucleus) replaces the world picker as the
-      primary navigation; URL state; Escape ascends.
+- [x] Camera dive and breadcrumb — superseded by the continuous zoom: the
+      breadcrumb now lists the layers built under the camera, and a crumb
+      (or Escape) flies the camera back up.
 
 Lessons: FMM must never evaluate a local expansion outside its cell
 (escapers on the Hubble flow did, Q → 10¹⁰); a zoom with a dense disc
@@ -79,18 +133,18 @@ costs ~20 ms/step at 5k particles — keep budgets ≈ profile nMass.
 
 ### M4 — GEODESIC (level 3)
 Equatorial Schwarzschild, G = c = 1, units of M.
-- [ ] Timelike orbits: integrate (dr/dτ)² = E² − V_eff, dφ/dτ = L/r² (RK4 in τ
+- [x] Timelike orbits: integrate (dr/dτ)² = E² − V_eff, dφ/dτ = L/r² (RK4 in τ
       on u = 1/r form for stability). Draggable launch; V_eff plot beside it
       with the particle's E marked. ISCO, marginally bound orbit marked.
-- [ ] Shadow: deflection LUT α(b) from the photon orbit equation; every pixel
+- [x] Shadow: deflection LUT α(b) from the photon orbit equation; every pixel
       maps through it to the background (the level-2 halo render, so the black
       hole lenses the galaxy you came from). Photon ring at b = 3√3M.
-- [ ] Two clocks: infall from rest at r₀ — proper time vs coordinate time,
+- [x] Two clocks: infall from rest at r₀ — proper time vs coordinate time,
       plus the redshift of signals sent outward.
-- [ ] Tests: periapsis precession 6πM/(a(1−e²)) in the weak field, photon
+- [x] Tests: periapsis precession 6πM/(a(1−e²)) in the weak field, photon
       capture at b = 3√3M, ISCO at 6M, marginally bound at 4M, proper infall
       time from r₀ to 0 = π·√(r₀³/8M).
-- [ ] Arcade entry "GEODESIC" → `/filament?level=nucleus`.
+- [x] Arcade entry "GEODESIC" → `/filament?level=nucleus`.
 
 ### M5 — Light-cone timeline (idea 1)
 - [ ] Conformal time η(a) and comoving distance χ(z) from `CosmicHistory`.
@@ -136,3 +190,16 @@ So:
 ### Later
 - Celestrium bridge (ROADMAP): Gaia streams / quasar dipole overlays.
 - Sonification (owner: optional, off by default).
+
+## Dream list (owner asked to note these)
+- Kerr: spin parameter a; frame dragging, asymmetric shadow, prograde/
+  retrograde ISCO (1–9M), ergosphere; geodesics via Carter constant.
+- Lensing detail: higher-order photon rings (n = 1, 2 subrings), Einstein
+  ring of the halo, time delays between images, magnification maps.
+- Accretion: thick/ADAF torus, relativistic jets, polarisation (EVPA
+  ticks like the EHT images), variability hot-spot orbiting at ISCO.
+- Tidal disruption: a star stretched into a stream on a plunging orbit.
+- Gravitational waves: binary black-hole inspiral with chirp audio.
+- Penrose diagram view for the infall clocks; Kruskal coordinates.
+- Back up the descent: merger trees (M7), light-cone survey (M6), BAO (M10),
+  holographic coda (M9) — still open.

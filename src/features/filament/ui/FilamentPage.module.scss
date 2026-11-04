@@ -435,29 +435,12 @@
 
 // --- lens bar + instruments -------------------------------------------------
 
-.clockFrame {
-  position: absolute;
-  bottom: 3.6rem;
-  left: 50%;
-  z-index: 30;
-  display: flex;
-  gap: 0.3rem;
-  transform: translateX(-50%);
+.timelineSlot {
+  display: contents;
 
-  button {
-    padding: 0.3rem 0.7rem;
-    border: 1px solid color-mix(in srgb, var(--color-text) 22%, transparent);
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-bg) 70%, transparent);
-    color: var(--color-text-muted);
-    font-family: var(--font-code);
-    font-size: 0.68rem;
-    cursor: pointer;
-
-    &[data-active] {
-      border-color: var(--color-accent);
-      color: var(--color-text);
-    }
+  &[data-frozen] .timeline {
+    opacity: 0.5;
+    pointer-events: none;
   }
 }
 
@@ -475,6 +458,17 @@
     color: var(--color-text);
   }
 
+  [data-below] {
+    opacity: 0.45;
+  }
+
+  .crumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  a,
   button {
     padding: 0;
     border: 0;
@@ -946,8 +940,7 @@
 
   .toolbar,
   .lensBar,
-  .bottomRight,
-  .clockFrame {
+  .bottomRight {
     @extend %filament-glass;
     padding: 0.3rem 0.65rem;
   }
@@ -955,6 +948,14 @@
   .bottomLeft {
     @extend %filament-glass;
     padding: 0.4rem 0.7rem;
+  }
+
+  // The instruments read over the brightest parts of the field too.
+  .instrumentsPanel {
+    @extend %filament-glass;
+    padding: 0.7rem 0.8rem 0.9rem;
+    // Paragraphs and plots need a deeper pane than a one-line readout.
+    background: color-mix(in srgb, var(--color-bg) 64%, transparent);
   }
 
   .timeline {

@@ -43,8 +43,8 @@ import { mulberry32 } from "@/lib/composer/rng"
 import { A_REC, CosmicHistory, cmbGlow, epochOf, PATCH_MPC } from "./cosmology"
 import { fft2, ParticleMesh, wrapPeriodic } from "./particle-mesh"
 import { K_BINS, kBin } from "./spectrum"
-import { DEFAULT_IC, transferFor, type InitialConditions } from "./presets"
-import type { Cloud } from "./presets"
+import { DEFAULT_IC, transferFor, type InitialConditions } from "./ics"
+import type { Cloud } from "./ics"
 
 export { cmbGlow }
 
