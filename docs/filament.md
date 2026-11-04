@@ -1,7 +1,8 @@
 # FILAMENT — the descent
 
 Living doc for `src/features/filament` (route `/filament`, arcade "featured").
-Status as of 2026-11-04. Tick boxes as milestones land; each milestone ends
+Status as of 2026-11-04: M1–M3 landed in 0aaeca1 (formation redshift and
+the Lab drawer still open). Tick boxes as milestones land; each milestone ends
 green on `npm run check` and is committed on its own.
 
 **Testing rule:** the owner's PC overheats. Never verify FILAMENT in a browser
@@ -43,32 +44,38 @@ to `/filament?level=nucleus`.
 ## Milestones
 
 ### M1 — Halo catalogue (level 1)
-- [ ] Friends-of-friends on the lattice particles (b = 0.2 × mean spacing,
+- [x] Friends-of-friends on the lattice particles (b = 0.2 × mean spacing,
       cell-hashed), min 32 members. Halo = lattice indices, so identity is
       Lagrangian and survives across snapshots.
-- [ ] Per halo: mass (M☉ from box mass), centre (shrinking circle), velocity,
-      dispersion, spin λ (2D: J/(M·√(GM)·R)), formation a (half-mass).
-- [ ] Rings drawn on the sky (sized by r_200-ish), hover card, click to dive.
-- [ ] Tests: FoF on a synthetic two-blob field; mass sums; IDs stable.
+- [x] Per halo: mass (3D-equivalent M☉), centre (shrinking circle), velocity,
+      dispersion, rotational support |J|/(N·R·σ). Formation a waits for M7.
+- [x] Rings drawn on the sky (sized by r_200-ish), hover card, click to dive.
+- [x] Tests: FoF on a synthetic two-blob field; mass sums; IDs stable.
 
 ### M2 — Zoom-in resimulation (level 2)
 Seed an isolated FMM world from the halo as measured:
-- [ ] Dark matter: the halo's own particles (plus everything within ~3 r_h,
+- [x] Dark matter: the halo's own particles (plus everything within ~3 r_h,
       so infalling neighbours come along — the Encounter emerges by itself),
       in the halo frame, resampled ×k with phase-space jitter.
-- [ ] A baryonic disc (f_b ≈ 0.16 of halo mass) laid in the measured
+- [x] A baryonic disc (f_b ≈ 0.16 of halo mass) laid in the measured
       potential, oriented by the measured spin. 2D: the disc *is* the plane.
-- [ ] External tidal field from the cosmos potential at the halo centre
+- [x] External tidal field from the cosmos potential at the halo centre
       (tidal tensor from `analysis.ts`), applied as a linear force T·x.
-- [ ] Units: code ↔ kpc/Myr from the halo's mass and radius; scale bar
-      continuous across the descent.
+- [x] Units: code ↔ kpc/Myr from the halo's mass and radius; scale bar
+      continuous across the descent. Velocity unit fixed by the 2D virial
+      theorem ⟨v²⟩ = GM/2 on the halo's members. Disc scale 0.1 R — about 3×
+      a real disc, so it is resolved; say so wherever sizes are quoted.
 - [ ] The old presets become the "Lab" drawer (controlled experiments).
 
 ### M3 — The descent
-- [ ] Camera dive: exponential zoom on the halo over ~1.5 s while the level-2
+- [x] Camera dive: exponential zoom on the halo over ~1.5 s while the level-2
       world spins up; reverse on ascend. Cosmos keeps its state.
-- [ ] Breadcrumb (Web › Halo 17 › Nucleus) replaces the world picker as the
+- [x] Breadcrumb (Web › Halo 17 › Nucleus) replaces the world picker as the
       primary navigation; URL state; Escape ascends.
+
+Lessons: FMM must never evaluate a local expansion outside its cell
+(escapers on the Hubble flow did, Q → 10¹⁰); a zoom with a dense disc
+costs ~20 ms/step at 5k particles — keep budgets ≈ profile nMass.
 
 ### M4 — GEODESIC (level 3)
 Equatorial Schwarzschild, G = c = 1, units of M.

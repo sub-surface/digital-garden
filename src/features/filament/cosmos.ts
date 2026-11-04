@@ -188,6 +188,15 @@ export function zeldovichLattice(grid: number, seed: number, ic: InitialConditio
   return { psiX, psiY, linearToday }
 }
 
+export interface CosmosSnapshot {
+  a: number
+  steps: number
+  sx: Float32Array
+  sy: Float32Array
+  vx: Float32Array
+  vy: Float32Array
+}
+
 export class Cosmos {
   readonly grid: number
   readonly n: number
@@ -274,6 +283,38 @@ export class Cosmos {
       }
     }
     this.pm.solve(x, y, this.n, this.ax, this.ay)
+  }
+
+  /** The integrated state, for rewinding: displacements, momenta, clock. */
+  snapshot(): CosmosSnapshot {
+    return {
+      a: this.a,
+      steps: this.steps,
+      sx: this.sx.slice(),
+      sy: this.sy.slice(),
+      vx: this.vx.slice(),
+      vy: this.vy.slice(),
+    }
+  }
+
+  /** Return to a snapshot. Forces are re-solved, so stepping resumes exactly. */
+  restore(snap: CosmosSnapshot): void {
+    this.sx.set(snap.sx)
+    this.sy.set(snap.sy)
+    this.vx.set(snap.vx)
+    this.vy.set(snap.vy)
+    this.a = snap.a
+    this.aPrev = snap.a
+    this.steps = snap.steps
+    this.done = snap.a >= 1
+    this.refresh()
+    this.prevX.set(this.x)
+    this.prevY.set(this.y)
+  }
+
+  /** Bytes one snapshot holds. */
+  get snapshotBytes(): number {
+    return this.n * 16
   }
 
   /** The next scale factor: one step in ln D, capped in ln a. */

@@ -19,12 +19,16 @@
 import type { CosmologyName } from "./cosmology"
 import type { DarkMatter, PresetName } from "./presets"
 import type { DensityPdf, WebCensus, WebClass } from "./analysis"
+import type { NucleusReadout } from "./nucleus"
 
 /**
  * How the field is coloured. Brightness is always surface density; a lens adds
  * a second quantity as hue, so structure stays legible under every reading.
  */
-export type LensName = "density" | "streams" | "web" | "flow" | "potential" | "redshift" | "doppler" | "origin"
+export type LensName =
+  | "density" | "streams" | "web" | "flow" | "potential" | "redshift"
+  | "doppler" | "origin"
+  | "orbits" | "shadow" | "clocks"
 
 /**
  * The three nested scales of the descent: the cosmic web, one halo's
@@ -116,8 +120,16 @@ export type ToWorker =
   | { t: "dive"; at: { x: number; y: number } }
   /** Back up one level. */
   | { t: "ascend" }
+  /** Scrub the web's history to scale factor a (backwards replays from a snapshot). */
+  | { t: "seek"; a: number }
   /** Deep link: run Cosmos to redshift z, then dive into the halo holding lattice index `halo`. */
-  | { t: "goto"; z: number; halo: number }
+  | { t: "goto"; z: number; halo: number; nucleus?: boolean }
+  /** Go straight to a black hole (the arcade's GEODESIC entry): Sgr A*. */
+  | { t: "nucleus" }
+  /** In the nucleus: a press at `from` released at `to`, raster pixels. */
+  | { t: "launch"; from: { x: number; y: number }; to: { x: number; y: number } }
+  /** Whose clock the clocks view keeps: the distant observer's, or the faller's. */
+  | { t: "clockFrame"; frame: "far" | "rider" }
   | { t: "stop" }
 
 export interface SimStats {
@@ -211,9 +223,17 @@ export interface IsolatedInstruments {
   angularDrift: number
   /** |Σmv| / Σm|v|. */
   momentumDrift: number
+  units: WorldUnits
 }
 
-export type Instruments = CosmicInstruments | IsolatedInstruments
+/** The black hole: the selected orbit's well and the infall clocks. */
+export interface NucleusInstruments extends NucleusReadout {
+  kind: "nucleus"
+  massSun: number
+  units: WorldUnits
+}
+
+export type Instruments = CosmicInstruments | IsolatedInstruments | NucleusInstruments
 
 /** What lies under the pointer. */
 export interface ProbeReading {

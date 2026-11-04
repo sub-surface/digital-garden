@@ -15,7 +15,7 @@
  */
 
 import type { Afterglow } from "./cosmology"
-import type { LensName } from "./protocol"
+import type { LensName, LevelName } from "./protocol"
 
 export type Rgb = [number, number, number]
 
@@ -310,7 +310,8 @@ export interface LensInfo {
   description: string
   /** Legend end labels (and an optional middle one). */
   scale: string[]
-  cosmological: boolean | "both"
+  /** Levels of the descent this lens can read. */
+  levels: LevelName[]
 }
 
 export const LENSES: LensInfo[] = [
@@ -320,7 +321,7 @@ export const LENSES: LensInfo[] = [
     description:
       "Surface density. In Cosmos it is drawn from the dark-matter sheet itself, on a log scale from a tenth of the mean to six hundred times it; in the isolated worlds, on an asinh stretch, the way survey images show faint arms and bright cores together.",
     scale: ["empty", "dense"],
-    cosmological: "both",
+    levels: ["web", "halo"],
   },
   {
     name: "streams",
@@ -328,7 +329,7 @@ export const LENSES: LensInfo[] = [
     description:
       "How many layers of the folded dark-matter sheet lie over each point. One stream is matter that has never crossed anything; three is a pancake or filament; dozens is a halo. Shell-crossing is what nonlinear means, and this is the only lens that shows it directly.",
     scale: ["1", "3", "48+"],
-    cosmological: true,
+    levels: ["web"],
   },
   {
     name: "web",
@@ -336,7 +337,7 @@ export const LENSES: LensInfo[] = [
     description:
       "The T-web: count the directions in which the tidal field is compressing matter. None is a void, one a filament, two a node. Smoothed over 3 Mpc, threshold λ = 0.3.",
     scale: ["void", "filament", "node"],
-    cosmological: true,
+    levels: ["web"],
   },
   {
     name: "flow",
@@ -344,7 +345,7 @@ export const LENSES: LensInfo[] = [
     description:
       "Peculiar velocity divergence in units of the Hubble rate. Blue is falling in; red is a void expanding faster than the universe around it.",
     scale: ["infall", "Hubble flow", "outflow"],
-    cosmological: true,
+    levels: ["web"],
   },
   {
     name: "potential",
@@ -352,7 +353,7 @@ export const LENSES: LensInfo[] = [
     description:
       "The peculiar gravitational potential, with contours every half σ. It is the smoothest field in the box, and the one the CMB's large-scale temperature pattern traces.",
     scale: ["well", "0", "hill"],
-    cosmological: true,
+    levels: ["web"],
   },
   {
     name: "redshift",
@@ -360,7 +361,7 @@ export const LENSES: LensInfo[] = [
     description:
       "The box as a galaxy survey would map it, with distance read from redshift along the vertical line of sight. Peculiar velocities stretch clusters into fingers of God pointing at the observer, and squash infalling filaments flat.",
     scale: ["empty", "dense"],
-    cosmological: true,
+    levels: ["web"],
   },
   {
     name: "doppler",
@@ -368,7 +369,7 @@ export const LENSES: LensInfo[] = [
     description:
       "Line-of-sight velocity along the vertical, as a spectrograph would measure it. A rotating disc shows the classic dipole: one side approaching, one receding.",
     scale: ["approaching", "at rest", "receding"],
-    cosmological: false,
+    levels: ["halo"],
   },
   {
     name: "origin",
@@ -376,12 +377,40 @@ export const LENSES: LensInfo[] = [
     description:
       "Where each particle came from. In a zoom-in: the halo's own dark matter, the stars of its disc, and dark matter still falling in from the web. In the lab worlds: which galaxy each star began in.",
     scale: ["halo", "stars", "companion", "infall"],
-    cosmological: false,
+    levels: ["halo"],
   },
 ]
 
-export function lensesFor(cosmological: boolean): LensInfo[] {
-  return LENSES.filter((l) => l.cosmological === "both" || l.cosmological === cosmological)
+LENSES.push(
+  {
+    name: "orbits",
+    label: "Orbits",
+    description:
+      "The equatorial plane from above, with test bodies on exact Schwarzschild geodesics, in the distant observer's time. Click to place a circular orbit; drag to throw a body. The horizon is 2M, the photon sphere 3M (dashed), the last stable orbit 6M.",
+    scale: ["horizon 2M", "photon 3M", "ISCO 6M"],
+    levels: ["nucleus"],
+  },
+  {
+    name: "shadow",
+    label: "Shadow",
+    description:
+      "What a camera 40M from the hole sees: every ray bent through the exact deflection angle. The galaxy behind wraps into an Einstein ring; rays aimed inside b = 3√3 M fall in, leaving the shadow, 2.6 times the horizon's size.",
+    scale: ["shadow", "photon ring", "sky"],
+    levels: ["nucleus"],
+  },
+  {
+    name: "clocks",
+    label: "Clocks",
+    description:
+      "A probe dropped from rest, flashing home at fixed intervals of its own time. From afar its flashes stretch and redden and it never arrives; riding along, it crosses the horizon at a finite time and meets r = 0 soon after. Click to drop from a new height.",
+    scale: ["blue", "redshifted"],
+    levels: ["nucleus"],
+  },
+)
+
+export function lensesFor(level: LevelName, cosmic = true): LensInfo[] {
+  // Lab worlds are halo-level but have no cosmic web above them.
+  return LENSES.filter((l) => l.levels.includes(level) && (cosmic || level !== "web"))
 }
 
 /** CSS gradient for a lens legend, drawn from the very ramp the worker uses. */

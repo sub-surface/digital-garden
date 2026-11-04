@@ -40,6 +40,10 @@ import { Cosmos } from "../src/features/filament/cosmos"
 import { SheetRaster } from "../src/features/filament/sheet"
 import { findHalos, friendsOfFriends, measureHalo, progenitors } from "../src/features/filament/halos"
 import { zoomWorld } from "../src/features/filament/zoom"
+import {
+  B_CRIT, HORIZON, ISCO, MARGINALLY_BOUND, circularOrbit, deflection, effectivePotential, infall, infallEta,
+  infallRedshift, makeBody, measurePrecession, properStep, stepCoordinate, stepProper, type Body,
+} from "../src/features/filament/geodesic"
 import { fft2, ParticleMesh } from "../src/features/filament/particle-mesh"
 import {
   depositCic,
@@ -783,6 +787,68 @@ for (const preset of ["disc", "collision", "stream", "collapse"] as const) {
   if (!(err < 0.05)) fail(`escaper pull off by ${(err * 100).toFixed(1)}%`)
   if (!(worst < 100)) fail(`an escaper made the field explode: max |a| ${worst.toExponential(2)}`)
   console.log(`  escaper   monopole pull within ${(err * 100).toFixed(2)}% · max |a| ${worst.toFixed(1)}`)
+}
+
+
+// ---------------------------------------------------------------------------
+// GEODESIC: the Schwarzschild classics, each against its closed form
+// ---------------------------------------------------------------------------
+
+{
+  // Periapsis advance: 6π/p plus the known second-order term (3π/2)(18+e²)/p².
+  const pre = (rp: number, ra: number) => {
+    const a = (rp + ra) / 2
+    const e = (ra - rp) / (ra + rp)
+    const p = a * (1 - e * e)
+    return (6 * Math.PI) / p + ((3 * Math.PI) / 2) * (18 + e * e) / (p * p)
+  }
+  const got = measurePrecession(200, 400)
+  const precErr = Math.abs(got / pre(200, 400) - 1)
+  if (!(precErr < 0.005)) fail(`periapsis precession off by ${(precErr * 100).toFixed(2)}%`)
+
+  // The innermost stable orbit is the potential's inflection: V' = V'' = 0 at r = 6, L² = 12.
+  const L = Math.sqrt(12)
+  const h = 1e-3
+  const V = (r: number) => effectivePotential(r, L)
+  const d1 = (V(ISCO + h) - V(ISCO - h)) / (2 * h)
+  const d2 = (V(ISCO + h) - 2 * V(ISCO) + V(ISCO - h)) / (h * h)
+  if (!(Math.abs(d1) < 1e-9 && Math.abs(d2) < 1e-5)) fail(`ISCO is not an inflection: V' ${d1.toExponential(1)}, V'' ${d2.toExponential(1)}`)
+  // The marginally bound circular orbit has E = 1 at r = 4.
+  if (Math.abs(circularOrbit(MARGINALLY_BOUND).E - 1) > 1e-12) fail("marginally bound orbit is not at r = 4")
+
+  // Light: weak-field 4/b + 15π/4b², capture below 3√3, divergence approaching it.
+  const b = 200
+  const weak = 4 / b + (15 * Math.PI) / (4 * b * b)
+  const bendErr = Math.abs(deflection(b) / weak - 1)
+  if (!(bendErr < 1e-3)) fail(`light bending at b = 200 off by ${(bendErr * 100).toFixed(3)}%`)
+  if (!Number.isNaN(deflection(B_CRIT * 0.999))) fail("light inside 3√3 M was not captured")
+  if (!(deflection(B_CRIT * 1.0001) > 2 * Math.PI)) fail("rays grazing the photon sphere should loop the hole")
+
+  // Infall from rest: proper time to r = 0 is π√(r0³/8); the integrated
+  // geodesic must agree with the cycloid; coordinate time diverges at 2M.
+  const r0 = 10
+  const total = infall(r0, Math.PI).tau
+  const body = makeBody(r0, 0, 0, 0)
+  while (body.r > 4) stepProper(body, properStep(body, 0.0005))
+  const closed = infall(r0, infallEta(r0, body.r))
+  const fallErr = Math.max(Math.abs(body.tau / closed.tau - 1), Math.abs(body.t / closed.t - 1))
+  if (Math.abs(total - Math.PI * Math.sqrt(r0 ** 3 / 8)) > 1e-12) fail("infall proper time to r = 0 is wrong")
+  if (!(fallErr < 1e-3)) fail(`integrated infall departs from the cycloid by ${(fallErr * 100).toFixed(3)}%`)
+  if (!(infall(r0, infallEta(r0, 2.0001)).t > 40)) fail("coordinate time does not diverge at the horizon")
+  if (!(infallRedshift(2.001, Math.sqrt(1 - 2 / r0)) > 100)) fail("light from the horizon is not infinitely redshifted")
+
+  // A body on a circular orbit stays on it; a plunger freezes, in our time, outside 2M.
+  const circ = circularOrbit(10)
+  const c10: Body = { r: 10, phi: 0, ur: 0, E: circ.E, L: circ.L, tau: 0, t: 0, captured: false }
+  for (let k = 0; k < 200; k++) stepCoordinate(c10, 5)
+  const plunge = makeBody(8, 0, -0.1, 2)
+  for (let k = 0; k < 400; k++) stepCoordinate(plunge, 2)
+  if (Math.abs(c10.r - 10) > 1e-6) fail(`circular orbit drifted to r = ${c10.r}`)
+  if (!(plunge.r > HORIZON && plunge.r < 2.3)) fail(`plunge should hover just outside 2M in our time, at ${plunge.r.toFixed(3)}`)
+  console.log(
+    `  geodesic  precession ${(precErr * 100).toFixed(3)}% · ISCO inflection ✓ · bending ${(bendErr * 100).toFixed(4)}% · ` +
+      `infall ${(fallErr * 100).toFixed(4)}% · plunge frozen at ${plunge.r.toFixed(3)} M`,
+  )
 }
 
 

@@ -19,10 +19,11 @@
  */
 
 import { Universe } from "./universe"
-import { Cosmos } from "./cosmos"
+import { Cosmos, type CosmosSnapshot } from "./cosmos"
 import { A_REC, cmbGlow, COSMOLOGIES, HUBBLE_TIME_GYR, PATCH_MPC, type Afterglow } from "./cosmology"
 import { COSMO_KMS, findHalos, haloMassSun, type Halo } from "./halos"
 import { zoomWorld } from "./zoom"
+import { Nucleus, SGR_A_STAR, type NucleusMode } from "./nucleus"
 import { ISO_KMS, ISO_KPC, ISO_MYR } from "./presets"
 import { wrapPeriodic } from "./particle-mesh"
 import { depositCic, resampleConservative, timedDecay } from "./density-raster"
@@ -197,7 +198,78 @@ let flight: {
 let fadeFrom: Uint32Array | null = null
 let fadeT0 = 0
 /** Deep link waiting for the cosmos to reach its epoch. */
-let pendingGoto: { a: number; id: number } | null = null
+let pendingGoto: { a: number; id: number; nucleus: boolean } | null = null
+/** Frames to wait, after landing in a halo, before continuing down to its hole. */
+let nucleusAfterLanding = 0
+/** The black hole, at the bottom. */
+let nucleus: Nucleus | null = null
+/** The last halo frame: the nucleus's sky, and the image a dive fades from. */
+let haloFrame: Uint32Array | null = null
+/** Units of the halo level, restored on the way back up from the nucleus. */
+let haloUnits: WorldUnits = LAB_UNITS
+/** Screen mapping of the last isolated frame, for clicks on its centre. */
+let isoCamera = { scale: 1, ox: 0, oy: 0 }
+/** A black hole's mass as a fraction of its halo's (≈ the M_BH–M_halo relation). */
+const BH_FRACTION = 3e-5
+
+// --- time travel --------------------------------------------------------------
+/** States saved on the way through history, oldest first, for rewinding. */
+let snapshots: CosmosSnapshot[] = []
+/** Playhead at which the next snapshot is due. */
+let nextSnapshot = 0
+let snapshotEvery = 1 / 40
+/** A scrub in progress: the scale factor the web is being run to. */
+let pendingSeek: number | null = null
+/** The last frame drawn, whatever the level, for fades between levels. */
+let lastFrame: Uint32Array | null = null
+
+/** Zoom thresholds for descending and climbing by scroll alone. */
+const AUTO_DIVE_FILL = 0.42
+const AUTO_ASCEND_ZOOM = 0.5
+const AUTO_NUCLEUS_ZOOM = 6
+const AUTO_LEAVE_NUCLEUS_ZOOM = 0.45
+
+/** Start a fade from whatever was last on screen. */
+function fadeFromLast(): void {
+  fadeFrom = lastFrame ? lastFrame.slice() : null
+  fadeT0 = performance.now()
+}
+
+/** Save the state now if the playhead has passed the next mark. */
+function maybeSnapshot(c: Cosmos): void {
+  if (playhead < nextSnapshot) return
+  snapshots.push(c.snapshot())
+  nextSnapshot = playhead + snapshotEvery
+}
+
+/**
+ * Scrub the web to scale factor `a`. Forward runs the physics on; backward
+ * restores the latest snapshot before `a` and replays from there — the
+ * integrator is deterministic, so the replay is the same history exactly.
+ */
+function seek(a: number): void {
+  const c = cosmos
+  if (!c || level !== "web") return
+  const target = Math.max(snapshots.length ? snapshots[0].a : c.a, Math.min(1, a))
+  if (target < c.a) {
+    let k = snapshots.length - 1
+    while (k > 0 && snapshots[k].a > target) k--
+    c.restore(snapshots[k])
+    snapshots.length = k + 1
+    nextSnapshot = playheadOf(c, c.a) + snapshotEvery
+    growthHistory = {
+      lnA: growthHistory.lnA.filter((v) => v <= Math.log(target)),
+      measured: growthHistory.measured.slice(0, growthHistory.lnA.filter((v) => v <= Math.log(target)).length),
+    }
+  }
+  pendingSeek = target
+  catalogueA = 0
+  catalogue = []
+  hoverHalo = -1
+  quasars = []
+  bursts = []
+  analysisDirty = true
+}
 
 /** True while the cosmic web is the world on screen. */
 function inWeb(): boolean {
@@ -223,6 +295,8 @@ function rand(): number {
 /** The lens actually in force: each world offers only the lenses it can read. */
 function activeLens(): LensName {
   const lens = params?.lens ?? "density"
+  if (level === "nucleus") return lens === "shadow" || lens === "clocks" ? lens : "orbits"
+  if (lens === "orbits" || lens === "shadow" || lens === "clocks") return "density"
   if (lens === "density") return lens
   if (inWeb()) return lens === "doppler" || lens === "origin" ? "density" : lens
   return lens === "doppler" || lens === "origin" ? lens : "density"
@@ -265,6 +339,7 @@ function advanceCosmos(c: Cosmos, dtSec: number, rate: number): void {
   const want = scaleFactorAtPlayhead(c, playhead)
   const t0 = performance.now()
   while (!c.done && c.a < want && performance.now() - t0 < STEP_BUDGET_MS) c.step()
+  maybeSnapshot(c)
   if (c.a < want) {
     // Physics is behind: show what exists rather than run ahead of it.
     aShow = c.a
@@ -457,7 +532,14 @@ function analyse(advancing: boolean): void {
   const t0 = performance.now()
   const lens = activeLens()
 
-  if (inWeb() && analysis) {
+  if (level === "nucleus" && nucleus) {
+    if (p.instruments) {
+      ctx.postMessage({
+        t: "instruments",
+        data: { kind: "nucleus", ...nucleus.readout(), massSun: nucleus.massSun, units },
+      })
+    }
+  } else if (inWeb() && analysis) {
     const c = cosmos!
     const an = analysis
     binDown(c.pm.cellMass, c.pm.size, analysisMass, an.n)
@@ -493,7 +575,7 @@ function analyse(advancing: boolean): void {
     }
 
     if (p.instruments) postCosmic(c)
-  } else if (uni) {
+  } else if (uni && level === "halo") {
     const u = uni
     const diag = isolatedDiagnostics(u.masses, u.nMass)
     if (angularZero === null) angularZero = diag.angularMomentum
@@ -516,6 +598,7 @@ function analyse(advancing: boolean): void {
           rotation: diag.rotation,
           angularDrift: Math.abs(diag.angularMomentum - angularZero) / Math.max(1e-12, diag.angularScale),
           momentumDrift: diag.momentumDrift,
+          units,
         },
       })
     }
@@ -723,6 +806,43 @@ function land(): void {
   ctx.postMessage({ t: "level", level, focus })
 }
 
+/**
+ * Scroll alone moves through the levels: zoom in on a halo until it fills the
+ * screen and the dive begins; pull back far enough and the climb does.
+ * Thresholds sit well apart so a level never flickers at its boundary.
+ */
+function autoTransition(): void {
+  if (flight || pendingGoto || pendingSeek !== null) return
+  const fill = Math.min(rw, rh)
+  if (level === "web" && cosmos && catalogue.length) {
+    const cam = webCamera(cosmos)
+    const scale = fill * 0.5 * cam.zoom
+    let best: Halo | null = null
+    let bestD = Infinity
+    for (const h of catalogue) {
+      const dx = wrapPeriodic(h.x - cam.x, cosmos.half)
+      const dy = wrapPeriodic(h.y - cam.y, cosmos.half)
+      const d = Math.hypot(dx, dy)
+      if (d < ringRadius(h) * 1.5 && d < bestD) {
+        best = h
+        bestD = d
+      }
+    }
+    if (best && ringRadius(best) * scale > AUTO_DIVE_FILL * fill) {
+      dive(best)
+      // Come back out a little further than this, so the climb does not re-dive.
+      webView = { ...view, zoom: view.zoom * 0.5 }
+    }
+  } else if (level === "halo" && uni && focus && view.zoom < AUTO_ASCEND_ZOOM) {
+    ascend()
+  } else if (level === "halo" && uni && view.zoom > AUTO_NUCLEUS_ZOOM) {
+    const c = galaxyCentrePx(uni)
+    if (Math.hypot(c.x - rw * 0.5, c.y - rh * 0.5) < fill * 0.2) enterNucleus()
+  } else if (level === "nucleus" && view.zoom < AUTO_LEAVE_NUCLEUS_ZOOM && (uni || cosmos)) {
+    leaveNucleus()
+  }
+}
+
 /** Back up to the web, flying the camera out to where it was. */
 function ascend(): void {
   if (level !== "halo" || !cosmos || !focus) return
@@ -743,6 +863,7 @@ function ascend(): void {
     toZoom: Math.max(COSMOS_MIN_ZOOM, back.zoom),
     halo: null,
   }
+  fadeFromLast()
   level = "web"
   uni = null
   focus = null
@@ -834,6 +955,8 @@ function reset(): void {
   flight = null
   fadeFrom = null
   webView = null
+  nucleus = null
+  haloFrame = null
   if (p.preset === "cosmos") {
     level = "web"
     units = WEB_UNITS
@@ -851,6 +974,12 @@ function reset(): void {
     frameHalf = 1
     playhead = 0
     aShow = c.a
+    // As many rewind points as ~64 MB allows, up to forty across the run.
+    const count = Math.max(8, Math.min(40, Math.floor((64 * 1024 * 1024) / c.snapshotBytes)))
+    snapshotEvery = 1 / count
+    snapshots = [c.snapshot()]
+    nextSnapshot = snapshotEvery
+    pendingSeek = null
     if (dispX.length !== c.n) {
       dispX = new Float32Array(c.n)
       dispY = new Float32Array(c.n)
@@ -1114,6 +1243,7 @@ function renderCosmos(c: Cosmos, out: Uint32Array): void {
     }
   }
 
+  applyFade(out)
   drawRings(out, c, camX, camY, scale)
   if (!p.events || lens !== "density" || flight) return
   const toScreen = (wx: number, wy: number): [number, number] => [
@@ -1143,6 +1273,93 @@ function drawEvents(out: Uint32Array, toScreen: (x: number, y: number) => [numbe
     spikes(out, sx, sy, (9 + 26 * f) * size, 150 * f, 190 * f, 255 * f)
     sprite(out, sx, sy, (2.5 + 4 * f) * size, 255 * f, 250 * f, 255 * f)
   }
+}
+
+/** The previous world's last frame lingers a moment over the new one. */
+function applyFade(out: Uint32Array): void {
+  if (!fadeFrom || fadeFrom.length !== out.length) return
+  const f = (performance.now() - fadeT0) / FADE_MS
+  if (f >= 1) {
+    fadeFrom = null
+    return
+  }
+  const k = 1 - f * f
+  for (let i = 0; i < out.length; i++) {
+    const a = fadeFrom[i]
+    const b = out[i]
+    let o = 0
+    for (let sh = 0; sh < 32; sh += 8) {
+      const va = (a >>> sh) & 255
+      const vb = (b >>> sh) & 255
+      o |= Math.round(vb + (va - vb) * k) << sh
+    }
+    out[i] = o >>> 0
+  }
+}
+
+/** Into the black hole at the centre of the halo on screen. */
+function enterNucleus(): void {
+  const mass = focus ? Math.max(1e5, focus.massSun * BH_FRACTION) : SGR_A_STAR
+  haloUnits = units
+  nucleus = new Nucleus(mass, haloFrame, rw, rh)
+  nucleus.mode = "orbits"
+  fadeFromLast()
+  level = "nucleus"
+  units = nucleus.units
+  view = { zoom: 1, panX: 0, panY: 0, autoFit: true }
+  quasars = []
+  bursts = []
+  analysisDirty = true
+  ctx.postMessage({ t: "level", level, focus })
+}
+
+/** Back out of the nucleus to the halo (or, for a direct visit, the web). */
+function leaveNucleus(): void {
+  nucleus = null
+  fadeFromLast()
+  level = uni ? "halo" : "web"
+  units = uni ? haloUnits : WEB_UNITS
+  view = { zoom: 1, panX: 0, panY: 0, autoFit: true }
+  if (uni) {
+    // Come back out still close in on the galaxy's heart, so the climb
+    // continues where the descent left off.
+    const c = galaxyCentrePx(uni)
+    const sc = isoCamera.scale || 1
+    view = {
+      zoom: 3,
+      panX: (c.x - rw * 0.5) / sc,
+      panY: (rh * 0.5 - c.y) / sc,
+      autoFit: false,
+    }
+  }
+  if (level === "web") {
+    focus = null
+    view = webView ? { ...webView } : view
+  }
+  autoGain = 0
+  accum.fill(0)
+  hueAccum.fill(0)
+  glowKey = -1
+  lutKey = ""
+  analysisDirty = true
+  ctx.postMessage({ t: "level", level, focus, view })
+}
+
+/** The stellar centre of the zoom-in on screen, in raster pixels. */
+function galaxyCentrePx(u: Universe): { x: number; y: number } {
+  const m = u.masses
+  let sx = 0
+  let sy = 0
+  let n = 0
+  for (let i = 0; i < u.nMass; i++) {
+    if (m.tag && m.tag[i] !== 1) continue
+    sx += m.x[i]
+    sy += m.y[i]
+    n++
+  }
+  const x = n ? sx / n : u.boxCx
+  const y = n ? sy / n : u.boxCy
+  return { x: x * isoCamera.scale + isoCamera.ox, y: isoCamera.oy - y * isoCamera.scale }
 }
 
 function renderIsolated(u: Universe, out: Uint32Array, elapsedSeconds: number, advancing: boolean): void {
@@ -1216,25 +1433,11 @@ function renderIsolated(u: Universe, out: Uint32Array, elapsedSeconds: number, a
     autoGain += (want - autoGain) * ease
   }
 
-  // The web's last frame lingers a moment over the zoom-in as it spins up.
-  if (fadeFrom && fadeFrom.length === out.length) {
-    const f = (performance.now() - fadeT0) / FADE_MS
-    if (f >= 1) {
-      fadeFrom = null
-    } else {
-      const k = 1 - f * f
-      for (let i = 0; i < out.length; i++) {
-        const a = fadeFrom[i]
-        const b = out[i]
-        let o = 0
-        for (let sh = 0; sh < 32; sh += 8) {
-          const va = (a >>> sh) & 255
-          const vb = (b >>> sh) & 255
-          o |= Math.round(vb + (va - vb) * k) << sh
-        }
-        out[i] = o >>> 0
-      }
-    }
+  applyFade(out)
+  isoCamera = { scale, ox, oy }
+  if (level === "halo") {
+    if (!haloFrame || haloFrame.length !== out.length) haloFrame = new Uint32Array(out.length)
+    haloFrame.set(out)
   }
 
   if (!p.events || lens !== "density") return
@@ -1266,7 +1469,7 @@ function finished(): boolean {
 
 function runTick(): void {
   scheduled = false
-  if (!running || !params || (!cosmos && !uni) || pool.length === 0) return
+  if (!running || !params || (!cosmos && !uni && !nucleus) || pool.length === 0) return
 
   const now = performance.now()
   const advancing = params.substeps > 0 && !finished()
@@ -1276,7 +1479,25 @@ function runTick(): void {
   renderRequested = false
 
   const t0 = performance.now()
-  if (pendingGoto && inWeb()) {
+  if (pendingSeek !== null && inWeb() && !pendingGoto) {
+    const c = cosmos!
+    const t = performance.now()
+    while (!c.done && c.a < pendingSeek && performance.now() - t < 90) {
+      c.step()
+      playhead = playheadOf(c, c.a)
+      maybeSnapshot(c)
+    }
+    if (c.done || c.a >= pendingSeek) {
+      aShow = Math.max(c.aPrev, Math.min(c.a, pendingSeek))
+      pendingSeek = null
+      // Landed: the haloes are whatever this epoch holds.
+      if (c.a > 0.06) refreshCatalogue()
+      analysisDirty = true
+    } else {
+      aShow = c.a
+    }
+    playhead = playheadOf(c, aShow)
+  } else if (pendingGoto && inWeb()) {
     // Deep link: fast-forward the web to the linked epoch, then dive.
     const c = cosmos!
     const t = performance.now()
@@ -1286,17 +1507,25 @@ function runTick(): void {
     if (c.done || c.a >= pendingGoto.a) {
       refreshCatalogue()
       const want = pendingGoto.id
+      const deeper = pendingGoto.nucleus
       pendingGoto = null
       const h = catalogue.find((k) => k.members.includes(want)) ?? catalogue[0]
-      if (h) dive(h)
+      if (h) {
+        dive(h)
+        // The hole's sky is the galaxy around it, so let a few frames render first.
+        if (deeper) nucleusAfterLanding = 4
+      }
     }
   } else if (advancing && !flight) {
-    if (inWeb()) advanceCosmos(cosmos!, dtSec, params.substeps)
+    if (level === "nucleus" && nucleus) {
+      nucleus.mode = activeLens() as NucleusMode
+      nucleus.step(dtSec, params.substeps)
+    } else if (inWeb()) advanceCosmos(cosmos!, dtSec, params.substeps)
     else if (uni) for (let s = 0; s < params.substeps; s++) uni.step()
   }
   if (flight && flight.dir === 1 && performance.now() - flight.t0 >= FLIGHT_MS) land()
   else if (flight && flight.dir === -1 && performance.now() - flight.t0 >= FLIGHT_MS) flight = null
-  if (inWeb() && !flight && (catalogueA === 0 || (advancing && clock - lastCatalogue > 1.2 && Math.log(cosmos!.a / catalogueA) > 0.04))) {
+  if (inWeb() && !flight && pendingSeek === null && !pendingGoto && (catalogueA === 0 || (advancing && clock - lastCatalogue > 1.2 && Math.log(cosmos!.a / catalogueA) > 0.04))) {
     if (cosmos!.a > 0.06) refreshCatalogue()
   }
   const t1 = performance.now()
@@ -1315,7 +1544,11 @@ function runTick(): void {
   const buf = pool.pop()!
   const out = new Uint32Array(buf)
   const t2 = performance.now()
-  if (inWeb() || (flight && cosmos)) {
+  if (level === "nucleus" && nucleus) {
+    nucleus.mode = activeLens() as NucleusMode
+    stats.scale = nucleus.render(out, rw, rh, Math.max(0.2, view.zoom), accent)
+    applyFade(out)
+  } else if (inWeb() || (flight && cosmos)) {
     renderCosmos(cosmos!, out)
     // Keep the frame a dive is leaving, to fade from on landing.
     if (flight && flight.dir === 1) {
@@ -1335,7 +1568,7 @@ function runTick(): void {
   stats.focus = focus
   stats.haloes = catalogue.length
   stats.units = units
-  stats.moving = flight !== null || pendingGoto !== null
+  stats.moving = flight !== null || pendingGoto !== null || pendingSeek !== null
   if (inWeb()) {
     const c = cosmos!
     const pm = c.pm.stats
@@ -1355,6 +1588,13 @@ function runTick(): void {
     stats.growth = c.history.growth(aShow)
     stats.done = finished()
     stats.epoch = stats.done ? "today" : c.epochAt(aShow)
+  } else if (level === "nucleus" && nucleus) {
+    stats.cosmological = false
+    stats.solver = "fmm"
+    stats.particles = nucleus.bodies.length
+    stats.time = 0
+    stats.done = false
+    stats.epoch = ""
   } else {
     const u = uni!
     stats.cosmological = false
@@ -1380,6 +1620,9 @@ function runTick(): void {
     }
   }
 
+  if (nucleusAfterLanding > 0 && level === "halo" && !flight && --nucleusAfterLanding === 0) enterNucleus()
+  if (!lastFrame || lastFrame.length !== out.length) lastFrame = new Uint32Array(out.length)
+  lastFrame.set(out)
   ctx.postMessage({ t: "frame", buf, w: rw, h: rh, stats: { ...stats } }, [buf])
   kick()
 }
@@ -1392,7 +1635,7 @@ function kick(force = false): void {
     faulted ||
     pool.length === 0 ||
     rw === 0 ||
-    (params?.substeps === 0 && !renderRequested && !flight && !pendingGoto && !fadeFrom) ||
+    (params?.substeps === 0 && !renderRequested && !flight && !pendingGoto && pendingSeek === null && !fadeFrom) ||
     (finished() && level === "web" && !renderRequested && !flight)
   ) return
   scheduled = true
@@ -1479,6 +1722,7 @@ ctx.addEventListener("message", (e: MessageEvent<ToWorker>) => {
 
       case "view":
         view = { ...msg.view }
+        autoTransition()
         // Trails live in screen space; retaining them through a camera
         // transform would ghost the old coordinate system over the new one.
         accum.fill(0)
@@ -1510,6 +1754,15 @@ ctx.addEventListener("message", (e: MessageEvent<ToWorker>) => {
       }
 
       case "dive": {
+        if (level === "halo" && uni && !flight && rw > 0) {
+          // A click on the galaxy's heart goes down to its black hole.
+          const c = galaxyCentrePx(uni)
+          if (Math.hypot(msg.at.x - c.x, msg.at.y - c.y) < Math.max(28, Math.min(rw, rh) * 0.06)) {
+            enterNucleus()
+            kick(true)
+          }
+          break
+        }
         if (!inWeb() || flight || rw === 0) break
         const at = rasterToWorld(msg.at.x, msg.at.y)
         const h = haloAt(at.x, at.y)
@@ -1520,14 +1773,57 @@ ctx.addEventListener("message", (e: MessageEvent<ToWorker>) => {
         break
       }
 
+      case "seek":
+        seek(msg.a)
+        kick(true)
+        break
+
       case "ascend":
-        if (!flight) ascend()
+        if (level === "nucleus") leaveNucleus()
+        else if (!flight) ascend()
+        kick(true)
+        break
+
+      case "nucleus":
+        uni = null
+        focus = null
+        haloFrame = null
+        enterNucleus()
+        kick(true)
+        break
+
+      case "launch": {
+        if (!nucleus || level !== "nucleus") break
+        const sc = stats.scale
+        const wx = (msg.from.x - rw * 0.5) / sc
+        const wy = (rh * 0.5 - msg.from.y) / sc
+        if (nucleus.mode === "clocks") {
+          const g = nucleus.clocksGeometry(rw, rh, Math.max(0.2, view.zoom))
+          nucleus.drop(Math.abs((msg.from.x - g.ox) / g.scale))
+        } else if (nucleus.mode === "orbits") {
+          const dx = (msg.to.x - msg.from.x) / sc
+          const dy = -(msg.to.y - msg.from.y) / sc
+          const r = Math.max(1, Math.hypot(wx, wy))
+          // Dragging half the radius throws at the local circular speed.
+          nucleus.launch(wx, wy, dx / (0.5 * r), dy / (0.5 * r))
+        }
+        analysisDirty = true
+        kick(true)
+        break
+      }
+
+      case "clockFrame":
+        if (nucleus) {
+          nucleus.frame = msg.frame
+          nucleus.drop(nucleus.r0)
+          analysisDirty = true
+        }
         kick(true)
         break
 
       case "goto":
         if (cosmos) {
-          pendingGoto = { a: 1 / (1 + Math.max(0, msg.z)), id: msg.halo | 0 }
+          pendingGoto = { a: 1 / (1 + Math.max(0, msg.z)), id: msg.halo | 0, nucleus: !!msg.nucleus }
           if (level !== "web") {
             level = "web"
             uni = null

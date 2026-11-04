@@ -102,6 +102,14 @@ const GAMES: GameCard[] = [
     live: true,
     section: "featured",
   },
+  {
+    href: "filament?level=nucleus",
+    name: "GEODESIC",
+    blurb:
+      "The bottom of FILAMENT's descent: a black hole, exactly. Throw bodies onto Schwarzschild geodesics and watch rosettes precess and plunges freeze at the horizon; look through a lensing camera at the shadow and its photon ring; drop a probe and compare its clock with yours. Climb out to the cosmic web.",
+    live: true,
+    section: "featured",
+  },
   { href: "apparatus", name: "Apparatus", blurb: "A seeded studio for generative dithered plates — compose whole plates, lock the good bits and re-roll the rest, then re-emulate through vintage output devices (Mac 1-bit, Game Boy, CGA, plotter…). Square by default; exports SVG/PNG.", live: true, section: "featured" },
 ]
 

@@ -34,8 +34,9 @@
  * at each image of itself that overlaps the screen.
  */
 
-/** Below this pixel area a triangle is deposited as a point. */
-const POINT_AREA = 3
+/** Below this pixel area a triangle is deposited as a point: scanline is exact
+ *  for a smooth sheet at any size, but misses a triangle no pixel centre falls in. */
+const POINT_AREA = 0.6
 
 export interface SheetCamera {
   /** World coordinates at the centre of the raster. */
