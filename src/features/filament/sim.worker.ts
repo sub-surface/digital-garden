@@ -1,26 +1,64 @@
 /**
- * FILAMENT simulation worker — the loop, the luminous events, and the raster.
+ * FILAMENT simulation worker — the loop, the instruments, the luminous events,
+ * and the raster.
  *
- * The physics lives in `universe.ts` (headlessly testable); this file owns what
- * only a worker can: the frame loop, the pixel buffers, and the message
- * contract in `protocol.ts`.
+ * The physics lives in `universe.ts` and the measurements in `analysis.ts`
+ * (both headlessly testable); this file owns what only a worker can: the frame
+ * loop, the pixel buffers, and the message contract in `protocol.ts`.
  *
  * Per frame:
  *   1. advance the {@link Universe} by `substeps`
- *   2. scan solver-independent density cells; light quasars, fire starbursts
- *   3. splat both species into a density buffer, tone-map it, draw the events
+ *   2. every ~0.2 s, run the analysis pass: spectra, web, flow, profiles
+ *   3. scan solver-independent density cells; light quasars, fire starbursts
+ *   4. splat density (and the lens quantity) into the raster, tone-map it
  */
 
 import { Universe } from "./universe"
-import { cmbGlow, type Afterglow } from "./cosmology"
+import { cmbGlow, COSMOLOGIES, PATCH_MPC, type Afterglow } from "./cosmology"
 import { wrapPeriodic } from "./particle-mesh"
 import { depositCic, resampleConservative, timedDecay } from "./density-raster"
-import type { FromWorker, SimParams, SimStats, ToWorker, ViewParams } from "./protocol"
+import {
+  MeshAnalysis,
+  densityPdf,
+  depositPeriodic,
+  isolatedDiagnostics,
+  type WebCensus,
+  type WebClass,
+} from "./analysis"
+import { K_BINS, kBinCentre } from "./spectrum"
+import { sampleGrowth } from "./cosmology"
+import {
+  HUE_BINS,
+  HUE_SCALE,
+  buildDensityPalette,
+  buildLensPalette,
+  lensHasHue,
+  signedHue,
+  type Rgb,
+} from "./palettes"
+import type {
+  FromWorker,
+  LensName,
+  ProbeReading,
+  SimParams,
+  SimStats,
+  ToWorker,
+  ViewParams,
+} from "./protocol"
 
 /** Brightness of a massive particle relative to a tracer. */
 const MASS_WEIGHT = 2.6
 /** Tone-map index the auto-exposure aims the mean occupied pixel at. */
 const TARGET_LEVEL = 7.5
+/** Wall-clock seconds between analysis passes while running. */
+const ANALYSIS_PERIOD = 0.2
+/** T-web smoothing (3 comoving Mpc) and eigenvalue threshold. */
+const WEB_SMOOTHING = 3 / PATCH_MPC
+const WEB_THRESHOLD = 0.3
+/** Wavenumbers treated as "the largest modes" for the growth instrument. */
+const GROWTH_K_MAX = 4.5
+/** History arrays are halved, keeping every other sample, past this length. */
+const HISTORY_CAP = 360
 
 const ctx = globalThis as unknown as {
   postMessage(msg: FromWorker, transfer?: Transferable[]): void
@@ -35,9 +73,15 @@ let frameCx = 0, frameCy = 0, frameHalf = 1
 let rng = 1
 
 let accum = new Float32Array(0)
+/** Doppler numerator: Σ weight·hue, so hue = hueAccum / accum survives trails. */
+let hueAccum = new Float32Array(0)
+/** Per-pixel lens hue for mesh lenses; −1 outside the periodic patch. */
+let hueFrame = new Float32Array(0)
 const palette = new Uint32Array(256)
-let accent: [number, number, number] = [0.71, 0.26, 0.3]
+const lensLut = new Uint32Array(HUE_BINS * 256)
+let accent: Rgb = [0.71, 0.26, 0.3]
 let glowKey = -1
+let lutKey = ""
 /** Metered exposure; 0 means "not yet measured", so the first frame snaps. */
 let autoGain = 0
 let rw = 0, rh = 0
@@ -60,9 +104,27 @@ let clock = 0
 let lastTick = 0
 let lastEventScan = 0
 
+// --- analysis state ---------------------------------------------------------
+let analysis: MeshAnalysis | null = null
+/** Lens hue on the force mesh, 0–1. */
+let hueMesh = new Float32Array(0)
+/** Redshift-space density on the force mesh. */
+let rsdMesh = new Float32Array(0)
+let lastAnalysis = -Infinity
+let analysisDirty = true
+let webValid = false
+let phiValid = false
+let flowValid = false
+let lastCensus: WebCensus | null = null
+const spectrum = new Float64Array(K_BINS)
+let growthHistory = { lnA: [] as number[], measured: [] as number[] }
+let isoHistory = { t: [] as number[], virial: [] as number[], r10: [] as number[], r50: [] as number[], r90: [] as number[] }
+let angularZero: number | null = null
+let probeAt: { x: number; y: number } | null = null
+
 const stats: SimStats = {
-  stepMs: 0, drawMs: 0, cells: 0, depth: 0, nearPairs: 0, translations: 0,
-  speedup: 1, scale: 1, cosmological: false, a: 1, z: 0, time: 0,
+  stepMs: 0, drawMs: 0, analysisMs: 0, cells: 0, depth: 0, nearPairs: 0, translations: 0,
+  speedup: 1, scale: 1, cosmological: false, a: 1, z: 0, time: 0, growth: 1,
   epoch: "", done: false, quasars: 0, bursts: 0, solver: "fmm",
   particles: 0, peakCellMass: 0, occupiedCells: 0, health: "stable",
 }
@@ -73,6 +135,15 @@ function rand(): number {
   rng ^= rng >>> 17
   rng ^= rng << 5
   return (rng >>> 0) / 4294967296
+}
+
+/** The lens actually in force: a cosmological lens falls back in isolated worlds. */
+function activeLens(): LensName {
+  const lens = params?.lens ?? "density"
+  const cosmo = !!uni?.cosmological
+  if (lens === "doppler") return cosmo ? "density" : lens
+  if (lens === "density") return lens
+  return cosmo ? lens : "density"
 }
 
 // ---------------------------------------------------------------------------
@@ -126,14 +197,12 @@ let burstTotal = 0
 function scanEvents(dtSec: number): void {
   const p = params!
   const u = uni!
-  if (!p.events) {
+  if (!p.events || activeLens() !== "density") {
     quasars.length = 0
     bursts.length = 0
     return
   }
 
-  // One pass for the scale of the biggest halo, so every threshold below is
-  // relative and works at any particle count and any epoch.
   let peak = 0
   u.forEachDensityCell((mass) => {
     if (mass > peak) peak = mass
@@ -146,8 +215,6 @@ function scanEvents(dtSec: number): void {
   const quasarThreshold = peak * 0.45
   const burstThreshold = peak * 0.05
   // Global expected flashes per second, distributed by physical cell mass.
-  // Normalising by total mass rather than by the peak keeps a 256² mesh from
-  // producing 16× more events than a 64² mesh merely because it has more cells.
   const burstRate = 8 * dtSec * (u.cosmological ? 0.3 + noon : 1)
 
   u.forEachDensityCell((m, cellX, cellY, h) => {
@@ -159,11 +226,8 @@ function scanEvents(dtSec: number): void {
     }
 
     if (m < quasarThreshold) return
-    // One quasar per halo: if there is already one nearby, let it drift with
-    // its halo rather than igniting a second. The "nearby" radius is a fraction
-    // of the *system*, not of a cell — cells shrink as the tree deepens, and
-    // keying off them lets a single wandering nucleus re-ignite every time the
-    // depth feedback subdivides underneath it.
+    // One quasar per halo, judged at a fraction of the *system* rather than of
+    // a cell, so a wandering nucleus does not re-ignite as the tree deepens.
     const near = Math.max(h * 2.5, u.boxHalf * 0.05)
     let occupied = false
     for (const q of quasars) {
@@ -180,8 +244,6 @@ function scanEvents(dtSec: number): void {
         break
       }
     }
-    // A whole cosmological patch can host a dozen at cosmic noon; a single
-    // galaxy or a merging pair hosts one, occasionally two.
     if (occupied || quasars.length >= (u.cosmological ? 12 : 2)) return
     if (rand() < (u.cosmological ? 0.05 * noon : 0.012)) {
       quasars.push({
@@ -203,84 +265,224 @@ function scanEvents(dtSec: number): void {
 }
 
 // ---------------------------------------------------------------------------
-// Palette
+// Palettes
 // ---------------------------------------------------------------------------
 
-/**
- * Build the density → colour table.
- *
- * The asinh stretch is baked into the *table*, not applied per pixel: entry i
- * stands for a linear density of i/gain, but is coloured as though that density
- * had been passed through asinh. So the tone map costs one multiply, one
- * truncation and one array read per pixel, and still gets the enormous dynamic
- * range astronomy needs — the same stretch SDSS uses to show a galaxy's core
- * and its outer arms in a single image.
- *
- * The recombination afterglow rides in the same table, added as a uniform floor
- * rather than composited per pixel: it is the same colour everywhere on screen,
- * so there is no reason to pay for it more than 256 times.
- */
-function buildPalette(glow: Afterglow): void {
-  const [ar, ag, ab] = accent
-  const K = 14
-  const norm = Math.asinh(K)
-  // Placed so the site's accent lands on the *filaments* — the mid-densities
-  // that make up most of the visible field — rather than on a thin shell
-  // between "empty" and "clipped to white", which is where an evenly spaced
-  // ramp puts it once the asinh stretch has done its work.
-  const stops: [number, number, number, number][] = [
-    [0.0, 0.01, 0.01, 0.035],
-    [0.1, 0.05, 0.045, 0.2],
-    [0.26, ar * 0.8, ag * 0.8, ab * 0.9],
-    [0.55, Math.min(1, ar * 0.6 + 0.45), Math.min(1, ag * 0.55 + 0.36), Math.min(1, ab * 0.45 + 0.26)],
-    [1.0, 1.0, 0.97, 0.9],
-  ]
-
-  // The afterglow tints the whole ramp rather than washing over it, and adds
-  // only a dim uniform floor. That way the early sky is not a flat orange
-  // rectangle: it is the density field itself rendered hot, which is what a CMB
-  // map actually is — the same primordial potential, seen in temperature.
-  const s = glow.strength
-  const tint = s * 0.62
-  const floor = s * 0.05
-
-  for (let i = 0; i < 256; i++) {
-    const t = Math.asinh((i / 255) * K) / norm
-    let k = 0
-    while (k < stops.length - 2 && t > stops[k + 1][0]) k++
-    const [t0, r0, g0, b0] = stops[k]
-    const [t1, r1, g1, b1] = stops[k + 1]
-    const f = t1 > t0 ? (t - t0) / (t1 - t0) : 0
-    let r = r0 + (r1 - r0) * f
-    let g = g0 + (g1 - g0) * f
-    let b = b0 + (b1 - b0) * f
-    if (s > 0) {
-      // Warm the ramp, weighted toward the low end so bright knots keep their
-      // structure instead of clipping to a single orange.
-      const w = tint * (1 - 0.45 * t)
-      r = Math.min(1, r * (1 - w) + glow.r * w + floor)
-      g = Math.min(1, g * (1 - w) + glow.g * w + floor * 0.45)
-      b = Math.min(1, b * (1 - w) + glow.b * w + floor * 0.2)
-    }
-    // Fade in over the first few levels so empty space stays transparent and
-    // the page's own background shows through — except while the sky itself is
-    // still glowing, when even empty space carries the afterglow.
-    const alpha = Math.max(s * 0.34, Math.min(1, t * 4)) * 255
-    // Little-endian byte order (0xAABBGGRR) — every platform a browser ships on.
-    palette[i] = ((alpha & 255) << 24) | ((b * 255) << 16) | ((g * 255) << 8) | (r * 255)
-  }
-  if (s <= 0) palette[0] = 0
-}
-
-/** Rebuild the palette only when the afterglow has visibly moved. */
+/** Rebuild the density palette only when the afterglow has visibly moved. */
 function syncGlow(): void {
-  const lit = uni?.cosmological && params?.events
+  const lit = uni?.cosmological && params?.events && activeLens() === "density"
   const glow: Afterglow = lit ? cmbGlow(uni!.a) : { strength: 0, r: 0, g: 0, b: 0 }
-  // Quantised so the palette is rebuilt only when the afterglow visibly moves.
   const key = Math.round(glow.strength * 96) * 128 + Math.round(glow.g * 64)
   if (key === glowKey) return
   glowKey = key
-  buildPalette(glow)
+  buildDensityPalette(palette, accent, glow)
+}
+
+function syncLensLut(): void {
+  const lens = activeLens()
+  if (!lensHasHue(lens)) return
+  const key = `${lens}:${accent.join(",")}`
+  if (key === lutKey) return
+  lutKey = key
+  buildLensPalette(lensLut, lens, accent)
+}
+
+// ---------------------------------------------------------------------------
+// Analysis
+// ---------------------------------------------------------------------------
+
+function pushHistory<T extends Record<string, number[]>>(h: T, values: { [K in keyof T]: number }): void {
+  const keys = Object.keys(h) as (keyof T)[]
+  for (const k of keys) h[k].push(values[k])
+  if (h[keys[0]].length > HISTORY_CAP) {
+    for (const k of keys) h[k] = h[k].filter((_, i) => i % 2 === 0) as T[keyof T]
+  }
+}
+
+/** Transcribe the active lens quantity onto the mesh hue field. */
+function refreshHueMesh(): void {
+  const an = analysis
+  if (!an) return
+  const lens = activeLens()
+  const cells = hueMesh.length
+  if (lens === "web" && webValid) {
+    for (let i = 0; i < cells; i++) hueMesh[i] = an.web[i] * 0.5
+  } else if (lens === "flow" && flowValid) {
+    for (let i = 0; i < cells; i++) hueMesh[i] = signedHue(an.theta[i], HUE_SCALE.flow)
+  } else if (lens === "potential" && phiValid) {
+    for (let i = 0; i < cells; i++) hueMesh[i] = signedHue(an.phi[i], HUE_SCALE.potential)
+  }
+}
+
+function analyse(advancing: boolean): void {
+  const p = params!
+  const u = uni!
+  const t0 = performance.now()
+  const lens = activeLens()
+
+  if (u.pm && analysis) {
+    const an = analysis
+    an.load(u.pm.cellMass)
+    an.powerSpectrum(spectrum)
+    if (lens === "web" || p.instruments || probeAt) {
+      lastCensus = an.tidalWeb(WEB_SMOOTHING, WEB_THRESHOLD)
+      webValid = true
+    }
+    if (lens === "potential" || probeAt) {
+      an.potential()
+      phiValid = true
+    }
+    if (lens === "flow") {
+      an.flow(
+        [
+          { c: u.masses, n: u.nMass },
+          { c: u.tracers, n: u.nTracer },
+        ],
+        1 / (u.a * u.a * u.hubbleRate),
+      )
+      flowValid = true
+    }
+    refreshHueMesh()
+
+    // Growth of the largest modes, recorded whether or not anyone is looking,
+    // so opening the instruments mid-run shows the whole history.
+    const D = u.growthFactor
+    let meas = 0
+    let lin = 0
+    for (let b = 0; b < K_BINS; b++) {
+      if (kBinCentre(b) > GROWTH_K_MAX || u.linearToday[b] <= 0 || spectrum[b] <= 0) continue
+      meas += spectrum[b]
+      lin += u.linearToday[b]
+    }
+    if (lin > 0 && (advancing || growthHistory.lnA.length === 0)) {
+      const lnA = Math.log(u.a)
+      const last = growthHistory.lnA[growthHistory.lnA.length - 1]
+      if (last === undefined || lnA > last) pushHistory(growthHistory, { lnA, measured: Math.sqrt(meas / lin) })
+    }
+
+    if (p.instruments) postCosmic(D)
+  } else if (!u.cosmological) {
+    const diag = isolatedDiagnostics(u.masses, u.nMass)
+    if (angularZero === null) angularZero = diag.angularMomentum
+    const last = isoHistory.t[isoHistory.t.length - 1]
+    if (last === undefined || u.time > last) {
+      pushHistory(isoHistory, {
+        t: u.time,
+        virial: diag.virial,
+        r10: diag.lagrangian[0],
+        r50: diag.lagrangian[1],
+        r90: diag.lagrangian[2],
+      })
+    }
+    if (p.instruments) {
+      ctx.postMessage({
+        t: "instruments",
+        data: {
+          kind: "isolated",
+          ...isoHistory,
+          rotation: diag.rotation,
+          angularDrift: Math.abs(diag.angularMomentum - angularZero) / Math.max(1e-12, diag.angularScale),
+          momentumDrift: diag.momentumDrift,
+        },
+      })
+    }
+  }
+
+  if (probeAt) postProbe()
+  stats.analysisMs = performance.now() - t0
+}
+
+function postCosmic(D: number): void {
+  const u = uni!
+  const total = u.nMass + u.nTracer
+  const k: number[] = []
+  const measured: number[] = []
+  const linear: number[] = []
+  const shot: number[] = []
+  let kNL: number | null = null
+  let prevK = 0
+  let prevLin = 0
+  for (let b = 0; b < K_BINS; b++) {
+    if (spectrum[b] <= 0) continue
+    const kc = kBinCentre(b)
+    const lin = u.linearToday[b] * D * D
+    k.push(kc)
+    measured.push(spectrum[b])
+    linear.push(lin)
+    shot.push((2 * Math.PI * kc * kc) / total)
+    // Largest scale at which linear theory has reached Δ² = 1: where the box
+    // stops being describable as small ripples.
+    if (kNL === null && lin >= 1) {
+      kNL = prevLin > 0 && prevLin < 1
+        ? Math.exp(Math.log(prevK) + (Math.log(kc) - Math.log(prevK)) * (-Math.log(prevLin) / (Math.log(lin) - Math.log(prevLin))))
+        : kc
+    }
+    if (lin > 0) {
+      prevK = kc
+      prevLin = lin
+    }
+  }
+
+  // The theory curve is fixed per universe; 64 samples across the run.
+  const theoryLnA: number[] = []
+  const theoryD: number[] = []
+  const lo = Math.log(1 / 1101)
+  for (let i = 0; i <= 64; i++) {
+    const s = lo + (0 - lo) * (i / 64)
+    theoryLnA.push(s)
+    theoryD.push(sampleGrowth(u.growth, Math.exp(s)).D)
+  }
+
+  ctx.postMessage({
+    t: "instruments",
+    data: {
+      kind: "cosmic",
+      a: u.a,
+      k,
+      measured,
+      linear,
+      shot,
+      kNL,
+      growth: { lnA: [...growthHistory.lnA], measured: [...growthHistory.measured] },
+      growthTheory: { lnA: theoryLnA, D: theoryD },
+      pdf: densityPdf(analysis!.delta),
+      web: lastCensus,
+    },
+  })
+}
+
+/** Screen raster pixel → world coordinates under the current camera. */
+function rasterToWorld(px: number, py: number): { x: number; y: number } {
+  const u = uni!
+  const scale = stats.scale
+  let x = (px - rw * 0.5) / scale + frameCx + view.panX
+  let y = (rh * 0.5 - py) / scale + frameCy + view.panY
+  if (u.cosmological) {
+    x = wrapPeriodic(x, u.boxHalf)
+    y = wrapPeriodic(y, u.boxHalf)
+  }
+  return { x, y }
+}
+
+function postProbe(): void {
+  const u = uni
+  if (!u || !probeAt || rw === 0) return
+  const { x, y } = rasterToWorld(probeAt.x, probeAt.y)
+  const reading: ProbeReading = { x, y, cosmological: u.cosmological }
+  if (u.pm && analysis) {
+    const n = analysis.n
+    const half = u.pm.half
+    if (Math.abs((probeAt.x - rw * 0.5) / stats.scale) < half && Math.abs((rh * 0.5 - probeAt.y) / stats.scale) < half) {
+      const ix = Math.min(n - 1, Math.max(0, Math.floor(((x + half) / (2 * half)) * n)))
+      const iy = Math.min(n - 1, Math.max(0, Math.floor(((y + half) / (2 * half)) * n)))
+      const i = iy * n + ix
+      reading.delta = analysis.delta[i]
+      if (webValid) reading.web = analysis.web[i] as WebClass
+      if (phiValid) reading.phi = analysis.phi[i]
+      if (flowValid && activeLens() === "flow") reading.theta = analysis.theta[i]
+    }
+  }
+  ctx.postMessage({ t: "probe", reading })
 }
 
 // ---------------------------------------------------------------------------
@@ -297,6 +499,11 @@ function reset(): void {
     order: p.order,
     meshSize: p.meshSize,
     softening: p.softening,
+    ic: {
+      cosmology: COSMOLOGIES[p.cosmology] ?? COSMOLOGIES.planck,
+      darkMatter: p.darkMatter,
+      amplitude: p.amplitude,
+    },
   })
   frameCx = 0
   frameCy = 0
@@ -310,7 +517,27 @@ function reset(): void {
   glowKey = -1
   autoGain = 0
   accum.fill(0)
+  hueAccum.fill(0)
   rng = (p.seed | 1) >>> 0
+
+  if (uni.pm) {
+    const n = uni.pm.size
+    if (!analysis || analysis.n !== n) analysis = new MeshAnalysis(n, uni.pm.half)
+    if (hueMesh.length !== n * n) {
+      hueMesh = new Float32Array(n * n)
+      rsdMesh = new Float32Array(n * n)
+    }
+    hueMesh.fill(0.5)
+  } else {
+    analysis = null
+  }
+  webValid = phiValid = flowValid = false
+  lastCensus = null
+  growthHistory = { lnA: [], measured: [] }
+  isoHistory = { t: [], virial: [], r10: [], r50: [], r90: [] }
+  angularZero = null
+  lastAnalysis = -Infinity
+  analysisDirty = true
   syncGlow()
 }
 
@@ -364,29 +591,35 @@ function spikes(out: Uint32Array, cx: number, cy: number, len: number, cr: numbe
   }
 }
 
-/** Continuous CIC particle raster for isolated FMM scenarios. */
-function splatParticles(u: Universe, scale: number, ox: number, oy: number): void {
-  const splat = (cx: Float32Array, cy: Float32Array, n: number, weight: number) => {
+/**
+ * Continuous CIC particle raster for isolated FMM scenarios. With `doppler`
+ * set, each deposit also carries its line-of-sight speed as hue.
+ */
+function splatParticles(u: Universe, scale: number, ox: number, oy: number, doppler: boolean): void {
+  const splat = (c: { x: Float32Array; y: Float32Array; vy: Float32Array }, n: number, weight: number) => {
+    const { x: cx, y: cy, vy } = c
     for (let i = 0; i < n; i++) {
       const sx = cx[i] * scale + ox
       const sy = oy - cy[i] * scale
       if (sx < -1 || sx >= rw || sy < -1 || sy >= rh) continue
       depositCic(accum, rw, rh, sx, sy, weight)
+      if (doppler) depositCic(hueAccum, rw, rh, sx, sy, weight * signedHue(vy[i], HUE_SCALE.doppler))
     }
   }
-  splat(u.tracers.x, u.tracers.y, u.nTracer, 1)
-  splat(u.masses.x, u.masses.y, u.nMass, MASS_WEIGHT)
+  splat(u.tracers, u.nTracer, 1)
+  splat(u.masses, u.nMass, MASS_WEIGHT)
 }
 
 /**
- * Reconstruct the cosmological density directly from the force mesh.
+ * Reconstruct a periodic mesh field directly into the raster.
  *
  * The mesh is the simulation's actual resolved mass field. Showing individual
  * nearest-pixel particles below that scale adds sampling noise, not physical
  * detail. Bilinear reconstruction gives continuous motion, costs no particle
- * splat pass, and makes visual and force resolution agree.
+ * splat pass, and makes visual and force resolution agree. A lens hue field on
+ * the same mesh is sampled with the same weights in the same pass.
  */
-function splatPeriodicDensity(u: Universe, scale: number): void {
+function splatPeriodicMesh(u: Universe, scale: number, rho: Float32Array, hue: Float32Array | null): void {
   const pm = u.pm!
   const n = pm.size
   const half = pm.half
@@ -426,9 +659,9 @@ function splatPeriodicDensity(u: Universe, scale: number): void {
     sampleYF[y] = gy - base
   }
 
-  const rho = pm.cellMass
   const patchPixels = Math.max(1, Math.pow(2 * half * scale, 2))
   const densityScale = ((u.nMass + u.nTracer) * n * n) / patchPixels
+  if (hue) hueFrame.fill(-1)
   for (let y = 0; y < rh; y++) {
     if (!sampleYInside[y]) continue
     const y0 = sampleY0[y] * n
@@ -441,11 +674,30 @@ function splatPeriodicDensity(u: Universe, scale: number): void {
       const x0 = sampleX0[x]
       const x1 = sampleX1[x]
       const tx = sampleXF[x]
-      const a = rho[y0 + x0] * (1 - tx) + rho[y0 + x1] * tx
-      const b = rho[y1 + x0] * (1 - tx) + rho[y1 + x1] * tx
+      const wx0 = 1 - tx
+      const a = rho[y0 + x0] * wx0 + rho[y0 + x1] * tx
+      const b = rho[y1 + x0] * wx0 + rho[y1 + x1] * tx
       accum[row + x] += (a * wy0 + b * ty) * densityScale
+      if (hue) {
+        const ha = hue[y0 + x0] * wx0 + hue[y0 + x1] * tx
+        const hb = hue[y1 + x0] * wx0 + hue[y1 + x1] * tx
+        hueFrame[row + x] = ha * wy0 + hb * ty
+      }
     }
   }
+}
+
+/** Redshift-space density: positions displaced by v_los / (aH) along y. */
+function depositRedshiftSpace(u: Universe): Float32Array {
+  const pm = u.pm!
+  rsdMesh.fill(0)
+  const total = u.nMass + u.nTracer
+  // u = a²ẋ, so the peculiar velocity over the Hubble rate, in comoving
+  // length, is u / (a²H): exactly the drift factor's own combination.
+  const shift = 1 / (u.a * u.a * u.hubbleRate)
+  depositPeriodic(rsdMesh, pm.size, pm.half, u.masses, u.nMass, 1 / total, shift)
+  depositPeriodic(rsdMesh, pm.size, pm.half, u.tracers, u.nTracer, 1 / total, shift)
+  return rsdMesh
 }
 
 function render(buf: ArrayBuffer, elapsedSeconds: number, advancing: boolean): void {
@@ -453,6 +705,7 @@ function render(buf: ArrayBuffer, elapsedSeconds: number, advancing: boolean): v
   const u = uni!
   const out = new Uint32Array(buf)
   const px = rw * rh
+  const lens = activeLens()
 
   // Camera. In comoving coordinates the patch is a fixed size by construction,
   // so the cosmological run wants a fixed frame; the isolated scenarios expand
@@ -468,16 +721,26 @@ function render(buf: ArrayBuffer, elapsedSeconds: number, advancing: boolean): v
   const oy = rh * 0.5 + (frameCy + view.panY) * scale
   stats.scale = scale
 
-  if (u.pm) splatPeriodicDensity(u, scale)
-  else splatParticles(u, scale, ox, oy)
+  let hueMode: "none" | "mesh" | "particle" = "none"
+  if (u.pm) {
+    const rho = lens === "redshift" ? depositRedshiftSpace(u) : u.pm.cellMass
+    const meshHue = lensHasHue(lens) && (webValid || phiValid || flowValid)
+    splatPeriodicMesh(u, scale, rho, meshHue ? hueMesh : null)
+    if (meshHue) hueMode = "mesh"
+  } else {
+    const doppler = lens === "doppler"
+    splatParticles(u, scale, ox, oy, doppler)
+    if (doppler) hueMode = "particle"
+  }
+  syncLensLut()
 
   // Paused redraws are fresh static reconstructions. They must not brighten
   // merely because a view or palette message requested the same state again.
   const decay = advancing ? timedDecay(p.trails, elapsedSeconds) : 0
   const empty = palette[0]
+  // Flow and potential paint empty space too: voids are where they speak.
+  const fillEmpty = lens === "flow" || lens === "potential"
 
-  // Meter once before the first tone map so a reset does not emit a blank
-  // calibration frame. Subsequent frames meter inside the normal decay pass.
   if (autoGain === 0) {
     let initialSum = 0
     let initialOccupied = 0
@@ -489,34 +752,41 @@ function render(buf: ArrayBuffer, elapsedSeconds: number, advancing: boolean): v
     if (initialOccupied > 0) autoGain = (TARGET_LEVEL * initialOccupied) / initialSum
   }
   const gain = autoGain * p.exposure
+  const hueTop = HUE_BINS - 1e-3
 
   // Tone map and decay in one pass. `decay === 0` clears the buffer, so trails
-  // off costs exactly the same as trails on. The same pass measures the frame
-  // for the auto-exposure below, for two adds per occupied pixel.
+  // off costs exactly the same as trails on. The same pass meters the frame.
   let sum = 0
   let occupied = 0
   for (let i = 0; i < px; i++) {
     const v = accum[i]
     if (v > 0) {
       const k = v * gain
-      out[i] = palette[k >= 255 ? 255 : k | 0]
+      const idx = k >= 255 ? 255 : k | 0
+      if (hueMode === "mesh") {
+        const h = hueFrame[i]
+        out[i] = h < 0 ? palette[idx] : lensLut[(((h * hueTop) | 0) << 8) | idx]
+      } else if (hueMode === "particle") {
+        const h = hueAccum[i] / v
+        out[i] = lensLut[(((h * hueTop) | 0) << 8) | idx]
+        hueAccum[i] *= decay
+      } else {
+        out[i] = palette[idx]
+      }
       accum[i] = v * decay
       sum += v
       occupied++
+    } else if (fillEmpty && hueMode === "mesh" && hueFrame[i] >= 0) {
+      out[i] = lensLut[((hueFrame[i] * hueTop) | 0) << 8]
     } else {
       out[i] = empty
+      if (hueMode === "particle") hueAccum[i] = 0
     }
   }
 
-  // Auto-exposure, metered off the frame just drawn.
-  //
-  // A fixed gain cannot serve both a cosmological patch — matter spread thinly
-  // over the whole field — and a merger remnant, where most of the mass ends up
-  // inside a few dozen pixels. Anything static is either a grey cosmos or a
-  // blown-out galaxy. Metering the mean occupied density and easing the gain
-  // toward whatever puts it at a fixed point on the tone curve fixes both, and
-  // it also absorbs the 1/(1-decay) brightening that switching trails on would
-  // otherwise cause. Slow enough not to pump on a passing supernova.
+  // Auto-exposure, metered off the frame just drawn: a fixed gain cannot serve
+  // both a thin cosmological field and a merger remnant packed into a few
+  // dozen pixels. Slow enough not to pump on a passing supernova.
   if (occupied > 0) {
     const want = (TARGET_LEVEL * occupied) / sum
     const ease = autoGain > 0
@@ -525,7 +795,7 @@ function render(buf: ArrayBuffer, elapsedSeconds: number, advancing: boolean): v
     autoGain += (want - autoGain) * ease
   }
 
-  if (!p.events) return
+  if (!p.events || lens !== "density") return
 
   // Starbursts: a fast blue-white flash expanding and decaying over ~1 s.
   for (const b of bursts) {
@@ -542,9 +812,7 @@ function render(buf: ArrayBuffer, elapsedSeconds: number, advancing: boolean): v
   }
 
   // Quasars: a hard blue-white core with diffraction spikes, fading in and out
-  // across the halo's active lifetime. Their intrinsic variability is kept
-  // deliberately slow and subtle; a fast 22% pulse looked exactly like a
-  // dropped-frame or adaptive-resolution fault.
+  // across the halo's active lifetime, with slow, subtle variability.
   for (const q of quasars) {
     const age = (clock - q.born) / q.life
     const envelope = Math.sin(Math.PI * Math.min(1, Math.max(0, age)))
@@ -587,7 +855,7 @@ function runTick(): void {
   if (!running || !params || !uni || pool.length === 0) return
 
   const now = performance.now()
-  const advancing = params.substeps > 0
+  const advancing = params.substeps > 0 && !(uni.cosmological && uni.done)
   const dtSec = advancing ? (lastTick ? Math.min(0.25, (now - lastTick) / 1000) : 1 / 60) : 0
   lastTick = advancing ? now : 0
   if (advancing) clock += dtSec
@@ -598,17 +866,23 @@ function runTick(): void {
   const t1 = performance.now()
 
   syncGlow()
+  if (analysisDirty || (advancing && clock - lastAnalysis >= ANALYSIS_PERIOD)) {
+    analysisDirty = false
+    lastAnalysis = clock
+    analyse(advancing)
+  }
   if (advancing && clock - lastEventScan >= 0.1) {
     scanEvents(clock - lastEventScan)
     lastEventScan = clock
   }
 
   const buf = pool.pop()!
-  render(buf, dtSec, advancing)
   const t2 = performance.now()
+  render(buf, dtSec, advancing)
+  const t3 = performance.now()
 
   stats.stepMs = t1 - t0
-  stats.drawMs = t2 - t1
+  stats.drawMs = t3 - t2
   stats.cells = uni.stats.cells
   stats.depth = uni.stats.depth
   stats.nearPairs = uni.stats.nearPairs
@@ -618,6 +892,7 @@ function runTick(): void {
   stats.a = uni.a
   stats.z = uni.z
   stats.time = uni.time
+  stats.growth = uni.cosmological ? uni.growthFactor : 1
   stats.epoch = uni.epoch()
   stats.done = uni.done
   stats.quasars = quasars.length
@@ -643,7 +918,8 @@ function kick(force = false): void {
     faulted ||
     pool.length === 0 ||
     rw === 0 ||
-    (params?.substeps === 0 && !renderRequested)
+    (params?.substeps === 0 && !renderRequested) ||
+    (uni?.cosmological && uni.done && !renderRequested)
   ) return
   scheduled = true
   setTimeout(tick, 0)
@@ -651,9 +927,12 @@ function kick(force = false): void {
 
 function resize(w: number, h: number): void {
   const nextAccum = resampleConservative(accum, rw, rh, w, h)
+  const nextHue = resampleConservative(hueAccum, rw, rh, w, h)
   rw = w
   rh = h
   accum = nextAccum
+  hueAccum = nextHue
+  hueFrame = new Float32Array(w * h)
   sampleX0 = new Int32Array(w)
   sampleX1 = new Int32Array(w)
   sampleXF = new Float32Array(w)
@@ -696,17 +975,28 @@ ctx.addEventListener("message", (e: MessageEvent<ToWorker>) => {
           params.seed !== prev.seed ||
           params.nMass !== prev.nMass ||
           params.nTracer !== prev.nTracer ||
-          params.meshSize !== prev.meshSize
+          params.meshSize !== prev.meshSize ||
+          params.cosmology !== prev.cosmology ||
+          params.darkMatter !== prev.darkMatter ||
+          params.amplitude !== prev.amplitude
         if (structural) {
           faulted = false
           reset()
         } else {
           if (params.order !== prev.order) uni.setOrder(params.order)
           if (params.softening !== prev.softening) uni.setSoftening(params.softening)
-          if (params.events !== prev.events) {
+          if (params.events !== prev.events || params.lens !== prev.lens) {
             glowKey = -1
             syncGlow()
           }
+          if (params.lens !== prev.lens) {
+            // Trails belong to one reading of the field; carrying them into
+            // another would ghost the old colouring over the new.
+            accum.fill(0)
+            hueAccum.fill(0)
+            analysisDirty = true
+          }
+          if (params.instruments && !prev.instruments) analysisDirty = true
         }
         kick(true)
         break
@@ -725,15 +1015,32 @@ ctx.addEventListener("message", (e: MessageEvent<ToWorker>) => {
         // Trails live in screen space; retaining them through a camera
         // transform would ghost the old coordinate system over the new one.
         accum.fill(0)
+        hueAccum.fill(0)
         kick(true)
         break
 
       case "accent":
         accent = msg.accent
         glowKey = -1
+        lutKey = ""
         syncGlow()
         kick(true)
         break
+
+      case "probe": {
+        const wasProbing = probeAt !== null
+        probeAt = msg.at
+        if (!probeAt) {
+          ctx.postMessage({ t: "probe", reading: null })
+        } else if (!wasProbing && uni?.cosmological && (!webValid || !phiValid)) {
+          // The first probe needs fields the current lens may not compute.
+          analysisDirty = true
+          kick(true)
+        } else {
+          postProbe()
+        }
+        break
+      }
 
       case "resize":
         if (msg.w > 0 && msg.h > 0 && (msg.w !== rw || msg.h !== rh)) resize(msg.w, msg.h)

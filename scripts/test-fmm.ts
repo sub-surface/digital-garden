@@ -17,8 +17,24 @@
  */
 import { Fmm, applyPerm, directAccel, chooseDepth } from "../src/features/filament/fmm"
 import { Universe } from "../src/features/filament/universe"
-import { PATCH_SOURCE } from "../src/features/filament/presets"
-import { A_REC, ageOf, growthTable, sampleGrowth, HUBBLE_TIME_GYR } from "../src/features/filament/cosmology"
+import { PATCH_SOURCE, makeInitialState, type DarkMatter } from "../src/features/filament/presets"
+import {
+  A_REC,
+  ageOf,
+  COSMOLOGIES,
+  growthTable,
+  sampleGrowth,
+  sourceFor,
+  HUBBLE_TIME_GYR,
+} from "../src/features/filament/cosmology"
+import {
+  MeshAnalysis,
+  densityPdf,
+  depositPeriodic,
+  isolatedDiagnostics,
+} from "../src/features/filament/analysis"
+import { K_BINS, kBin, kBinCentre } from "../src/features/filament/spectrum"
+import { HUE_BINS, buildLensPalette, lensGradient } from "../src/features/filament/palettes"
 import { fft2, ParticleMesh } from "../src/features/filament/particle-mesh"
 import {
   depositCic,
@@ -546,11 +562,200 @@ function clustering(u: Universe): number {
   )
 }
 
+
+// ---------------------------------------------------------------------------
+// Instruments: every measurement checked against a field with a known answer.
+// ---------------------------------------------------------------------------
+
+// Other universes: the expansion history must reproduce the textbook ages.
+{
+  const eds = ageOf(1, COSMOLOGIES.eds) * HUBBLE_TIME_GYR
+  // Einstein–de Sitter is exactly two-thirds of a Hubble time old.
+  if (Math.abs(eds - (2 / 3) * HUBBLE_TIME_GYR) > 0.03) fail(`EdS age ${eds.toFixed(3)} Gyr, expected 9.65`)
+  const open = ageOf(1, COSMOLOGIES.open) * HUBBLE_TIME_GYR
+  const vacuum = ageOf(1, COSMOLOGIES.vacuum) * HUBBLE_TIME_GYR
+  if (!(eds < open && open < ageOf(1) * HUBBLE_TIME_GYR && ageOf(1) * HUBBLE_TIME_GYR < vacuum)) {
+    fail(`cosmology ages out of order: EdS ${eds.toFixed(2)}, open ${open.toFixed(2)}, Λ-heavy ${vacuum.toFixed(2)}`)
+  }
+  // Late growth: EdS keeps growing, Λ-heavy has stalled.
+  const late = (c: typeof COSMOLOGIES.planck) => {
+    const t = growthTable(sourceFor(c), c)
+    return sampleGrowth(t, 1).D / sampleGrowth(t, 0.5).D
+  }
+  if (!(late(COSMOLOGIES.eds) > late(COSMOLOGIES.planck) && late(COSMOLOGIES.planck) > late(COSMOLOGIES.vacuum))) {
+    fail("late-time growth should order EdS > ΛCDM > Λ-heavy")
+  }
+  console.log(
+    `  ages      EdS ${eds.toFixed(2)} · open ${open.toFixed(2)} · Λ-heavy ${vacuum.toFixed(2)} Gyr · ` +
+      `growth z=1→0 ${late(COSMOLOGIES.eds).toFixed(2)} / ${late(COSMOLOGIES.planck).toFixed(2)} / ${late(COSMOLOGIES.vacuum).toFixed(2)}`,
+  )
+}
+
+// The measured spectrum at recombination is the linear prediction for the
+// same realisation — this one check covers the Zel'dovich normalisation, the
+// CIC deconvolution, the binning, and the Δ² convention all at once.
+{
+  const make = (darkMatter: DarkMatter) =>
+    new Universe({
+      preset: "cosmos",
+      seed: 5,
+      nMass: 6000,
+      nTracer: 18000,
+      meshSize: 64,
+      order: 4,
+      softening: 1,
+      ic: { cosmology: COSMOLOGIES.planck, darkMatter, amplitude: 5 },
+    })
+  const cold = make("cold")
+  const an = new MeshAnalysis(64)
+  const pk = new Float64Array(K_BINS)
+  an.load(cold.pm!.cellMass)
+  an.powerSpectrum(pk)
+  const D2 = cold.growthFactor ** 2
+  let worst = 0
+  for (let b = 0; b < K_BINS; b++) {
+    if (kBinCentre(b) > 9 || cold.linearToday[b] <= 0 || pk[b] <= 0) continue
+    worst = Math.max(worst, Math.abs(pk[b] / (cold.linearToday[b] * D2) - 1))
+  }
+  if (!(worst < 0.12)) fail(`recombination spectrum departs from linear theory by ${(worst * 100).toFixed(1)}%`)
+
+  // Same phases: on a single-mode bin the hot/cold ratio must be exactly the
+  // transfer function squared — which only holds if both drew identical modes.
+  const hot = make("hot")
+  const big = kBin(1)
+  const small = kBin(14)
+  const tHot = Math.exp(-3.9 / 30 - 2.1 / 900)
+  const sameLarge = Math.abs(hot.linearToday[big] / cold.linearToday[big] / (tHot * tHot) - 1)
+  const suppressed = hot.linearToday[small] / cold.linearToday[small]
+  if (!(sameLarge < 1e-6)) fail(`hot/cold box-scale ratio is not T(1)²: off by ${sameLarge.toExponential(2)}`)
+  if (!(suppressed < 0.05)) fail(`hot dark matter kept ${(suppressed * 100).toFixed(1)}% of k=14 power`)
+  console.log(
+    `  spectrum  recombination vs linear: worst ${(worst * 100).toFixed(1)}% (k ≤ 9) · ` +
+      `hot/cold = T² to ${sameLarge.toExponential(0)} · k=14 ${suppressed.toExponential(1)}`,
+  )
+}
+
+// T-web, potential and flow on analytic fields.
+{
+  const n = 64
+  const an = new MeshAnalysis(n)
+  const mass = new Float32Array(n * n)
+  const at = (i: number) => -1 + ((i + 0.5) * 2) / n
+  // δ = A(cos πx + cos πy): a node where both crests meet, a void at the troughs.
+  const A = 0.6
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) mass[y * n + x] = 1 + A * (Math.cos(Math.PI * at(x)) + Math.cos(Math.PI * at(y)))
+  }
+  an.load(mass)
+  const census = an.tidalWeb(0.01, 0.3)
+  const centre = (n / 2) * n + n / 2
+  const corner = 0
+  const edge = (n / 2) * n // x ≈ −1 trough, y ≈ 0 crest
+  if (an.web[centre] !== 2) fail(`T-web: crest intersection classed ${an.web[centre]}, expected node`)
+  if (an.web[corner] !== 0) fail(`T-web: trough classed ${an.web[corner]}, expected void`)
+  if (an.web[edge] !== 1) fail(`T-web: saddle classed ${an.web[edge]}, expected filament`)
+  const totalVolume = census.volume[0] + census.volume[1] + census.volume[2]
+  if (Math.abs(totalVolume - 1) > 1e-9) fail("T-web volume fractions do not sum to one")
+
+  // ∇²φ = δ for a single cosine gives φ ∝ −cos: perfectly anticorrelated.
+  an.potential()
+  let dot = 0, d2 = 0, p2 = 0
+  for (let i = 0; i < n * n; i++) {
+    dot += an.delta[i] * an.phi[i]
+    d2 += an.delta[i] * an.delta[i]
+    p2 += an.phi[i] * an.phi[i]
+  }
+  const corr = dot / Math.sqrt(d2 * p2)
+  if (!(corr < -0.999)) fail(`potential/density correlation ${corr.toFixed(4)}, expected −1`)
+
+  // A uniform lattice with u = c·sin(πx) has ∇·u = cπ·cos(πx) exactly.
+  const side = 128
+  const cloud = {
+    x: new Float32Array(side * side),
+    y: new Float32Array(side * side),
+    vx: new Float32Array(side * side),
+    vy: new Float32Array(side * side),
+    m: new Float32Array(0),
+  }
+  const c = 0.05
+  for (let j = 0; j < side; j++) {
+    for (let i = 0; i < side; i++) {
+      const k = j * side + i
+      cloud.x[k] = -1 + ((i + 0.5) * 2) / side
+      cloud.y[k] = -1 + ((j + 0.5) * 2) / side
+      cloud.vx[k] = c * Math.sin(Math.PI * cloud.x[k])
+    }
+  }
+  an.flow([{ c: cloud, n: side * side }], 1)
+  let flowErr = 0
+  for (let x = 0; x < n; x++) {
+    const expect = c * Math.PI * Math.cos(Math.PI * at(x))
+    flowErr = Math.max(flowErr, Math.abs(an.theta[(n / 3 | 0) * n + x] - expect) / (c * Math.PI))
+  }
+  if (!(flowErr < 0.03)) fail(`velocity divergence error ${(flowErr * 100).toFixed(1)}%`)
+
+  // Redshift-space deposit moves mass but never creates or destroys it.
+  const rsd = new Float32Array(n * n)
+  depositPeriodic(rsd, n, 1, cloud, side * side, 1 / (side * side), 0.8)
+  const rsdTotal = rsd.reduce((s, v) => s + v, 0)
+  if (Math.abs(rsdTotal - 1) > 1e-4) fail(`redshift-space deposit total ${rsdTotal}`)
+
+  const pdf = densityPdf(an.delta)
+  const covered = pdf.measured.reduce((s, v) => s + v, 0) + pdf.empty
+  if (Math.abs(covered - 1) > 1e-9) fail(`density PDF covers ${covered} of the cells`)
+  console.log(
+    `  analysis  T-web node/filament/void ✓ · φ↔δ corr ${corr.toFixed(4)} · ∇·v err ${(flowErr * 100).toFixed(2)}% · PDF closed`,
+  )
+}
+
+// Isolated diagnostics: a cold disc starts rotationally supported, a cold
+// cloud starts with no kinetic support at all, and the stream preset is
+// assembled at rest about its centre of mass.
+{
+  const probe = (preset: "disc" | "collapse" | "stream") => {
+    const s = makeInitialState(preset, 3, 6000, 0)
+    return { s, d: isolatedDiagnostics(s.masses, 6000) }
+  }
+  const disc = probe("disc").d
+  const cold = probe("collapse").d
+  const stream = probe("stream")
+  if (!(disc.virial > 0.8 && disc.virial < 1.25)) fail(`disc virial ratio ${disc.virial.toFixed(3)}, expected ≈1`)
+  if (!(cold.virial < 0.05)) fail(`cold collapse virial ratio ${cold.virial.toFixed(3)}, expected ≈0`)
+  let rcErr = 0
+  let rcCount = 0
+  for (let b = 0; b < disc.rotation.r.length; b++) {
+    if (disc.rotation.r[b] < 0.15 || disc.rotation.r[b] > 0.6) continue
+    rcErr = Math.max(rcErr, Math.abs(disc.rotation.vPhi[b] / disc.rotation.vCirc[b] - 1))
+    rcCount++
+  }
+  if (rcCount === 0 || !(rcErr < 0.15)) fail(`disc rotation curve departs from √(GM(<r)) by ${(rcErr * 100).toFixed(1)}%`)
+  if (!(stream.d.momentumDrift < 0.02)) fail(`stream preset carries net momentum ${stream.d.momentumDrift.toFixed(3)}`)
+  if (!(disc.lagrangian[0] < disc.lagrangian[1] && disc.lagrangian[1] < disc.lagrangian[2])) {
+    fail("Lagrangian radii are not ordered")
+  }
+  console.log(
+    `  isolated  Q disc ${disc.virial.toFixed(2)} · collapse ${cold.virial.toFixed(3)} · ` +
+      `rotation curve within ${(rcErr * 100).toFixed(1)}% · stream momentum ${stream.d.momentumDrift.toExponential(1)}`,
+  )
+}
+
+// Palettes: tables are fully populated, legends parse.
+{
+  const lut = new Uint32Array(HUE_BINS * 256)
+  for (const lens of ["web", "flow", "potential", "doppler"] as const) {
+    lut.fill(0)
+    buildLensPalette(lut, lens, [0.4, 0.5, 0.7])
+    if (lut[HUE_BINS * 256 - 1] === 0 || lut[(HUE_BINS >> 1) * 256 + 128] === 0) fail(`${lens} palette has holes`)
+    if (!lensGradient(lens, [0.4, 0.5, 0.7]).startsWith("linear-gradient(")) fail(`${lens} legend gradient malformed`)
+  }
+}
+
 if (failures > 0) {
   console.error(`${failures} FMM failure(s)`)
   process.exit(1)
 }
 console.log(
   `FMM: ${clouds.length} distributions × 4 orders vs direct N² — converges as expected, depth-independent.\n` +
-    `Cosmology: periodic particle mesh, ΛCDM growing mode, and stable recombination-to-present runs.`,
+    `Cosmology: periodic particle mesh, ΛCDM growing mode, and stable recombination-to-present runs.\n` +
+    `Instruments: spectrum vs linear theory, T-web, potential, flow, PDF, virial, rotation curve.`,
 )

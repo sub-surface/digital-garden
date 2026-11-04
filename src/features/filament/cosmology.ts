@@ -59,22 +59,109 @@ export const A_REC = 1 / 1101
 /** Comoving radius of the simulated patch, in Mpc — sets the distance scale. */
 export const PATCH_MPC = 90
 
+/**
+ * A background universe: the three density parameters that fix H(a).
+ *
+ * Curvature is whatever is left over, Ω_k = 1 − Ω_m − Ω_Λ − Ω_r, so an open
+ * universe is simply one whose matter and vacuum do not add up to one. H₀ is
+ * shared by all of them, which makes the comparison the classic one: the same
+ * expansion rate today, different histories behind it.
+ */
+export type CosmologyName = "planck" | "eds" | "open" | "vacuum"
+
+export interface Cosmology {
+  name: CosmologyName
+  label: string
+  omegaM: number
+  omegaL: number
+  omegaR: number
+  blurb: string
+}
+
+export const COSMOLOGIES: Record<CosmologyName, Cosmology> = {
+  planck: {
+    name: "planck",
+    label: "ΛCDM",
+    omegaM: OMEGA_M,
+    omegaL: OMEGA_L,
+    omegaR: OMEGA_R,
+    blurb: "Planck 2018: 31.5% matter, 68.5% vacuum energy, flat. The universe we measure.",
+  },
+  eds: {
+    name: "eds",
+    label: "Einstein–de Sitter",
+    omegaM: 1,
+    omegaL: 0,
+    omegaR: OMEGA_R,
+    blurb:
+      "All matter, no Λ — the standard model until 1998. Structure keeps growing to the present day, and the universe is only two-thirds of a Hubble time old: younger than its oldest stars.",
+  },
+  open: {
+    name: "open",
+    label: "Open",
+    omegaM: 0.3,
+    omegaL: 0,
+    omegaR: OMEGA_R,
+    blurb:
+      "The right amount of matter with no vacuum energy, so space is negatively curved. Curvature takes over late and freezes the web in place.",
+  },
+  vacuum: {
+    name: "vacuum",
+    label: "Λ-heavy",
+    omegaM: 0.1,
+    omegaL: 0.9,
+    omegaR: OMEGA_R,
+    blurb:
+      "Thin matter, dominant Λ. Acceleration begins early, so to reach today's clumpiness the web must assemble long ago and then stall.",
+  },
+}
+
+export const PLANCK = COSMOLOGIES.planck
+
+/** Ω_k — positive for an open universe. */
+export function omegaK(c: Cosmology = PLANCK): number {
+  return 1 - c.omegaM - c.omegaL - c.omegaR
+}
+
+/**
+ * The 2D analogue of 4πGρ̄ for a given matter density: C = 2πGΣ̄.
+ *
+ * The ΛCDM value is fixed by the patch (side two, total mass one, so C = π/2),
+ * and every other universe scales with its matter content, exactly as the 3D
+ * source 3/2·Ω_m·H₀² does. More matter, stronger self-gravity, same box.
+ */
+export function sourceFor(c: Cosmology = PLANCK): number {
+  return (Math.PI / 2) * (c.omegaM / OMEGA_M)
+}
+
 /** E(a) = H(a)/H₀. */
-export function hubble(a: number): number {
+export function hubble(a: number, c: Cosmology = PLANCK): number {
   const ai = 1 / a
-  return Math.sqrt(OMEGA_R * ai * ai * ai * ai + OMEGA_M * ai * ai * ai + OMEGA_L)
+  return Math.sqrt(
+    c.omegaR * ai * ai * ai * ai + c.omegaM * ai * ai * ai + omegaK(c) * ai * ai + c.omegaL,
+  )
 }
 
 /** d ln H / d ln a — needed by the growth equation. */
-function dlnHdlna(a: number): number {
+function dlnHdlna(a: number, c: Cosmology): number {
   const ai = 1 / a
-  const r = OMEGA_R * ai * ai * ai * ai
-  const m = OMEGA_M * ai * ai * ai
-  return (-4 * r - 3 * m) / (2 * (r + m + OMEGA_L))
+  const r = c.omegaR * ai * ai * ai * ai
+  const m = c.omegaM * ai * ai * ai
+  const k = omegaK(c) * ai * ai
+  return (-4 * r - 3 * m - 2 * k) / (2 * (r + m + k + c.omegaL))
+}
+
+/**
+ * Scale factor at which the expansion starts to accelerate (q = 0), or null
+ * for a universe without Λ. Radiation is negligible this late.
+ */
+export function accelerationOnset(c: Cosmology = PLANCK): number | null {
+  if (c.omegaL <= 0) return null
+  return Math.cbrt(c.omegaM / (2 * c.omegaL))
 }
 
 /** Cosmic time at scale factor `a`, in units of 1/H₀. */
-export function ageOf(a: number, steps = 4096): number {
+export function ageOf(a: number, c: Cosmology = PLANCK, steps = 4096): number {
   // ∫₀^a da'/(a'H) — substitute a = e^s so the integrand is finite at a → 0
   // in radiation domination (where it behaves as a·da).
   const s1 = Math.log(a)
@@ -84,7 +171,7 @@ export function ageOf(a: number, steps = 4096): number {
   for (let i = 0; i <= steps; i++) {
     const s = s0 + i * h
     const w = i === 0 || i === steps ? 0.5 : 1
-    sum += w / hubble(Math.exp(s))
+    sum += w / hubble(Math.exp(s), c)
   }
   return sum * h
 }
@@ -121,7 +208,13 @@ export interface GrowthTable {
   dD: Float64Array
 }
 
-export function growthTable(C: number, aStart = A_REC, aEnd = 3, samples = 1024): GrowthTable {
+export function growthTable(
+  C: number,
+  c: Cosmology = PLANCK,
+  aStart = A_REC,
+  aEnd = 3,
+  samples = 1024,
+): GrowthTable {
   const s0 = Math.log(aStart)
   const s1 = Math.log(aEnd)
   const h = (s1 - s0) / (samples - 1)
@@ -137,10 +230,10 @@ export function growthTable(C: number, aStart = A_REC, aEnd = 3, samples = 1024)
 
   const deriv = (s: number, dv: number, vv: number) => {
     const a = Math.exp(s)
-    const H = hubble(a)
+    const H = hubble(a, c)
     return {
       dd: vv,
-      dv: (C / (a * a * H * H)) * dv - (2 + dlnHdlna(a)) * vv,
+      dv: (C / (a * a * H * H)) * dv - (2 + dlnHdlna(a, c)) * vv,
     }
   }
 

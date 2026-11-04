@@ -18,8 +18,22 @@
  */
 
 import { Fmm, applyPerm, chooseDepth, MAX_DEPTH } from "./fmm"
-import { makeInitialState, PATCH_SOURCE, type Cloud, type PresetName } from "./presets"
-import { ageOf, hubble } from "./cosmology"
+import {
+  DEFAULT_IC,
+  makeInitialState,
+  type Cloud,
+  type InitialConditions,
+  type PresetName,
+} from "./presets"
+import {
+  ageOf,
+  growthTable,
+  hubble,
+  sampleGrowth,
+  sourceFor,
+  type Cosmology,
+  type GrowthTable,
+} from "./cosmology"
 import { ParticleMesh, wrapPeriodic } from "./particle-mesh"
 
 /** Scale factor at which a cosmological run stops: the present day. */
@@ -35,6 +49,8 @@ export interface UniverseOptions {
   meshSize?: number
   /** Multiplier on the preset's softening length. */
   softening: number
+  /** Cosmology, dark matter and amplitude for the cosmological scenario. */
+  ic?: InitialConditions
 }
 
 export interface UniverseStats {
@@ -59,6 +75,12 @@ export class Universe {
   readonly nMass: number
   readonly nTracer: number
   cosmological = false
+  /** Background universe; ignored by the isolated scenarios. */
+  readonly cosmology: Cosmology
+  /** Linear growth D(a) of this cosmology's own 2D growth equation. */
+  readonly growth: GrowthTable
+  /** Linear Δ²(k) today for this realisation, per spectrum bin. */
+  readonly linearToday: Float64Array
 
   /** Physical-time clock (isolated scenarios). */
   dt = 0.002
@@ -98,14 +120,18 @@ export class Universe {
     this.nTracer = opts.nTracer
     this.softeningScale = opts.softening
 
-    const init = makeInitialState(opts.preset, opts.seed, opts.nMass, opts.nTracer)
+    const ic = opts.ic ?? DEFAULT_IC
+    this.cosmology = ic.cosmology
+    const init = makeInitialState(opts.preset, opts.seed, opts.nMass, opts.nTracer, ic)
+    this.linearToday = init.linearToday
+    this.growth = growthTable(sourceFor(ic.cosmology), ic.cosmology)
     this.masses = init.masses
     this.tracers = init.tracers
     this.cosmological = init.cosmological
     this.dt = init.dt
     this.dlnA = init.dlnA
     this.a = init.aStart
-    this.cosmicTime = init.cosmological ? ageOf(init.aStart) : 0
+    this.cosmicTime = init.cosmological ? ageOf(init.aStart, ic.cosmology) : 0
     this.softeningBase = init.softening
     this.extent = init.extent
 
@@ -116,7 +142,7 @@ export class Universe {
     this.scratch = new Float32Array(Math.max(opts.nMass, 1))
     this.fmm = new Fmm(opts.order)
     this.pm = init.cosmological
-      ? new ParticleMesh(opts.meshSize ?? 128, PATCH_SOURCE)
+      ? new ParticleMesh(opts.meshSize ?? 128, sourceFor(ic.cosmology))
       : null
 
     // Prime the accelerations so the first half-kick is not a free fall.
@@ -357,19 +383,20 @@ export class Universe {
     const half = this.dlnA * 0.5
     const lnA0 = Math.log(this.a)
 
+    const cosmo = this.cosmology
     const aMid = Math.exp(lnA0 + half)
-    const driftF = this.dlnA / (aMid * aMid * hubble(aMid))
-    const k0 = half / hubble(this.a)
+    const driftF = this.dlnA / (aMid * aMid * hubble(aMid, cosmo))
+    const k0 = half / hubble(this.a, cosmo)
     this.kickDriftPeriodic(this.masses, this.ax, this.ay, this.nMass, k0, driftF)
     this.kickDriftPeriodic(this.tracers, this.tax, this.tay, this.nTracer, k0, driftF)
 
     this.a = Math.exp(lnA0 + this.dlnA)
     // dt = d(ln a)/H — the cosmic clock falls straight out of the integrator.
-    this.cosmicTime += this.dlnA / hubble(aMid)
+    this.cosmicTime += this.dlnA / hubble(aMid, cosmo)
 
     this.solve()
 
-    const k1 = half / hubble(this.a)
+    const k1 = half / hubble(this.a, cosmo)
     this.kick(this.masses, this.ax, this.ay, this.nMass, k1)
     this.kick(this.tracers, this.tax, this.tay, this.nTracer, k1)
 
@@ -421,6 +448,16 @@ export class Universe {
       const mass = this.fmm.leafCom(c, com)
       if (mass > 0) cb(mass, com.x, com.y, h)
     }
+  }
+
+  /** Linear growth factor at the current epoch, D(a), with D(today) = 1. */
+  get growthFactor(): number {
+    return sampleGrowth(this.growth, this.a).D
+  }
+
+  /** E(a) = H/H₀ at the current epoch. */
+  get hubbleRate(): number {
+    return hubble(this.a, this.cosmology)
   }
 
   /** Where we are in the story, for the readout. */

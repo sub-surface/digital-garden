@@ -30,10 +30,85 @@
  */
 
 import { mulberry32 } from "@/lib/composer/rng"
-import { A_REC, growthTable, hubble, sampleGrowth } from "./cosmology"
+import {
+  A_REC,
+  growthTable,
+  hubble,
+  PLANCK,
+  sampleGrowth,
+  sourceFor,
+  type Cosmology,
+} from "./cosmology"
 import { fft2, wrapPeriodic } from "./particle-mesh"
+import { K_BINS, cicWindow2, kBin } from "./spectrum"
 
-export type PresetName = "cosmos" | "disc" | "collision" | "collapse"
+export type PresetName = "cosmos" | "disc" | "collision" | "stream" | "collapse"
+
+/**
+ * What the dark matter is, as far as the initial conditions can tell: how far
+ * it streams freely before it is slow enough to clump. Fast particles smear out
+ * every perturbation smaller than the distance they travel, so the choice is a
+ * cutoff in the primordial spectrum — nothing else changes. All three share the
+ * same random phases, so switching between them on one seed is a controlled
+ * experiment: same universe, different particle.
+ */
+export type DarkMatter = "cold" | "warm" | "hot"
+
+export const DARK_MATTER: { name: DarkMatter; label: string; blurb: string }[] = [
+  {
+    name: "cold",
+    label: "Cold",
+    blurb: "Slow, heavy particles that clump on every scale. Small haloes form first and merge upward: bottom-up, hierarchical.",
+  },
+  {
+    name: "warm",
+    label: "Warm",
+    blurb:
+      "Lighter particles that stream far enough to erase the smallest seeds. The cutoff is exaggerated here, to about 25 Mpc, so you can see it: fewer small knots, smoother filaments.",
+  },
+  {
+    name: "hot",
+    label: "Hot",
+    blurb:
+      "Neutrino-like particles that stream across ~40 Mpc. Only the largest pancakes survive; they collapse first and fragment late. This top-down picture was ruled out in the 1980s, partly by simulations like this one: the web forms too late.",
+  },
+]
+
+/**
+ * Transfer function T(k) for each species, on integer wavenumber k.
+ *
+ * Warm uses the thermal-relic fit of Bode, Ostriker & Turok (2001), with the
+ * half-mode placed at k = 7. Hot uses the BBKS (1986) neutrino fit,
+ * exp(−3.9q − 2.1q²), with q = k/30 putting its half-mode near k = 5.
+ */
+function transferFor(dm: DarkMatter): (k: number) => number {
+  if (dm === "warm") {
+    const nu = 1.12
+    const alpha = Math.pow(Math.pow(2, nu / 5) - 1, 1 / (2 * nu)) / 7
+    return (k) => Math.pow(1 + Math.pow(alpha * k, 2 * nu), -5 / nu)
+  }
+  if (dm === "hot") {
+    return (k) => {
+      const q = k / 30
+      return Math.exp(-3.9 * q - 2.1 * q * q)
+    }
+  }
+  return () => 1
+}
+
+/** Everything about a cosmological initial condition beyond its seed. */
+export interface InitialConditions {
+  cosmology: Cosmology
+  darkMatter: DarkMatter
+  /** Linear rms density contrast the field would reach today (σ₀). */
+  amplitude: number
+}
+
+export const DEFAULT_IC: InitialConditions = {
+  cosmology: PLANCK,
+  darkMatter: "cold",
+  amplitude: 5,
+}
 
 /**
  * The 2D analogue of 4πGρ̄ — the constant relating a density contrast to the
@@ -49,7 +124,7 @@ export type PresetName = "cosmos" | "disc" | "collision" | "collapse"
  * coast until a ≈ Ω_m/C. The dark ages really are quiet here — rather more
  * quiet than they should be.
  */
-export const PATCH_SOURCE = Math.PI / 2
+export const PATCH_SOURCE = sourceFor(PLANCK)
 
 /**
  * Linear density contrast the seed field would reach today if it kept growing
@@ -62,7 +137,17 @@ export const PATCH_SOURCE = Math.PI / 2
  * be visible on a screen, and every visualisation of the early universe makes
  * the same trade.
  */
-const LINEAR_DELTA_TODAY = 5
+export const LINEAR_DELTA_TODAY = DEFAULT_IC.amplitude
+
+/**
+ * Physical units for the isolated worlds, scaled to a Milky-Way-like disc: a
+ * code length of 10 kpc puts the default disc scale length near 3 kpc, and a
+ * code speed of 200 km/s puts its flat rotation curve where the Sun's orbit
+ * is. Time follows: 10 kpc at 200 km/s is 48.9 Myr.
+ */
+export const ISO_KPC = 10
+export const ISO_KMS = 200
+export const ISO_MYR = 48.9
 
 export interface PresetInfo {
   name: PresetName
@@ -91,6 +176,13 @@ export const PRESETS: PresetInfo[] = [
     label: "Encounter",
     blurb:
       "Two discs on a grazing pass. Tidal tails first, then a merger — and, as in the real universe, the merger is what lights the quasar.",
+    cosmological: false,
+  },
+  {
+    name: "stream",
+    label: "Stream",
+    blurb:
+      "A dwarf satellite on an eccentric orbit around a disc galaxy. Each pericentre strips stars into a leading and a trailing arm: the tidal streams Gaia now maps around the Milky Way, and one of the few ways to weigh a dark halo directly.",
     cosmological: false,
   },
   {
@@ -183,6 +275,29 @@ function layDisc(
 }
 
 /**
+ * A compact, self-bound satellite: Gaussian in position, isotropic Gaussian in
+ * velocity. In 2D the virial theorem fixes the dispersion independent of size —
+ * 2K = GM²/2 gives σ² = GM/4 per axis — so a clump of any radius is in global
+ * equilibrium at this speed. Softening weakens its self-binding slightly, so
+ * it runs a little cool.
+ */
+function laySatellite(
+  c: Cloud,
+  from: number,
+  to: number,
+  rnd: Rng,
+  o: { cx: number; cy: number; bvx: number; bvy: number; rs: number; mass: number },
+): void {
+  const sigma = 0.85 * Math.sqrt(o.mass / 4)
+  for (let i = from; i < to; i++) {
+    c.x[i] = o.cx + gauss(rnd) * o.rs
+    c.y[i] = o.cy + gauss(rnd) * o.rs
+    c.vx[i] = o.bvx + gauss(rnd) * sigma
+    c.vy[i] = o.bvy + gauss(rnd) * sigma
+  }
+}
+
+/**
  * A periodic Zel'dovich displacement field sampled from a spectral mesh.
  *
  * The former implementation evaluated 28 sinusoids separately for every
@@ -192,7 +307,7 @@ function layDisc(
  * small-scale structure. Integer wave vectors make the field exactly periodic,
  * matching the particle-mesh force that evolves it.
  */
-function zeldovich(rnd: Rng, size = 128) {
+function zeldovich(rnd: Rng, transfer: (k: number) => number, size = 128) {
   const cells = size * size
   const dxR = new Float64Array(cells)
   const dxI = new Float64Array(cells)
@@ -201,6 +316,16 @@ function zeldovich(rnd: Rng, size = 128) {
   const divR = new Float64Array(cells)
   const divI = new Float64Array(cells)
   const kMax = Math.min(28, size / 2 - 2)
+  // The realised spectrum, binned as the live measurement will bin it: for
+  // each mode, k²|δ_k|² before the amplitude is applied. Using the drawn modes
+  // rather than their expectation removes cosmic variance from the comparison,
+  // so any departure the instrument shows is dynamics, not luck of the draw.
+  const binSum = new Float64Array(K_BINS)
+  const binCount = new Float64Array(K_BINS)
+  // Variance of the *cold* field, by Parseval. Normalising every species to
+  // the cold amplitude keeps the large scales identical between them; only
+  // the free-streaming cutoff differs.
+  let coldVariance = 0
 
   const at = (x: number, y: number) =>
     ((y % size + size) % size) * size + ((x % size + size) % size)
@@ -228,13 +353,28 @@ function zeldovich(rnd: Rng, size = 128) {
       if (ky < 0 || (ky === 0 && kx <= 0)) continue
       const k = Math.hypot(kx, ky)
       if (k < 1 || k > kMax) continue
-      const transfer = 1 / (1 + Math.pow(k / 7, 2))
+      const shape = 1 / (1 + Math.pow(k / 7, 2))
       const cutoff = Math.exp(-Math.pow(k / kMax, 6))
-      const sqrtPower = Math.pow(k, 0.48) * transfer * cutoff
+      const coldAmplitude = Math.pow(k, 0.48) * shape * cutoff
+      const sqrtPower = coldAmplitude * transfer(k)
       const physicalK2 = Math.PI * Math.PI * k * k
       const scale = sqrtPower / physicalK2
-      const pr = gauss(rnd) * scale
-      const pi = gauss(rnd) * scale
+      // Draw the phases first and scale them after, so every species sees the
+      // identical random numbers.
+      const g1 = gauss(rnd)
+      const g2 = gauss(rnd)
+      const pr = g1 * scale
+      const pi = g2 * scale
+      const draw = g1 * g1 + g2 * g2
+      coldVariance += 2 * coldAmplitude * coldAmplitude * draw
+      const bin = kBin(k)
+      if (bin >= 0) {
+        // Particles sample this atlas bilinearly, which filters it exactly as
+        // a CIC window would; fold that in so the prediction is the field the
+        // particles actually carry.
+        binSum[bin] += k * k * sqrtPower * sqrtPower * draw * cicWindow2(kx, ky, size)
+        binCount[bin]++
+      }
       const px = Math.PI * kx
       const py = Math.PI * ky
 
@@ -249,9 +389,12 @@ function zeldovich(rnd: Rng, size = 128) {
   fft2(dyR, dyI, size, true)
   fft2(divR, divI, size, true)
 
-  let sum = 0
-  for (let i = 0; i < cells; i++) sum += divR[i] * divR[i]
-  const rmsDiv = Math.sqrt(sum / cells)
+  const rmsDiv = Math.sqrt(coldVariance) / cells
+  // Δ²(k) = 2πk²|c_k|², with c_k = F_k/n² the coefficient of the real field.
+  const linearShape = new Float64Array(K_BINS)
+  for (let b = 0; b < K_BINS; b++) {
+    if (binCount[b] > 0) linearShape[b] = (2 * Math.PI * binSum[b]) / binCount[b] / (cells * cells)
+  }
 
   const sample = (field: Float64Array, x: number, y: number) => {
     const gx = ((wrapPeriodic(x) + 1) * 0.5) * size
@@ -278,6 +421,35 @@ function zeldovich(rnd: Rng, size = 128) {
       out.y = sample(dyR, qx, qy)
     },
     rmsDiv,
+    linearShape,
+  }
+}
+
+/**
+ * Move an isolated world into its centre-of-mass frame. Random sampling leaves
+ * a net momentum of order 1/√N; uncorrected, the whole system drifts and the
+ * camera spends the run chasing it. Tracers are shifted by the same amount so
+ * they stay where the masses are.
+ */
+function toRestFrame(masses: Cloud, nMass: number, tracers: Cloud, nTracer: number): void {
+  let m = 0, x = 0, y = 0, vx = 0, vy = 0
+  for (let i = 0; i < nMass; i++) {
+    const mi = masses.m[i]
+    m += mi
+    x += mi * masses.x[i]
+    y += mi * masses.y[i]
+    vx += mi * masses.vx[i]
+    vy += mi * masses.vy[i]
+  }
+  if (!(m > 0)) return
+  x /= m; y /= m; vx /= m; vy /= m
+  for (const [c, n] of [[masses, nMass], [tracers, nTracer]] as const) {
+    for (let i = 0; i < n; i++) {
+      c.x[i] -= x
+      c.y[i] -= y
+      c.vx[i] -= vx
+      c.vy[i] -= vy
+    }
   }
 }
 
@@ -305,6 +477,11 @@ export interface InitialState {
   softening: number
   /** Half-width the view should frame. */
   extent: number
+  /**
+   * Cosmological only: linear Δ²(k) per {@link K_BINS} bin that this exact
+   * realisation would have today, so that Δ²_lin(k, a) = D(a)² · linearToday.
+   */
+  linearToday: Float64Array
 }
 
 /**
@@ -320,6 +497,7 @@ export function makeInitialState(
   seed: number,
   nMass: number,
   nTracer: number,
+  ic: InitialConditions = DEFAULT_IC,
 ): InitialState {
   const masses = allocate(nMass, true)
   const tracers = allocate(nTracer, false)
@@ -329,17 +507,19 @@ export function makeInitialState(
   // dynamics — the same seed is the same universe. The Zel'dovich modes are
   // drawn from a *third*, shared stream so both species see the same field.
   const fieldRnd = mulberry32((seed ^ 0x9e3779b1) >>> 0)
-  const zel = cosmological ? zeldovich(fieldRnd) : null
+  const zel = cosmological ? zeldovich(fieldRnd, transferFor(ic.darkMatter)) : null
 
   let growthAmp = 0
   let growthVel = 0
+  const linearToday = new Float64Array(K_BINS)
   if (zel) {
-    const table = growthTable(PATCH_SOURCE)
+    const table = growthTable(sourceFor(ic.cosmology), ic.cosmology)
     const start = sampleGrowth(table, A_REC)
-    const amp = LINEAR_DELTA_TODAY / zel.rmsDiv // A, from δ_linear(today) = target
+    const amp = ic.amplitude / zel.rmsDiv // A, from δ_linear(today) = target
     growthAmp = amp * start.D
     // u = a²ẋ, and for the growing mode ẋ = H·D'·ψ, so u = a²·H·D'·A·ψ.
-    growthVel = amp * start.dD * A_REC * A_REC * hubble(A_REC)
+    growthVel = amp * start.dD * A_REC * A_REC * hubble(A_REC, ic.cosmology)
+    for (let b = 0; b < K_BINS; b++) linearToday[b] = zel.linearShape[b] * amp * amp
   }
 
   const fill = (c: Cloud, n: number, salt: number) => {
@@ -370,6 +550,20 @@ export function makeInitialState(
         break
       }
 
+      case "stream": {
+        // Host and satellite placed so the centre of mass sits at rest at the
+        // origin; otherwise the whole system drifts out of frame.
+        const fSat = 0.12
+        const host = Math.round(n * (1 - fSat))
+        const sx = 1.05
+        const svy = 0.6
+        const hx = (-fSat * sx) / (1 - fSat)
+        const hvy = (-fSat * svy) / (1 - fSat)
+        layDisc(c, 0, host, rnd, { cx: hx, cy: 0, bvx: 0, bvy: hvy, rd: 0.24, mass: 1 - fSat, sign: 1, heat: 0.1 })
+        laySatellite(c, host, n, rnd, { cx: hx + sx, cy: 0, bvx: 0, bvy: hvy + svy, rs: 0.045, mass: fSat })
+        break
+      }
+
       case "collapse":
         // Randomly sampled, not sunflower-packed. A perfectly regular cold disc
         // collapses to a genuine caustic — every particle arriving at the centre
@@ -394,12 +588,13 @@ export function makeInitialState(
 
   fill(masses, nMass, 1)
   if (nTracer > 0) fill(tracers, nTracer, 2)
+  if (!cosmological) toRestFrame(masses, nMass, tracers, nTracer)
 
   // The periodic mesh supplies Cosmos with its force-resolution scale. The
   // explicit softening below belongs to isolated FMM worlds, where it tracks
   // the mean interparticle spacing: fine enough not to smear real structure,
   // coarse enough that a chance close pair cannot fling a particle away.
-  const extent = cosmological ? 1.02 : preset === "collapse" ? 0.95 : 1.0
+  const extent = cosmological ? 1.02 : preset === "collapse" ? 0.95 : preset === "stream" ? 1.3 : 1.0
   const spacing = extent * Math.sqrt(Math.PI / Math.max(1, nMass))
   const softening = cosmological
     ? spacing
@@ -421,5 +616,6 @@ export function makeInitialState(
     aStart: A_REC,
     softening,
     extent,
+    linearToday,
   }
 }

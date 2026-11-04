@@ -14,8 +14,7 @@
 .simulation[data-embedded="true"] {
   height: 100%;
 
-  .parameterPanel,
-  .diagnosticsPanel {
+  .optionsPanel {
     max-height: calc(100% - 5rem);
   }
 }
@@ -325,14 +324,9 @@
 }
 
 .clockHud {
-  position: absolute;
-  bottom: 1rem;
-  left: 1.1rem;
-  z-index: 20;
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem 0.85rem;
-  max-width: calc(100vw - 2.2rem);
   padding: 0;
   color: var(--color-accent);
   font-size: 0.68rem;
@@ -346,18 +340,35 @@
 
 .gestureHint {
   position: absolute;
-  right: 1.1rem;
-  bottom: 1rem;
+  left: 50%;
+  top: 1.45rem;
   z-index: 20;
   padding: 0;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  animation: hint-out 9s var(--ease-default) forwards;
   color: var(--color-text-muted);
   font-size: 0.59rem;
   letter-spacing: 0.04em;
   text-shadow:
     0 1px 2px var(--color-bg),
     0 0 12px var(--color-bg);
-  opacity: 0.52;
+  opacity: 0;
   pointer-events: none;
+}
+
+@keyframes hint-out {
+  0%,
+  8% {
+    opacity: 0;
+  }
+  16%,
+  70% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 .faultHud {
@@ -389,6 +400,315 @@
     text-decoration: underline;
     text-underline-offset: 0.25em;
     cursor: pointer;
+  }
+}
+
+// --- universe controls ------------------------------------------------------
+
+.universeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 0.15rem 0 0.2rem 0.75rem;
+  border-left: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
+
+.fieldNote {
+  margin: 0.1rem 0 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.figures {
+  color: color-mix(in srgb, var(--color-accent) 80%, var(--color-text-muted));
+  font-family: var(--font-code);
+  font-size: 0.62rem;
+  white-space: nowrap;
+
+  sub {
+    font-size: 0.75em;
+  }
+}
+
+// --- lens bar + instruments -------------------------------------------------
+
+.lensBar {
+  position: absolute;
+  top: 1rem;
+  right: 1.1rem;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem 1.2rem;
+  min-height: 2rem;
+  text-shadow:
+    0 1px 2px var(--color-bg),
+    0 0 14px var(--color-bg);
+}
+
+.instrumentsTrigger {
+  min-height: 1.8rem;
+  padding: 0.12rem 0;
+  background: none;
+  border: 0;
+  color: var(--color-text);
+  font-family: var(--font-code);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-default);
+
+  span {
+    display: inline-block;
+    width: 0.8rem;
+    font-weight: 400;
+    opacity: 0.65;
+  }
+
+  &:hover,
+  &[aria-expanded="true"] {
+    color: var(--color-accent);
+  }
+
+  &:focus-visible {
+    outline: 1px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+}
+
+.instrumentsPanel {
+  position: absolute;
+  top: 3.6rem;
+  right: 1.1rem;
+  bottom: 1rem;
+  z-index: 25;
+  width: min(330px, calc(100% - 2.2rem));
+  display: flex;
+  flex-direction: column;
+  gap: 1.3rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 0.2rem 0.1rem 0.5rem;
+  animation: panel-in 150ms var(--ease-default);
+}
+
+.simulation[data-timeline] .instrumentsPanel {
+  bottom: 4.2rem;
+}
+
+.lensNote {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+
+  .fieldLabel {
+    margin-right: 0.35rem;
+    color: var(--color-accent);
+    opacity: 1;
+  }
+}
+
+// --- bottom furniture -------------------------------------------------------
+
+.bottomLeft,
+.bottomRight {
+  position: absolute;
+  bottom: 1rem;
+  z-index: 20;
+  pointer-events: none;
+  text-shadow:
+    0 1px 2px var(--color-bg),
+    0 0 14px var(--color-bg);
+}
+
+.bottomLeft {
+  left: 1.1rem;
+  max-width: calc(100% - 22rem);
+}
+
+.bottomRight {
+  right: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.65rem;
+}
+
+.simulation[data-timeline] .bottomLeft,
+.simulation[data-timeline] .bottomRight {
+  bottom: 3.7rem;
+}
+
+.simulation[data-instruments] .bottomRight {
+  right: calc(1.1rem + min(330px, 100% - 2.2rem) + 1.5rem);
+}
+
+.legend {
+  display: grid;
+  gap: 0.28rem;
+  width: 12.5rem;
+  pointer-events: auto;
+}
+
+.legendTitle {
+  color: var(--color-text);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lineOfSight {
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.legendBar {
+  height: 0.3rem;
+  border-radius: 1px;
+}
+
+.legendScale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-text-muted);
+  font-size: 0.56rem;
+  letter-spacing: 0.03em;
+}
+
+.scaleBar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.56rem;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.scaleRule {
+  height: 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--color-text) 70%, transparent);
+  border-top: 0;
+}
+
+// --- timeline ---------------------------------------------------------------
+
+.timeline {
+  position: absolute;
+  left: 1.1rem;
+  right: 1.1rem;
+  bottom: 1rem;
+  z-index: 20;
+  height: 2.1rem;
+  pointer-events: none;
+}
+
+.timelineTrack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0.25rem;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-text-muted) 35%, transparent);
+}
+
+.timelineFill {
+  position: absolute;
+  inset: 0;
+  background: var(--color-accent);
+  transform-origin: left;
+  transition: transform 220ms linear;
+}
+
+.timelineHead {
+  position: absolute;
+  top: -3px;
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-bg);
+  transition: left 220ms linear;
+}
+
+.timelineMark {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 5px;
+  background: color-mix(in srgb, var(--color-text-muted) 70%, transparent);
+  pointer-events: auto;
+
+  span {
+    position: absolute;
+    bottom: 0.55rem;
+    left: 0;
+    transform: translateX(-50%);
+    color: var(--color-text-muted);
+    font-size: 0.55rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    opacity: 0.7;
+    text-shadow:
+      0 1px 2px var(--color-bg),
+      0 0 10px var(--color-bg);
+    transition:
+      color 400ms var(--ease-default),
+      opacity 400ms var(--ease-default);
+  }
+
+  &[data-row="1"] span {
+    bottom: 1.25rem;
+  }
+
+  &[data-edge="start"] span {
+    transform: none;
+  }
+
+  &[data-edge="end"] span {
+    transform: translateX(-100%);
+  }
+
+  &[data-passed] span {
+    color: var(--color-text);
+    opacity: 0.9;
+  }
+}
+
+// --- probe ------------------------------------------------------------------
+
+.probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 35;
+  display: grid;
+  gap: 0.12rem;
+  padding: 0.45rem 0.6rem;
+  border-left: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-bg) 78%, transparent);
+  color: var(--color-text-muted);
+  font-size: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  white-space: pre;
+  pointer-events: none;
+
+  span[data-first] {
+    color: var(--color-text);
   }
 }
 
@@ -429,10 +749,55 @@
     min-height: 2.5rem;
   }
 
-  .clockHud {
-    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  .bottomLeft {
     left: 0.75rem;
-    max-width: calc(100vw - 1.5rem);
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100% - 1.5rem);
+  }
+
+  .simulation[data-timeline] .bottomLeft {
+    bottom: calc(3.4rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .bottomRight {
+    display: none;
+  }
+
+  .lensBar {
+    top: 3.1rem;
+    right: auto;
+    left: 0.75rem;
+    max-width: calc(100% - 1.5rem);
+    justify-content: flex-start;
+  }
+
+  .instrumentsPanel,
+  .simulation[data-timeline] .instrumentsPanel {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-height: 55%;
+    padding: 1rem 0.75rem calc(1rem + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  }
+
+  .timeline {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .timelineMark span {
+    display: none;
+  }
+
+  .probe {
+    display: none;
   }
 
   .gestureHint {
@@ -446,7 +811,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .optionsPanel {
+  .optionsPanel,
+  .instrumentsPanel {
     animation: none;
+  }
+
+  .gestureHint {
+    display: none;
+  }
+
+  .timelineFill,
+  .timelineHead {
+    transition: none;
   }
 }

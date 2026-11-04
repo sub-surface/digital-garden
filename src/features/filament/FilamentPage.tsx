@@ -1,36 +1,52 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 import { useProgramHost } from "@/components/ui/games/ProgramHostContext"
-import { PRESETS, type PresetName } from "./presets"
-import { formatAge } from "./cosmology"
+import { DARK_MATTER, ISO_MYR, PRESETS, type DarkMatter, type PresetName } from "./presets"
+import { COSMOLOGIES, formatAge, type CosmologyName } from "./cosmology"
 import {
   FIDELITY_ORDER,
   fidelityProfile,
   type FidelityName,
   type FidelityProfile,
 } from "./quality"
-import type { FromWorker, SimParams, SimStats, ToWorker, ViewParams } from "./protocol"
+import { lensesFor, type Rgb } from "./palettes"
+import { InstrumentPanel } from "./Instruments"
+import { Legend, ProbeTip, ScaleBar, Timeline } from "./Hud"
+import type {
+  FromWorker,
+  Instruments,
+  LensName,
+  ProbeReading,
+  SimParams,
+  SimStats,
+  ToWorker,
+  ViewParams,
+} from "./protocol"
 import styles from "./FilamentPage.module.scss"
 
 /**
- * FILAMENT — periodic structure formation and isolated N-body worlds.
+ * FILAMENT — periodic structure formation and isolated N-body worlds, with the
+ * instruments to read them.
  *
- * This component owns nothing but chrome. All of the simulation and all of the
+ * This component owns nothing but chrome. All of the simulation, analysis and
  * rasterisation happen in `sim.worker.ts`; the page hands over parameters and
  * blits finished pixel buffers, so however heavy the sim gets it cannot stall
  * the site's main thread. Cosmos uses the periodic solver in `particle-mesh.ts`;
- * isolated worlds use `fmm.ts`; `cosmology.ts` owns the expansion history.
+ * isolated worlds use `fmm.ts`; `cosmology.ts` owns the expansion history and
+ * `analysis.ts` the measurements.
  */
 
 const SPEEDS = [
-  { n: 0, label: "❙❙", title: "Pause" },
-  { n: 1, label: "▶", title: "Run" },
+  { n: 0, label: "❙❙", title: "Pause (space)" },
+  { n: 1, label: "▶", title: "Run (space)" },
   { n: 3, label: "▶▶", title: "Run fast — three integration steps per frame" },
 ]
 
+const COSMOLOGY_ORDER: CosmologyName[] = ["planck", "eds", "open", "vacuum"]
+
 /** Resolve any CSS colour (hex, rgb(), oklch(), …) to 0–1 RGB. */
-function readAccent(): [number, number, number] {
-  const fallback: [number, number, number] = [0.71, 0.26, 0.3]
+function readAccent(): Rgb {
+  const fallback: Rgb = [0.71, 0.26, 0.3]
   if (typeof document === "undefined") return fallback
   const value = getComputedStyle(document.documentElement).getPropertyValue("--color-accent").trim()
   if (!value) return fallback
@@ -54,9 +70,16 @@ const fmt = (n: number) =>
 /** Redshift, rounded the way astronomers actually write it. */
 const fmtZ = (z: number) => (z >= 100 ? z.toFixed(0) : z >= 10 ? z.toFixed(1) : z.toFixed(2))
 
+/** Isolated-world time in physical units. */
+const fmtMyr = (t: number) => {
+  const myr = t * ISO_MYR
+  return myr >= 1000 ? `${(myr / 1000).toFixed(2)} Gyr` : `${myr.toFixed(0)} Myr`
+}
+
 export function FilamentPage() {
   const programHost = useProgramHost()
   const isPhone = usePhoneViewport()
+  const rootRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const workerRef = useRef<Worker | null>(null)
 
@@ -66,14 +89,26 @@ export function FilamentPage() {
   const [trails, setTrails] = useState(true)
   const [events, setEvents] = useState(true)
   const [exposure, setExposure] = useState(1)
+  const [lens, setLens] = useState<LensName>("density")
+  const [cosmology, setCosmology] = useState<CosmologyName>("planck")
+  const [darkMatter, setDarkMatter] = useState<DarkMatter>("cold")
+  const [amplitude, setAmplitude] = useState(5)
+  const [amplitudeDraft, setAmplitudeDraft] = useState(5)
   const [seed, setSeed] = useState(() => (Math.random() * 0xffffffff) >>> 0)
   const [stats, setStats] = useState<SimStats | null>(null)
+  const [instruments, setInstruments] = useState<Instruments | null>(null)
+  const [probe, setProbe] = useState<{ reading: ProbeReading; x: number; y: number } | null>(null)
   const [fault, setFault] = useState<string | null>(null)
   const [controlsOpen, setControlsOpen] = useState(false)
+  const [instrumentsOpen, setInstrumentsOpen] = useState(false)
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
+  const [accent, setAccent] = useState<Rgb>(() => readAccent())
 
   const profile = useMemo(() => fidelityProfile(fidelity, isPhone), [fidelity, isPhone])
   const info = useMemo(() => PRESETS.find((p) => p.name === preset) ?? PRESETS[0], [preset])
+  const lenses = useMemo(() => lensesFor(info.cosmological), [info.cosmological])
+  const activeLens = lenses.some((l) => l.name === lens) ? lens : "density"
+  const cosmo = COSMOLOGIES[cosmology]
 
   // The worker is driven from refs, not props: it must not be torn down and
   // rebuilt every time a control moves.
@@ -90,6 +125,7 @@ export function FilamentPage() {
   const slowSamplesRef = useRef(0)
   const fastSamplesRef = useRef(0)
   const lastScaleAtRef = useRef(0)
+  const probeClientRef = useRef<{ x: number; y: number } | null>(null)
   profileRef.current = profile
 
   const params: SimParams = useMemo(
@@ -105,8 +141,13 @@ export function FilamentPage() {
       exposure,
       trails: trails ? 0.9 : 0,
       events,
+      lens: activeLens,
+      cosmology,
+      darkMatter,
+      amplitude,
+      instruments: instrumentsOpen,
     }),
-    [preset, seed, profile, speed, exposure, trails, events],
+    [preset, seed, profile, speed, exposure, trails, events, activeLens, cosmology, darkMatter, amplitude, instrumentsOpen],
   )
   const paramsRef = useRef(params)
   paramsRef.current = params
@@ -189,17 +230,28 @@ export function FilamentPage() {
     }
     worker.onmessage = (e: MessageEvent<FromWorker>) => {
       const msg = e.data
-      if (msg.t === "fault") {
-        setFault(msg.message)
-        return
+      switch (msg.t) {
+        case "fault":
+          setFault(msg.message)
+          return
+        case "instruments":
+          setInstruments(msg.data)
+          return
+        case "probe": {
+          const at = probeClientRef.current
+          setProbe(msg.reading && at ? { reading: msg.reading, x: at.x, y: at.y } : null)
+          return
+        }
+        case "frame": {
+          // Drop a frame rather than queue it: if the page is behind, the
+          // newest state is the only one worth painting.
+          const stale = pendingRef.current
+          if (stale) worker.postMessage({ t: "recycle", buf: stale.buf } satisfies ToWorker, [stale.buf])
+          pendingRef.current = { buf: msg.buf, w: msg.w, h: msg.h }
+          statsRef.current = msg.stats
+          return
+        }
       }
-      if (msg.t !== "frame") return
-      // Drop a frame rather than queue it: if the page is behind, the newest
-      // state is the only one worth painting.
-      const stale = pendingRef.current
-      if (stale) worker.postMessage({ t: "recycle", buf: stale.buf } satisfies ToWorker, [stale.buf])
-      pendingRef.current = { buf: msg.buf, w: msg.w, h: msg.h }
-      statsRef.current = msg.stats
     }
     worker.postMessage({
       t: "start",
@@ -227,7 +279,16 @@ export function FilamentPage() {
 
   useEffect(() => {
     setFault(null)
-  }, [preset, seed, profile])
+    setInstruments(null)
+  }, [preset, seed, profile, cosmology, darkMatter, amplitude])
+
+  // The amplitude restarts the universe, so commit it only once the slider
+  // settles rather than on every pixel of a drag.
+  useEffect(() => {
+    if (amplitudeDraft === amplitude) return
+    const id = setTimeout(() => setAmplitude(amplitudeDraft), 350)
+    return () => clearTimeout(id)
+  }, [amplitudeDraft, amplitude])
 
   // --- paint loop -----------------------------------------------------------
   useEffect(() => {
@@ -329,7 +390,11 @@ export function FilamentPage() {
 
   // Follow the site's accent through theme changes.
   useEffect(() => {
-    const obs = new MutationObserver(() => post({ t: "accent", accent: readAccent() }))
+    const obs = new MutationObserver(() => {
+      const next = readAccent()
+      setAccent((prev) => (prev.every((v, i) => Math.abs(v - next[i]) < 1e-3) ? prev : next))
+      post({ t: "accent", accent: next })
+    })
     obs.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["style", "class", "data-theme"],
@@ -424,28 +489,64 @@ export function FilamentPage() {
     return () => canvas.removeEventListener("wheel", onWheel)
   }, [pushView, zoomAt])
 
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
-    ;(e.target as Element).setPointerCapture?.(e.pointerId)
-    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
-    if (pointersRef.current.size === 1) {
-      dragRef.current = { x: e.clientX, y: e.clientY }
-      pinchRef.current = null
-      return
-    }
-    const points = [...pointersRef.current.values()]
-    const a = points[0]
-    const b = points[1]
-    pinchRef.current = {
-      distance: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
-      x: (a.x + b.x) / 2,
-      y: (a.y + b.y) / 2,
-    }
-    dragRef.current = null
-  }, [])
+  // --- probe ---------------------------------------------------------------
+  // A mouse hovering the field reads it; the worker answers from the mesh
+  // fields it already holds, and re-answers on every analysis pass.
+  const probeRafRef = useRef(0)
+  const sendProbe = useCallback(
+    (clientX: number, clientY: number) => {
+      const root = rootRef.current
+      if (!root) return
+      const r = root.getBoundingClientRect()
+      probeClientRef.current = { x: clientX - r.left, y: clientY - r.top }
+      if (probeRafRef.current) return
+      probeRafRef.current = requestAnimationFrame(() => {
+        probeRafRef.current = 0
+        const at = probeClientRef.current
+        if (!at) return
+        const b = bufferPixels({ clientX: at.x + r.left, clientY: at.y + r.top })
+        post({ t: "probe", at: { x: b.x, y: b.y } })
+      })
+    },
+    [bufferPixels, post],
+  )
+  const stopProbe = useCallback(() => {
+    if (!probeClientRef.current) return
+    probeClientRef.current = null
+    setProbe(null)
+    post({ t: "probe", at: null })
+  }, [post])
+  useEffect(() => () => cancelAnimationFrame(probeRafRef.current), [])
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      stopProbe()
+      ;(e.target as Element).setPointerCapture?.(e.pointerId)
+      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (pointersRef.current.size === 1) {
+        dragRef.current = { x: e.clientX, y: e.clientY }
+        pinchRef.current = null
+        return
+      }
+      const points = [...pointersRef.current.values()]
+      const a = points[0]
+      const b = points[1]
+      pinchRef.current = {
+        distance: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2,
+      }
+      dragRef.current = null
+    },
+    [stopProbe],
+  )
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!pointersRef.current.has(e.pointerId)) return
+      if (!pointersRef.current.has(e.pointerId)) {
+        if (e.pointerType === "mouse" && e.buttons === 0) sendProbe(e.clientX, e.clientY)
+        return
+      }
       pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
 
       if (pointersRef.current.size >= 2) {
@@ -476,7 +577,7 @@ export function FilamentPage() {
       if (panByClientPixels(e.clientX - d.x, e.clientY - d.y)) pushView()
       dragRef.current = { x: e.clientX, y: e.clientY }
     },
-    [panByClientPixels, pushView, zoomAt],
+    [panByClientPixels, pushView, sendProbe, zoomAt],
   )
 
   const endDrag = useCallback((e: React.PointerEvent) => {
@@ -490,6 +591,16 @@ export function FilamentPage() {
     viewRef.current = { zoom: 1, panX: 0, panY: 0, autoFit: true }
     pushView()
   }, [pushView])
+
+  const cycleLens = useCallback(
+    (dir: 1 | -1) => {
+      const i = lenses.findIndex((l) => l.name === activeLens)
+      setLens(lenses[(i + dir + lenses.length) % lenses.length].name)
+    },
+    [lenses, activeLens],
+  )
+
+  const togglePause = useCallback(() => setSpeed((s) => (s === 0 ? 1 : 0)), [])
 
   const onCanvasKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLCanvasElement>) => {
@@ -534,17 +645,42 @@ export function FilamentPage() {
     [panByClientPixels, pushView, resetView, zoomAt],
   )
 
+  // Simulation-wide keys, from anywhere inside the page. Letters avoid the
+  // site's global hotkeys (f, b, m, r, /, \).
+  const onRootKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const target = e.target as HTMLElement
+      if (target.closest("input, textarea, select, [contenteditable]")) return
+      if (e.key === " " && target.tagName !== "BUTTON") {
+        e.preventDefault()
+        togglePause()
+      } else if (e.key === "i" || e.key === "I") {
+        e.preventDefault()
+        setInstrumentsOpen((o) => !o)
+      } else if (e.key === "l") {
+        e.preventDefault()
+        cycleLens(1)
+      } else if (e.key === "L") {
+        e.preventDefault()
+        cycleLens(-1)
+      }
+    },
+    [cycleLens, togglePause],
+  )
+
   // --- readout --------------------------------------------------------------
   const clock: string[] = []
   if (stats) {
     if (stats.cosmological) {
       clock.push(stats.done ? "z = 0 · today" : `z = ${fmtZ(stats.z)}`)
       clock.push(formatAge(stats.time))
-      if (stats.epoch) clock.push(stats.epoch)
+      if (stats.epoch && !stats.done) clock.push(stats.epoch)
+      clock.push(`D = ${stats.growth.toFixed(3)}`)
     } else {
-      clock.push(`t = ${stats.time.toFixed(2)}`)
+      clock.push(`t = ${fmtMyr(stats.time)}`)
     }
-    if (stats.quasars > 0) clock.push(`${stats.quasars} quasar${stats.quasars > 1 ? "s" : ""}`)
+    if (stats.quasars > 0 && activeLens === "density") clock.push(`${stats.quasars} quasar${stats.quasars > 1 ? "s" : ""}`)
     if (stats.health === "resolution-limit") clock.push("resolution limit")
   }
 
@@ -554,14 +690,21 @@ export function FilamentPage() {
         `${fmt(stats.cells)} force cells · level ${stats.depth}`,
         `${geomRef.current.w}×${geomRef.current.h} density raster → ` +
           `${displayGeomRef.current.w}×${displayGeomRef.current.h} display`,
-        `${stats.stepMs.toFixed(1)} ms sim · ${stats.drawMs.toFixed(1)} ms draw`,
+        `${stats.stepMs.toFixed(1)} ms sim · ${stats.drawMs.toFixed(1)} ms draw · ${stats.analysisMs.toFixed(1)} ms analysis`,
         `${fmt(stats.speedup)}× fewer interactions than direct`,
         `${(stats.peakCellMass * 100).toFixed(2)}% in densest cell`,
       ]
     : ["warming up…"]
 
+  const cssPerWorld = (() => {
+    const canvas = canvasRef.current
+    if (!stats || !canvas || !geomRef.current.w) return 0
+    return stats.scale * (canvas.clientWidth / geomRef.current.w)
+  })()
+
   const replay = () => {
     setFault(null)
+    setInstruments(null)
     post({ t: "replay" })
   }
 
@@ -581,17 +724,29 @@ export function FilamentPage() {
     setSeed((Math.random() * 0xffffffff) >>> 0)
   }
 
+  const lensInfo = lenses.find((l) => l.name === activeLens) ?? lenses[0]
+  const dmInfo = DARK_MATTER.find((d) => d.name === darkMatter) ?? DARK_MATTER[0]
+
   return (
-    <div className={styles.simulation} data-fullbleed data-embedded={programHost.embedded || undefined}>
+    <div
+      ref={rootRef}
+      className={styles.simulation}
+      data-fullbleed
+      data-embedded={programHost.embedded || undefined}
+      data-instruments={instrumentsOpen || undefined}
+      data-timeline={info.cosmological || undefined}
+      onKeyDown={onRootKeyDown}
+    >
       <canvas
         ref={canvasRef}
         className={styles.stage}
         tabIndex={0}
-        aria-label="Interactive two-dimensional gravity simulation. Drag or use arrow keys to pan; scroll, pinch, or use plus and minus to zoom."
+        aria-label="Interactive two-dimensional gravity simulation. Drag or use arrow keys to pan; scroll, pinch, or use plus and minus to zoom. Space pauses, L changes lens, I opens the instruments."
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onPointerLeave={stopProbe}
         onKeyDown={onCanvasKeyDown}
         onDoubleClick={resetView}
       />
@@ -653,6 +808,69 @@ export function FilamentPage() {
                   ))}
                 </div>
               </div>
+              <p className={styles.presetBlurb}>{info.blurb}</p>
+
+              {info.cosmological && (
+                <div className={styles.universeGroup}>
+                  <div className={styles.field}>
+                    <span className={styles.fieldLabel}>Universe</span>
+                    <div className={styles.segmented} role="group" aria-label="Background cosmology">
+                      {COSMOLOGY_ORDER.map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => setCosmology(name)}
+                          data-active={name === cosmology || undefined}
+                          aria-pressed={name === cosmology}
+                        >
+                          {COSMOLOGIES[name].label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className={styles.fieldNote}>
+                      {cosmo.blurb}{" "}
+                      <span className={styles.figures}>
+                        Ω<sub>m</sub> {cosmo.omegaM} · Ω<sub>Λ</sub> {cosmo.omegaL}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className={styles.field}>
+                    <span className={styles.fieldLabel}>Dark matter</span>
+                    <div className={styles.segmented} role="group" aria-label="Dark matter species">
+                      {DARK_MATTER.map((d) => (
+                        <button
+                          key={d.name}
+                          type="button"
+                          onClick={() => setDarkMatter(d.name)}
+                          data-active={d.name === darkMatter || undefined}
+                          aria-pressed={d.name === darkMatter}
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className={styles.fieldNote}>
+                      {dmInfo.blurb} Same seed, same phases: switch species to compare.
+                    </p>
+                  </div>
+
+                  <label className={styles.rangeField}>
+                    <span className={styles.fieldLabel} title="Linear rms density contrast this field would reach today">
+                      Amplitude σ₀
+                    </span>
+                    <input
+                      type="range"
+                      min="2"
+                      max="9"
+                      step="0.5"
+                      value={amplitudeDraft}
+                      onChange={(e) => setAmplitudeDraft(Number(e.currentTarget.value))}
+                    />
+                    <output>{amplitudeDraft.toFixed(1)}</output>
+                  </label>
+                </div>
+              )}
 
               <div className={styles.field}>
                 <span className={styles.fieldLabel}>Fidelity</span>
@@ -673,10 +891,8 @@ export function FilamentPage() {
                     )
                   })}
                 </div>
+                <p className={styles.profileNote}>{profile.description}</p>
               </div>
-
-              <p className={styles.presetBlurb}>{info.blurb}</p>
-              <p className={styles.profileNote}>{profile.description}</p>
 
               <div className={styles.field}>
                 <span className={styles.fieldLabel}>Light</span>
@@ -686,7 +902,7 @@ export function FilamentPage() {
                     onClick={() => setEvents((v) => !v)}
                     data-active={events || undefined}
                     aria-pressed={events}
-                    title="Quasars, starbursts, and the recombination afterglow"
+                    title="Quasars, starbursts, and the recombination afterglow (density lens)"
                   >
                     Events
                   </button>
@@ -729,6 +945,7 @@ export function FilamentPage() {
               {diagnosticsOpen && (
                 <div className={styles.machineStats} aria-live="polite">
                   {machine.map((r) => <span key={r}>{r}</span>)}
+                  <span>seed {seed.toString(16).padStart(8, "0")}</span>
                 </div>
               )}
             </div>
@@ -736,13 +953,60 @@ export function FilamentPage() {
         )}
       </div>
 
-      <div className={styles.clockHud} aria-live="polite">
-        {(clock.length > 0 ? clock : ["seeding the early universe…"]).map((c) => <span key={c}>{c}</span>)}
+      <div className={styles.lensBar} data-panel-ignore>
+        <div className={styles.segmented} role="group" aria-label="Lens">
+          {lenses.map((l) => (
+            <button
+              key={l.name}
+              type="button"
+              onClick={() => setLens(l.name)}
+              data-active={l.name === activeLens || undefined}
+              aria-pressed={l.name === activeLens}
+              title={l.description}
+            >
+              {l.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className={styles.instrumentsTrigger}
+          onClick={() => setInstrumentsOpen((o) => !o)}
+          aria-expanded={instrumentsOpen}
+          aria-controls="filament-instruments"
+          title="Measurements (I)"
+        >
+          Instruments <span aria-hidden="true">{instrumentsOpen ? "−" : "+"}</span>
+        </button>
       </div>
 
-      <div className={styles.gestureHint} aria-hidden="true">
-        drag to pan · scroll or pinch to zoom · double-click to reset
+      {instrumentsOpen && (
+        <aside id="filament-instruments" className={styles.instrumentsPanel} aria-label="Instruments" data-panel-ignore>
+          <p className={styles.lensNote}>
+            <span className={styles.fieldLabel}>{lensInfo.label}</span> {lensInfo.description}
+          </p>
+          <InstrumentPanel data={instruments} accent={accent} />
+        </aside>
+      )}
+
+      <div className={styles.bottomLeft}>
+        <div className={styles.clockHud} aria-live="polite">
+          {(clock.length > 0 ? clock : ["seeding the early universe…"]).map((c) => <span key={c}>{c}</span>)}
+        </div>
       </div>
+
+      <div className={styles.bottomRight}>
+        <Legend lens={activeLens} accent={accent} />
+        <ScaleBar cssPerWorld={cssPerWorld} cosmological={info.cosmological} />
+      </div>
+
+      {info.cosmological && stats?.cosmological && <Timeline cosmology={cosmo} a={stats.a} />}
+
+      <div className={styles.gestureHint} aria-hidden="true">
+        drag to pan · scroll to zoom · hover to probe · space pauses · L lens · I instruments
+      </div>
+
+      {probe && <ProbeTip reading={probe.reading} x={probe.x} y={probe.y} />}
 
       {fault && (
         <div className={styles.faultHud} role="alert">
