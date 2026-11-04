@@ -30,6 +30,52 @@ export function toneOf(i: number): number {
   return Math.asinh((i / 255) * ASINH_K) / ASINH_NORM
 }
 
+/** Inverse of {@link toneOf}: the index whose brightness is t. */
+export function toneIndex(t: number): number {
+  const c = Math.max(0, Math.min(1, t))
+  return Math.max(0, Math.min(255, Math.round((255 * Math.sinh(c * ASINH_NORM)) / ASINH_K)))
+}
+
+/**
+ * Logarithmic density tone, for the sheet renderer.
+ *
+ * The sheet's density spans five decades — voids at a tenth of the mean,
+ * caustics formally infinite — and all of it is real signal, not noise, so it
+ * can be shown on a log scale without the grain a particle splat would show.
+ * The table is keyed by the high 16 bits of the float32 density (exponent plus
+ * seven mantissa bits), which *is* log₂ρ to 1/128 of an octave: one shift per
+ * pixel instead of a logarithm. Exposure is an offset on the key.
+ */
+export const LOG_TONE = {
+  /** Density mapped to black and to white, in units of the mean. */
+  lo: 0.05,
+  hi: 600,
+  /** Keys per octave (2⁷, from the seven mantissa bits kept). */
+  perOctave: 128,
+} as const
+
+export function logToneKey(value: number): number {
+  const f = new Float32Array([value])
+  return new Int32Array(f.buffer)[0] >> 16
+}
+
+/** Build the key → palette-index table; returns the key of entry 0. */
+export function buildLogTone(): { lut: Uint8Array; keyLo: number } {
+  const keyLo = logToneKey(LOG_TONE.lo / 4)
+  const keyHi = logToneKey(LOG_TONE.hi * 4)
+  const lut = new Uint8Array(keyHi - keyLo + 1)
+  const f = new Float32Array(1)
+  const k = new Int32Array(f.buffer)
+  const lo = Math.log(LOG_TONE.lo)
+  const span = Math.log(LOG_TONE.hi) - lo
+  for (let i = 0; i < lut.length; i++) {
+    k[0] = ((keyLo + i) << 16) | 0x8000
+    const t = (Math.log(f[0]) - lo) / span
+    lut[i] = t <= 0 ? 0 : toneIndex(t)
+  }
+  return { lut, keyLo }
+}
+
 /** Little-endian RGBA pack (0xAABBGGRR) — every platform a browser ships on. */
 function pack(r: number, g: number, b: number, a: number): number {
   const c = (v: number) => Math.max(0, Math.min(255, Math.round(v * 255)))
@@ -127,6 +173,22 @@ const POTENTIAL_STOPS: Rgb[] = [
   [0.85, 0.9, 0.5],
 ]
 
+/** One stream → pancake → multistream halo. */
+const STREAM_STOPS: Rgb[] = [
+  [0.3, 0.36, 0.62],
+  [0.24, 0.72, 0.78],
+  [0.98, 0.76, 0.38],
+  [1.0, 0.94, 0.86],
+]
+
+/** Stream count shown at full hue. */
+export const STREAM_TOP = 48
+
+/** Hue for a stream count ≥ 1: logarithmic, one stream at zero. */
+export function streamHue(streams: number): number {
+  return streams <= 1 ? 0 : Math.min(1, Math.log(streams) / Math.log(STREAM_TOP))
+}
+
 /** Approaching → at rest → receding. */
 const DOPPLER_STOPS: Rgb[] = [
   [0.25, 0.5, 1.0],
@@ -145,6 +207,8 @@ export function lensHue(lens: LensName, h: number, accent: Rgb): Rgb {
       return ramp(POTENTIAL_STOPS, h)
     case "doppler":
       return ramp(DOPPLER_STOPS, h)
+    case "streams":
+      return ramp(STREAM_STOPS, h)
     default:
       return accent
   }
@@ -152,7 +216,7 @@ export function lensHue(lens: LensName, h: number, accent: Rgb): Rgb {
 
 /** Lenses that colour by a second quantity. */
 export function lensHasHue(lens: LensName): boolean {
-  return lens === "web" || lens === "flow" || lens === "potential" || lens === "doppler"
+  return lens === "web" || lens === "flow" || lens === "potential" || lens === "doppler" || lens === "streams"
 }
 
 /**
@@ -238,9 +302,18 @@ export const LENSES: LensInfo[] = [
   {
     name: "density",
     label: "Density",
-    description: "Surface density on an asinh stretch, the way survey images show faint arms and bright cores together.",
+    description:
+      "Surface density. In Cosmos it is drawn from the dark-matter sheet itself, on a log scale from a tenth of the mean to six hundred times it; in the isolated worlds, on an asinh stretch, the way survey images show faint arms and bright cores together.",
     scale: ["empty", "dense"],
     cosmological: "both",
+  },
+  {
+    name: "streams",
+    label: "Streams",
+    description:
+      "How many layers of the folded dark-matter sheet lie over each point. One stream is matter that has never crossed anything; three is a pancake or filament; dozens is a halo. Shell-crossing is what nonlinear means, and this is the only lens that shows it directly.",
+    scale: ["1", "3", "48+"],
+    cosmological: true,
   },
   {
     name: "web",

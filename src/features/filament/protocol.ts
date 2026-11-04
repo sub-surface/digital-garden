@@ -24,18 +24,23 @@ import type { DensityPdf, WebCensus, WebClass } from "./analysis"
  * How the field is coloured. Brightness is always surface density; a lens adds
  * a second quantity as hue, so structure stays legible under every reading.
  */
-export type LensName = "density" | "web" | "flow" | "potential" | "redshift" | "doppler"
+export type LensName = "density" | "streams" | "web" | "flow" | "potential" | "redshift" | "doppler"
 
 export interface SimParams {
   preset: PresetName
   seed: number
   nMass: number
   nTracer: number
-  /** Width of the periodic force mesh used by cosmological worlds. */
+  /** Cosmos: width of the Lagrangian lattice; particles = grid². */
+  grid: number
+  /** Cosmos: width of the periodic force mesh. */
   meshSize: number
   /** Expansion order p — the accuracy dial. Higher is slower and truer. */
   order: number
-  /** Physics substeps per rendered frame; 0 pauses. */
+  /**
+   * Playback rate; 0 pauses. Isolated worlds take this many leapfrog steps
+   * per frame; Cosmos advances its clock this many times faster than ▶.
+   */
   substeps: number
   /** Multiplier on the preset's softening length. */
   softening: number
@@ -51,7 +56,7 @@ export interface SimParams {
   cosmology: CosmologyName
   /** Free-streaming species for Cosmos. */
   darkMatter: DarkMatter
-  /** Linear rms density contrast Cosmos would reach today. */
+  /** σ₈ for Cosmos: rms linear contrast today in 8 Mpc top-hats. */
   amplitude: number
   /** Measure and post instrument readings. */
   instruments: boolean
@@ -104,7 +109,6 @@ export interface SimStats {
   /** Fraction of total mass in the densest force cell. */
   peakCellMass: number
   occupiedCells: number
-  health: "stable" | "resolution-limit"
   /** Raster pixels per world unit — lets the page turn drag pixels into world pan. */
   scale: number
 

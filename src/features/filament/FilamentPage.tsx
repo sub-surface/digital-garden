@@ -31,7 +31,7 @@ import styles from "./FilamentPage.module.scss"
  * This component owns nothing but chrome. All of the simulation, analysis and
  * rasterisation happen in `sim.worker.ts`; the page hands over parameters and
  * blits finished pixel buffers, so however heavy the sim gets it cannot stall
- * the site's main thread. Cosmos uses the periodic solver in `particle-mesh.ts`;
+ * the site's main thread. Cosmos is `cosmos.ts` (FastPM + the sheet in `sheet.ts`);
  * isolated worlds use `fmm.ts`; `cosmology.ts` owns the expansion history and
  * `analysis.ts` the measurements.
  */
@@ -92,8 +92,8 @@ export function FilamentPage() {
   const [lens, setLens] = useState<LensName>("density")
   const [cosmology, setCosmology] = useState<CosmologyName>("planck")
   const [darkMatter, setDarkMatter] = useState<DarkMatter>("cold")
-  const [amplitude, setAmplitude] = useState(5)
-  const [amplitudeDraft, setAmplitudeDraft] = useState(5)
+  const [amplitude, setAmplitude] = useState(1)
+  const [amplitudeDraft, setAmplitudeDraft] = useState(1)
   const [seed, setSeed] = useState(() => (Math.random() * 0xffffffff) >>> 0)
   const [stats, setStats] = useState<SimStats | null>(null)
   const [instruments, setInstruments] = useState<Instruments | null>(null)
@@ -135,6 +135,7 @@ export function FilamentPage() {
       nMass: profile.nMass,
       nTracer: profile.nTracer,
       order: profile.order,
+      grid: profile.grid,
       meshSize: profile.meshSize,
       substeps: speed,
       softening: 1,
@@ -460,7 +461,9 @@ export function FilamentPage() {
       if (!s) return false
       const v = viewRef.current
       v.autoFit = false
-      const next = Math.max(0.05, Math.min(400, v.zoom * factor))
+      // The periodic box tiles the plane, so Cosmos may pull back to show
+      // several copies of itself, but no further than the worker will draw.
+      const next = Math.max(paramsRef.current.preset === "cosmos" ? 0.4 : 0.05, Math.min(400, v.zoom * factor))
       const applied = next / v.zoom
       if (Math.abs(applied - 1) < 1e-6) return false
       const b = bufferPixels({ clientX, clientY })
@@ -681,7 +684,6 @@ export function FilamentPage() {
       clock.push(`t = ${fmtMyr(stats.time)}`)
     }
     if (stats.quasars > 0 && activeLens === "density") clock.push(`${stats.quasars} quasar${stats.quasars > 1 ? "s" : ""}`)
-    if (stats.health === "resolution-limit") clock.push("resolution limit")
   }
 
   const machine = stats
@@ -856,18 +858,21 @@ export function FilamentPage() {
                   </div>
 
                   <label className={styles.rangeField}>
-                    <span className={styles.fieldLabel} title="Linear rms density contrast this field would reach today">
-                      Amplitude σ₀
+                    <span
+                      className={styles.fieldLabel}
+                      title="σ₈: rms linear density contrast today in circles 8 Mpc across. Our universe: 0.81"
+                    >
+                      Clumpiness σ₈
                     </span>
                     <input
                       type="range"
-                      min="2"
-                      max="9"
-                      step="0.5"
+                      min="0.4"
+                      max="2"
+                      step="0.05"
                       value={amplitudeDraft}
                       onChange={(e) => setAmplitudeDraft(Number(e.currentTarget.value))}
                     />
-                    <output>{amplitudeDraft.toFixed(1)}</output>
+                    <output>{amplitudeDraft.toFixed(2)}</output>
                   </label>
                 </div>
               )}

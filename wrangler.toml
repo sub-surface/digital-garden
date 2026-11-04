@@ -22,8 +22,8 @@ binding = "ASSETS"
 # straight through (see worker/index.ts: non-GET / non-HTML returns as-is).
 run_worker_first = true
 
-[vars]
-NODE_VERSION = "24"
+# Build Node version is set in the CF dashboard (Settings → Build → Variables:
+# NODE_VERSION=24). A [vars] entry here would only be a runtime binding.
 
 [build]
 command = "npm run build"

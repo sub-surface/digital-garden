@@ -574,43 +574,19 @@ export class Fmm {
     const x0 = this.boxCx - this.boxHalf
     const y0 = this.boxCy - this.boxHalf
     const p2 = p * 2
-    const nb = new Uint32Array(18) // up to 9 [start, end) ranges
     let nearPairs = 0
 
+    // Far field: L2P, Horner over each leaf's local expansion.
     for (let c = 0; c < cells; c++) {
       const s = cellStart[c]
       const e = cellStart[c + 1]
       if (s === e) continue
-      const gx = gxOf[c]
-      const gy = gyOf[c]
-      const ccx = x0 + (gx + 0.5) * h
-      const ccy = y0 + (gy + 0.5) * h
+      const ccx = x0 + (gxOf[c] + 0.5) * h
+      const ccy = y0 + (gyOf[c] + 0.5) * h
       const co = c * p2
-
-      // Gather the near neighbourhood once per cell, not once per particle.
-      let nn = 0
-      for (let dy = -1; dy <= 1; dy++) {
-        const sy = gy + dy
-        if (sy < 0 || sy >= side) continue
-        for (let dx = -1; dx <= 1; dx++) {
-          const sx = gx + dx
-          if (sx < 0 || sx >= side) continue
-          const b = spread[sx] | (spread[sy] << 1)
-          const bs = cellStart[b]
-          const be = cellStart[b + 1]
-          if (bs === be) continue
-          nb[nn++] = bs
-          nb[nn++] = be
-        }
-      }
-
       for (let i = s; i < e; i++) {
-        const xi = x[i]
-        const yi = y[i]
-
-        // L2P — Horner over the local expansion.
-        const ur = xi - ccx
-        const ui = yi - ccy
+        const ur = x[i] - ccx
+        const ui = y[i] - ccy
         let fr = L[co + (p - 1) * 2]
         let fi = L[co + (p - 1) * 2 + 1]
         for (let t = p - 2; t >= 0; t--) {
@@ -619,30 +595,79 @@ export class Fmm {
           fr = nr
         }
         // a = -G · conj(f)
-        let axi = -G * fr
-        let ayi = G * fi
+        ax[i] = -G * fr
+        ay[i] = G * fi
+      }
+    }
 
-        // P2P over the near field.
-        for (let r = 0; r < nn; r += 2) {
-          const be = nb[r + 1]
-          for (let j = nb[r]; j < be; j++) {
+    // Near field, by Newton's third law: each pair is visited once and both
+    // particles take their equal and opposite share. A cell meets itself
+    // (j > i) and four of its eight neighbours — east, north-west, north and
+    // north-east; the other four meet it from their side. Half the pair work
+    // of the one-sided sum, and total momentum is conserved to rounding.
+    const fwd = [1, 0, -1, 1, 0, 1, 1, 1]
+    for (let c = 0; c < cells; c++) {
+      const s = cellStart[c]
+      const e = cellStart[c + 1]
+      if (s === e) continue
+      const gx = gxOf[c]
+      const gy = gyOf[c]
+      for (let i = s; i < e; i++) {
+        const xi = x[i]
+        const yi = y[i]
+        const mi = G * m[i]
+        let axi = 0
+        let ayi = 0
+        for (let j = i + 1; j < e; j++) {
+          const dx = x[j] - xi
+          const dy = y[j] - yi
+          const inv = 1 / (dx * dx + dy * dy + eps2)
+          const wj = G * m[j] * inv
+          const wi = mi * inv
+          axi += dx * wj
+          ayi += dy * wj
+          ax[j] -= dx * wi
+          ay[j] -= dy * wi
+        }
+        ax[i] += axi
+        ay[i] += ayi
+      }
+      nearPairs += ((e - s) * (e - s - 1)) >> 1
+
+      for (let f = 0; f < 8; f += 2) {
+        const sx = gx + fwd[f]
+        const sy = gy + fwd[f + 1]
+        if (sx < 0 || sx >= side || sy >= side) continue
+        const b = spread[sx] | (spread[sy] << 1)
+        const bs = cellStart[b]
+        const be = cellStart[b + 1]
+        if (bs === be) continue
+        nearPairs += (e - s) * (be - bs)
+        for (let i = s; i < e; i++) {
+          const xi = x[i]
+          const yi = y[i]
+          const mi = G * m[i]
+          let axi = 0
+          let ayi = 0
+          for (let j = bs; j < be; j++) {
             const dx = x[j] - xi
             const dy = y[j] - yi
-            const r2 = dx * dx + dy * dy + eps2
-            const w = (G * m[j]) / r2
-            axi += dx * w
-            ayi += dy * w
+            const inv = 1 / (dx * dx + dy * dy + eps2)
+            const wj = G * m[j] * inv
+            const wi = mi * inv
+            axi += dx * wj
+            ayi += dy * wj
+            ax[j] -= dx * wi
+            ay[j] -= dy * wi
           }
-          nearPairs += be - nb[r]
+          ax[i] += axi
+          ay[i] += ayi
         }
-        // j === i contributed dx = dy = 0, i.e. nothing — no branch needed.
-
-        ax[i] = axi
-        ay[i] = ayi
       }
     }
     this.stats.nearPairs = nearPairs
   }
+
 
   /**
    * Accelerations for massless tracers: the leaf local expansion only.

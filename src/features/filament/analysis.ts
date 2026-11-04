@@ -604,8 +604,9 @@ export function depositPeriodic(
     const gy = (y + half) * invCell - 0.5
     const fx0 = Math.floor(gx)
     const fy0 = Math.floor(gy)
-    const x0 = fx0 < 0 ? n - 1 : fx0 >= n ? fx0 - n : fx0
-    const y0 = fy0 < 0 ? n - 1 : fy0 >= n ? fy0 - n : fy0
+    // Positions may be unwrapped (the cosmos lattice never folds them back).
+    const x0 = ((fx0 % n) + n) % n
+    const y0 = ((fy0 % n) + n) % n
     const x1 = x0 + 1 === n ? 0 : x0 + 1
     const y1 = y0 + 1 === n ? 0 : y0 + 1
     const tx = gx - fx0

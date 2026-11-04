@@ -435,15 +435,18 @@
 
 // --- lens bar + instruments -------------------------------------------------
 
+// Left, under the toolbar: the top-right corner belongs to the site's own
+// QuickControls, which float over every immersive page.
 .lensBar {
   position: absolute;
-  top: 1rem;
-  right: 1.1rem;
-  z-index: 30;
+  top: 3.35rem;
+  left: 1.1rem;
+  z-index: 20;
+  max-width: calc(100% - 2.2rem);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 0.3rem 1.2rem;
   min-height: 2rem;
   text-shadow:
@@ -485,7 +488,7 @@
 
 .instrumentsPanel {
   position: absolute;
-  top: 3.6rem;
+  top: 4.75rem;
   right: 1.1rem;
   bottom: 1rem;
   z-index: 25;

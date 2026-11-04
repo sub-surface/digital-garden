@@ -20,6 +20,8 @@ export interface FidelityProfile {
   nMass: number
   nTracer: number
   order: number
+  /** Cosmos lattice width (particles = grid²) and force-mesh width. */
+  grid: number
   meshSize: number
   minPixels: number
   maxPixels: number
@@ -34,7 +36,8 @@ const DESKTOP: Record<FidelityName, FidelityProfile> = {
     nMass: 10_000,
     nTracer: 50_000,
     order: 5,
-    meshSize: 128,
+    grid: 256,
+    meshSize: 256,
     minPixels: 300_000,
     maxPixels: 700_000,
     targetDrawMs: 10,
@@ -46,7 +49,8 @@ const DESKTOP: Record<FidelityName, FidelityProfile> = {
     nMass: 20_000,
     nTracer: 120_000,
     order: 6,
-    meshSize: 256,
+    grid: 256,
+    meshSize: 512,
     minPixels: 700_000,
     maxPixels: 1_500_000,
     targetDrawMs: 16,
@@ -54,11 +58,12 @@ const DESKTOP: Record<FidelityName, FidelityProfile> = {
   vast: {
     name: "vast",
     label: "Vast",
-    description: "The largest particle census, tuned for the continuous geometry of the cosmic web.",
+    description: "The largest particle census: a quarter of a million sheet vertices in Cosmos.",
     nMass: 24_000,
     nTracer: 240_000,
     order: 5,
-    meshSize: 128,
+    grid: 512,
+    meshSize: 512,
     minPixels: 320_000,
     maxPixels: 800_000,
     targetDrawMs: 14,
@@ -70,7 +75,8 @@ const PHONE: Record<FidelityName, FidelityProfile> = {
     ...DESKTOP.auto,
     nMass: 4_000,
     nTracer: 20_000,
-    meshSize: 64,
+    grid: 128,
+    meshSize: 128,
     minPixels: 160_000,
     maxPixels: 420_000,
     targetDrawMs: 10,
@@ -79,7 +85,8 @@ const PHONE: Record<FidelityName, FidelityProfile> = {
     ...DESKTOP.deep,
     nMass: 8_000,
     nTracer: 48_000,
-    meshSize: 128,
+    grid: 128,
+    meshSize: 256,
     minPixels: 280_000,
     maxPixels: 700_000,
     targetDrawMs: 14,
@@ -88,7 +95,8 @@ const PHONE: Record<FidelityName, FidelityProfile> = {
     ...DESKTOP.vast,
     nMass: 10_000,
     nTracer: 90_000,
-    meshSize: 64,
+    grid: 256,
+    meshSize: 256,
     minPixels: 180_000,
     maxPixels: 500_000,
     targetDrawMs: 12,

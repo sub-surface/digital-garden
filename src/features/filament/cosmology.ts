@@ -280,6 +280,118 @@ export function sampleGrowth(t: GrowthTable, a: number): { D: number; dD: number
   }
 }
 
+// ---------------------------------------------------------------------------
+// A whole expansion history, tabulated once
+// ---------------------------------------------------------------------------
+
+/**
+ * Everything the integrator and the readout need to know about one universe,
+ * as dense tables in ln a: growth D and its log-derivative, the Hubble rate,
+ * and cosmic age. Built once per run, so a frame never integrates anything.
+ *
+ * It also supplies the two functions the FastPM integrator is built on:
+ *
+ *     G_p(a) = a²·dD/dt          (momentum of the linear growing mode, per ψ)
+ *     G_f(a) = C·D(a)            (force of the linear growing mode, per ψ)
+ *
+ * which satisfy dG_p/dt = G_f exactly — that identity *is* the growth
+ * equation, rewritten in the canonical momentum u = a²ẋ.
+ */
+export class CosmicHistory {
+  readonly cosmology: Cosmology
+  readonly source: number
+  private readonly lnA: Float64Array
+  private readonly D: Float64Array
+  private readonly dD: Float64Array
+  private readonly age: Float64Array
+  private readonly lo: number
+  private readonly step: number
+
+  constructor(c: Cosmology = PLANCK, samples = 4096) {
+    this.cosmology = c
+    this.source = sourceFor(c)
+    const g = growthTable(this.source, c, A_REC, 1.2, samples)
+    this.lnA = g.lnA
+    this.D = g.D
+    this.dD = g.dD
+    this.lo = g.lnA[0]
+    this.step = (g.lnA[samples - 1] - g.lnA[0]) / (samples - 1)
+    // Age by the trapezoid rule in ln a, seeded with the exact age at the
+    // first sample (radiation era included).
+    this.age = new Float64Array(samples)
+    this.age[0] = ageOf(Math.exp(this.lo), c)
+    for (let i = 1; i < samples; i++) {
+      const h0 = 1 / hubble(Math.exp(g.lnA[i - 1]), c)
+      const h1 = 1 / hubble(Math.exp(g.lnA[i]), c)
+      this.age[i] = this.age[i - 1] + 0.5 * (h0 + h1) * this.step
+    }
+  }
+
+  private lerp(table: Float64Array, a: number): number {
+    const f = (Math.log(a) - this.lo) / this.step
+    const n = table.length
+    if (f <= 0) return table[0]
+    if (f >= n - 1) return table[n - 1]
+    const i = f | 0
+    return table[i] + (table[i + 1] - table[i]) * (f - i)
+  }
+
+  /** Linear growth factor, D(today) = 1. */
+  growth(a: number): number {
+    return this.lerp(this.D, a)
+  }
+
+  /** dD/d ln a. */
+  growthRate(a: number): number {
+    return this.lerp(this.dD, a)
+  }
+
+  /** Cosmic time in units of 1/H₀. */
+  ageAt(a: number): number {
+    return this.lerp(this.age, a)
+  }
+
+  hubble(a: number): number {
+    return hubble(a, this.cosmology)
+  }
+
+  /** G_p(a) = a²·dD/dt = a²·H·dD/dln a. */
+  momentumGrowth(a: number): number {
+    return a * a * hubble(a, this.cosmology) * this.growthRate(a)
+  }
+
+  /** G_f(a) = C·D. */
+  forceGrowth(a: number): number {
+    return this.source * this.growth(a)
+  }
+
+  /** Inverse of {@link growth}, by bisection on the monotone table. */
+  scaleFactorAt(D: number): number {
+    let lo = 0
+    let hi = this.D.length - 1
+    if (D <= this.D[lo]) return Math.exp(this.lnA[lo])
+    if (D >= this.D[hi]) return Math.exp(this.lnA[hi])
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1
+      if (this.D[mid] < D) lo = mid
+      else hi = mid
+    }
+    const f = (D - this.D[lo]) / (this.D[hi] - this.D[lo])
+    return Math.exp(this.lnA[lo] + f * (this.lnA[hi] - this.lnA[lo]))
+  }
+}
+
+/** Where we are in the story, for the readout. */
+export function epochOf(z: number, done: boolean): string {
+  if (done) return "today"
+  if (z > 900) return "recombination"
+  if (z > 30) return "the dark ages"
+  if (z > 10) return "cosmic dawn"
+  if (z > 6) return "reionisation"
+  if (z > 1.2) return "cosmic noon"
+  return "the modern era"
+}
+
 /**
  * The afterglow of recombination, as a screen colour.
  *

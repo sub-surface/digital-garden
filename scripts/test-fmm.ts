@@ -12,8 +12,9 @@
  *   - depth (leaf occupancy) does not change the answer, only the cost
  *   - a shallower tree and a deeper tree agree with each other
  *
- * Particle-mesh checks cover FFT round trips, periodic equilibrium, momentum,
- * structure growth, concentration, and both coarse and shipping timesteps.
+ * Particle-mesh checks cover FFT round trips and periodic equilibrium. Cosmos
+ * checks cover FastPM's exact linear growth, the recombination spectrum, σ₈,
+ * a full recombination-to-today run, and the sheet renderer's mass and tiling.
  */
 import { Fmm, applyPerm, directAccel, chooseDepth } from "../src/features/filament/fmm"
 import { Universe } from "../src/features/filament/universe"
@@ -35,6 +36,8 @@ import {
 } from "../src/features/filament/analysis"
 import { K_BINS, kBin, kBinCentre } from "../src/features/filament/spectrum"
 import { HUE_BINS, buildLensPalette, lensGradient } from "../src/features/filament/palettes"
+import { Cosmos } from "../src/features/filament/cosmos"
+import { SheetRaster } from "../src/features/filament/sheet"
 import { fft2, ParticleMesh } from "../src/features/filament/particle-mesh"
 import {
   depositCic,
@@ -319,32 +322,20 @@ for (const n of [8, 32]) {
 {
   const side = 32
   const n = side * side
-  const masses = {
-    x: new Float32Array(n),
-    y: new Float32Array(n),
-    vx: new Float32Array(n),
-    vy: new Float32Array(n),
-    m: new Float32Array(n),
-  }
+  const px = new Float32Array(n)
+  const py = new Float32Array(n)
   for (let y = 0; y < side; y++) {
     for (let x = 0; x < side; x++) {
       const i = y * side + x
-      masses.x[i] = -1 + ((x + 0.5) * 2) / side
-      masses.y[i] = -1 + ((y + 0.5) * 2) / side
-      masses.m[i] = 1 / n
+      // Whole boxes off: the solver must accept unwrapped positions.
+      px[i] = -1 + ((x + 0.5) * 2) / side + 2
+      py[i] = -1 + ((y + 0.5) * 2) / side - 4
     }
-  }
-  const empty = {
-    x: new Float32Array(0),
-    y: new Float32Array(0),
-    vx: new Float32Array(0),
-    vy: new Float32Array(0),
-    m: new Float32Array(0),
   }
   const ax = new Float32Array(n)
   const ay = new Float32Array(n)
   const pm = new ParticleMesh(side, PATCH_SOURCE)
-  pm.solve(masses, n, empty, 0, ax, ay, new Float32Array(0), new Float32Array(0))
+  pm.solve(px, py, n, ax, ay)
   let peakAccel = 0
   for (let i = 0; i < n; i++) peakAccel = Math.max(peakAccel, Math.hypot(ax[i], ay[i]))
   if (!(peakAccel < 1e-6)) fail(`uniform periodic mesh accelerated by ${peakAccel.toExponential(2)}`)
@@ -431,7 +422,7 @@ for (const n of [8, 32]) {
 // Integrators: nothing may diverge, and nothing may become NaN
 // ---------------------------------------------------------------------------
 
-for (const preset of ["cosmos", "disc", "collision", "collapse"] as const) {
+for (const preset of ["disc", "collision", "stream", "collapse"] as const) {
   const u = new Universe({ preset, seed: 4242, nMass: 2000, nTracer: 1000, order: 4, softening: 1 })
   const steps = 600
   const r0 = u.rmsRadius()
@@ -447,15 +438,11 @@ for (const preset of ["cosmos", "disc", "collision", "collapse"] as const) {
   }
   if (bad > 0) fail(`${preset}: ${bad} non-finite particles after ${steps} steps`)
   if (!Number.isFinite(r1)) fail(`${preset}: RMS radius is not finite`)
-  // Nothing should blow up by orders of magnitude: comoving structure formation
-  // keeps the patch roughly its original size, and the isolated systems are
+  // Nothing should blow up by orders of magnitude: the isolated systems are
   // bound. A runaway integrator shows up here long before it shows up on screen.
   if (r1 > r0 * 8) fail(`${preset}: RMS radius grew ${(r1 / r0).toFixed(1)}× — integrator unstable`)
 
-  const extra =
-    preset === "cosmos"
-      ? `  z=${u.z.toFixed(1)}  t=${(u.cosmicTime * HUBBLE_TIME_GYR).toFixed(2)} Gyr  "${u.epoch()}"`
-      : `  t=${u.simTime.toFixed(2)}`
+  const extra = `  t=${u.time.toFixed(2)}`
   console.log(
     `  ${preset.padEnd(10)} ${String(steps).padStart(4)} steps  rms ${r0.toFixed(3)}→${r1.toFixed(3)}` +
       `  depth=${u.stats.depth}  ${Math.round(u.stats.speedup).toLocaleString()}× vs direct${extra}`,
@@ -463,102 +450,212 @@ for (const preset of ["cosmos", "disc", "collision", "collapse"] as const) {
 }
 
 // ---------------------------------------------------------------------------
-// The whole of cosmic history, end to end
+// Cosmos: FastPM, the whole of cosmic history, and the sheet
 // ---------------------------------------------------------------------------
 
-/** Peak leaf-cell mass over the mean occupied one — a blunt clustering measure. */
-function clustering(u: Universe): number {
-  return u.stats.peakCellMass * u.stats.occupiedCells
-}
-
+// FastPM's claim is that linear growth is exact at *any* step size. Replace
+// the field with one gentle box-scale mode and the displacement today must be
+// D(1)·ψ, the momentum G_p(1)·ψ — to within the mesh's force accuracy.
 {
-  const u = new Universe({ preset: "cosmos", seed: 77, nMass: 4000, nTracer: 0, order: 4, softening: 1 })
-  // Coarsen the step so the full seven e-folds fit in a test budget. Running
-  // the integrator well outside its shipping resolution is a feature here: if
-  // it only holds together at the exact step the presets choose, it is fragile.
-  u.dlnA *= 6
-  const before = clustering(u)
-
-  let steps = 0
-  while (!u.done && steps < 4000) {
-    u.step()
-    steps++
+  // A 256 mesh puts the force softening (0.8 cells) at 0.15% for this mode,
+  // so what remains is the integrator's own error.
+  const c = new Cosmos({ seed: 1, grid: 32, meshSize: 256 })
+  const h = c.history
+  const A = 2e-3
+  const D0 = h.growth(c.a)
+  const Gp0 = h.momentumGrowth(c.a)
+  const q = new Float64Array(c.n)
+  for (let j = 0; j < c.grid; j++) {
+    for (let i = 0; i < c.grid; i++) {
+      const k = j * c.grid + i
+      q[k] = -1 + ((i + 0.5) * 2) / c.grid
+      const psi = (A * Math.sin(Math.PI * q[k])) / Math.PI
+      c.sx[k] = D0 * psi
+      c.sy[k] = 0
+      c.vx[k] = Gp0 * psi
+      c.vy[k] = 0
+    }
   }
-  if (!u.done) fail(`cosmological run did not reach the present day in ${steps} steps`)
-
-  // The integrator accumulates cosmic time itself, as Σ dlna/H, while `ageOf`
-  // integrates the Friedmann equation independently. If those two disagree, the
-  // clock on screen is decorative — so check them against each other.
-  const walked = u.cosmicTime * HUBBLE_TIME_GYR
-  const exact = ageOf(1) * HUBBLE_TIME_GYR
-  if (Math.abs(walked - exact) > 0.15) {
-    fail(`integrated cosmic time ${walked.toFixed(3)} Gyr vs exact ${exact.toFixed(3)} Gyr`)
+  c.refresh()
+  while (!c.done) c.step()
+  let err = 0
+  let norm = 0
+  let uErr = 0
+  const Gp1 = h.momentumGrowth(1)
+  for (let k = 0; k < c.n; k++) {
+    const psi = (A * Math.sin(Math.PI * q[k])) / Math.PI
+    err += (c.x[k] - q[k] - psi) ** 2
+    uErr += (c.vx[k] - Gp1 * psi) ** 2
+    norm += psi * psi
   }
-
-  const after = clustering(u)
-  let bad = 0
-  for (let i = 0; i < u.nMass; i++) if (!Number.isFinite(u.masses.x[i])) bad++
-  if (bad > 0) fail(`${bad} non-finite particles at the end of cosmic history`)
-  // Structure formation is the entire claim. A run that ends as smooth as it
-  // began means the growing mode, the background subtraction, or the force
-  // coupling is wrong — none of which the accuracy tests above would catch.
-  if (!(after > before * 3)) {
-    fail(`no structure formed: peak/mean leaf mass went ${before.toFixed(2)} → ${after.toFixed(2)}`)
-  }
-  if (!(u.stats.peakCellMass < 0.04)) {
-    fail(`periodic cosmos over-collapsed: one cell holds ${(u.stats.peakCellMass * 100).toFixed(1)}% of mass`)
-  }
+  const posErr = Math.sqrt(err / norm)
+  const momErr = Math.sqrt(uErr / (norm * Gp1 * Gp1))
+  if (!(posErr < 0.004)) fail(`FastPM linear displacement off by ${(posErr * 100).toFixed(2)}% after ${c.steps} steps`)
+  if (!(momErr < 0.004)) fail(`FastPM linear momentum off by ${(momErr * 100).toFixed(2)}%`)
   console.log(
-    `  recombination → today in ${steps} coarse steps: clock ${walked.toFixed(2)} Gyr ` +
-      `(exact ${exact.toFixed(2)}), clustering ${before.toFixed(2)} → ${after.toFixed(2)}, ` +
-      `peak cell ${(u.stats.peakCellMass * 100).toFixed(2)}%`,
+    `  FastPM    single mode, recombination → today in ${c.steps} steps: ` +
+      `ψ err ${(posErr * 100).toFixed(3)}% · u err ${(momErr * 100).toFixed(3)}%`,
   )
-
-  // Comoving momentum conservation: matching CIC deposit/interpolation leaves
-  // the periodic patch with nothing external to push against.
-  let vx = 0
-  let vy = 0
-  for (let i = 0; i < u.nMass; i++) {
-    vx += u.masses.vx[i]
-    vy += u.masses.vy[i]
-  }
-  for (let i = 0; i < u.nTracer; i++) {
-    vx += u.tracers.vx[i]
-    vy += u.tracers.vy[i]
-  }
-  const drift = Math.hypot(vx, vy) / (u.nMass + u.nTracer)
-  if (!(drift < 0.05)) {
-    fail(`periodic mean momentum drifted ${drift.toExponential(2)}`)
-  }
-  console.log(`  mean momentum drift across all of cosmic history: ${drift.toExponential(2)}`)
 }
 
-// Shipping timestep, reduced particle/mesh census. The coarse-history test
-// above is intentionally abusive; this one guards the exact 6000-step path that
-// once looked healthy numerically while draining the universe into one quasar
-// cell.
+// The measured spectrum at recombination is the linear prediction for the
+// same realisation — one check for the Zel'dovich normalisation, the CIC
+// deconvolution, the binning, and the Δ² convention.
 {
-  const u = new Universe({
-    preset: "cosmos",
-    seed: 91,
-    nMass: 800,
-    nTracer: 2400,
-    meshSize: 32,
-    order: 4,
-    softening: 1,
-  })
-  let steps = 0
-  while (!u.done && steps < 6100) {
-    u.step()
-    steps++
+  const make = (darkMatter: DarkMatter, grid = 128) =>
+    new Cosmos({ seed: 5, grid, meshSize: grid, ic: { cosmology: COSMOLOGIES.planck, darkMatter, amplitude: 1 } })
+  const cold = make("cold")
+  const an = new MeshAnalysis(128)
+  const pk = new Float64Array(K_BINS)
+  an.load(cold.pm.cellMass)
+  an.powerSpectrum(pk)
+  const D2 = cold.growthFactor ** 2
+  let worst = 0
+  for (let b = 0; b < K_BINS; b++) {
+    if (kBinCentre(b) > 16 || cold.linearToday[b] <= 0 || pk[b] <= 0) continue
+    worst = Math.max(worst, Math.abs(pk[b] / (cold.linearToday[b] * D2) - 1))
   }
-  if (!u.done || steps !== 6000) fail(`shipping cosmology ended after ${steps} steps`)
-  if (!(u.stats.peakCellMass < 0.05)) {
-    fail(`shipping cosmology concentrated ${(u.stats.peakCellMass * 100).toFixed(1)}% in one cell`)
+  if (!(worst < 0.06)) fail(`recombination spectrum departs from linear theory by ${(worst * 100).toFixed(1)}%`)
+
+  // σ₈ of the realised linear field, measured the way it is defined: smooth
+  // δ/D with a top-hat 8 Mpc across, take the rms. The normalisation is to the
+  // ensemble, so this realisation may differ by its cosmic variance.
+  const n = 128
+  const re = new Float64Array(n * n)
+  const im = new Float64Array(n * n)
+  for (let i = 0; i < n * n; i++) re[i] = an.delta[i] / cold.growthFactor
+  fft2(re, im, n, false)
+  const R = 8 / 90
+  const sinc = (v: number) => (Math.abs(v) < 1e-9 ? 1 : Math.sin(v) / v)
+  for (let y = 0; y < n; y++) {
+    const ky = Math.PI * (y <= n / 2 ? y : y - n)
+    for (let x = 0; x < n; x++) {
+      const kx = Math.PI * (x <= n / 2 ? x : x - n)
+      const kr = Math.hypot(kx, ky) * R
+      // 2J₁(x)/x from its power series, ample at these arguments.
+      let w = 1
+      if (kr > 1e-6) {
+        let j1 = 0
+        let term = kr / 2
+        for (let m = 0; m < 40; m++) {
+          j1 += term
+          term *= -(kr * kr) / 4 / ((m + 1) * (m + 2))
+        }
+        w = (2 * j1) / kr
+      }
+      // Divide out the CIC deposit window too: σ₈ is a property of the field.
+      const cic = (sinc(kx / n) * sinc(ky / n)) ** 2
+      re[y * n + x] *= w / cic
+      im[y * n + x] *= w / cic
+    }
   }
+  fft2(re, im, n, true)
+  let s2 = 0
+  for (let i = 0; i < n * n; i++) s2 += re[i] * re[i]
+  const sigma8 = Math.sqrt(s2 / (n * n))
+  if (!(Math.abs(sigma8 - 1) < 0.15)) fail(`realised σ₈ ${sigma8.toFixed(3)}, requested 1`)
+
+  // Same phases: the hot/cold ratio is exactly T² in every bin, since both
+  // spectra are normalised to the same cold σ₈.
+  const hot = make("hot", 64)
+  const cold64 = make("cold", 64)
+  const big = kBin(1)
+  const small = kBin(14)
+  const tHot = Math.exp(-3.9 / 30 - 2.1 / 900)
+  const sameLarge = Math.abs(hot.linearToday[big] / cold64.linearToday[big] / (tHot * tHot) - 1)
+  const suppressed = hot.linearToday[small] / cold64.linearToday[small]
+  if (!(sameLarge < 1e-6)) fail(`hot/cold box-scale ratio is not T(1)²: off by ${sameLarge.toExponential(2)}`)
+  if (!(suppressed < 0.05)) fail(`hot dark matter kept ${(suppressed * 100).toFixed(1)}% of k=14 power`)
   console.log(
-    `  shipping   recombination → today in ${steps} steps · peak cell ` +
-      `${(u.stats.peakCellMass * 100).toFixed(2)}%`,
+    `  spectrum  recombination vs linear: worst ${(worst * 100).toFixed(1)}% (k ≤ 16) · σ₈ ${sigma8.toFixed(3)} · ` +
+      `hot/cold = T² to ${sameLarge.toExponential(0)} · k=14 ${suppressed.toExponential(1)}`,
+  )
+}
+
+// A full nonlinear run: it must reach today, stay finite, conserve momentum,
+// and actually form structure — sheets folding into many streams.
+{
+  const c = new Cosmos({ seed: 77, grid: 64, meshSize: 128 })
+  const peak0 = c.pm.stats.peakCellMass
+  while (!c.done && c.steps < 2000) c.step()
+  if (!c.done) fail(`cosmos did not reach the present day in ${c.steps} steps`)
+  let bad = 0
+  for (let i = 0; i < c.n; i++) if (!Number.isFinite(c.x[i]) || !Number.isFinite(c.vx[i])) bad++
+  if (bad > 0) fail(`${bad} non-finite cosmos particles today`)
+  const drift = c.meanMomentum()
+  if (!(drift < 1e-4)) fail(`periodic mean momentum drifted ${drift.toExponential(2)}`)
+  const peak1 = c.pm.stats.peakCellMass
+  if (!(peak1 > peak0 * 20)) fail(`no structure formed: densest cell ${peak0.toExponential(2)} → ${peak1.toExponential(2)}`)
+
+  const sheet = new SheetRaster()
+  sheet.resize(256, 256)
+  sheet.draw(c.x, c.y, c.grid, 2, { cx: 0, cy: 0, scale: 128 })
+  let mass = 0
+  let multi = 0
+  for (let i = 0; i < 256 * 256; i++) {
+    mass += sheet.density[i]
+    if (sheet.streams[i] >= 2.5) multi++
+  }
+  const massErr = Math.abs(mass / (256 * 256) - 1)
+  if (!(massErr < 0.01)) fail(`sheet raster lost ${(massErr * 100).toFixed(2)}% of the box's mass`)
+  const multiFrac = multi / (256 * 256)
+  if (!(multiFrac > 0.02 && multiFrac < 0.8)) fail(`multistream fraction today ${(multiFrac * 100).toFixed(1)}%`)
+  console.log(
+    `  cosmos    recombination → today in ${c.steps} steps · momentum ${drift.toExponential(1)} · ` +
+      `densest cell ×${(peak1 / peak0).toFixed(0)} · sheet mass ${(massErr * 100).toFixed(2)}% off · ` +
+      `${(multiFrac * 100).toFixed(1)}% of the box multistream`,
+  )
+}
+
+// The sheet on an undisturbed lattice is exactly the mean, pixel by pixel —
+// the top-left rule gives every pixel to exactly one triangle — and the box
+// tiles: a camera one period over sees the same picture, half a period over
+// sees it rolled. (Panning used to stop at the box edge.)
+{
+  const grid = 32
+  const lattice = (wobble: number) => {
+    const x = new Float32Array(grid * grid)
+    const y = new Float32Array(grid * grid)
+    for (let j = 0; j < grid; j++) {
+      for (let i = 0; i < grid; i++) {
+        x[j * grid + i] = -1 + ((i + 0.5) * 2) / grid + wobble * Math.sin((2 * Math.PI * j) / grid)
+        y[j * grid + i] = -1 + ((j + 0.5) * 2) / grid
+      }
+    }
+    return { x, y }
+  }
+  const flat = new SheetRaster()
+  flat.resize(200, 120)
+  const u = lattice(0)
+  flat.draw(u.x, u.y, grid, 2, { cx: 0.3, cy: -0.7, scale: 64 })
+  let flatErr = 0
+  for (let i = 0; i < flat.density.length; i++) {
+    flatErr = Math.max(flatErr, Math.abs(flat.density[i] - 1), Math.abs(flat.streams[i] - 1))
+  }
+
+  const w = lattice(0.02)
+  const a = new SheetRaster()
+  const b = new SheetRaster()
+  const r = new SheetRaster()
+  for (const s of [a, b, r]) s.resize(128, 128)
+  a.draw(w.x, w.y, grid, 2, { cx: 0.1, cy: 0.2, scale: 64 })
+  b.draw(w.x, w.y, grid, 2, { cx: 0.1 + 2, cy: 0.2 - 6, scale: 64 })
+  r.draw(w.x, w.y, grid, 2, { cx: 0.1 + 1, cy: 0.2, scale: 64 })
+  let periodErr = 0
+  let rollErr = 0
+  for (let py = 0; py < 128; py++) {
+    for (let px = 0; px < 128; px++) {
+      const i = py * 128 + px
+      periodErr = Math.max(periodErr, Math.abs(a.density[i] - b.density[i]))
+      rollErr = Math.max(rollErr, Math.abs(a.density[py * 128 + ((px + 64) % 128)] - r.density[i]))
+    }
+  }
+  if (!(flatErr < 1e-5)) fail(`undisturbed sheet is not uniform: max error ${flatErr.toExponential(2)}`)
+  if (!(periodErr < 1e-4)) fail(`camera one period over draws a different sky: ${periodErr.toExponential(2)}`)
+  if (!(rollErr < 1e-4)) fail(`half-period pan does not roll the sky: ${rollErr.toExponential(2)}`)
+  console.log(
+    `  sheet     uniform lattice exact to ${flatErr.toExponential(1)} · periodic camera ${periodErr.toExponential(1)} · ` +
+      `pan roll ${rollErr.toExponential(1)}`,
   )
 }
 
@@ -588,50 +685,6 @@ function clustering(u: Universe): number {
   console.log(
     `  ages      EdS ${eds.toFixed(2)} · open ${open.toFixed(2)} · Λ-heavy ${vacuum.toFixed(2)} Gyr · ` +
       `growth z=1→0 ${late(COSMOLOGIES.eds).toFixed(2)} / ${late(COSMOLOGIES.planck).toFixed(2)} / ${late(COSMOLOGIES.vacuum).toFixed(2)}`,
-  )
-}
-
-// The measured spectrum at recombination is the linear prediction for the
-// same realisation — this one check covers the Zel'dovich normalisation, the
-// CIC deconvolution, the binning, and the Δ² convention all at once.
-{
-  const make = (darkMatter: DarkMatter) =>
-    new Universe({
-      preset: "cosmos",
-      seed: 5,
-      nMass: 6000,
-      nTracer: 18000,
-      meshSize: 64,
-      order: 4,
-      softening: 1,
-      ic: { cosmology: COSMOLOGIES.planck, darkMatter, amplitude: 5 },
-    })
-  const cold = make("cold")
-  const an = new MeshAnalysis(64)
-  const pk = new Float64Array(K_BINS)
-  an.load(cold.pm!.cellMass)
-  an.powerSpectrum(pk)
-  const D2 = cold.growthFactor ** 2
-  let worst = 0
-  for (let b = 0; b < K_BINS; b++) {
-    if (kBinCentre(b) > 9 || cold.linearToday[b] <= 0 || pk[b] <= 0) continue
-    worst = Math.max(worst, Math.abs(pk[b] / (cold.linearToday[b] * D2) - 1))
-  }
-  if (!(worst < 0.12)) fail(`recombination spectrum departs from linear theory by ${(worst * 100).toFixed(1)}%`)
-
-  // Same phases: on a single-mode bin the hot/cold ratio must be exactly the
-  // transfer function squared — which only holds if both drew identical modes.
-  const hot = make("hot")
-  const big = kBin(1)
-  const small = kBin(14)
-  const tHot = Math.exp(-3.9 / 30 - 2.1 / 900)
-  const sameLarge = Math.abs(hot.linearToday[big] / cold.linearToday[big] / (tHot * tHot) - 1)
-  const suppressed = hot.linearToday[small] / cold.linearToday[small]
-  if (!(sameLarge < 1e-6)) fail(`hot/cold box-scale ratio is not T(1)²: off by ${sameLarge.toExponential(2)}`)
-  if (!(suppressed < 0.05)) fail(`hot dark matter kept ${(suppressed * 100).toFixed(1)}% of k=14 power`)
-  console.log(
-    `  spectrum  recombination vs linear: worst ${(worst * 100).toFixed(1)}% (k ≤ 9) · ` +
-      `hot/cold = T² to ${sameLarge.toExponential(0)} · k=14 ${suppressed.toExponential(1)}`,
   )
 }
 
@@ -742,7 +795,7 @@ function clustering(u: Universe): number {
 // Palettes: tables are fully populated, legends parse.
 {
   const lut = new Uint32Array(HUE_BINS * 256)
-  for (const lens of ["web", "flow", "potential", "doppler"] as const) {
+  for (const lens of ["web", "flow", "potential", "doppler", "streams"] as const) {
     lut.fill(0)
     buildLensPalette(lut, lens, [0.4, 0.5, 0.7])
     if (lut[HUE_BINS * 256 - 1] === 0 || lut[(HUE_BINS >> 1) * 256 + 128] === 0) fail(`${lens} palette has holes`)
@@ -756,6 +809,6 @@ if (failures > 0) {
 }
 console.log(
   `FMM: ${clouds.length} distributions × 4 orders vs direct N² — converges as expected, depth-independent.\n` +
-    `Cosmology: periodic particle mesh, ΛCDM growing mode, and stable recombination-to-present runs.\n` +
+    `Cosmos: FastPM linear exactness, σ₈, recombination spectrum, full nonlinear run, sheet mass and tiling.\n` +
     `Instruments: spectrum vs linear theory, T-web, potential, flow, PDF, virial, rotation curve.`,
 )

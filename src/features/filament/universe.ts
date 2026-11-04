@@ -1,43 +1,18 @@
 /**
- * FILAMENT — the simulation proper, with no rendering and no messaging.
+ * FILAMENT — the isolated worlds: discs, mergers, streams and collapses.
  *
  * Kept separate from `sim.worker.ts` so the physics is headlessly testable
- * (`scripts/test-fmm.ts`), the same way `src/lib/sigil.ts` is separate from the
- * page that draws it. The worker owns pixels, events and the camera; this owns
- * particles, force solvers, and time.
+ * (`scripts/test-fmm.ts`). The worker owns pixels, events and the camera; this
+ * owns particles, the FMM force solver, and time. The expanding periodic box
+ * is a different machine entirely and lives in `cosmos.ts`.
  *
- * Two integrators live here, chosen by the scenario:
- *
- *   • {@link Universe.stepStatic} — ordinary kick-drift-kick in physical time,
- *     for isolated systems.
- *   • {@link Universe.stepCosmo} — kick-drift-kick in ln a, in comoving
- *     coordinates on a ΛCDM background, for the run from recombination to now.
- *     See `cosmology.ts` for the derivation; the short version is that with the
- *     canonical momentum u = a²ẋ the Hubble drag term vanishes, leaving a
- *     genuinely symplectic scheme with no friction to leak energy through.
+ * Integration is ordinary kick-drift-kick leapfrog in physical time:
+ * symplectic, time-reversible, and second order, which is what keeps a disc's
+ * energy and angular momentum from drifting over thousands of orbits.
  */
 
 import { Fmm, applyPerm, chooseDepth, MAX_DEPTH } from "./fmm"
-import {
-  DEFAULT_IC,
-  makeInitialState,
-  type Cloud,
-  type InitialConditions,
-  type PresetName,
-} from "./presets"
-import {
-  ageOf,
-  growthTable,
-  hubble,
-  sampleGrowth,
-  sourceFor,
-  type Cosmology,
-  type GrowthTable,
-} from "./cosmology"
-import { ParticleMesh, wrapPeriodic } from "./particle-mesh"
-
-/** Scale factor at which a cosmological run stops: the present day. */
-export const A_TODAY = 1
+import { makeInitialState, type Cloud, type PresetName } from "./presets"
 
 export interface UniverseOptions {
   preset: PresetName
@@ -45,16 +20,11 @@ export interface UniverseOptions {
   nMass: number
   nTracer: number
   order: number
-  /** Periodic force-mesh width for the cosmological scenario. */
-  meshSize?: number
   /** Multiplier on the preset's softening length. */
   softening: number
-  /** Cosmology, dark matter and amplitude for the cosmological scenario. */
-  ic?: InitialConditions
 }
 
 export interface UniverseStats {
-  solver: "fmm" | "pm"
   cells: number
   depth: number
   nearPairs: number
@@ -70,26 +40,13 @@ export class Universe {
   masses!: Cloud
   tracers!: Cloud
   fmm!: Fmm
-  readonly pm: ParticleMesh | null
 
   readonly nMass: number
   readonly nTracer: number
-  cosmological = false
-  /** Background universe; ignored by the isolated scenarios. */
-  readonly cosmology: Cosmology
-  /** Linear growth D(a) of this cosmology's own 2D growth equation. */
-  readonly growth: GrowthTable
-  /** Linear Δ²(k) today for this realisation, per spectrum bin. */
-  readonly linearToday: Float64Array
 
-  /** Physical-time clock (isolated scenarios). */
   dt = 0.002
-  simTime = 0
-  /** Cosmological clock. */
-  a = 1
-  dlnA = 1e-3
-  cosmicTime = 0
-  done = false
+  /** Elapsed time, code units. */
+  time = 0
 
   private softeningBase = 0.004
   private softeningScale = 1
@@ -105,7 +62,6 @@ export class Universe {
   extent = 1
 
   readonly stats: UniverseStats = {
-    solver: "fmm",
     cells: 0,
     depth: 0,
     nearPairs: 0,
@@ -120,18 +76,10 @@ export class Universe {
     this.nTracer = opts.nTracer
     this.softeningScale = opts.softening
 
-    const ic = opts.ic ?? DEFAULT_IC
-    this.cosmology = ic.cosmology
-    const init = makeInitialState(opts.preset, opts.seed, opts.nMass, opts.nTracer, ic)
-    this.linearToday = init.linearToday
-    this.growth = growthTable(sourceFor(ic.cosmology), ic.cosmology)
+    const init = makeInitialState(opts.preset, opts.seed, opts.nMass, opts.nTracer)
     this.masses = init.masses
     this.tracers = init.tracers
-    this.cosmological = init.cosmological
     this.dt = init.dt
-    this.dlnA = init.dlnA
-    this.a = init.aStart
-    this.cosmicTime = init.cosmological ? ageOf(init.aStart, ic.cosmology) : 0
     this.softeningBase = init.softening
     this.extent = init.extent
 
@@ -141,9 +89,6 @@ export class Universe {
     this.tay = new Float32Array(opts.nTracer)
     this.scratch = new Float32Array(Math.max(opts.nMass, 1))
     this.fmm = new Fmm(opts.order)
-    this.pm = init.cosmological
-      ? new ParticleMesh(opts.meshSize ?? 128, sourceFor(ic.cosmology))
-      : null
 
     // Prime the accelerations so the first half-kick is not a free fall.
     this.solve()
@@ -151,23 +96,12 @@ export class Universe {
 
   /** Swap the expansion order; the tree is rebuilt from scratch. */
   setOrder(order: number): void {
-    if (this.pm) return
     this.fmm = new Fmm(order)
     this.solve()
   }
 
   setSoftening(scale: number): void {
     this.softeningScale = scale
-  }
-
-  /** Redshift, or 0 for the isolated scenarios. */
-  get z(): number {
-    return this.cosmological ? 1 / this.a - 1 : 0
-  }
-
-  /** The clock the readout should show — cosmic time, or elapsed sim time. */
-  get time(): number {
-    return this.cosmological ? this.cosmicTime : this.simTime
   }
 
   private get softening(): number {
@@ -237,31 +171,6 @@ export class Universe {
     const n = this.nMass
     const { fmm, masses, tracers } = this
 
-    if (this.pm) {
-      this.pm.solve(
-        masses,
-        this.nMass,
-        tracers,
-        this.nTracer,
-        this.ax,
-        this.ay,
-        this.tax,
-        this.tay,
-      )
-      const p = this.pm.stats
-      const total = this.nMass + this.nTracer
-      const work = total * 10 + p.fftOps
-      this.stats.solver = "pm"
-      this.stats.cells = p.cells
-      this.stats.depth = Math.log2(this.pm.size)
-      this.stats.nearPairs = 0
-      this.stats.translations = p.fftOps
-      this.stats.speedup = (total * Math.max(0, total - 1)) / Math.max(1, work)
-      this.stats.peakCellMass = p.peakCellMass
-      this.stats.occupiedCells = p.occupied
-      return
-    }
-
     this.boundBox()
 
     const depth = Math.max(
@@ -282,7 +191,6 @@ export class Universe {
     }
 
     const s = this.stats
-    s.solver = "fmm"
     s.cells = fmm.stats.cells
     s.depth = fmm.depth
     s.nearPairs = fmm.stats.nearPairs
@@ -319,8 +227,8 @@ export class Universe {
     if (++this.depthTick >= 5) {
       this.depthTick = 0
       const perParticle = s.nearPairs / Math.max(1, n)
-      if (perParticle > 320 && this.depthAdj < 5) this.depthAdj++
-      else if (perParticle < 70 && this.depthAdj > -2) this.depthAdj--
+      if (perParticle > 160 && this.depthAdj < 5) this.depthAdj++
+      else if (perParticle < 35 && this.depthAdj > -2) this.depthAdj--
     }
   }
 
@@ -338,27 +246,8 @@ export class Universe {
     }
   }
 
-  /** First cosmological kick, drift, and periodic wrap in one memory pass. */
-  private kickDriftPeriodic(
-    c: Cloud,
-    ax: Float32Array,
-    ay: Float32Array,
-    n: number,
-    kickFactor: number,
-    driftFactor: number,
-  ): void {
-    for (let i = 0; i < n; i++) {
-      const vx = c.vx[i] + ax[i] * kickFactor
-      const vy = c.vy[i] + ay[i] * kickFactor
-      c.vx[i] = vx
-      c.vy[i] = vy
-      c.x[i] = wrapPeriodic(c.x[i] + vx * driftFactor)
-      c.y[i] = wrapPeriodic(c.y[i] + vy * driftFactor)
-    }
-  }
-
-  /** Kick-drift-kick in physical time. */
-  private stepStatic(): void {
+  /** One kick-drift-kick step. */
+  step(): void {
     const h = this.dt * 0.5
     this.kick(this.masses, this.ax, this.ay, this.nMass, h)
     this.kick(this.tracers, this.tax, this.tay, this.nTracer, h)
@@ -367,65 +256,20 @@ export class Universe {
     this.solve()
     this.kick(this.masses, this.ax, this.ay, this.nMass, h)
     this.kick(this.tracers, this.tax, this.tay, this.nTracer, h)
-    this.simTime += this.dt
+    this.time += this.dt
   }
 
-  /**
-   * Kick-drift-kick in ln a.
-   *
-   *     dx/d(ln a) = u / (a²H)      du/d(ln a) = Γ(x) / H
-   *
-   * Drift factors are evaluated at the midpoint of the step, which keeps the
-   * scheme second order across the enormous range of a it has to cover — seven
-   * e-folds, from the surface of last scattering to the present day.
-   */
-  private stepCosmo(): void {
-    const half = this.dlnA * 0.5
-    const lnA0 = Math.log(this.a)
-
-    const cosmo = this.cosmology
-    const aMid = Math.exp(lnA0 + half)
-    const driftF = this.dlnA / (aMid * aMid * hubble(aMid, cosmo))
-    const k0 = half / hubble(this.a, cosmo)
-    this.kickDriftPeriodic(this.masses, this.ax, this.ay, this.nMass, k0, driftF)
-    this.kickDriftPeriodic(this.tracers, this.tax, this.tay, this.nTracer, k0, driftF)
-
-    this.a = Math.exp(lnA0 + this.dlnA)
-    // dt = d(ln a)/H — the cosmic clock falls straight out of the integrator.
-    this.cosmicTime += this.dlnA / hubble(aMid, cosmo)
-
-    this.solve()
-
-    const k1 = half / hubble(this.a, cosmo)
-    this.kick(this.masses, this.ax, this.ay, this.nMass, k1)
-    this.kick(this.tracers, this.tax, this.tay, this.nTracer, k1)
-
-    if (this.a >= A_TODAY) {
-      this.a = A_TODAY
-      this.done = true
-    }
-  }
-
-  /** Advance one step, in whichever time variable this scenario uses. */
-  step(): void {
-    if (this.cosmological) {
-      if (!this.done) this.stepCosmo()
-    } else {
-      this.stepStatic()
-    }
-  }
-
-  /** Camera bounds without exposing which force solver owns them. */
+  /** The tree's box, which the camera follows. */
   get boxCx(): number {
-    return this.pm ? 0 : this.fmm.boxCx
+    return this.fmm.boxCx
   }
 
   get boxCy(): number {
-    return this.pm ? 0 : this.fmm.boxCy
+    return this.fmm.boxCy
   }
 
   get boxHalf(): number {
-    return this.pm ? this.pm.half : this.fmm.boxHalf
+    return this.fmm.boxHalf
   }
 
   /**
@@ -435,11 +279,6 @@ export class Universe {
    * particle state, keeping quasars and starbursts provably outside dynamics.
    */
   forEachDensityCell(cb: (mass: number, x: number, y: number, size: number) => void): void {
-    if (this.pm) {
-      this.pm.forEachCell(cb)
-      return
-    }
-
     const side = 1 << this.fmm.depth
     const cells = side * side
     const h = (2 * this.fmm.boxHalf) / side
@@ -448,29 +287,6 @@ export class Universe {
       const mass = this.fmm.leafCom(c, com)
       if (mass > 0) cb(mass, com.x, com.y, h)
     }
-  }
-
-  /** Linear growth factor at the current epoch, D(a), with D(today) = 1. */
-  get growthFactor(): number {
-    return sampleGrowth(this.growth, this.a).D
-  }
-
-  /** E(a) = H/H₀ at the current epoch. */
-  get hubbleRate(): number {
-    return hubble(this.a, this.cosmology)
-  }
-
-  /** Where we are in the story, for the readout. */
-  epoch(): string {
-    if (!this.cosmological) return ""
-    if (this.done) return "today"
-    const z = this.z
-    if (z > 900) return "recombination"
-    if (z > 30) return "the dark ages"
-    if (z > 10) return "cosmic dawn"
-    if (z > 6) return "reionisation"
-    if (z > 1.2) return "cosmic noon"
-    return "the modern era"
   }
 
   /** RMS comoving displacement of the massive species — a clustering proxy. */

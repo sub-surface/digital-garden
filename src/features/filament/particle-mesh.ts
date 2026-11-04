@@ -8,13 +8,11 @@
  * become the attractor for the whole simulation.
  *
  * This solver deposits every particle onto a periodic mesh with cloud-in-cell
- * (CIC), solves the 2D Poisson equation by FFT, differentiates the potential,
- * then interpolates the field back with the same CIC kernel. The matching
- * deposit/sample pair conserves momentum, the mesh supplies a natural
- * softening scale, and the cost is O(N + M log M).
+ * (CIC), solves the 2D Poisson equation by FFT with a deconvolved Green
+ * function, takes the gradient spectrally, and interpolates the field back with
+ * the same CIC kernel. The matching deposit/sample pair conserves momentum, the
+ * mesh supplies a natural softening scale, and the cost is O(N + M log M).
  */
-
-import type { Cloud } from "./presets"
 
 interface FftPlan {
   n: number
@@ -179,17 +177,24 @@ export class ParticleMesh {
   readonly size: number
   readonly half: number
   readonly cellSize: number
+  /** Mass per cell from the last solve, normalised to a unit total. */
   readonly cellMass: Float32Array
-  readonly fieldX: Float32Array
-  readonly fieldY: Float32Array
   readonly stats: ParticleMeshStats
 
-  private readonly spectralR: Float64Array
-  private readonly spectralI: Float64Array
-  private readonly poissonScale: Float64Array
-  private readonly previous: Uint16Array
-  private readonly next: Uint16Array
+  private readonly re: Float64Array
+  private readonly im: Float64Array
+  /** −C·S(k)/(k²·W²(k)) per mode: Green function, softening, CIC deconvolution. */
+  private readonly green: Float64Array
+  /** Physical wavenumber per mesh index; Nyquist set to zero for the gradient. */
+  private readonly wave: Float64Array
+  /** Interpolated field on the mesh: x in `fx`, y in `fy`. */
+  private readonly fx: Float32Array
+  private readonly fy: Float32Array
 
+  /**
+   * @param source C = 2πGΣ̄, so that ∇²φ = C·δ.
+   * @param half   half-width of the periodic box.
+   */
   constructor(size: number, source: number, half = 1) {
     fftPlan(size)
     this.size = size
@@ -197,32 +202,37 @@ export class ParticleMesh {
     this.cellSize = (2 * half) / size
     const cells = size * size
     this.cellMass = new Float32Array(cells)
-    this.fieldX = new Float32Array(cells)
-    this.fieldY = new Float32Array(cells)
-    this.spectralR = new Float64Array(cells)
-    this.spectralI = new Float64Array(cells)
-    this.poissonScale = new Float64Array(cells)
-    this.previous = new Uint16Array(size)
-    this.next = new Uint16Array(size)
-    for (let i = 0; i < size; i++) {
-      this.previous[i] = i === 0 ? size - 1 : i - 1
-      this.next[i] = i + 1 === size ? 0 : i + 1
-    }
+    this.re = new Float64Array(cells)
+    this.im = new Float64Array(cells)
+    this.green = new Float64Array(cells)
+    this.fx = new Float32Array(cells)
+    this.fy = new Float32Array(cells)
+    this.wave = new Float64Array(size)
 
-    // The discrete Green function depends only on mesh geometry. Cache it once
-    // instead of evaluating thousands of trigonometric functions per step.
-    const invDx = 1 / this.cellSize
-    const wave = new Float64Array(size)
+    // Continuous wavenumbers, spectral derivatives. The Nyquist row and column
+    // have no defined sign for a first derivative, so they carry no force.
     for (let i = 0; i < size; i++) {
       const k = i <= size / 2 ? i : i - size
-      wave[i] = 2 * Math.sin(Math.PI * k / size) * invDx
+      this.wave[i] = i === size / 2 ? 0 : (Math.PI * k) / half
     }
+    // Every mode's Green function, cached once: the 1/k² of Poisson, the CIC
+    // window divided out *twice* (once for the deposit, once for the
+    // interpolation back), and a Gaussian of 0.8 cells so the deconvolution
+    // cannot amplify grid-scale noise. Without the deconvolution the force is
+    // blurred over ~3 cells; with it, ~1.5.
+    const rs = 0.8 * this.cellSize
     for (let y = 0; y < size; y++) {
-      const sy = wave[y]
+      const ky = y <= size / 2 ? y : y - size
+      const qy = (Math.PI * ky) / half
       for (let x = 0; x < size; x++) {
-        const sx = wave[x]
-        const k2 = sx * sx + sy * sy
-        this.poissonScale[y * size + x] = k2 === 0 ? 0 : -source / k2
+        const kx = x <= size / 2 ? x : x - size
+        const qx = (Math.PI * kx) / half
+        const k2 = qx * qx + qy * qy
+        if (k2 === 0) continue
+        const w = sinc((Math.PI * kx) / size) * sinc((Math.PI * ky) / size)
+        const w2 = w * w // CIC window per pass: [sinc·sinc]²
+        const deconvolve = 1 / Math.max(0.2, w2 * w2)
+        this.green[y * size + x] = (-source * Math.exp(-k2 * rs * rs) * deconvolve) / k2
       }
     }
     this.stats = {
@@ -233,156 +243,124 @@ export class ParticleMesh {
     }
   }
 
-  private deposit(c: Cloud, nParticles: number, mass: number): void {
-    const n = this.size
+  /** Cloud-in-cell deposit of `n` equal masses; positions may be unwrapped. */
+  private deposit(x: Float32Array, y: Float32Array, n: number, mass: number): void {
+    const size = this.size
     const rho = this.cellMass
     const invCell = 1 / this.cellSize
     const half = this.half
-    for (let i = 0; i < nParticles; i++) {
-      const x = c.x[i]
-      const y = c.y[i]
-      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+    for (let i = 0; i < n; i++) {
+      const xi = wrapPeriodic(x[i], half)
+      const yi = wrapPeriodic(y[i], half)
+      if (!Number.isFinite(xi) || !Number.isFinite(yi)) {
         throw new Error(`non-finite periodic particle ${i}`)
       }
-      // Mesh values live at cell centres. Subtracting half a cell makes
-      // deposit and interpolation address those centres rather than corners.
-      const gx = (x + half) * invCell - 0.5
-      const gy = (y + half) * invCell - 0.5
+      // Mesh values live at cell centres; positions are wrapped, so the
+      // floors fall in −1..n−1 and two branches replace four modulos.
+      const gx = (xi + half) * invCell - 0.5
+      const gy = (yi + half) * invCell - 0.5
       const fx0 = Math.floor(gx)
       const fy0 = Math.floor(gy)
-      // Positions are already periodic, so these floors are only -1..n-1.
-      // Branches avoid four general modulo operations in this hottest loop.
-      const x0 = fx0 < 0 ? n - 1 : fx0
-      const y0 = fy0 < 0 ? n - 1 : fy0
-      const x1 = x0 + 1 === n ? 0 : x0 + 1
-      const y1 = y0 + 1 === n ? 0 : y0 + 1
+      const x0 = fx0 < 0 ? size - 1 : fx0
+      const y0 = fy0 < 0 ? size - 1 : fy0
+      const x1 = x0 + 1 === size ? 0 : x0 + 1
+      const y1 = y0 + 1 === size ? 0 : y0 + 1
       const tx = gx - fx0
       const ty = gy - fy0
       const wx0 = 1 - tx
       const wy0 = 1 - ty
-      rho[y0 * n + x0] += mass * wx0 * wy0
-      rho[y0 * n + x1] += mass * tx * wy0
-      rho[y1 * n + x0] += mass * wx0 * ty
-      rho[y1 * n + x1] += mass * tx * ty
+      rho[y0 * size + x0] += mass * wx0 * wy0
+      rho[y0 * size + x1] += mass * tx * wy0
+      rho[y1 * size + x0] += mass * wx0 * ty
+      rho[y1 * size + x1] += mass * tx * ty
     }
   }
 
-  private sample(
-    c: Cloud,
-    nParticles: number,
-    ax: Float32Array,
-    ay: Float32Array,
-  ): void {
-    const n = this.size
-    const fx = this.fieldX
-    const fy = this.fieldY
+  /** Interpolate the mesh field back with the same CIC kernel. */
+  private sample(x: Float32Array, y: Float32Array, n: number, ax: Float32Array, ay: Float32Array): void {
+    const size = this.size
+    const fx = this.fx
+    const fy = this.fy
     const invCell = 1 / this.cellSize
     const half = this.half
-    for (let i = 0; i < nParticles; i++) {
-      const gx = (c.x[i] + half) * invCell - 0.5
-      const gy = (c.y[i] + half) * invCell - 0.5
+    for (let i = 0; i < n; i++) {
+      const gx = (wrapPeriodic(x[i], half) + half) * invCell - 0.5
+      const gy = (wrapPeriodic(y[i], half) + half) * invCell - 0.5
       const fx0 = Math.floor(gx)
       const fy0 = Math.floor(gy)
-      const x0 = fx0 < 0 ? n - 1 : fx0
-      const y0 = fy0 < 0 ? n - 1 : fy0
-      const x1 = x0 + 1 === n ? 0 : x0 + 1
-      const y1 = y0 + 1 === n ? 0 : y0 + 1
+      const x0 = fx0 < 0 ? size - 1 : fx0
+      const y0 = fy0 < 0 ? size - 1 : fy0
+      const x1 = x0 + 1 === size ? 0 : x0 + 1
+      const y1 = y0 + 1 === size ? 0 : y0 + 1
       const tx = gx - fx0
       const ty = gy - fy0
-      const wx0 = 1 - tx
-      const wy0 = 1 - ty
-      const i00 = y0 * n + x0
-      const i10 = y0 * n + x1
-      const i01 = y1 * n + x0
-      const i11 = y1 * n + x1
-      ax[i] =
-        fx[i00] * wx0 * wy0 +
-        fx[i10] * tx * wy0 +
-        fx[i01] * wx0 * ty +
-        fx[i11] * tx * ty
-      ay[i] =
-        fy[i00] * wx0 * wy0 +
-        fy[i10] * tx * wy0 +
-        fy[i01] * wx0 * ty +
-        fy[i11] * tx * ty
+      const w00 = (1 - tx) * (1 - ty)
+      const w10 = tx * (1 - ty)
+      const w01 = (1 - tx) * ty
+      const w11 = tx * ty
+      const i00 = y0 * size + x0
+      const i10 = y0 * size + x1
+      const i01 = y1 * size + x0
+      const i11 = y1 * size + x1
+      ax[i] = fx[i00] * w00 + fx[i10] * w10 + fx[i01] * w01 + fx[i11] * w11
+      ay[i] = fy[i00] * w00 + fy[i10] * w10 + fy[i01] * w01 + fy[i11] * w11
     }
   }
 
   /**
-   * Solve the periodic peculiar field.
+   * Peculiar acceleration Γ = −∇φ, ∇²φ = C·δ, for `n` equal-mass particles.
    *
-   * In Cosmos, both arrays are equal-mass particles. Keeping two arrays is a
-   * storage/performance detail inherited from the isolated FMM scenarios, not a
-   * distinction in their cosmological dynamics.
+   * Two FFTs per solve. The forward transform takes δ to k-space; there both
+   * gradient components are formed spectrally, Γ_k = −ik·φ_k, and packed as one
+   * complex field Γx + iΓy — legitimate because each is real — so a single
+   * inverse transform returns both. Spectral gradients are exact on every
+   * resolved mode, where the old finite difference lost a third of the force
+   * near the grid scale.
    */
-  solve(
-    masses: Cloud,
-    nMass: number,
-    tracers: Cloud,
-    nTracer: number,
-    ax: Float32Array,
-    ay: Float32Array,
-    tax: Float32Array,
-    tay: Float32Array,
-  ): void {
-    const total = nMass + nTracer
-    if (total <= 0) throw new Error("FILAMENT cannot solve an empty universe")
-
-    const n = this.size
-    const cells = n * n
+  solve(x: Float32Array, y: Float32Array, n: number, ax: Float32Array, ay: Float32Array): void {
+    if (n <= 0) throw new Error("FILAMENT cannot solve an empty universe")
+    const size = this.size
+    const cells = size * size
     const rho = this.cellMass
     rho.fill(0)
-    const particleMass = 1 / total
-    this.deposit(masses, nMass, particleMass)
-    this.deposit(tracers, nTracer, particleMass)
+    this.deposit(x, y, n, 1 / n)
 
-    const mean = 1 / cells
-    const re = this.spectralR
-    const im = this.spectralI
+    const re = this.re
+    const im = this.im
     let occupied = 0
     let peak = 0
     for (let i = 0; i < cells; i++) {
       const m = rho[i]
       if (m > 0) occupied++
       if (m > peak) peak = m
-      re[i] = m / mean - 1
+      re[i] = m * cells - 1
       im[i] = 0
     }
     this.stats.occupied = occupied
     this.stats.peakCellMass = peak
 
-    fft2(re, im, n, false)
-
-    // Cached discrete periodic Laplacian: the mesh operator and centred force
-    // remain consistent at the grid scale without recomputing any sines.
-    const poisson = this.poissonScale
-    for (let i = 0; i < cells; i++) {
-      re[i] *= poisson[i]
-      im[i] *= poisson[i]
-    }
-
-    fft2(re, im, n, true)
-
-    const gx = this.fieldX
-    const gy = this.fieldY
-    const invDx = 1 / this.cellSize
-    const derivative = 0.5 * invDx
-    const previous = this.previous
-    const next = this.next
-    for (let y = 0; y < n; y++) {
-      const ym = previous[y]
-      const yp = next[y]
-      for (let x = 0; x < n; x++) {
-        const xm = previous[x]
-        const xp = next[x]
-        const i = y * n + x
-        gx[i] = -(re[y * n + xp] - re[y * n + xm]) * derivative
-        gy[i] = -(re[yp * n + x] - re[ym * n + x]) * derivative
+    fft2(re, im, size, false)
+    const green = this.green
+    const wave = this.wave
+    for (let yy = 0; yy < size; yy++) {
+      const ky = wave[yy]
+      const row = yy * size
+      for (let xx = 0; xx < size; xx++) {
+        const i = row + xx
+        const kx = wave[xx]
+        const pr = re[i] * green[i]
+        const pi = im[i] * green[i]
+        // Γx + iΓy = −ik_x·φ + k_y·φ  =  φ·(k_y − i·k_x)
+        re[i] = pr * ky + pi * kx
+        im[i] = pi * ky - pr * kx
       }
     }
-
-    this.sample(masses, nMass, ax, ay)
-    this.sample(tracers, nTracer, tax, tay)
+    fft2(re, im, size, true)
+    for (let i = 0; i < cells; i++) {
+      this.fx[i] = re[i]
+      this.fy[i] = im[i]
+    }
+    this.sample(x, y, n, ax, ay)
   }
 
   /** Iterate physical cell masses and centres for halo/event detection. */
@@ -397,4 +375,8 @@ export class ParticleMesh {
       }
     }
   }
+}
+
+function sinc(x: number): number {
+  return Math.abs(x) < 1e-8 ? 1 : Math.sin(x) / x
 }
