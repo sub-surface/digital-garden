@@ -212,6 +212,21 @@ describe("OS interactions", () => {
     expect(await screen.findByText("WEBGL2 UNAVAILABLE")).toBeInTheDocument()
   })
 
+  it("releases its WebGL context instead of leaving it attached to a dead canvas", async () => {
+    const loseContext = vi.fn()
+    const gl = {
+      createProgram: () => null,
+      getExtension: (name: string) => (name === "WEBGL_lose_context" ? { loseContext } : null),
+    }
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(gl as unknown as RenderingContext)
+    const { container, unmount } = render(<MediaVisualizer analyser={null} mode="feedback" skin="classic" />)
+
+    expect(await screen.findByText("WEBGL SHADER FAILED")).toBeInTheDocument()
+    expect(loseContext).toHaveBeenCalled()
+    expect(container.querySelector("canvas")).toBeNull()
+    unmount()
+  })
+
   it("saves a Paint project as a visible local pixel picture", async () => {
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null)
     useOS.getState().openWindow({ appId: "paint", args: {}, title: "Untitled.pxl — Paint", multiInstance: true, silent: true })

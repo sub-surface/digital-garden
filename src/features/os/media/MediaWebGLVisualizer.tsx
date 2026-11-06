@@ -135,15 +135,32 @@ function energy(data: Uint8Array, start: number, end: number) {
 }
 
 export default function MediaWebGLVisualizer({ analyser, mode, skin, large }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const hostRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const host = hostRef.current
+    if (!host) return
     setError(null)
+    // Each run owns its canvas. Deleting programs and textures does not free the
+    // WebGL context itself, and a canvas keeps its context for life, so a
+    // React-owned canvas could neither be released (StrictMode and mode changes
+    // reuse it) nor left alone (every open/close of the player stacked another
+    // live context until Chrome began evicting them). A private canvas can be
+    // explicitly lost and dropped in cleanup.
+    const canvas = document.createElement("canvas")
+    canvas.className = styles.mediaVisual
+    canvas.setAttribute("aria-label", `${mode} WebGL visualisation`)
+    host.prepend(canvas)
     const gl = canvas.getContext("webgl2", { alpha: false, antialias: false, powerPreference: "low-power" })
+    const release = () => {
+      gl?.getExtension("WEBGL_lose_context")?.loseContext()
+      canvas.width = 1
+      canvas.height = 1
+      canvas.remove()
+    }
     if (!gl) {
+      release()
       setError("WEBGL2 UNAVAILABLE")
       return
     }
@@ -155,6 +172,7 @@ export default function MediaWebGLVisualizer({ analyser, mode, skin, large }: Pr
       copyProgram = program(gl, COPY_SHADER)
     } catch (cause) {
       if (import.meta.env.DEV) console.error("[media visualizer] shader failed:", cause)
+      release()
       setError("WEBGL SHADER FAILED")
       return
     }
@@ -290,12 +308,12 @@ export default function MediaWebGLVisualizer({ analyser, mode, skin, large }: Pr
       gl.deleteVertexArray(vao)
       gl.deleteProgram(feedbackProgram)
       gl.deleteProgram(copyProgram)
+      release()
     }
   }, [analyser, mode, skin])
 
   return (
-    <div className={`${styles.mediaWebGL} ${large ? styles.mediaVisualLarge : ""}`}>
-      <canvas ref={canvasRef} className={styles.mediaVisual} aria-label={`${mode} WebGL visualisation`} />
+    <div ref={hostRef} className={`${styles.mediaWebGL} ${large ? styles.mediaVisualLarge : ""}`}>
       {error && <span>{error}</span>}
     </div>
   )

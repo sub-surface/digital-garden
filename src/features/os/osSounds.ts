@@ -22,8 +22,15 @@ export function playOSSound(sound: OSSound, volume: number): void {
       close: [392, 294],
       notify: [660, 660],
     }
+    let pending = notes[sound].length
     notes[sound].forEach((frequency, index) => {
       const oscillator = ctx.createOscillator()
+      // Detach each cue's nodes from the shared context once it has played, so
+      // a long session doesn't keep every click's graph wired to the output.
+      oscillator.onended = () => {
+        oscillator.disconnect()
+        if (--pending === 0) gain.disconnect()
+      }
       oscillator.type = sound === "startup" ? "sine" : "triangle"
       oscillator.frequency.value = frequency
       oscillator.connect(gain)
