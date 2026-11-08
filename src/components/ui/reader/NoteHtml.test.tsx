@@ -2,15 +2,23 @@ import { act, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { NoteHtml } from "./NoteHtml"
 
-vi.mock("@/components/mdx/MDXProvider", () => ({
-  mdxComponents: {
+vi.mock("@/components/mdx/MDXProvider", async () => {
+  const { lazy } = await import("react")
+  // A grid whose code arrives a few ms late, like the real lazy registry.
+  const LazyGrid = lazy(() =>
+    new Promise<{ default: (p: { children?: React.ReactNode }) => React.ReactElement }>((resolve) =>
+      setTimeout(() => resolve({ default: ({ children }) => <section data-testid="lazy-grid">{children}</section> }), 20),
+    ),
+  )
+  return { mdxComponents: {
+    LazyGrid,
     Grid: ({ children }: { children?: React.ReactNode }) => <section data-testid="grid">{children}</section>,
     Card: ({ title, children }: { title: string; children?: React.ReactNode }) => (
       <article data-testid="card"><h3>{title}</h3>{children}</article>
     ),
     Leaf: ({ n }: { n: number }) => <i data-testid="leaf">{n * 2}</i>,
-  },
-}))
+  } }
+})
 
 const props = (value: unknown) => JSON.stringify(value).replace(/"/g, "&quot;")
 
@@ -45,5 +53,12 @@ describe("NoteHtml", () => {
     render(<NoteHtml html={`<div data-island="Nope" data-props="{}"></div>`} />)
     await act(async () => {})
     expect(screen.getByRole("alert").textContent).toMatch(/Nope could not render: not registered/)
+  })
+
+  it("finds nested islands that appear after a lazy parent resolves", async () => {
+    render(<NoteHtml html={`<div data-island="LazyGrid" data-props="{}"><div data-island="Card" data-props="${props({ title: "Late" })}"><p>x</p></div></div>`} />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 80)) })
+    expect(screen.getByTestId("lazy-grid")).toBeTruthy()
+    expect(screen.getAllByTestId("card").map((c) => c.querySelector("h3")?.textContent)).toEqual(["Late"])
   })
 })

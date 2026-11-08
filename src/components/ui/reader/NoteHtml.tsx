@@ -59,35 +59,48 @@ export function NoteHtml({ html, containerRef }: { html: string; containerRef?: 
     setIslands([])
   }, [html, ref])
 
-  // Discover placeholders (including ones nested in islands mounted last pass).
+  // Discover placeholders: now, and whenever nodes are added under the root.
+  // Nested placeholders only exist once their parent island has rendered its
+  // static children, which can be any number of commits later (a lazy
+  // component resolving, a Suspense boundary revealing). Re-scanning on a
+  // fixed dependency missed those: the wiki home's cards stayed empty once
+  // the grids became lazy. A MutationObserver sees every arrival.
   useLayoutEffect(() => {
     const root = ref.current
     if (!root) return
-    const found: Island[] = []
-    root.querySelectorAll<HTMLElement>("[data-island]:not([data-island-mounted])").forEach((el) => {
-      // A nested placeholder is detached once its parent island is cleared
-      // above; it reappears inside the parent's static children next pass.
-      if (!el.isConnected) return
-      el.setAttribute("data-island-mounted", "")
-      let props: Record<string, unknown> = {}
-      try {
-        props = JSON.parse(el.getAttribute("data-props") || "{}")
-      } catch {
-        // Malformed props are a build bug; render the island with none and let it show.
-      }
-      const childrenHtml = el.innerHTML
-      el.innerHTML = ""
-      found.push({
-        id: nextId.current++,
-        el,
-        name: el.getAttribute("data-island") || "",
-        props,
-        childrenHtml,
-        inline: el.tagName === "SPAN",
+    const scan = () => {
+      const found: Island[] = []
+      root.querySelectorAll<HTMLElement>("[data-island]:not([data-island-mounted])").forEach((el) => {
+        // A nested placeholder is detached once its parent island is cleared
+        // below; it reappears inside the parent's static children later.
+        if (!el.isConnected) return
+        el.setAttribute("data-island-mounted", "")
+        let props: Record<string, unknown> = {}
+        try {
+          props = JSON.parse(el.getAttribute("data-props") || "{}")
+        } catch {
+          // Malformed props are a build bug; render the island with none and let it show.
+        }
+        const childrenHtml = el.innerHTML
+        el.innerHTML = ""
+        found.push({
+          id: nextId.current++,
+          el,
+          name: el.getAttribute("data-island") || "",
+          props,
+          childrenHtml,
+          inline: el.tagName === "SPAN",
+        })
       })
+      if (found.length) setIslands((current) => [...current, ...found])
+    }
+    scan()
+    const observer = new MutationObserver((records) => {
+      if (records.some((r) => r.addedNodes.length > 0)) scan()
     })
-    if (found.length) setIslands((current) => [...current, ...found])
-  }, [html, islands.length, ref])
+    observer.observe(root, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [html, ref])
 
   // Image zoom by delegation (formerly the MDX `img` override).
   const onClick = (e: React.MouseEvent) => {
