@@ -3,6 +3,7 @@ import { useMemo, useRef } from "react"
 import type { NoteMetadata } from "@/types/content"
 import { isLandableNote } from "@/hooks/useRandomNote"
 import { classifyLayout } from "@/lib/layout"
+import { formatNoteDate } from "@/components/ui/reader/NoteHeader"
 import styles from "./Query.module.scss"
 
 const pillStyle: React.CSSProperties = {
@@ -115,6 +116,15 @@ function kindLabel(note: NoteMetadata): string {
   return note.slug.toLowerCase().startsWith("writing/") ? "essay" : classifyLayout(note.slug, note)
 }
 
+// Growth as a glyph: an empty circle that fills as a note matures.
+const GROWTH_GLYPH: Record<string, string> = { larval: "◌", becoming: "◐", actual: "●" }
+
+/**
+ * An essay, as a card: a thin letterboxed strip of its image (the owner's
+ * choice of picture carries the mood), then the typography does the work:
+ * small-caps kicker, the title in Playfair, a two-line italic standfirst, and
+ * a quiet footer with growth and reading time.
+ */
 function EssayCard({ note, lead }: { note: NoteMetadata; lead: boolean }) {
   const src = imageSrc(note.image)
   const initial = note.title.replace(/^[^\p{L}\p{N}]+/u, "").charAt(0).toUpperCase() || "·"
@@ -127,11 +137,20 @@ function EssayCard({ note, lead }: { note: NoteMetadata; lead: boolean }) {
       </div>
       <div className={styles.body}>
         <span className={styles.kicker}>
-          {kindLabel(note)}{note.date ? ` · ${new Date(note.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}` : ""}
+          {kindLabel(note)}
+          {note.date && <> <span className={styles.dot}>·</span> {formatNoteDate(note.date)}</>}
         </span>
         <span className={styles.title}>{note.title}</span>
         {note.description && <span className={styles.description}>{note.description}</span>}
-        {note.readingTime ? <span className={styles.meta}>{note.readingTime} min read</span> : null}
+        <span className={styles.footer}>
+          {note.growth && (
+            <span className={styles.growth} title={`Growth: ${note.growth}`}>
+              {GROWTH_GLYPH[note.growth] ?? "◌"} {note.growth}
+            </span>
+          )}
+          {note.readingTime ? <span>{note.readingTime} min</span> : null}
+          <span className={styles.read} aria-hidden="true">read →</span>
+        </span>
       </div>
     </a>
   )

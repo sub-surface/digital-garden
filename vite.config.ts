@@ -96,10 +96,8 @@ export default defineConfig(({ command }) => ({
     rollupOptions: {
       output: {
         // Function form so heavy vendor deps split out of the main entry chunk
-        // regardless of where they're imported. Keep Supabase in its own lazy dependency
-        // chunk for wiki/chat auth paths. FlexSearch is intentionally not forced into a
-        // manual chunk: SearchOverlay imports it dynamically so search stays off the
-        // initial preload graph.
+        // regardless of where they're imported. Supabase gets its own chunk, which
+        // lib/supabase.ts imports dynamically: anonymous garden readers never load it.
         // d3 / chess.js are NOT listed — they co-bundle with their own
         // lazy-loaded pages (ConstellationPage, ChessPage) and never reach the main chunk.
         manualChunks(id) {

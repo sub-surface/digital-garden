@@ -1,10 +1,10 @@
 /**
- * Canonical keyboard-shortcut registry — the single source of truth for global
- * bindings. `useHotkeys` reads `key` to dispatch; the prompt's `keys` command
- * (also on `?`) lists `keys` + `label`. Keep the two in sync by editing only this file.
+ * The keyboard-shortcut registry: what the prompt's `keys` command (also `?`)
+ * lists. `useHotkeys` dispatches the bindings by hand, so when you add or
+ * change one, change it in both places.
  *
  * `key` is the value matched in the keydown handler (already lowercased there).
- * `keys` is the display form (what the cheat sheet shows). `shell` narrows a
+ * `keys` is the display form (what `keys` in the prompt shows). `shell` narrows a
  * binding to specific shells; omit for "all shells".
  */
 export type Shell = "main" | "wiki" | "chat" | "os"
@@ -12,11 +12,11 @@ export type Shell = "main" | "wiki" | "chat" | "os"
 export interface Hotkey {
   /** Lowercased KeyboardEvent.key this binding matches (handler-side). */
   key: string
-  /** Display chips for the cheat sheet, e.g. ["Ctrl", "K"]. */
+  /** Display chips, e.g. ["Ctrl", "K"]. */
   keys: string[]
   /** Human-readable action. */
   label: string
-  /** Grouping in the cheat sheet. */
+  /** Grouping in the `keys` listing. */
   group: "Navigation" | "Reading" | "Appearance" | "Media" | "Help"
   /** Restrict to these shells; undefined = all. */
   shell?: Shell[]
@@ -26,10 +26,10 @@ export const HOTKEYS: Hotkey[] = [
   // Help / discovery
   { key: "?", keys: ["?"], label: "This list (in the prompt)", group: "Help" },
   // Navigation
-  { key: "p", keys: ["Ctrl", "P"], label: "Prompt: search or run a command", group: "Navigation", shell: ["main", "wiki", "chat"] },
-  { key: "k", keys: ["Ctrl", "K"], label: "Prompt (same as Ctrl P)", group: "Navigation", shell: ["main", "wiki", "chat"] },
-  { key: "/", keys: ["/"], label: "Prompt, empty", group: "Navigation", shell: ["main", "wiki", "chat"] },
-  { key: "c", keys: ["C"], label: "philchat in the dock", group: "Navigation", shell: ["main", "wiki"] },
+  { key: "p", keys: ["Ctrl", "P"], label: "Prompt: search or run a command", group: "Navigation", shell: ["main", "wiki"] },
+  { key: "k", keys: ["Ctrl", "K"], label: "Prompt (same as Ctrl P)", group: "Navigation", shell: ["main", "wiki"] },
+  { key: "/", keys: ["/"], label: "Prompt, empty", group: "Navigation", shell: ["main", "wiki"] },
+  { key: "c", keys: ["C"], label: "philchat in the dock (not on game pages)", group: "Navigation", shell: ["main", "wiki"] },
   { key: "r", keys: ["R"], label: "Random note", group: "Navigation", shell: ["main", "wiki"] },
   // Reading — size/width keys apply while reader mode is on
   { key: "f", keys: ["F"], label: "Reader mode", group: "Reading", shell: ["main", "wiki"] },
@@ -46,10 +46,10 @@ export const HOTKEYS: Hotkey[] = [
   { key: "Escape", keys: ["Esc"], label: "Close the dock or a panel", group: "Help" },
 ]
 
-/** Cheat-sheet display order. */
+/** Display order of the groups. */
 export const HOTKEY_GROUPS: Hotkey["group"][] = ["Navigation", "Reading", "Appearance", "Media", "Help"]
 
-/** Hotkeys visible for a given shell (for the cheat sheet). */
+/** Hotkeys visible for a given shell. */
 export function hotkeysForShell(shell: Shell): Hotkey[] {
   return HOTKEYS.filter((h) => !h.shell || h.shell.includes(shell))
 }

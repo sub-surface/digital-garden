@@ -88,9 +88,12 @@
   overflow: hidden;
   border: 9px ridge rgb(225 232 222 / .86);
   border-radius: 50%;
+  display: grid;
+  place-items: center;
+  // Dark agar, so glorp's green reads.
   background:
-    radial-gradient(circle at 35% 25%, rgb(255 255 255 / .55), transparent 18%),
-    radial-gradient(circle, rgb(210 242 213 / .78) 0 49%, rgb(150 188 164 / .7) 74%, rgb(91 116 103 / .82) 100%);
+    radial-gradient(circle at 35% 25%, rgb(255 255 255 / .12), transparent 18%),
+    radial-gradient(circle, rgb(18 34 24) 0 49%, rgb(24 46 32) 74%, rgb(40 64 48) 100%);
   box-shadow: inset 0 0 22px rgb(42 73 54 / .28), 3px 4px 7px rgb(0 0 0 / .24);
   touch-action: none;
 
@@ -119,141 +122,7 @@
   &:nth-child(3) { left: 64%; top: 73%; width: 5px; height: 5px; }
 }
 
-.creature {
-  --pet-size: 116px;
-  position: absolute;
-  left: 50%;
-  top: 55%;
-  width: var(--pet-size);
-  height: var(--pet-size);
-  transform: translate(-50%, -50%);
-  animation: arrive .42s cubic-bezier(.2, 1.4, .5, 1);
-}
-
-.body {
-  position: absolute;
-  z-index: 2;
-  inset: 12% 7% 10%;
-  display: flex;
-  justify-content: center;
-  gap: 17%;
-  border: 2px solid var(--pet-dark);
-  border-radius: 46% 54% 42% 58% / 55% 47% 53% 45%;
-  background:
-    radial-gradient(circle at 34% 26%, var(--pet-light) 0 5%, transparent 6%),
-    radial-gradient(circle at 68% 65%, var(--pet-dark) 0 4%, transparent 5%),
-    var(--pet-color);
-  box-shadow: inset 8px 8px 0 rgb(255 255 255 / .18), inset -8px -9px 0 rgb(0 0 0 / .09);
-  animation: breathe 3.1s ease-in-out infinite;
-}
-
-.eye {
-  position: relative;
-  width: 22%;
-  height: 26%;
-  margin-top: 28%;
-  overflow: hidden;
-  border: 2px solid #343239;
-  border-radius: 50%;
-  background: #fffdf5;
-
-  i {
-    position: absolute;
-    left: calc(50% - 3px);
-    top: calc(50% - 3px);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #25232a;
-    transform: translate(var(--look-x), var(--look-y));
-    transition: transform 70ms linear;
-  }
-}
-
-.mouth {
-  position: absolute;
-  left: 43%;
-  top: 65%;
-  width: 14%;
-  height: 8%;
-  border: 2px solid var(--pet-dark);
-  border-top: 0;
-  border-radius: 0 0 50% 50%;
-}
-
-.cheek {
-  position: absolute;
-  left: 19%;
-  top: 61%;
-  width: 12%;
-  height: 7%;
-  border-radius: 50%;
-  background: rgb(232 110 125 / .38);
-  &:nth-last-child(1) { left: auto; right: 19%; }
-}
-
-.shadow {
-  position: absolute;
-  left: 18%;
-  right: 18%;
-  bottom: 2%;
-  height: 13%;
-  border-radius: 50%;
-  background: rgb(34 66 43 / .19);
-  filter: blur(2px);
-}
-
-.sprout {
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  top: -3%;
-  width: 3px;
-  height: 28%;
-  background: #467b45;
-  transform: rotate(4deg);
-
-  i,
-  b { position: absolute; width: 17px; height: 10px; border-radius: 90% 12% 90% 12%; background: #6ca05a; }
-  i { left: 1px; top: 1px; transform: rotate(-17deg); }
-  b { right: 1px; top: 9px; transform: scaleX(-1) rotate(-12deg); }
-}
-
-.petal {
-  display: none;
-  position: absolute;
-  z-index: 1;
-  left: 37%;
-  top: -13%;
-  width: 27%;
-  height: 39%;
-  border: 2px solid var(--pet-dark);
-  border-radius: 60% 60% 45% 45%;
-  background: var(--pet-light);
-  transform-origin: 50% 112%;
-  &:nth-child(2) { transform: rotate(90deg); }
-  &:nth-child(3) { transform: rotate(180deg); }
-  &:nth-child(4) { transform: rotate(270deg); }
-}
-
-.root[data-stage="spore"] {
-  .creature { --pet-size: 54px; }
-  .sprout { display: none; }
-  .eye { gap: 2px; }
-}
-.root[data-stage="sprout"] .creature { --pet-size: 86px; }
-.root[data-stage="sprout"] .sprout { height: 22%; }
-.root[data-stage="bloom"] .petal { display: block; }
-
-.root[data-mood="sleepy"],
-.root[data-mood="dormant"] {
-  .eye { height: 5%; margin-top: 39%; border-width: 0 0 2px; border-radius: 0; background: transparent; }
-  .eye i { display: none; }
-}
-.root[data-mood="peckish"] .mouth { width: 10%; height: 10%; left: 45%; border: 2px solid var(--pet-dark); border-radius: 50%; }
-.root[data-mood="mucky"] .body { filter: saturate(.65); }
-.root[data-mood="radiant"] .dish { box-shadow: inset 0 0 22px rgb(42 73 54 / .28), 0 0 12px var(--pet-light), 3px 4px 7px rgb(0 0 0 / .24); }
-.root[data-dancing="true"] .creature { animation: dance .72s ease-in-out infinite alternate; }
+.root[data-mood="radiant"] .dish { box-shadow: inset 0 0 22px rgb(42 180 100 / .2), 3px 4px 7px rgb(0 0 0 / .24); }
 
 .nowPlaying {
   max-width: 90%;
@@ -334,20 +203,6 @@
   button { padding: 2px 6px; font-size: 9px; }
 }
 
-@keyframes breathe {
-  0%, 100% { transform: scale(1, .98) rotate(-1deg); }
-  50% { transform: scale(.98, 1.025) rotate(1deg); }
-}
-
-@keyframes arrive {
-  from { transform: translate(-50%, -38%) scale(.7); opacity: .2; }
-}
-
-@keyframes dance {
-  0% { transform: translate(-50%, -50%) rotate(-9deg) translateY(0); }
-  100% { transform: translate(-50%, -50%) rotate(9deg) translateY(-8px); }
-}
-
 @container os-window (max-width: 570px) {
   .main { grid-template-columns: 1fr; overflow: auto; }
   .dish { flex: none; height: 260px; }
@@ -358,8 +213,28 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .creature,
-  .body,
-  .root[data-dancing="true"] .creature { animation: none; }
   .needTrack span { transition: none; }
+}
+
+// The pet is glorp (src/features/glorp): an ASCII alien in the dish.
+.glorp {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  transform: translate(var(--look-x, 0px), var(--look-y, 0px));
+  transition: transform 0.2s ease;
+  animation: glorpBob 3.2s ease-in-out infinite;
+
+  .root[data-dancing] & { animation-duration: 0.9s; }
+  .root[data-mood="dormant"] & { animation: none; opacity: 0.7; }
+}
+
+@keyframes glorpBob {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -3px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glorp { animation: none; }
 }

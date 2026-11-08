@@ -73,19 +73,29 @@ export function MusicPlayer() {
     }
     const peaks = new Float32Array(BANDS)   // smoothed per-band amplitude
 
-    let animationId: number
+    let animationId = 0
     const TWO_PI = Math.PI * 2
+    // 30 fps is plenty for a ring of bars; the accent is re-read every second
+    // (getComputedStyle per frame forced a style recalc). While paused the
+    // bars decay to rest and then the loop stops until playback resumes.
+    const FRAME_MS = 1000 / 30
+    let lastFrame = 0
+    let frames = 0
+    let accent = "#b4424c"
 
-    const draw = () => {
+    const draw = (t = 0) => {
       animationId = win.requestAnimationFrame(draw)
+      if (t - lastFrame < FRAME_MS) return
+      lastFrame = t
       analyser.getByteFrequencyData(dataArray)
 
       const W = canvas.width, H = canvas.height
       const cx = W / 2, cy = H / 2
       ctx.clearRect(0, 0, W, H)
 
-      const accent = (win.getComputedStyle(rootEl)
-        .getPropertyValue("--color-accent-base") || "#b4424c").trim()
+      if (frames++ % 30 === 0) {
+        accent = (win.getComputedStyle(rootEl).getPropertyValue("--color-accent-base") || "#b4424c").trim()
+      }
       const inner = Math.min(W, H) * 0.30   // start just outside the disc edge
       const maxLen = Math.min(W, H) * 0.205
 
@@ -115,12 +125,19 @@ export function MusicPlayer() {
           ctx.stroke()
         }
       }
+      ctx.globalAlpha = 1
+
+      if (!isPlaying) {
+        let energy = 0
+        for (let i = 0; i < BANDS; i++) energy += peaks[i]
+        if (reduce || energy < 0.02 * BANDS) win.cancelAnimationFrame(animationId)
+      }
     }
 
     draw()
     return () => win.cancelAnimationFrame(animationId)
     // re-bind when popping in/out so the rAF targets the right window/canvas
-  }, [analyser, isExpanded, pipWindow])
+  }, [analyser, isExpanded, pipWindow, isPlaying])
 
   // Pre-decode the current track for scratching so the first scratch is instant
   // (no ~5MB fetch+decode mid-gesture). Fires as soon as the player is open and

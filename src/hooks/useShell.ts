@@ -16,11 +16,3 @@ export function useShell(): Shell {
 export function useIsWiki(): boolean {
   return useShell() === "wiki"
 }
-
-export function useIsChat(): boolean {
-  return useShell() === "chat"
-}
-
-export function useIsOS(): boolean {
-  return useShell() === "os"
-}

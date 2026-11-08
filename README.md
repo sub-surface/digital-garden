@@ -31,7 +31,7 @@ sandbox, ant farm, and more). Plus two original games with their own research th
 **SUBSURFACES 95** ([os.subsurfaces.net](https://os.subsurfaces.net)) is a Win95-style windowed desktop
 that is a second reading interface for the garden: notes, games, a media player, local files,
 Paint and a pet, all in draggable windows. The shared procedural **terminal** (`/terminal`, or
-Ctrl+P anywhere) powers its MS-DOS Prompt and also runs on the main site.
+the dock's prompt, Ctrl+P, on the garden and wiki) powers its MS-DOS Prompt too.
 
 The wiki at `wiki.subsurfaces.net` is a community space for the philchat Discord — profiles,
 philosophical positions, and collaborative articles, with accounts, moderation, and edit history.

@@ -20,7 +20,7 @@ Feature reference for the main site. Outstanding work is in [`../ROADMAP.md`](..
 ## Platform features
 
 - **Backgrounds** (13 modes, ThemePanel `\`, hotkey `b`): see architecture.md. Theme: dark/light plus ROYGBIV accent cycle with triadic secondary colours; `bgOpacity` "Intensity".
-- **Navigation overlays**: search (Ctrl+K, FlexSearch over the pre-built index), command palette (Ctrl+Shift+P), terminal (Ctrl+P, shared with `/terminal` and the OS), keyboard cheat sheet (`?`), skip link, global focus ring.
+- **The dock** (`src/features/dock/`): one right-hand panel with the prompt (Ctrl/Cmd+P or K, `/`; live suggestions over commands and the pre-built search index; `?` runs `keys`) and philchat (`C`). Settings (`\`) holds look, reading, background and sky. Skip link, global focus ring.
 - **Graph**: `/graph` constellation (Canvas 2D + D3), local radar, global overlay, MDX embeds.
 - **Music**: persistent `MusicProvider` (one `<audio>`, FFT analyser), turntable player with vinyl scratch (AudioWorklet in `public/`), radial visualiser, Document-PiP pop-out, mobile bar, `music:Track Title` links. See [`music-workflow.md`](music-workflow.md).
 - **Collections**: bookshelf, movieshelf, music library, photography albums (`content/Photos/*.md` into `albums.json`), Inbox triage (`/inbox`).

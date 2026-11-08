@@ -3,6 +3,7 @@ import { useStore, BG_MODES, BG_META, ROYGBIV_ACCENTS, READER_MEASURE_STEPS, REA
 import { SITE_DEFAULTS } from "@/config/site-defaults"
 import { useFocusTrap } from "@/hooks/useFocusTrap"
 import { BG_CONTROLS } from "./bgControls"
+import { FLURRY, guessPlace, lightPhase, moonPhase, nextTurn, seasonOf, weatherWords } from "@/features/ambience/sky"
 import styles from "./ThemePanel.module.scss"
 
 /**
@@ -56,9 +57,36 @@ export function ThemePanel() {
         <LookSection />
         <ReadingSection />
         <BackgroundSection />
+        <SkySection />
       </div>
       <Footer />
     </aside>
+  )
+}
+
+/** A section whose heading folds it away; the fold is remembered. */
+function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  const collapsed = useStore((s) => s.settingsCollapsed.includes(id))
+  const toggle = useStore((s) => s.toggleSettingsSection)
+  return (
+    <section className={styles.section} data-collapsed={collapsed || undefined}>
+      <h3>
+        <button
+          className={styles.sectionToggle}
+          aria-expanded={!collapsed}
+          aria-controls={`settings-${id}`}
+          onClick={() => toggle(id)}
+        >
+          {title}
+          <span className={styles.chevron} aria-hidden="true">›</span>
+        </button>
+      </h3>
+      {!collapsed && (
+        <div className={styles.sectionBody} id={`settings-${id}`}>
+          {children}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -111,6 +139,8 @@ function LookSection() {
   const setTheme = useStore((s) => s.setTheme)
   const accentBase = useStore((s) => s.accentBase)
   const setAccentBase = useStore((s) => s.setAccentBase)
+  const glorpVisits = useStore((s) => s.glorpVisits)
+  const setGlorpVisits = useStore((s) => s.setGlorpVisits)
   const [hex, setHex] = useState("")
   const applyHex = () => {
     const v = hex.trim()
@@ -121,8 +151,7 @@ function LookSection() {
   }
 
   return (
-    <section className={styles.section} aria-labelledby="settings-look">
-      <h3 id="settings-look">Look</h3>
+    <Section id="look" title="Look">
       <div className={styles.row}>
         <span className={styles.rowLabel}>Theme</span>
         <Segmented
@@ -164,7 +193,11 @@ function LookSection() {
         />
         <button className={styles.textBtn} onClick={applyHex} disabled={!HEX_RE.test(hex)}>set</button>
       </div>
-    </section>
+      <div className={styles.row}>
+        <span className={styles.rowLabel}>Glorp drops by</span>
+        <Switch on={glorpVisits} onChange={setGlorpVisits} label="Glorp drops by now and then" />
+      </div>
+    </Section>
   )
 }
 
@@ -175,10 +208,11 @@ function ReadingSection() {
   const readerScale = useStore((s) => s.readerScale)
   const cycleReaderMeasure = useStore((s) => s.cycleReaderMeasure)
   const cycleReaderScale = useStore((s) => s.cycleReaderScale)
+  const readerShowBg = useStore((s) => s.readerShowBg)
+  const setReaderShowBg = useStore((s) => s.setReaderShowBg)
 
   return (
-    <section className={styles.section} aria-labelledby="settings-reading">
-      <h3 id="settings-reading">Reading</h3>
+    <Section id="reading" title="Reading">
       <div className={styles.row}>
         <span className={styles.rowLabel}>
           Reader mode <kbd className={styles.kbd}>F</kbd>
@@ -187,12 +221,16 @@ function ReadingSection() {
       </div>
       <Stepper label="Text size" value={readerScale} display={`${Math.round(readerScale * 100)}%`} steps={READER_SCALE_STEPS} onStep={cycleReaderScale} />
       <Stepper label="Line length" value={readerMeasureCh} display={`${readerMeasureCh}ch`} steps={READER_MEASURE_STEPS} onStep={cycleReaderMeasure} />
+      <div className={styles.row}>
+        <span className={styles.rowLabel}>Show background</span>
+        <Switch on={readerShowBg} onChange={setReaderShowBg} label="Show the background while reading" />
+      </div>
       <p className={styles.note}>
         {isReaderMode
           ? "Size and length apply now. Keys while reading: − + size, [ ] length."
-          : "Size and length apply in reader mode, which hides everything but the text."}
+          : "These apply in reader mode, which hides everything but the text."}
       </p>
-    </section>
+    </Section>
   )
 }
 
@@ -206,8 +244,7 @@ function BackgroundSection() {
   const visible = bgStyle !== "off"
 
   return (
-    <section className={styles.section} aria-labelledby="settings-bg">
-      <h3 id="settings-bg">Background</h3>
+    <Section id="background" title="Background">
       <div className={styles.row}>
         <span className={styles.rowLabel} title="B cycles the modes">
           Animated <kbd className={styles.kbd}>B</kbd>
@@ -244,7 +281,55 @@ function BackgroundSection() {
       </div>
       <p className={styles.note}>{BG_META[bgMode]?.desc ?? "A page-scoped board."}</p>
       <Tuning mode={bgMode} />
-    </section>
+    </Section>
+  )
+}
+
+const DAY_MONTH = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" })
+
+function SkySection() {
+  const seasonal = useStore((s) => s.seasonal)
+  const skyLight = useStore((s) => s.skyLight)
+  const liveWeather = useStore((s) => s.liveWeather)
+  const weather = useStore((s) => s.weatherNow)
+  const setSky = useStore((s) => s.setSky)
+  const requestFlurry = useStore((s) => s.requestFlurry)
+  const now = new Date()
+  const southern = (weather?.lat ?? 1) < 0
+  const season = seasonOf(now, southern)
+  const next = nextTurn(now, southern)
+  const place = weather ? { lat: weather.lat, lon: weather.lon } : guessPlace(now)
+
+  return (
+    <Section id="sky" title="Sky">
+      <div className={styles.row}>
+        <span className={styles.rowLabel}>Seasonal flurries</span>
+        <Switch on={seasonal} onChange={(v) => setSky({ seasonal: v })} label="Seasonal flurries" />
+      </div>
+      <div className={styles.row}>
+        <span className={styles.rowLabel}>Light follows the sun</span>
+        <Switch on={skyLight} onChange={(v) => setSky({ skyLight: v })} label="Light follows the sun" />
+      </div>
+      <div className={styles.row}>
+        <span className={styles.rowLabel}>Live weather</span>
+        <Switch on={liveWeather} onChange={(v) => setSky({ liveWeather: v })} label="Live weather" />
+      </div>
+      <p className={styles.note}>
+        It is {season}
+        {skyLight ? `, ${lightPhase(now, place.lat, place.lon)}` : ""}, under a {moonPhase(now).name}.
+        {liveWeather && weather
+          ? ` Outside: ${weatherWords(weather.code)}${weather.temperature !== null ? `, ${Math.round(weather.temperature)}°` : ""}.`
+          : ""}{" "}
+        {next.season[0].toUpperCase() + next.season.slice(1)} arrives {DAY_MONTH.format(next.at)}.{" "}
+        <button className={styles.textBtn} onClick={() => requestFlurry(FLURRY[season])}>show me</button>
+      </p>
+      {liveWeather && (
+        <p className={styles.note}>
+          Weather uses the rough location of your connection (about 10 km), asked of Open-Meteo through this
+          site. Nothing is stored.
+        </p>
+      )}
+    </Section>
   )
 }
 

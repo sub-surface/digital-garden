@@ -1,3 +1,4 @@
+import type { Particle } from "@/features/ambience/sky"
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 import type { PanelCard, ContentIndex, NoteMetadata } from "@/types/content"
@@ -62,7 +63,7 @@ export const BG_MODES = [
 
 /**
  * Single source of truth for ambient-mode display names (ROADMAP §28.11).
- * ThemePanel's System-tab picker and the old BgModeToggle's tooltip used to carry
+ * ThemePanel's picker and a bar tooltip used to carry
  * separate label lists that drifted (e.g. "Plate Scan" vs "Plate-scan") —
  * this spelling wins. `desc` is only used by ThemePanel.
  */
@@ -83,6 +84,15 @@ export const BG_META: Record<string, { label: string; desc: string }> = {
 }
 
 export type DockTab = "prompt" | "chat"
+
+export interface WeatherNow {
+  code: number
+  temperature: number | null
+  isDay: boolean
+  lat: number
+  lon: number
+  fetchedAt: number
+}
 export interface DockRequest {
   /** Increments per request, so the same request twice still fires. */
   id: number
@@ -90,6 +100,8 @@ export interface DockRequest {
   run?: string
 }
 const PROMPT_HISTORY_MAX = 100
+// Request ids keep rising even after the mailbox is emptied.
+let dockRequestSeq = 0
 
 export const ROYGBIV_ACCENTS = [
   "#b4424c", // Red
@@ -129,6 +141,30 @@ interface GardenStore {
   readerScale: number       // font-size multiplier (e.g. 0.95 | 1 | 1.1 | 1.2)
   cycleReaderMeasure: (dir: 1 | -1) => void
   cycleReaderScale: (dir: 1 | -1) => void
+  /** Keep the animated background at full strength while reading. */
+  readerShowBg: boolean
+  setReaderShowBg: (show: boolean) => void
+  // Sky (src/features/ambience): seasonal flurries (on), light that follows
+  // the sun (off), live weather from the connection's rough location (off).
+  seasonal: boolean
+  skyLight: boolean
+  liveWeather: boolean
+  setSky: (patch: Partial<Pick<GardenStore, "seasonal" | "skyLight" | "liveWeather">>) => void
+  /** Session: the latest live weather, for Settings and the `sky` command. */
+  weatherNow: WeatherNow | null
+  setWeatherNow: (w: WeatherNow | null) => void
+  /** A flurry someone asked for (the `season` command, Settings' "show me"). */
+  flurryRequest: { id: number; kind?: Particle } | null
+  requestFlurry: (kind?: Particle) => void
+  /** Glorp may drop by now and then (GlorpPeek). */
+  glorpVisits: boolean
+  setGlorpVisits: (on: boolean) => void
+  /** Ask glorp over right now (the `glorp` command). */
+  glorpCall: number
+  callGlorp: () => void
+  /** Settings sections the reader has folded away. */
+  settingsCollapsed: string[]
+  toggleSettingsSection: (id: string) => void
 
   // The dock: one right-hand panel holding the prompt and (wiki/garden) chat.
   // It replaced five overlays: search, command palette, cheat sheet, the
@@ -148,7 +184,6 @@ interface GardenStore {
   // Graph Overlay
   isGraphOpen: boolean
   setGraphOpen: (open: boolean) => void
-  toggleGraph: () => void
 
   // Music
   isMusicOpen: boolean
@@ -204,8 +239,6 @@ interface GardenStore {
   setChatDensity: (d: GardenStore["chatDensity"]) => void
   chatFontScale: number
   setChatFontScale: (s: number) => void
-  chatTerminal: boolean
-  setChatTerminal: (v: boolean) => void
 
   // Session overrides (for dev property manager)
   sessionOverrides: Record<string, Partial<NoteMetadata>>
@@ -230,16 +263,13 @@ const getInitialTheme = (): "light" | "dark" =>
 
 const getInitialAccent = (): string => legacy("accentBase", String, "#427ab4")
 
-// ?terminal=1 forces terminal chat for the session regardless of persisted pref
-const terminalUrlOverride =
-  isBrowser && new URLSearchParams(window.location.search).get("terminal") === "1"
-
 /** Keys persisted to localStorage under "garden-settings". Everything else is
  * session state (overlays, panel stack, content index) and must NOT persist. */
 const PERSISTED_KEYS = [
   "theme", "accentBase", "readerMeasureCh", "readerScale", "dockWidth", "promptHistory",
-  "chessBot", "chatDensity", "chatFontScale", "chatTerminal", "bgOpacity",
-  "bgMode", "bgStyle",
+  "chessBot", "chatDensity", "chatFontScale", "bgOpacity",
+  "bgMode", "bgStyle", "readerShowBg", "settingsCollapsed",
+  "seasonal", "skyLight", "liveWeather", "glorpVisits",
 ] as const
 
 /** Reader typography steps (ThemePanel steppers, QuickControls, `[ ] - =` keys). */
@@ -308,6 +338,27 @@ export const useStore = create<GardenStore>()(
       // Reader typography — clamped steps
       readerMeasureCh: legacy("reader-measure", (v) => parseInt(v, 10) || 80, 80),
       readerScale: legacy("reader-scale", (v) => parseFloat(v) || 1, 1),
+      readerShowBg: false,
+      setReaderShowBg: (readerShowBg) => set({ readerShowBg }),
+      seasonal: true,
+      skyLight: false,
+      liveWeather: false,
+      setSky: (patch) => set(patch),
+      weatherNow: null,
+      setWeatherNow: (weatherNow) => set({ weatherNow }),
+      flurryRequest: null,
+      requestFlurry: (kind) => set((s) => ({ flurryRequest: { id: (s.flurryRequest?.id ?? 0) + 1, kind } })),
+      glorpVisits: true,
+      setGlorpVisits: (glorpVisits) => set({ glorpVisits }),
+      glorpCall: 0,
+      callGlorp: () => set((s) => ({ glorpCall: s.glorpCall + 1 })),
+      settingsCollapsed: [],
+      toggleSettingsSection: (id) =>
+        set((s) => ({
+          settingsCollapsed: s.settingsCollapsed.includes(id)
+            ? s.settingsCollapsed.filter((x) => x !== id)
+            : [...s.settingsCollapsed, id],
+        })),
       cycleReaderMeasure: (dir) =>
         set((s) => ({ readerMeasureCh: stepReader(READER_MEASURE_STEPS, s.readerMeasureCh, dir) })),
       cycleReaderScale: (dir) =>
@@ -318,11 +369,11 @@ export const useStore = create<GardenStore>()(
       openDock: (tab, request) =>
         set((s) => ({
           dock: tab,
-          dockRequest: request ? { ...request, id: (s.dockRequest?.id ?? 0) + 1 } : s.dockRequest,
+          dockRequest: request ? { ...request, id: ++dockRequestSeq } : s.dockRequest,
         })),
       closeDock: () => set({ dock: null }),
       toggleDock: (tab) => set((s) => ({ dock: s.dock === tab ? null : tab })),
-      dockWidth: legacy("sidechat-width", (v) => Math.max(380, parseInt(v, 10) || 380), 380),
+      dockWidth: legacy("sidechat-width", (v) => Math.max(300, parseInt(v, 10) || 380), 380),
       setDockWidth: (dockWidth) => set({ dockWidth }),
       promptHistory: [],
       pushPromptHistory: (line) =>
@@ -335,7 +386,6 @@ export const useStore = create<GardenStore>()(
       // Graph Overlay
       isGraphOpen: false,
       setGraphOpen: (isGraphOpen) => set({ isGraphOpen }),
-      toggleGraph: () => set((s) => ({ isGraphOpen: !s.isGraphOpen })),
 
       // Music
       isMusicOpen: false,
@@ -408,8 +458,6 @@ export const useStore = create<GardenStore>()(
       setChatDensity: (chatDensity) => set({ chatDensity }),
       chatFontScale: legacy("chatFontScale", (v) => Number(v) || 1, 1),
       setChatFontScale: (chatFontScale) => set({ chatFontScale }),
-      chatTerminal: terminalUrlOverride || legacy("chatTerminal", (v) => v === "1", false),
-      setChatTerminal: (chatTerminal) => set({ chatTerminal }),
 
       // Session overrides
       sessionOverrides: {},
@@ -433,8 +481,6 @@ export const useStore = create<GardenStore>()(
       },
       merge: (persisted, current) => {
         const merged = { ...current, ...(persisted as Partial<GardenStore>) }
-        // URL override beats the persisted terminal preference for this session
-        if (terminalUrlOverride) merged.chatTerminal = true
         if (!(BG_MODES as readonly string[]).includes(merged.bgMode)) merged.bgMode = "murmuration"
         merged.lastBgMode = merged.bgMode
         return merged

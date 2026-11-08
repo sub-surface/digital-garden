@@ -90,26 +90,6 @@
   }
 }
 
-.clockWrap {
-  position: fixed;
-  top: 12px;
-  right: 16px;
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  height: 20px;
-}
-
-.clock {
-  font-family: var(--font-code);
-  font-size: 0.7rem;
-  color: var(--color-text-muted);
-  opacity: 0.5;
-  letter-spacing: 1px;
-  user-select: none;
-  pointer-events: none;
-}
-
 // ── Mobile ──
 @media (max-width: $bp-phone) {
   .container {
@@ -125,8 +105,19 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+}
 
-  .clockWrap {
-    display: none; // redundant with QuickControls; hide on mobile
-  }
+.modeItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modeCurrent {
+  color: var(--color-text);
+  opacity: 1;
+  cursor: default;
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent-base);
+  text-underline-offset: 4px;
 }

@@ -90,27 +90,33 @@ function formatDateTime(): { date: string; time: string } {
   }
 }
 
-interface QuickControlsProps {
-  variant?: "full" | "chat"
-}
 
-function TerminalToggle() {
-  const shell = useShell()
-  const chatTerminal = useStore((s) => s.chatTerminal)
-  const setChatTerminal = useStore((s) => s.setChatTerminal)
-  if (shell !== "chat") return null
+/**
+ * Its own component, so the per-second tick re-renders two spans rather than
+ * the whole bar; it also stops while the tab is hidden.
+ */
+function Clock() {
+  const [time, setTime] = useState(() => formatDateTime())
+  useEffect(() => {
+    let id = 0
+    const start = () => {
+      window.clearInterval(id)
+      if (document.visibilityState !== "visible") return
+      setTime(formatDateTime())
+      id = window.setInterval(() => setTime(formatDateTime()), 1000)
+    }
+    start()
+    document.addEventListener("visibilitychange", start)
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener("visibilitychange", start)
+    }
+  }, [])
   return (
-    <button
-      className={chatTerminal ? `${styles.iconBtn} ${styles.iconBtnActive}` : styles.iconBtn}
-      onClick={() => setChatTerminal(!chatTerminal)}
-      title={chatTerminal ? "Exit terminal view" : "Terminal view"}
-      aria-label="Toggle terminal view"
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="4 17 10 11 4 5"/>
-        <line x1="12" y1="19" x2="20" y2="19"/>
-      </svg>
-    </button>
+    <span className={styles.clock}>
+      <span className={styles.clockDate}>{time.date} | </span>
+      <span className={styles.clockTime}>{time.time}</span>
+    </span>
   )
 }
 
@@ -177,8 +183,7 @@ function SettingsButton() {
   )
 }
 
-export function QuickControls({ variant = "full" }: QuickControlsProps) {
-  const [time, setTime] = useState(() => formatDateTime())
+export function QuickControls() {
   const shell = useShell()
   const activeSlug = useStore((s) => s.activeGraphSlug)
   const isWiki =
@@ -186,26 +191,20 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
     activeSlug.toLowerCase().startsWith("wiki") ||
     (typeof window !== "undefined" && window.location.pathname.toLowerCase().startsWith("/wiki"))
 
-  useEffect(() => {
-    const id = setInterval(() => setTime(formatDateTime()), 1000)
-    return () => clearInterval(id)
-  }, [])
-
   return (
-    <div className={styles.quickControls} data-variant={variant} data-panel-ignore data-reader-keep>
+    <div className={styles.quickControls} data-panel-ignore data-reader-keep>
       <div className={styles.cluster} data-cluster="now">
         <ArcadeBackButton />
-        {variant === "full" && <NowSlot scope={isWiki ? "wiki" : "garden"} music={shell === "main" && !isWiki} />}
+        <NowSlot scope={isWiki ? "wiki" : "garden"} music={shell === "main" && !isWiki} />
       </div>
 
       <div className={styles.cluster} data-cluster="prompt">
-        <PromptButton compact={shell === "wiki" || variant === "chat"} />
+        <PromptButton compact={shell === "wiki"} />
       </div>
 
       <div className={styles.cluster} data-cluster="you">
-        {variant === "full" && <ReaderToggle />}
+        <ReaderToggle />
         <ChatDockToggle />
-        <TerminalToggle />
         <SettingsButton />
         {shell === "main" && <RecoveredControl />}
         {shell !== "main" && (
@@ -214,10 +213,7 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
           </Suspense>
         )}
         <div className={styles.clockGroup}>
-          <span className={styles.clock}>
-            <span className={styles.clockDate}>{time.date} | </span>
-            <span className={styles.clockTime}>{time.time}</span>
-          </span>
+          <Clock />
           <BuildStamp />
         </div>
       </div>

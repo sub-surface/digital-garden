@@ -1,3 +1,4 @@
+import { MODES, type ModeId } from "@/config/modes"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { useNavigate, useLocation } from "@tanstack/react-router"
 import { useStore } from "@/store"
@@ -298,15 +299,49 @@ async function* wikiBootSequence(): AsyncGenerator<string, void, unknown> {
   }
 }
 
+// ── Modes ──
+
+
+function ModeNav({ current: forced }: { current?: ModeId }) {
+  const navigate = useNavigate()
+  const activeSlug = useStore((s) => s.activeGraphSlug)
+  const current: ModeId = forced ?? (activeSlug.toLowerCase() === "arcade" ? "arcade" : "notes")
+  return (
+    <nav className={styles.chatNav} aria-label="Modes">
+      {MODES.map((mode, i) => (
+        <span key={mode.id} className={styles.modeItem}>
+          {i > 0 && <span className={styles.chatNavDivider} />}
+          {mode.id === current ? (
+            <span className={`${styles.chatNavLink} ${styles.modeCurrent}`} aria-current="page">{mode.label}</span>
+          ) : (
+            <a
+              className={styles.chatNavLink}
+              href={mode.href}
+              data-panel-ignore
+              onClick={(e) => {
+                // Inside the garden, notes and arcade are routes, not page loads.
+                if (forced || (mode.id !== "notes" && mode.id !== "arcade")) return
+                e.preventDefault()
+                navigate(mode.id === "notes" ? { to: "/" } : { to: "/$", params: { _splat: "arcade" } })
+              }}
+            >
+              {mode.label}
+            </a>
+          )}
+        </span>
+      ))}
+    </nav>
+  )
+}
+
 // ── Component ──
 
 interface TerminalTitleProps {
-  context?: "wiki" | "chat"
+  context?: "wiki"
 }
 
 export function TerminalTitle({ context }: TerminalTitleProps = {}) {
   const isWiki = context === "wiki"
-  const isChat = context === "chat"
   const navigate = useNavigate()
   const location = useLocation()
   const clearStack = useStore((s) => s.clearStack)
@@ -319,7 +354,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
   const abortRef = useRef<AbortController | null>(null)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const settledText = isWiki ? "Philchat Wiki" : isChat ? "Philchat" : "Sub-Surface Territories"
+  const settledText = isWiki ? "Philchat Wiki" : "Sub-Surface Territories"
 
   // Run a snippet generator, updating the displayed line
   const runSnippet = useCallback(
@@ -332,12 +367,18 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
     [],
   )
 
+  // Read through a ref: as a dependency, every click (isAnimating true→false)
+  // rebuilt scheduleIdle, which re-ran the boot effect and replayed the boot
+  // sequence over the click's own snippet.
+  const isAnimatingRef = useRef(isAnimating)
+  isAnimatingRef.current = isAnimating
+
   // Schedule the next idle re-trigger
   const scheduleIdle = useCallback(() => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
     const delay = 60_000 + Math.random() * 240_000 // 1–5 min
     idleTimerRef.current = setTimeout(async () => {
-      if (isAnimating) {
+      if (isAnimatingRef.current) {
         scheduleIdle()
         return
       }
@@ -356,30 +397,31 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
         scheduleIdle()
       }
     }, delay)
-  }, [runSnippet, isAnimating, isWiki, settledText])
+  }, [runSnippet, isWiki, settledText])
 
   // Boot sequence on mount
   useEffect(() => {
     const ac = new AbortController()
     abortRef.current = ac
     ;(async () => {
-      await runSnippet((isWiki || isChat) ? wikiBootSequence() : bootSequence(), ac.signal)
+      await runSnippet(isWiki ? wikiBootSequence() : bootSequence(), ac.signal)
       if (!ac.signal.aborted) {
         await sleep(600)
         setLine(settledText)
         setBooted(true)
-        if (!isWiki && !isChat) scheduleIdle()
+        if (!isWiki) scheduleIdle()
       }
     })()
     return () => {
       ac.abort()
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
     }
+  // Once per mount (and if the shell changes): never because of a click.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runSnippet, scheduleIdle, isWiki, isChat])
+  }, [isWiki])
 
   const handleClick = async () => {
-    if (isWiki || isChat) {
+    if (isWiki) {
       window.location.href = "/"
       return
     }
@@ -412,7 +454,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
   }
 
   const displayText = (isHovered && booted && !isAnimating) ? settledText : line
-  const titleTooltip = isWiki ? "Wiki home" : isChat ? "Chat home" : tooltip
+  const titleTooltip = isWiki ? "Wiki home" : tooltip
   const accessibleTitle = `${displayText || settledText}. ${titleTooltip}`
 
   const titleContent = (
@@ -449,27 +491,7 @@ export function TerminalTitle({ context }: TerminalTitleProps = {}) {
           {titleContent}
         </button>
       )}
-      {isChat && (
-        <nav className={styles.chatNav}>
-          <a className={styles.chatNavLink} href="https://wiki.subsurfaces.net" title="Wiki" rel="noopener">wiki</a>
-          <span className={styles.chatNavDivider} />
-          <a className={styles.chatNavLink} href="https://subsurfaces.net" title="Notes" rel="noopener">notes</a>
-        </nav>
-      )}
-      {isWiki && (
-        <nav className={styles.chatNav}>
-          <a className={styles.chatNavLink} href="https://subsurfaces.net" title="Notes" rel="noopener">notes</a>
-          <span className={styles.chatNavDivider} />
-          <a className={styles.chatNavLink} href="https://chat.subsurfaces.net" title="Chat" rel="noopener">chat</a>
-        </nav>
-      )}
-      {!isWiki && !isChat && (
-        <nav className={styles.chatNav}>
-          <a className={styles.chatNavLink} href="https://wiki.subsurfaces.net" title="Wiki" rel="noopener">wiki</a>
-          <span className={styles.chatNavDivider} />
-          <a className={styles.chatNavLink} href="https://chat.subsurfaces.net" title="Chat" rel="noopener">chat</a>
-        </nav>
-      )}
+      <ModeNav current={isWiki ? "wiki" : undefined} />
     </div>
   )
 }

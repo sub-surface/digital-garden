@@ -1,19 +1,11 @@
-// IRC-aesthetic shell — monospace throughout, minimal chrome
-// Full-viewport fixed layout: sidebar (rooms) + main (messages + input)
+// chat.subsurfaces.net: the bare pop-out room (see ChatShell.tsx).
 
 .shell {
-  // The dock (src/features/dock) pushes the page over rather than covering it.
-  width: calc(100vw - var(--dock-width, 0px));
+  width: 100vw;
   height: 100dvh;
-  background: transparent;
   overflow: hidden;
   font-family: var(--font-code);
-}
-
-// When terminal mode is active, fade the shell background to black
-.shell[data-terminal="1"] {
-  background: #000;
-  transition: background 0.5s ease;
+  background: var(--color-bg);
 }
 
 .mainPane {
@@ -22,19 +14,14 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  // Reserve top for TerminalTitle
-  padding-top: 3.5rem;
   box-sizing: border-box;
 
-  // When NotificationBanner is visible (28px), push content down further
   :global(body[data-banner]) & {
-    padding-top: calc(3.5rem + 1.75rem);
+    padding-top: 1.75rem;
   }
 
-  // Ensure Outlet content fills remaining space
   > * {
     flex: 1;
     min-height: 0;
   }
 }
-

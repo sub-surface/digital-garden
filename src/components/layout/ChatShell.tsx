@@ -1,44 +1,36 @@
 import { Outlet } from "@tanstack/react-router"
-import { LazyThemePanel } from "./lazyOverlay"
 import { useStore } from "@/store"
-import { BgCanvas } from "./BgCanvas"
-import { TerminalTitle } from "./TerminalTitle"
-import { QuickControls } from "./QuickControls"
 import { NotificationBanner } from "@/components/ui/NotificationBanner"
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
-import { SkipToContent } from "@/components/ui/SkipToContent"
 import styles from "./ChatShell.module.scss"
 
+/**
+ * chat.subsurfaces.net, in cold storage: just the room, chromeless, for the
+ * dock's pop-out button. philchat proper lives in the dock (C, or the chat
+ * button in the bar).
+ *
+ * The full chat site (rooms sidebar, terminal view, its own bar) was retired
+ * on 2026-11-08 and is preserved at the git tag `cold-storage/chat-shell`,
+ * pending a redesign as a small social space.
+ */
 export function ChatShell() {
-  const activeLayout = useStore((s) => s.activeLayout)
   const chatDensity = useStore((s) => s.chatDensity)
   const chatFontScale = useStore((s) => s.chatFontScale)
-  const chatTerminal = useStore((s) => s.chatTerminal)
 
   return (
     <div
       className={styles.shell}
       data-chat
-      data-layout={activeLayout}
       data-density={chatDensity}
-      data-terminal={chatTerminal ? "1" : undefined}
       style={{ "--chat-font-scale": chatFontScale } as React.CSSProperties}
       data-testid="chat-shell"
     >
-      <SkipToContent />
-      <BgCanvas />
-      <LazyThemePanel />
-
       <NotificationBanner />
-      <TerminalTitle context="chat" />
-      <QuickControls variant="chat" />
-
       <main id="main-content" tabIndex={-1} className={styles.mainPane} data-testid="main-pane">
         <ErrorBoundary label="chat">
           <Outlet />
         </ErrorBoundary>
       </main>
-
     </div>
   )
 }

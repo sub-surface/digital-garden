@@ -17,7 +17,29 @@ import {
   type PetriMood,
   type PetriState,
 } from "./petriModel"
+import { GlorpFace } from "@/features/glorp/GlorpFace"
+import type { Mood as GlorpMood } from "@/features/glorp/glorp"
 import styles from "./Petri.module.scss"
+
+/** The pet is glorp now: its needs pick which of glorp's faces it pulls. */
+function glorpMoodFor(mood: PetriMood, reaction: PetriAction | null, dancing: boolean): GlorpMood {
+  if (reaction === "feed" || reaction === "pet") return "happy"
+  if (reaction === "play" || reaction === "dance") return "excited"
+  if (reaction === "nap") return "sleepy"
+  if (dancing) return "dancing"
+  const map: Record<PetriMood, GlorpMood> = {
+    radiant: "happy",
+    curious: "curious",
+    peckish: "hungry",
+    lonely: "lonely",
+    mucky: "grubby",
+    sleepy: "sleepy",
+    dormant: "sleepy",
+  }
+  return map[mood]
+}
+
+const STAGE_SCALE = { spore: 0.8, sprout: 1, blob: 1.25, bloom: 1.5 } as const
 
 interface PetriStore {
   pet: PetriState
@@ -32,7 +54,7 @@ export const usePetriStore = create<PetriStore>()(
       pet: createPetri(),
       care: (action, now = Date.now()) => set((state) => ({ pet: actOnPetri(state.pet, action, now) })),
       rename: (requested) => set((state) => ({
-        pet: { ...state.pet, name: requested.trim().slice(0, 20) || "Mote" },
+        pet: { ...state.pet, name: requested.trim().slice(0, 20) || "Glorp" },
       })),
       hatch: (now = Date.now()) => set({ pet: createPetri(now, (now ^ Math.floor(Math.random() * 0xffffffff)) >>> 0) }),
     }),
@@ -203,16 +225,12 @@ export function PetriApp(_props: AppProps) {
             title="Double-click to pet"
           >
             <span className={styles.bubble} /><span className={styles.bubble} /><span className={styles.bubble} />
-            <div className={styles.creature} key={`${stage}-${pet.nonce}`} role="img" aria-label={`${pet.name}, a ${mood} ${stage}`}>
-              <span className={styles.petal} /><span className={styles.petal} /><span className={styles.petal} /><span className={styles.petal} />
-              <span className={styles.sprout}><i /><b /></span>
-              <span className={styles.body}>
-                <span className={styles.eye}><i /></span>
-                <span className={styles.eye}><i /></span>
-                <span className={styles.mouth} />
-                <span className={styles.cheek} /><span className={styles.cheek} />
-              </span>
-              <span className={styles.shadow} />
+            <div className={styles.glorp} key={`${stage}-${pet.nonce}`} role="img" aria-label={`${pet.name}, a ${mood} glorp (${stage})`}>
+              <GlorpFace
+                mood={glorpMoodFor(mood, reaction, isPlaying)}
+                interval={isPlaying ? 420 : 900}
+                style={{ fontSize: `${STAGE_SCALE[stage]}rem` }}
+              />
             </div>
           </div>
           {isPlaying && <div className={styles.nowPlaying}>♫ dancing to {currentTrack?.title ?? "the music"}</div>}

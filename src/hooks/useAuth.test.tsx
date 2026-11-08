@@ -8,19 +8,27 @@ const authMocks = vi.hoisted(() => ({
   })),
 }))
 
-vi.mock("@/lib/supabase", () => ({
-  supabase: {
-    auth: {
-      ...authMocks,
-      setSession: vi.fn(),
-      signInWithOtp: vi.fn(),
-      signInWithPassword: vi.fn(async () => ({ error: null })),
-      signUp: vi.fn(),
-      resetPasswordForEmail: vi.fn(),
-      updateUser: vi.fn(),
-      signOut: vi.fn(),
-    },
+const client = vi.hoisted(() => ({
+  auth: {
+    setSession: vi.fn(),
+    signInWithOtp: vi.fn(),
+    signInWithPassword: vi.fn(async () => ({ error: null })),
+    signUp: vi.fn(),
+    resetPasswordForEmail: vi.fn(),
+    updateUser: vi.fn(),
+    signOut: vi.fn(),
   },
+}))
+const lazy = vi.hoisted(() => ({ hint: true, loads: 0 }))
+
+vi.mock("@/lib/supabase", () => ({
+  authConfigured: true,
+  authHint: () => lazy.hint,
+  loadSupabase: vi.fn(async () => {
+    lazy.loads++
+    return { auth: { ...client.auth, ...authMocks } }
+  }),
+  whenSupabase: () => () => {},
 }))
 
 import { AuthProvider, useAuth } from "./useAuth"
@@ -53,5 +61,18 @@ describe("AuthProvider", () => {
     const subscription = authMocks.onAuthStateChange.mock.results[0].value.data.subscription
     view.unmount()
     await waitFor(() => expect(subscription.unsubscribe).toHaveBeenCalledTimes(1))
+  })
+
+  it("doesn't download auth for an anonymous garden reader", async () => {
+    lazy.hint = false
+    lazy.loads = 0
+    render(
+      <AuthProvider>
+        <AuthProbe />
+      </AuthProvider>,
+    )
+    expect(await screen.findByText("ready")).toBeTruthy()
+    expect(lazy.loads).toBe(0)
+    lazy.hint = true
   })
 })

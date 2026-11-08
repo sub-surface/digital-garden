@@ -30,10 +30,11 @@ import {
  * cap made high-refresh monitors run them 2.4x faster at 2.4x the cost.
  */
 const MAX_FPS = 60
-const MIN_FRAME_INTERVAL = 1000 / MAX_FPS // ~6.94ms
+const MIN_FRAME_INTERVAL = 1000 / MAX_FPS // ~16.7ms
 
 /** Idle cap for slow, purely time-based ambient modes (and any mode while dimmed by reader mode). */
 const SLOW_FRAME_INTERVAL = 1000 / 30
+const DIMMED_FRAME_INTERVAL = 1000 / 8
 /**
  * Modes whose motion is a pure function of wall-clock time (or static), so a
  * 30 FPS cap does not change their speed, only their temporal resolution.
@@ -69,6 +70,7 @@ function BgCanvasInner() {
   const bgMode = useStore((s) => s.bgMode)
   const bgStyle = useStore((s) => s.bgStyle)
   const bgOpacity = useStore((s) => s.bgOpacity)
+  const readerShowBg = useStore((s) => s.readerShowBg)
   const isReaderMode = useStore((s) => s.isReaderMode)
   const theme = useStore((s) => s.theme)
   const accentBase = useStore((s) => s.accentBase)
@@ -149,8 +151,8 @@ function BgCanvasInner() {
   }, [activeSlug])
 
   useEffect(() => {
-    stateRef.current.readerTarget = (isReaderMode ? 0.04 : 1) * bgOpacity
-  }, [isReaderMode, bgOpacity])
+    stateRef.current.readerTarget = (isReaderMode && !readerShowBg ? 0.04 : 1) * bgOpacity
+  }, [isReaderMode, readerShowBg, bgOpacity])
 
   useEffect(() => {
     stateRef.current.colorValid = false
@@ -336,12 +338,15 @@ function BgCanvasInner() {
       const dt = timestamp - lastPaintTime
 
       // Frame pacing: max 60 FPS (-1ms buffer absorbs timestamp jitter).
-      // Drops to 30 FPS while reader mode dims the canvas to ~nothing, and for slow
+      // Drops to 8 FPS while reader mode dims the canvas to ~nothing, to 30 for slow
       // wall-clock-driven modes while the cursor is idle.
       const dimmed = state.readerTarget < 0.1 && state.readerAlpha < 0.1
       const idle = timestamp - lastInput > IDLE_SETTLE_MS
       const slow = dimmed || idle || (isSlowMode && timestamp - lastMouseMove > MOUSE_ACTIVE_MS)
-      if (dt < (slow ? SLOW_FRAME_INTERVAL : MIN_FRAME_INTERVAL) - 1.0) {
+      // Under reader mode the canvas is at ~4% (and CSS opacity 0.12): nobody
+      // can see motion there, so 8 fps is plenty.
+      const interval = dimmed ? DIMMED_FRAME_INTERVAL : slow ? SLOW_FRAME_INTERVAL : MIN_FRAME_INTERVAL
+      if (dt < interval - 1.0) {
         return
       }
       lastPaintTime = timestamp

@@ -11,12 +11,8 @@ import { MessageInput } from "./MessageInput"
 import { TypingIndicator, useTypingBroadcast } from "./TypingIndicator"
 import { MiniProfilePopup } from "./MiniProfilePopup"
 import { ChatSettings } from "./ChatSettings"
-import { TerminalChatView } from "./TerminalChatView"
-import { TerminalBootScreen } from "./TerminalBootScreen"
 import { emoteSrc } from "@/lib/emoteIndex"
-import { useStore } from "@/store"
 import styles from "./Chat.module.scss"
-import termStyles from "./Terminal.module.scss"
 
 interface SearchResult {
   id: string
@@ -65,9 +61,6 @@ function renderPinBody(body: string): ReactNode[] {
 }
 
 export function ChatRoom({ roomId, roomName, accessToken, currentUserId, currentUsername, currentAvatarUrl, rooms, onRoomChange, onRefreshRooms, headerExtra }: Props) {
-  const chatTerminal = useStore((s) => s.chatTerminal)
-  const [showBoot, setShowBoot] = useState(false)
-  const prevTerminal = useRef(false)
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
   const [popup, setPopup] = useState<{ username: string; anchor: HTMLElement } | null>(null)
   const [showSettings, setShowSettings] = useState(false)
@@ -93,15 +86,6 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
   const channelRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    if (chatTerminal && !prevTerminal.current) {
-      if (localStorage.getItem("terminal-fastboot") !== "1") {
-        setShowBoot(true)
-      }
-    }
-    prevTerminal.current = chatTerminal
-  }, [chatTerminal])
 
   const { toast, showToast } = useChatToast()
   const broadcastTyping = useTypingBroadcast(roomId, currentUserId)
@@ -608,33 +592,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
 
   return (
     <>
-      {chatTerminal && !showBoot && (
-        <div className={termStyles.terminalFixed}>
-          <TerminalChatView
-            messages={messages}
-            currentUserId={currentUserId}
-            currentUsername={currentUsername}
-            roomId={roomId}
-            accessToken={accessToken}
-            onSend={handleSend}
-            knownUsers={knownUsers}
-            bootEcho="PSYCHOGRAPH OS v1.1.4 — session active"
-            lastReadTimestamp={lastReadRef.current}
-            onReact={handleReact}
-            isAdmin={isAdmin}
-            onDelete={handleDelete}
-            onEdit={handleEdit}
-            onPin={handlePin}
-            onBoot={() => setShowBoot(true)}
-          />
-        </div>
-      )}
-      {showBoot && (
-        <TerminalBootScreen
-          onDone={() => setShowBoot(false)}
-        />
-      )}
-      {!chatTerminal && (
+      {(
       <div className={styles.chatRoomHeader}>
         <div className={styles.chatContentWrapper}>
           {/* Channel selector */}
@@ -820,7 +778,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       </div>
       )}
 
-      {!chatTerminal && showSettings && (
+      {showSettings && (
         <ChatSettings
           anchorRef={settingsBtnRef}
           currentColor={name_color}
@@ -835,7 +793,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       )}
 
       {/* Pinned message ticker */}
-      {showPinTicker && pinnedMessages.length > 0 && !chatTerminal && (() => {
+      {showPinTicker && pinnedMessages.length > 0 && (() => {
         const safeIdx = Math.min(activePinIndex, pinnedMessages.length - 1)
         const pin = pinnedMessages[safeIdx]
         return (
@@ -884,7 +842,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
         )
       })()}
 
-      {!chatTerminal && (
+      {(
         <>
           {loading ? (
             <div className={styles.emptyState}>loading messages…</div>

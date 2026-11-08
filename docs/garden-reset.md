@@ -258,3 +258,27 @@ forward because it only depends on a markdown file.
 
 Next: phase 4 (rooms contract), then the cosy phases. Mobile phase still
 owes the rest of docs/mobile-audit.md.
+
+## Progress 2026-11-08 (night): sky, glorp, chat to cold storage, perf
+
+- Chat shell to cold storage (tag `cold-storage/chat-shell`); philchat is
+  the dock's tab; chat.subsurfaces.net is the bare pop-out room. Terminal
+  chat removed.
+- Modes nav `notes · wiki · os · arcade` + `mode`, `boot`. FILAMENT and
+  p(doom) in the arcade.
+- Sky (`src/features/ambience`): seasonal flurries at each turn of season
+  (default on), Light follows the sun and live weather (both opt-in; the
+  Worker's weather endpoint falls back to Cloudflare's city-level location).
+  Commands `season`, `sky`.
+- Glorp (`src/features/glorp`): shared module; the OS pet is glorp; GlorpPeek
+  drops by once a visit; `glorp` command. Companion commands `trail`,
+  `thread`, `ponder`.
+- Settings: collapsible sections, Sky section, "Show background" in reading,
+  "Glorp drops by". Essay cards restyled.
+- Perf (from a read-only audit): Supabase loads on demand (no longer in
+  every visitor's first load); GameOfLife and the homepage glorp only
+  animate on screen; the music visualiser stops while paused (30 fps cap);
+  the clock is a leaf component; background at 8 fps under reader mode;
+  dock resize no longer writes localStorage per frame. Bugs: first `?` lost
+  its request (now a mailbox); the title replayed its boot on every click.
+- The session plan to the end of the backlog lives in docs/ideas.md.

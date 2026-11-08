@@ -29,7 +29,7 @@ Browser (`BROWSER.EXE`, garden notes in chrome), Notepad (editable local files, 
 
 ## Terminal (`src/features/terminal/`)
 
-One module, four frames: `/terminal` fullscreen, Ctrl/Cmd+P overlay on main/wiki/chat, the OS MS-DOS Prompt, and DOS mode. `commands.ts` is one registry (about 38 commands) driving help and completion (a regression test enforces the derivation). Spatial toys are launchers via the `PROGRAMS` map, which Start, Run and the terminal share; text-native toys stay commands. `ctx.open(slug)` navigates on the main site and opens a window in the OS, so no command branches on surface. The command palette moved to Ctrl/Cmd+Shift+P. Attract mode plays the procedural sequence (`bootGenerators`, `useBootPlayback`, `bootSeed`, `bootRng`) and collapses to a prompt on first keypress.
+One module, four frames: `/terminal` fullscreen, the dock's prompt on main/wiki (Ctrl/Cmd+P), the OS MS-DOS Prompt, and DOS mode. `commands.ts` is one registry (about 38 commands) driving help and completion (a regression test enforces the derivation). Spatial toys are launchers via the `PROGRAMS` map, which Start, Run and the terminal share; text-native toys stay commands. `ctx.open(slug)` navigates on the main site and opens a window in the OS, so no command branches on surface. Site commands (`siteCommands.ts`, `only: ["dock", ...]`) act on the page around the prompt and never appear in the OS. Attract mode plays the procedural sequence (`bootGenerators`, `useBootPlayback`, `bootSeed`, `bootRng`) and collapses to a prompt on first keypress.
 
 ## Contracts
 

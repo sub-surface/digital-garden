@@ -1,58 +1,93 @@
 # Ideas backlog
 
-Owner's ideas worth keeping, collected from the "What's on my mind" section of
-`content/index.md` (updated 2026-09-27) and planning conversations. Status is
-as of 2026-11-08. The phased engineering plan lives in
-[`garden-reset.md`](./garden-reset.md); this file is the creative docket.
+The creative docket: what's next, what's someday, and what we decided not to
+do. The engineering record is [`garden-reset.md`](./garden-reset.md). Status
+as of 2026-11-08 (pruned with the owner the same evening).
 
-## Done (can come off the homepage list)
+## The session plan
 
-- **Reader-mode controls**: `f` toggles reader mode, `+`/`-` text size,
-  `[`/`]` column width (`src/hooks/useHotkeys.ts`). Wider ranges shipped.
-- **OS music visualizer** reacting to playback (Media Player, WebGL modes).
-- **OS customisable desktop**: themes, wallpapers (background modes),
-  widgets, all persisted locally.
+Roughly one session each, in a sensible order. About **ten sessions** to the
+end of this list, give or take the canvas.
 
-## In the plan
+1. **Mobile, the whole site.** Work through [`mobile-audit.md`](./mobile-audit.md):
+   the sidenote "footnote header" marker, `100vh` → `dvh`, wide tables, the
+   dock and Settings as phone sheets (started), CornerMenu tidy.
+2. **philchat as a small social space.** Bring `chat.subsurfaces.net` back
+   out of cold storage (git tag `cold-storage/chat-shell`) as a quiet feed
+   for friends: profiles, notes and edits as events, pebbles (below). The
+   dock keeps the live room.
+3. **Music.** Overhaul the turntable (scratching is laggy and sometimes
+   buggy; profile the AudioWorklet path), make the player draggable, and give
+   it a home of its own at `music.subsurfaces.net` so pop-out doesn't depend
+   on the garden (a small Worker serving the player + `music.json`; same R2
+   bucket).
+4. **The Desk.** `content/desk.md` + a `desk` CLI in the jot/wavify idiom
+   (`desk reading "…"`, `desk making "…"`, `desk haiku`), feeding the
+   homepage's "On the desk" block (drafted by hand in `index.md` for now).
+   An Obsidian plugin later, for the phone.
+5. **Rooms + the background state machine.** The rooms contract
+   (`defineRoom`), and the remaining audit items: one `bgEnabled` + derived
+   effective mode (drop `lastBgMode`/`autoChamberRef`), one `music` state
+   (closed / bar / player), `activeGraphSlug` derived from the route.
+6. **The prompt as companion, part 2.** `ask <word>` (what the garden says
+   about it, as snippets from the search index), `trail pdf` (this visit's
+   pages as one typeset PDF, a keepsake), and the new **boot**: a clean,
+   modern, futuristic redesign of the procedural boot, reachable from `boot`
+   and `mode`.
+7. **Sky, part 2.** The Haecceity, bottles, an accurate orrery and the moon
+   (below).
+8. **The 404 roguelike.** Small, abstract, visual, endlessly permutable.
+9. **The infinite canvas** (probably two sessions). Built as a room that
+   reads the corpus, so it can't break the reader.
 
-- **Mobile experience** (Synth's notes: the footnote header is useless on
-  phones; the site needs a better mobile model generally). Now its own
-  phase in `garden-reset.md`.
-- **Adding notes from a phone / without opening the site**: the Desk CLI
-  (`desk capture`) comes first; an Obsidian plugin that publishes from the
-  phone is the natural follow-up, since both write the same markdown.
-- **Daily notes / daily haiku in public**: fits the Desk (a "today" slot)
-  once it exists.
-- **Boot text generator**: keep as an easter egg for now. Later: integrate
-  it into the OS properly and give it a cleaner, more modern, futuristic
-  design. Part of making the site's "modes" explicit (see below).
+## Someday, written down so they aren't lost
 
-## Worth discussing
+- **The Haecceity.** A little ASCII boat that sails between notes across
+  time: it docks at the note you're reading, carries the date of the oldest
+  note it has visited, and arrives with a small fanfare (a gull, a bell, a
+  wake). Lives along the bottom edge like GlorpPeek, or in the OS.
+- **Messages in bottles.** Now and then a bottle washes up on the shore of
+  the page; click to read: a line from a note, a pebble someone left, or a
+  note from the owner. Could carry real messages between readers later
+  (via the social space).
+- **The moon.** Draw the current phase (the maths is in
+  `src/features/ambience/sky.ts`) in the orrery and the sky: a small moon in
+  the corner at night when Light & weather is on.
+- **An accurate orrery.** The `orrery` background drawn from real planetary
+  positions (low-precision Keplerian elements are plenty) for today's date,
+  with the time scrubbable.
+- **Weather, more of it.** Fog as a haze, thunder as a rare far-off flash,
+  wind bending the falling things. Today: rain and snow only.
+- **Pebbles.** One-line marks a reader leaves beside a paragraph, shown
+  faintly in the margin. Open question (for session 2): who can post
+  (signed-in only, or anyone with a captcha), moderation, and whether they're
+  public or just yours.
+- **Glorp, further.** Glorp in the OS as the pet (done), peeking in the
+  garden (done). Next: an ASCII alien generator (seeded by username) for
+  default wiki avatars; glorp reacting to the season and the weather; glorp
+  on the 404 page.
+- **OS toys** worth keeping: a tiny explorable world with items; a garden
+  that grows over real days. (The aquarium and the space game were dropped
+  or belong in the arcade.)
 
-- **Explicit modes.** The site has several personalities (garden, reader
-  mode, OS, terminal attract mode, chamber/game boards) that switch
-  implicitly. Making them explicit, named, and switchable from the prompt
-  would make the site easier to understand and to build on.
-- **Infinite canvas for notes.** A spatial, freeform evolution of the
-  Matuschak-style side panels: branch from a note into others on a canvas,
-  more mind-map than graph. The owner flagged the risk ("it risks
-  destroying everything") — best attempted after the corpus and rooms work,
-  as a room that reads the corpus rather than a change to the reader.
-- **404 page as a tiny game.** Simple but infinitely permutable: a
-  procedural, minimal, visual roguelike with simple controls and upgrades.
-- **Essay thumbnails on the homepage.** The owner is unsure about the
-  current card thumbnails. To propose alternatives during the creative pass
-  (e.g. typographic cards, an epigraph line instead of an image, or a
-  reading-time/growth glyph).
-- **ASCII aliens everywhere.** More easter eggs and aliens through the site
-  (`the machine-god in the future` hosts candidates); an ASCII alien
-  generator could double as default wiki profile avatars.
-- **The OS pet.** The Petri pet is cute but sloppy: rework as an alien with
-  distinct interactions and animations; keep its reactions to music.
-- **More OS toys**: a tiny explorable world with items; a virtual garden that
-  grows over time; real-world weather; an aquarium.
-- **ML playground**: interactive models; hosting is hard, so likely a
-  separate project linked from here (like Filament now is).
-- **Social feed** for wiki/chat friends (Bluesky/AT Protocol was suggested).
-  Not yet; a small private space first. The chat API-key system needs an
-  overhaul either way.
+## Done
+
+- Reader mode: keys, wider ranges, controls that stay visible, padding under
+  the bar, "Show background".
+- OS music visualizer; customisable desktop (themes, wallpapers, widgets).
+- The dock, the prompt and its site commands (`here toc goto backlinks cite
+  share bg accent reader look mode boot season sky glorp trail thread
+  ponder`), Settings as one sheet.
+- Seasonal flurries, Light follows the sun, live weather (rain, snow).
+- Essay cards: thin image strip, typographic body.
+- The modes nav (`notes · wiki · os · arcade`); FILAMENT and p(doom) in the
+  arcade.
+- The OS pet is glorp.
+
+## Decided against (for now)
+
+- **ML playground on the site.** Models are hard to host; if it happens it's
+  its own project, linked from the arcade like FILAMENT.
+- **Bluesky / AT Protocol feed.** Folded into session 2 as a private social
+  space first; federation only if that space wants it.
+- **The chat site as it was** (rooms sidebar, terminal view): in cold storage.

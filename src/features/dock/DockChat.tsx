@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/useAuth"
+import { useStore } from "@/store"
 import { apiGet } from "@/lib/api"
 import { ChatRoom } from "@/components/ui/chat/ChatRoom"
 import { WikiAuthModal } from "@/components/ui/wiki/WikiAuthModal"
@@ -13,6 +14,8 @@ import chatStyles from "@/components/ui/chat/Chat.module.scss"
  */
 export function DockChat() {
   const { session, username, avatar_url } = useAuth()
+  const chatDensity = useStore((s) => s.chatDensity)
+  const chatFontScale = useStore((s) => s.chatFontScale)
   const [showAuth, setShowAuth] = useState(false)
   const [room, setRoom] = useState<ChatRoomType | null>(null)
   const [rooms, setRooms] = useState<ChatRoomType[]>([])
@@ -53,7 +56,11 @@ export function DockChat() {
   )
 
   return (
-    <div className={styles.chat}>
+    <div
+      className={styles.chat}
+      data-density={chatDensity}
+      style={{ "--chat-font-scale": chatFontScale } as React.CSSProperties}
+    >
       {!session ? (
         <div className={styles.centered}>
           <button className={styles.loginBtn} onClick={() => setShowAuth(true)}>

@@ -1,177 +1,28 @@
 import { useState, useEffect, useRef, useCallback } from "react"
+import { GLORP_GREEN, MOODS, QUIPS, contextualQuip, pickFrom, pickMood, type Mood } from "@/features/glorp/glorp"
+import { moonPhase, seasonOf } from "@/features/ambience/sky"
+import { useStore } from "@/store"
 
-// ── Glorp — site mascot ────────────────────────────────────────────────────
-// Each frame is [antennae, face, body]
-// Moods group thematically; a mood is picked randomly each cycle
-
-const MOODS = {
-  idle: [
-    ["  ◇ ◇  ", " (o o) ", "  ◆ ◆  "],
-    ["  ◈ ◈  ", " (- -) ", "  ◇ ◇  "],
-    ["  ◇ ◇  ", " (~ ~) ", "  ◆ ◆  "],
-    ["  ◈ ◈  ", " (o o) ", "  ◆ ◆  "],
-    ["  ◇ ◈  ", " (o o) ", "  ◈ ◇  "],
-    ["  ◆ ◆  ", " (o o) ", "  ◇ ◇  "],
-    ["  ◈ ◈  ", " (^ ^) ", "  ◇ ◇  "],
-    ["  ◇ ◇  ", " (· ·) ", "  ◈ ◈  "],
-    ["  ◆ ◇  ", " (o o) ", "  ◇ ◆  "],
-    ["  ◇ ◇  ", " (o -) ", "  ◆ ◆  "],
-    ["  ◈ ◇  ", " (- o) ", "  ◇ ◈  "],
-  ],
-  happy: [
-    ["  ✦ ✦  ", " (O O) ", "  ◈ ◈  "],
-    ["  ⋆ ⋆  ", " (^ ^) ", "  ◆ ◆  "],
-    ["  ◆ ✦  ", " (* *) ", "  ✦ ◆  "],
-    ["  ✦ ⋆  ", " (o o) ", "  ⋆ ✦  "],
-    ["  ✦ ✦  ", " (≧◡≦)", "  ◈ ◈  "],
-    ["  ⋆ ✦  ", " (^o^) ", "  ✦ ⋆  "],
-    ["  ◈ ✦  ", " (>_<) ", "  ✦ ◈  "],
-  ],
-  thinking: [
-    ["  · ·  " , " (· ·) ", "  ∿ ∿  "],
-    ["  ∿ ∿  " , " (~ ~) ", "  · ·  "],
-    ["  · ·  " , " (∞ ∞) ", "  ∿ ∿  "],
-    ["  ∿ ∿  " , " (· ·) ", "  · ·  "],
-    ["  ∿ ·  " , " (? ?) ", "  · ∿  "],
-    ["  · ·  " , " (o ~) ", "  ∿ ∿  "],
-    ["  ∿ ∿  " , " (~ o) ", "  · ·  "],
-  ],
-  sleepy: [
-    ["  ◇ ◇  ", " (- -) ", "  ◇ ◇  "],
-    ["  ◇ ◇  ", " (= =) ", "  ◆ ◆  "],
-    ["  · ·  " , " (-_-) ", "  · ·  "],
-    ["  ◇ ◇  ", " (u u) ", "  ◇ ◇  "],
-    ["  · ·  " , " (z z) ", "  · ·  "],
-    ["  ◆ ◆  ", " (-.-) ", "  ◆ ◆  "],
-  ],
-  curious: [
-    ["  ◈ ◇  ", " (o ?) ", "  ◆ ◈  "],
-    ["  ◇ ◈  ", " (? o) ", "  ◈ ◆  "],
-    ["  ◆ ◆  ", " (O o) ", "  ◇ ◇  "],
-    ["  ◈ ◈  ", " (o O) ", "  ◆ ◆  "],
-    ["  ✦ ◇  ", " (^ ?) ", "  ◈ ◆  "],
-    ["  ◇ ✦  ", " (? ^) ", "  ◆ ◈  "],
-  ],
-  excited: [
-    ["  ✦ ✦  ", " (!_!) ", "  ✦ ✦  "],
-    ["  ⋆ ⋆  ", " (★ ★) ", "  ⋆ ⋆  "],
-    ["  ✦ ⋆  ", " (! !) ", "  ⋆ ✦  "],
-    ["  ◈ ✦  ", " (>o<) ", "  ✦ ◈  "],
-    ["  ✦ ✦  ", " (*_*) ", "  ✦ ✦  "],
-  ],
-  spooked: [
-    ["  ◇ ◇  ", " (o_o) ", "  ◇ ◇  "],
-    ["  · ·  " , " (O_O) ", "  · ·  "],
-    ["  ◈ ◈  ", " (◉_◉)", "  ◈ ◈  "],
-    ["  ◇ ◇  ", " (°_°) ", "  ◇ ◇  "],
-  ],
-} as const
-
-type Mood = keyof typeof MOODS
-
-// Weighted mood selection — idle is most common
-const MOOD_WEIGHTS: [Mood, number][] = [
-  ["idle",     45],
-  ["happy",    20],
-  ["thinking", 15],
-  ["sleepy",   10],
-  ["curious",  10],
-  ["excited",   7],
-  ["spooked",   3],
-]
-
-const QUIPS: Record<Mood, string[]> = {
-  idle: [
-    "the garden grows...",
-    "thinking in public...",
-    "all paths lead somewhere",
-    "sub-surface signals detected",
-    "the vectors drift on...",
-    "tending to the bookshelf...",
-    "i can hear the noise field",
-    "the nodes whisper back",
-    "each link is a thread",
-    "have you watered your notes?",
-    "another day, another node",
-    "systems nominal",
-    "silence in the signal",
-    "the garden knows itself",
-    "growth happens quietly",
-    "chaos gradually becomes order",
-    "each node is a seedling",
-  ],
-  happy: [
-    "* happy alien noises *",
-    "the glorp is satisfied",
-    "vibes are immaculate",
-    "praise the void.save()",
-    "glad you're here",
-    "something good is happening",
-    "the signal is clear today",
-    "✦ optimal conditions ✦",
-  ],
-  thinking: [
-    "processing the void...",
-    "computing the ineffable...",
-    "have you considered quasars?",
-    "what is light, really?",
-    "the glorp dreams of better code",
-    "running inference on existence",
-    "philosophical.exe is loading",
-    "i wonder about things",
-  ],
-  sleepy: [
-    "the glorp needs tea",
-    "low power mode...",
-    "resting between transmissions",
-    "* distant alien snoring *",
-    "z z z . . .",
-    "dreaming of graph theory",
-  ],
-  curious: [
-    "what's over there?",
-    "have you clicked everything?",
-    "the graph has secrets",
-    "follow the links...",
-    "something is connected to this",
-    "i noticed something",
-    "explore the margins",
-  ],
-  excited: [
-    "new note detected!!",
-    "the garden is growing!",
-    "a connection has been made!",
-    "signal strength: maximum",
-    "* glorp excitement noises *",
-  ],
-  spooked: [
-    "did you hear that?",
-    "something moved in the graph",
-    "unexpected signal detected",
-    "the void looked back",
-    "* startled alien noise *",
-  ],
-}
-
-function pickMood(): Mood {
-  const total = MOOD_WEIGHTS.reduce((s, [, w]) => s + w, 0)
-  let r = Math.random() * total
-  for (const [mood, weight] of MOOD_WEIGHTS) {
-    r -= weight
-    if (r <= 0) return mood
+/** A third of the time glorp talks about now (the hour, the season, the page). */
+function nextQuip(mood: Mood): string {
+  if (mood !== "spooked" && Math.random() < 0.33) {
+    const { contentIndex, activeGraphSlug } = useStore.getState()
+    const note = contentIndex?.[activeGraphSlug]
+    const now = new Date()
+    const line = contextualQuip({
+      date: now,
+      season: seasonOf(now),
+      moon: moonPhase(now).name,
+      noteTitle: note && activeGraphSlug !== "index" ? note.title : null,
+    })
+    if (line) return line
   }
-  return "idle"
-}
-
-function pickFrom<T>(arr: readonly T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]
+  return pickFrom(QUIPS[mood])
 }
 
 // How many frames to hold before picking a new mood/quip
 const FRAMES_PER_MOOD = 6
 
-// Glorp green — consistent across all themes
-const GLORP_GREEN = "#42b464"
 
 // ASCII characters for sprinkle bursts on click
 const SPRINKLE_CHARS = ['✦', '✧', '⋆', '◈', '◇', '◆', '·', '∿', '∞', '░', '▒', '○', '●', '⊕', '∂', '↗', '↑', '↖', '→', '←', '↘', '↓', '↙']
@@ -248,7 +99,28 @@ export function AsciiAvatar({ interval = 950, label, showQuip = true, size = "md
     setSprinkles(prev => [...prev, ...burst])
   }, [])
 
+  // Only animate while on screen and the tab is visible: it used to tick (and
+  // re-render) forever, even scrolled far away.
+  const [visible, setVisible] = useState(true)
   useEffect(() => {
+    const el = wrapperRef.current
+    if (!el || typeof IntersectionObserver === "undefined") return
+    let onScreen = true
+    const sync = () => setVisible(onScreen && document.visibilityState === "visible")
+    const io = new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting
+      sync()
+    })
+    io.observe(el)
+    document.addEventListener("visibilitychange", sync)
+    return () => {
+      io.disconnect()
+      document.removeEventListener("visibilitychange", sync)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!visible) return
     const id = setInterval(() => {
       setFrame(f => {
         const next = (f + 1) % MOODS[mood].length
@@ -258,13 +130,13 @@ export function AsciiAvatar({ interval = 950, label, showQuip = true, size = "md
           cycleRef.current = 0
           const newMood = pickMood()
           setMood(newMood)
-          setQuip(pickFrom(QUIPS[newMood]))
+          setQuip(nextQuip(newMood))
         }
         return next
       })
     }, interval)
     return () => clearInterval(id)
-  }, [interval, mood])
+  }, [interval, mood, visible])
 
   const f = MOODS[mood][frame % MOODS[mood].length]
 

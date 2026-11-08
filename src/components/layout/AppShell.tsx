@@ -16,6 +16,9 @@ const OSShell = lazy(() => import("@/features/os/OSShell").then(m => ({ default:
 import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
 import { BgCanvas } from "./BgCanvas"
+import { Ambience } from "@/features/ambience/Ambience"
+import { GlorpPeek } from "@/features/glorp/GlorpPeek"
+import { useTrail } from "@/features/terminal/trail"
 import { QuickControls } from "./QuickControls"
 import { GlobalOverlays } from "./GlobalOverlays"
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
@@ -33,6 +36,7 @@ export function AppShell() {
   const shell = useShell()
   const isWiki = shell === "wiki"
   const isReaderMode = useStore((s) => s.isReaderMode)
+  const readerShowBg = useStore((s) => s.readerShowBg)
   const readerMeasureCh = useStore((s) => s.readerMeasureCh)
   const readerScale = useStore((s) => s.readerScale)
   const activeSlug = useStore((s) => s.activeGraphSlug)
@@ -86,11 +90,12 @@ export function AppShell() {
   useScrollManager()
   usePanelClick()
   useHotkeys()
+  useTrail()
   useDynamicFavicon()
   const isMobile = usePhoneViewport() // hooks before shell branch (React rules)
 
   if (shell === "wiki") return <Suspense fallback={null}><WikiShell /><GlobalOverlays /><CookieConsent /></Suspense>
-  if (shell === "chat") return <Suspense fallback={null}><ChatShell /><GlobalOverlays /><CookieConsent /></Suspense>
+  if (shell === "chat") return <Suspense fallback={null}><ChatShell /><CookieConsent /></Suspense>
   if (shell === "os") return <Suspense fallback={null}><OSShell /><GlobalOverlays /><CookieConsent /></Suspense>
 
   const showFloatingGraph = !isMobile
@@ -105,6 +110,7 @@ export function AppShell() {
       <div
         className={styles.shell}
         data-reader={isReaderMode ? "true" : undefined}
+        data-reader-bg={isReaderMode && readerShowBg ? "show" : undefined}
         data-layout={activeLayout}
         data-testid="app-shell"
         style={
@@ -118,6 +124,8 @@ export function AppShell() {
       >
         <SkipToContent />
         <BgCanvas />
+        <Ambience />
+        <GlorpPeek />
         <LazyThemePanel />
         <LinkPreview />
         {!isWikiRoute && <LazyMusicPlayer />}

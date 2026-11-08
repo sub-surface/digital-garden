@@ -53,14 +53,6 @@
   gap: var(--space-2, 0.5rem);
 }
 
-.stubNote {
-  margin: 0;
-  font-family: var(--font-code);
-  font-size: 0.62rem;
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-
 .slider {
   display: grid;
   grid-template-columns: 3.4em 1fr 2.6em;

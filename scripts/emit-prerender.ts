@@ -61,7 +61,8 @@ export async function emitPrerender(
       const type = (fm.type as string | undefined) ?? meta.type
       const layout = classifyLayout(slug, { layout: fm.layout ?? meta.layout, type })
       const bodyHtml = parsed.html
-      const headings = extractHeadings(bodyHtml)
+      // `toc: false` in frontmatter: no contents box (the homepage, for one).
+      const headings = fm.toc === false ? [] : extractHeadings(bodyHtml)
       const seed: PrerenderSeed = {
         slug,
         frontmatter: fm,

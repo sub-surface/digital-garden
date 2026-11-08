@@ -174,6 +174,9 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
 
   const isWikiIndex = resolvedKey.toLowerCase() === "wiki" || resolvedKey.toLowerCase() === "wiki/index"
 
+  // `toc: false` in frontmatter turns the contents box off (as the build does).
+  const headings = data.frontmatter.toc === false ? [] : data.headings
+
   return (
     <article
       className={`${layout}-layout ${isWikiIndex ? "wiki-index-layout" : ""}`}
@@ -182,11 +185,11 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
     >
       {/* Layout-wrapped content (Header is passed inside to align with grid column 2) */}
       {layout === "article" ? (
-        <ArticleLayout headings={data.headings} infobox={infobox} header={header}>
+        <ArticleLayout headings={headings} infobox={infobox} header={header}>
           {renderContent()}
         </ArticleLayout>
       ) : (
-        <NoteLayout headings={data.headings} infobox={infobox} header={header}>
+        <NoteLayout headings={headings} infobox={infobox} header={header}>
           {renderContent()}
         </NoteLayout>
       )}

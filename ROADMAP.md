@@ -119,7 +119,7 @@ Conventions
 - [ ] A "Log" / "What's on my mind" page absorbing dated thoughts, merged with `a place to start writing` as one writing hub.
 - [ ] Writing prompt widget driven by Inbox flag counts; visible cadence indicator ("N days since last entry").
 
-## 9. Terminal (shared `/terminal`, Ctrl+P, OS prompt)
+## 9. Terminal (shared `/terminal`, the dock prompt, OS prompt)
 
 - [ ] Easter-egg commands from the old TempleOS idea bank: `god` (3-7 random poetic words, after F7 "God word"), an ASCII TempleOS elephant scene, an ASCII `temple` scene. (`holyc` and `theme temple` already exist.)
 - [ ] ASCII DOOM.

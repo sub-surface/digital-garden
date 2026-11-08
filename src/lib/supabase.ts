@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ""
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ""
@@ -52,8 +52,23 @@ function makeCookieStorage(domain?: string) {
   }
 }
 
-export const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+/**
+ * The client is loaded on demand. supabase-js is ~170 KB, and an anonymous
+ * reader of the garden never needs it: it wakes for the wiki and the OS, for
+ * a visitor with a stored session (`authHint`), or when someone logs in.
+ * It used to be created at import, so every page paid for it up front.
+ */
+export const authConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
+
+let client: SupabaseClient | null = null
+let loading: Promise<SupabaseClient | null> | null = null
+const waiting = new Set<(client: SupabaseClient) => void>()
+
+export function loadSupabase(): Promise<SupabaseClient | null> {
+  if (!authConfigured) return Promise.resolve(null)
+  if (client) return Promise.resolve(client)
+  loading ??= import("@supabase/supabase-js").then(({ createClient }) => {
+    client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
         detectSessionInUrl: true,
         flowType: "pkce",
@@ -63,4 +78,38 @@ export const supabase = SUPABASE_URL && SUPABASE_ANON_KEY
         lock: (_name, _acquireTimeout, fn) => fn(),
       },
     })
-  : null
+    for (const cb of waiting) cb(client)
+    waiting.clear()
+    return client
+  })
+  return loading
+}
+
+/** The client if it's already loaded (realtime code runs only once signed in). */
+export function supabaseNow(): SupabaseClient | null {
+  return client
+}
+
+/** Run `cb` once the client exists (now, if it already does). Returns a cancel. */
+export function whenSupabase(cb: (client: SupabaseClient) => void): () => void {
+  if (client) {
+    cb(client)
+    return () => {}
+  }
+  waiting.add(cb)
+  return () => waiting.delete(cb)
+}
+
+/** Any sign of a session worth waking auth for: a stored token, or an auth redirect. */
+export function authHint(): boolean {
+  if (typeof window === "undefined") return false
+  const looksLikeToken = (key: string) => key.startsWith("sb-") && key.includes("auth-token")
+  if (document.cookie.split("; ").some((row) => looksLikeToken(row.split("=")[0]))) return true
+  try {
+    for (let i = 0; i < localStorage.length; i++) if (looksLikeToken(localStorage.key(i) ?? "")) return true
+  } catch {
+    // storage blocked: no stored session we can see
+  }
+  const { search, hash } = window.location
+  return /[?&]code=/.test(search) || hash.includes("access_token=")
+}

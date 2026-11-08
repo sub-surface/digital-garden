@@ -48,9 +48,9 @@ inferred rendering. This is the brief for phase 9 of
   define the container, and panels are hidden on phones): Collections h1,
   Arcade, Tetris, HexLife, GameCabinet, Constellation. → `container-type` on
   `.mainContent` or `@media` twins.
-- **iOS focus-zoom** from <16px inputs: SearchOverlay, wiki forms
+- **iOS focus-zoom** from <16px inputs: the dock prompt, wiki forms
   (0.8rem), EmotePicker, Chat inputs, the 11px terminal input.
-- **Overlays use `vh`** (Search, CommandPalette, TerminalOverlay); the
+- **Overlays use `vh`** (the dock, Settings); the
   keyboard covers results. 27×25 terminal close button.
 - **Hover-only affordances**: telescopic controls (`telescopic.scss:12-20`,
   14px), chat message actions (`Chat.module.scss:417-452`, "visible on tap"

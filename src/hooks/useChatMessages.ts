@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react"
-import { supabase } from "@/lib/supabase"
+import { supabaseNow } from "@/lib/supabase"
 import { apiGet } from "@/lib/api"
 import type { ChatMessage } from "@/types/chat"
 
@@ -71,6 +71,8 @@ export function useChatMessages({
 
   // Supabase Realtime subscription
   useEffect(() => {
+    // Chat runs only for a signed-in reader, so auth (and the client) is awake.
+    const supabase = supabaseNow()
     if (!supabase) return
 
     const channel = supabase

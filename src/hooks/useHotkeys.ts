@@ -19,7 +19,8 @@ export function useHotkeys() {
     function handleKeydown(e: KeyboardEvent) {
       // The OS owns its keyboard surface. Letting these global bindings continue
       // underneath Desktop would cycle B twice and resurrect browser-level keys.
-      if (shell === "os") return
+      // The chat pop-out is just a room: no dock, no site keys.
+      if (shell === "os" || shell === "chat") return
       const store = useStore.getState()
 
       // Ctrl/Cmd+P or K — the prompt, from anywhere (even inside a field).

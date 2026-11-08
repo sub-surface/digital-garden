@@ -203,11 +203,6 @@
   }
 }
 
-.messageRowCompact {
-  padding-top: 1px;
-  padding-bottom: 1px;
-}
-
 .avatar {
   width: 32px;
   height: 32px;
@@ -458,14 +453,6 @@
 }
 
 .deleteBtn:hover { color: #e05555; }
-
-.actionDivider {
-  width: 1px;
-  height: 10px;
-  background: var(--color-border);
-  opacity: 0.6;
-  flex-shrink: 0;
-}
 
 // ── React picker (message action) ──
 

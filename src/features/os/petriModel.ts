@@ -35,7 +35,7 @@ const finite = (value: unknown, fallback: number) =>
 export function createPetri(now = Date.now(), seed = now >>> 0): PetriState {
   return {
     version: PETRI_VERSION,
-    name: "Mote",
+    name: "Glorp",
     bornAt: now,
     updatedAt: now,
     seed: seed >>> 0,

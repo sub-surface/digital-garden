@@ -1,0 +1,48 @@
+// Between the background canvas (z 0) and the page panes (z 1): the sky shows
+// through the transparent panes, behind the text, never over it.
+
+.particles,
+.light {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.particles {
+  width: 100vw;
+  height: 100vh;
+}
+
+// Light follows the sun: a faint wash, warmer at the edges of the day, cooler
+// at night. Kept subtle: it should be felt more than seen.
+.light {
+  transition: background 120s linear;
+
+  &[data-phase="dawn"] {
+    background: linear-gradient(to top, rgba(255, 160, 130, 0.07), rgba(255, 200, 170, 0.02) 70%);
+  }
+  &[data-phase="morning"] {
+    background: linear-gradient(to top, rgba(255, 220, 170, 0.04), transparent 70%);
+  }
+  &[data-phase="day"] {
+    background: transparent;
+  }
+  &[data-phase="golden"] {
+    background: linear-gradient(to top, rgba(255, 170, 80, 0.07), rgba(255, 190, 120, 0.02) 75%);
+  }
+  &[data-phase="dusk"] {
+    background: linear-gradient(to top, rgba(220, 100, 120, 0.08), rgba(90, 70, 150, 0.05) 80%);
+  }
+  &[data-phase="night"] {
+    background: radial-gradient(ellipse at 50% 120%, rgba(40, 60, 140, 0.1), rgba(10, 15, 40, 0.12) 70%);
+  }
+  // On the light theme the night wash would read as grime; make it a cool blue.
+  &[data-phase="night"][data-theme-tone="light"] {
+    background: linear-gradient(to top, rgba(90, 110, 170, 0.08), rgba(90, 110, 170, 0.04));
+  }
+}
+
+[data-reader="true"] .particles {
+  display: none;
+}

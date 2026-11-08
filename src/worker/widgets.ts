@@ -59,9 +59,14 @@ export async function handleWidgetNews({ url, waitUntil }: RouteCtx): Promise<Re
   })
 }
 
-export async function handleWidgetWeather({ url, waitUntil }: RouteCtx): Promise<Response> {
-  const latitude = Number(url.searchParams.get("lat"))
-  const longitude = Number(url.searchParams.get("lon"))
+export async function handleWidgetWeather({ request, url, waitUntil }: RouteCtx): Promise<Response> {
+  // Without ?lat/lon, use Cloudflare's guess from the connection (city-level)
+  // rounded to ~10 km. The garden's "Live weather" setting uses this, so it
+  // needs no browser location prompt and no coordinates leave the client.
+  const cf = (request as Request & { cf?: { latitude?: string; longitude?: string } }).cf
+  const fromConnection = !url.searchParams.has("lat") && cf?.latitude && cf?.longitude
+  const latitude = Number(fromConnection ? Number(cf!.latitude).toFixed(1) : url.searchParams.get("lat"))
+  const longitude = Number(fromConnection ? Number(cf!.longitude).toFixed(1) : url.searchParams.get("lon"))
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
     return jsonResponse({ error: "Invalid weather location" }, 400)
   }
@@ -73,12 +78,15 @@ export async function handleWidgetWeather({ url, waitUntil }: RouteCtx): Promise
     const endpoint = new URL("https://api.open-meteo.com/v1/forecast")
     endpoint.searchParams.set("latitude", lat)
     endpoint.searchParams.set("longitude", lon)
-    endpoint.searchParams.set("current", "temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day")
+    endpoint.searchParams.set("current", "temperature_2m,apparent_temperature,weather_code,wind_speed_10m,cloud_cover,is_day")
+    endpoint.searchParams.set("daily", "sunrise,sunset")
+    endpoint.searchParams.set("forecast_days", "1")
     endpoint.searchParams.set("timezone", "auto")
     const upstream = await fetch(endpoint)
     if (!upstream.ok) return jsonResponse({ error: "The weather station is not answering" }, 502)
     const data = await upstream.json<{
       current?: Record<string, number | string>
+      daily?: { sunrise?: string[]; sunset?: string[] }
       current_units?: Record<string, string>
       timezone?: string
     }>()
@@ -88,6 +96,7 @@ export async function handleWidgetWeather({ url, waitUntil }: RouteCtx): Promise
       location: { latitude: Number(lat), longitude: Number(lon), timezone: data.timezone ?? null },
       current: data.current,
       units: data.current_units ?? {},
+      sun: { rise: data.daily?.sunrise?.[0] ?? null, set: data.daily?.sunset?.[0] ?? null },
       attribution: "Open-Meteo",
     })
   })

@@ -39,14 +39,24 @@ export function GameOfLife({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [running, setRunning] = useState(autoplay)
   const gridRef = useRef<Uint8Array | null>(null)
+  // Draw only when the grid changed, and run only while on screen: it used to
+  // repaint every frame forever, even paused or scrolled away.
+  const dirtyRef = useRef(true)
+  const wakeRef = useRef<() => void>(() => {})
 
+  const changed = () => {
+    dirtyRef.current = true
+    wakeRef.current()
+  }
   const seed = () => {
     const g = new Uint8Array(cols * rows)
     for (let i = 0; i < g.length; i++) g[i] = Math.random() < density ? 1 : 0
     gridRef.current = g
+    changed()
   }
   const clear = () => {
     gridRef.current = new Uint8Array(cols * rows)
+    changed()
   }
 
   // (Re)seed when dimensions change.
@@ -64,6 +74,7 @@ export function GameOfLife({
     let raf = 0
     let acc = 0
     let lastT = 0
+    let onScreen = true
     // Reading a CSS variable forces style recalculation; it changes only with
     // the theme, so re-read it every 30 frames rather than every frame.
     let accent = "#b4424c"
@@ -110,18 +121,43 @@ export function GameOfLife({
     }
 
     const tick = (t: number) => {
-      raf = requestAnimationFrame(tick)
+      raf = 0
       if (!lastT) lastT = t
       acc += t - lastT
       lastT = t
       if (running && acc >= stepMs) {
         step()
         acc = 0
+        dirtyRef.current = true
       }
-      draw()
+      if (dirtyRef.current) {
+        draw()
+        dirtyRef.current = false
+      }
+      // Keep ticking only while there is something to animate and someone to see it.
+      if (running && onScreen && document.visibilityState === "visible") raf = requestAnimationFrame(tick)
     }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
+    const wake = () => {
+      if (!raf && onScreen && document.visibilityState === "visible") {
+        lastT = 0
+        raf = requestAnimationFrame(tick)
+      }
+    }
+    wakeRef.current = wake
+    const io = new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting
+      wake()
+    })
+    io.observe(canvas)
+    document.addEventListener("visibilitychange", wake)
+    dirtyRef.current = true
+    wake()
+    return () => {
+      cancelAnimationFrame(raf)
+      io.disconnect()
+      document.removeEventListener("visibilitychange", wake)
+      wakeRef.current = () => {}
+    }
   }, [running, cols, rows, stepMs])
 
   // Click / drag to toggle cells.
@@ -134,6 +170,7 @@ export function GameOfLife({
     const y = Math.floor(((e.clientY - rect.top) / rect.height) * rows)
     if (x < 0 || x >= cols || y < 0 || y >= rows) return
     g[y * cols + x] = force ?? (g[y * cols + x] ^ 1)
+    changed()
   }
 
   return (

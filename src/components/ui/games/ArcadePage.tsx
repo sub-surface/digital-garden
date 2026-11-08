@@ -54,6 +54,22 @@ const GAMES: GameCard[] = [
     section: "featured",
     external: true,
   },
+  {
+    href: "https://filament.subsurfaces.net",
+    name: "FILAMENT",
+    blurb: "One continuous zoom from the cosmic web, through a galaxy, down to the edge of a black hole. Real physics at every scale.",
+    live: true,
+    section: "featured",
+    external: true,
+  },
+  {
+    href: "https://pdoom.subsurfaces.net",
+    name: "p(doom)",
+    blurb: "A text incremental about running an AI lab in the race to transformative AI. The number in the corner is the honest estimate. Also `npx p-doom` in a terminal.",
+    live: true,
+    section: "featured",
+    external: true,
+  },
   { href: "hexo", name: "HeXO", blurb: "Connect six on an endless hex field, against a handmade opponent.", live: true, section: "featured" },
   {
     href: "https://omega.subsurfaces.net",

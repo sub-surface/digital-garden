@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
-import { supabase } from "@/lib/supabase"
+import { supabaseNow, whenSupabase } from "@/lib/supabase"
+import type { Session } from "@supabase/supabase-js"
 import { apiGet, apiPost, apiDelete } from "@/lib/api"
 
 const STORAGE_KEY = "wiki_bookmarks"
@@ -31,6 +32,7 @@ function localClear() {
 // ── API helpers ──
 
 async function getToken(): Promise<string | null> {
+  const supabase = supabaseNow()
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
   return session?.access_token ?? null
 }
@@ -66,16 +68,13 @@ export function useBookmarks() {
     }
   }, [loadFromServer])
 
-  // Detect auth state and load bookmarks accordingly
+  // Local bookmarks until auth is awake (it loads on demand, see lib/supabase);
+  // then follow the session: server bookmarks when signed in, local when not.
   useEffect(() => {
-    async function init() {
-      if (!supabase) {
-        setBookmarks(localLoad())
-        return
-      }
+    setBookmarks(localLoad())
+    let unsubscribe = () => {}
 
-      const { data: { session } } = await supabase.auth.getSession()
-
+    async function onSession(session: Session | null) {
       if (session) {
         setLoggedIn(true)
         await loadFromServer()
@@ -94,27 +93,17 @@ export function useBookmarks() {
       }
     }
 
-    init()
-
-    if (!supabase) return
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
-        setLoggedIn(true)
-        await loadFromServer()
-        if (!migrated.current) {
-          migrated.current = true
-          const local = localLoad()
-          if (local.length > 0) {
-            await migrateLocal(local)
-            localClear()
-          }
-        }
-      } else {
-        setLoggedIn(false)
-        setBookmarks(localLoad())
-      }
+    const cancelWait = whenSupabase((supabase) => {
+      void supabase.auth.getSession().then(({ data: { session } }) => onSession(session))
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        void onSession(session)
+      })
+      unsubscribe = () => subscription.unsubscribe()
     })
-    return () => subscription.unsubscribe()
+    return () => {
+      cancelWait()
+      unsubscribe()
+    }
   }, [loadFromServer, migrateLocal])
 
   // Sync localStorage changes across tabs (logged-out only)

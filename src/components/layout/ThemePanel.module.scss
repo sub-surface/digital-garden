@@ -103,21 +103,46 @@
 }
 
 .section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px 16px;
+  padding: 4px 16px;
 
   & + & { border-top: 1px solid var(--color-border); }
 
-  h3 {
-    margin: 0;
-    font: inherit;
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--color-accent-base);
-  }
+  h3 { margin: 0; font: inherit; }
+}
+
+.sectionToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-accent-base);
+  cursor: pointer;
+
+  &:hover .chevron { opacity: 1; }
+}
+
+.chevron {
+  display: inline-block;
+  font-size: 0.95rem;
+  opacity: 0.5;
+  transform: rotate(90deg);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+
+  .sectionToggle[aria-expanded="false"] & { transform: none; }
+}
+
+.sectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 14px;
 }
 
 .row {

@@ -387,10 +387,13 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
 
   // Requests from the rest of the site: `?` runs `keys`, "/" opens empty, etc.
   const dockRequest = useStore((s) => s.dockRequest)
-  const handledRequest = useRef(dockRequest?.id ?? 0)
+  // A mailbox: the dock (lazy) mounts *after* the request that opened it was
+  // posted, so a pending request is taken on mount, then cleared.
+  const handledRequest = useRef(0)
   useEffect(() => {
     if (!isDock || mode !== "prompt" || !dockRequest || dockRequest.id === handledRequest.current) return
     handledRequest.current = dockRequest.id
+    useStore.setState({ dockRequest: null })
     if (dockRequest.run) void execute(dockRequest.run)
     if (dockRequest.input !== undefined) setInput(dockRequest.input)
   }, [isDock, mode, dockRequest, execute])

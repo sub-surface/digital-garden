@@ -78,10 +78,17 @@ export function Dock() {
     e.preventDefault()
     const startX = e.clientX
     const startWidth = width
+    let next = width
     setResizing(true)
-    const move = (ev: PointerEvent) =>
-      setWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startWidth + startX - ev.clientX)))
+    // During the drag, write the CSS variable and the panel width directly;
+    // the store (which persists to localStorage) is written once, on release.
+    const move = (ev: PointerEvent) => {
+      next = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startWidth + startX - ev.clientX))
+      document.documentElement.style.setProperty("--dock-width", `${next}px`)
+      if (panelRef.current) panelRef.current.style.width = `${next}px`
+    }
     const up = () => {
+      setWidth(next)
       setResizing(false)
       window.removeEventListener("pointermove", move)
       window.removeEventListener("pointerup", up)

@@ -23,8 +23,9 @@
 
 [data-reader="true"] {
   // Quiet ONLY the ambient background canvas — not game / graph / art canvases,
-  // which are interactive content and must stay fully visible.
-  > [data-testid="bg-canvas"] {
+  // which are interactive content and must stay fully visible. Settings →
+  // Reading → "Show background" opts out (data-reader-bg="show").
+  &:not([data-reader-bg]) > [data-testid="bg-canvas"] {
     opacity: 0.12 !important;
     transition: opacity var(--duration-slow) var(--ease-default);
   }
@@ -36,6 +37,12 @@
   .article-toc,
   .body-side-group {
     display: none !important;
+  }
+
+  // The centred reading column sits right under the bar (which keeps its
+  // reader steppers), so give the page a couple of lines of clearance.
+  #main-content {
+    padding-top: 3.25rem;
   }
 
   > [data-reader-keep] {

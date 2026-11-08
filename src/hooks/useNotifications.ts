@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "./useAuth"
-import { supabase } from "@/lib/supabase"
+import { loadSupabase } from "@/lib/supabase"
 
 const STORAGE_KEY = "dg_notif_dismissed"
 
@@ -92,11 +92,12 @@ function buildAll(
       type: "warn",
       message: "Please verify your email to complete signup — check your inbox for a confirmation link.",
       persistent: false,
-      action: supabase && session.user.email
+      action: session.user.email
         ? {
             label: "Resend",
             onClick: async () => {
-              await supabase!.auth.resend({
+              const supabase = await loadSupabase()
+              await supabase?.auth.resend({
                 type: "signup",
                 email: session.user.email!,
               })

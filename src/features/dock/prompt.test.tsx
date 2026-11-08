@@ -59,6 +59,13 @@ describe("the dock prompt", () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
+  it("takes a request posted before it mounted (the first ? opens the lazy dock)", () => {
+    act(() => useStore.getState().openDock("prompt", { run: "keys" }))
+    setup()
+    expect(screen.getByText(/Prompt: search or run a command/)).toBeTruthy()
+    expect(useStore.getState().dockRequest).toBeNull()
+  })
+
   it("acts on requests from the rest of the site (? runs keys)", () => {
     setup()
     act(() => useStore.getState().openDock("prompt", { run: "keys" }))

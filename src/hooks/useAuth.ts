@@ -9,8 +9,9 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { supabase } from "@/lib/supabase"
-import type { Session } from "@supabase/supabase-js"
+import { authConfigured, authHint, loadSupabase, whenSupabase } from "@/lib/supabase"
+import type { Session, SupabaseClient } from "@supabase/supabase-js"
+import { useShell } from "@/hooks/useShell"
 import { apiGet, apiPost, apiPut, apiErrorMessage } from "@/lib/api"
 
 export type UserRole = "pending" | "editor" | "admin" | null
@@ -66,12 +67,39 @@ function useAuthController(): AuthContextValue {
   // fetch (to allow a retry), so it can't answer this.
   const profileOwner = useRef<string | null>(null)
 
+  const shell = useShell()
+
   useEffect(() => {
-    if (!supabase) {
+    if (!authConfigured) {
       setLoading(false)
       return
     }
+    let cancelled = false
+    let teardown = () => {}
 
+    // The wiki and the OS are about identity, and a returning reader has a
+    // stored session: wake auth now. An anonymous garden reader doesn't need
+    // it, so it waits until something asks (logging in, the chat tab).
+    if (shell !== "main" || authHint()) {
+      void loadSupabase().then((sb) => {
+        if (sb && !cancelled) teardown = start(sb)
+        else if (!sb) setLoading(false)
+      })
+    } else {
+      setLoading(false)
+      teardown = whenSupabase((sb) => {
+        if (!cancelled) teardown = start(sb)
+      })
+    }
+    return () => {
+      cancelled = true
+      teardown()
+    }
+    // fetchProfile only touches setters and refs; the subscription is set up once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function start(supabase: SupabaseClient): () => void {
     function applySession(next: Session | null) {
       setSession(next)
       if (!next) {
@@ -132,24 +160,21 @@ function useAuthController(): AuthContextValue {
     }
 
     return () => subscription.unsubscribe()
-    // fetchProfile only touches setters and refs; the subscription is set up once.
-     
-  }, [])
+  }
 
   // Dev auto-login — only in development, only when VITE_DEV_AUTH_EMAIL + VITE_DEV_AUTH_PASSWORD set
   useEffect(() => {
-    if (!supabase) return
     if (import.meta.env.PROD) return
     const email = import.meta.env.VITE_DEV_AUTH_EMAIL as string | undefined
     const password = import.meta.env.VITE_DEV_AUTH_PASSWORD as string | undefined
     if (!email || !password) return
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    void loadSupabase().then((supabase) => supabase?.auth.getSession().then(({ data: { session } }) => {
       if (session) return // already logged in
-      supabase!.auth.signInWithPassword({ email, password }).catch(() => {
+      supabase.auth.signInWithPassword({ email, password }).catch(() => {
         // Silently fail — dev convenience only
       })
-    })
+    }))
   }, [])
 
   async function fetchProfile(accessToken: string, userId: string) {
@@ -201,6 +226,7 @@ function useAuthController(): AuthContextValue {
   }
 
   async function signIn(email: string) {
+    const supabase = await loadSupabase()
     if (!supabase) return { error: "Auth not configured" }
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -210,12 +236,14 @@ function useAuthController(): AuthContextValue {
   }
 
   async function signInWithPassword(email: string, password: string) {
+    const supabase = await loadSupabase()
     if (!supabase) return { error: "Auth not configured" }
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error?.message ?? null }
   }
 
   async function signUp(email: string, usernameVal: string, password: string, redirectOrigin = window.location.origin) {
+    const supabase = await loadSupabase()
     if (!supabase) return { error: "Auth not configured" }
 
     // Validate & check uniqueness server-side
@@ -240,6 +268,7 @@ function useAuthController(): AuthContextValue {
   }
 
   async function resetPassword(email: string, redirectOrigin = window.location.origin) {
+    const supabase = await loadSupabase()
     if (!supabase) return { error: "Auth not configured" }
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${redirectOrigin}/profile`,
@@ -248,12 +277,14 @@ function useAuthController(): AuthContextValue {
   }
 
   async function changePassword(newPassword: string) {
+    const supabase = await loadSupabase()
     if (!supabase) return { error: "Auth not configured" }
     const { error } = await supabase.auth.updateUser({ password: newPassword })
     return { error: error?.message ?? null }
   }
 
   async function signOut() {
+    const supabase = await loadSupabase()
     if (!supabase) return
     // The SIGNED_OUT auth event resets session + profile (applySession).
     await supabase.auth.signOut()

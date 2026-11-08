@@ -11,6 +11,12 @@
 import { BG_MODES, BG_META, ROYGBIV_ACCENTS, useStore } from "@/store"
 import { HOTKEY_GROUPS, hotkeysForShell, type Shell } from "@/config/hotkeys"
 import type { TerminalCommand, TerminalContext } from "./types"
+import { FLURRY, guessPlace, lightPhase, moonPhase, nextTurn, seasonOf, solarElevation, weatherWords, type Particle } from "@/features/ambience/sky"
+import { MODES } from "@/config/modes"
+import { MOODS, QUIPS, contextualQuip, pickFrom } from "@/features/glorp/glorp"
+import { readTrail } from "./trail"
+
+const PARTICLES: Particle[] = ["snow", "leaves", "blossom", "motes", "rain"]
 
 const ACCENT_NAMES = ["red", "orange", "amber", "green", "blue", "indigo", "violet"] as const
 
@@ -267,6 +273,162 @@ export const SITE_COMMANDS: TerminalCommand[] = [
     run: (ctx) => {
       if (shellOf() === "chat") return ctx.print("you are already in philchat.", "muted")
       useStore.getState().openDock("chat")
+    },
+  },
+  {
+    name: "mode",
+    aliases: ["go"],
+    group: "site",
+    only: ["dock", "page"],
+    help: { usage: "mode [notes|wiki|os|arcade]", description: "Switch between the site's rooms" },
+    complete: (_ctx, value) => prefix(MODES.map((m) => m.id), value),
+    run: (ctx, args) => {
+      const id = args[0]?.toLowerCase()
+      if (!id) {
+        ctx.print("the rooms:", "accent")
+        for (const m of MODES) ctx.print(`  ${m.id.padEnd(8)}${m.href}`, "muted")
+        return
+      }
+      const mode = MODES.find((m) => m.id === id)
+      if (!mode) return ctx.print(`mode: no room called '${id}'`, "error")
+      ctx.print(`→ ${mode.label}`, "accent")
+      const here = window.location.hostname.replace(/^www\./, "")
+      if (here === "subsurfaces.net" && (id === "notes" || id === "arcade")) ctx.open(id === "notes" ? "" : "arcade", mode.label)
+      else ctx.navigate(mode.href)
+    },
+  },
+  {
+    name: "boot",
+    aliases: ["reboot"],
+    group: "toys",
+    only: ["dock"],
+    help: { usage: "boot", description: "Watch the machine boot (the procedural terminal)" },
+    run: (ctx) => {
+      ctx.print("rebooting into the terminal...", "accent")
+      ctx.navigate("https://subsurfaces.net/terminal")
+    },
+  },
+  {
+    name: "season",
+    aliases: ["flurry"],
+    group: "toys",
+    only: ["dock", "page"],
+    help: { usage: "season [snow|leaves|blossom|motes|rain]", description: "A flurry of the season (or the one you name)" },
+    complete: (_ctx, value) => prefix(PARTICLES, value),
+    run: (ctx, args) => {
+      const arg = args[0]?.toLowerCase() as Particle | undefined
+      if (arg && !PARTICLES.includes(arg)) return ctx.print(`season: try ${PARTICLES.join(", ")}`, "error")
+      const season = seasonOf(new Date(), (useStore.getState().weatherNow?.lat ?? 1) < 0)
+      const kind = arg ?? FLURRY[season]
+      useStore.getState().requestFlurry(kind)
+      ctx.print(arg ? `${kind}.` : `${season}: ${kind}.`, "accent")
+    },
+  },
+  {
+    name: "sky",
+    aliases: ["moon", "weather"],
+    group: "toys",
+    only: ["dock", "page"],
+    help: { usage: "sky", description: "The season, the sun, the moon, and the weather if it's on" },
+    run: (ctx) => {
+      const now = new Date()
+      const weather = useStore.getState().weatherNow
+      const place = weather ? { lat: weather.lat, lon: weather.lon } : guessPlace(now)
+      const southern = place.lat < 0
+      const moon = moonPhase(now)
+      const next = nextTurn(now, southern)
+      const days = Math.ceil((next.at.getTime() - now.getTime()) / 86_400_000)
+      ctx.print(`${seasonOf(now, southern)}, ${days} days until ${next.season}`, "accent")
+      ctx.print(`  sun   ${lightPhase(now, place.lat, place.lon)} (${solarElevation(now, place.lat, place.lon).toFixed(0)}° ${weather ? "above you" : "by your timezone's guess"})`, "muted")
+      ctx.print(`  moon  ${moon.name}, ${moon.age.toFixed(1)} days old`, "muted")
+      if (weather) {
+        ctx.print(`  out   ${weatherWords(weather.code)}${weather.temperature !== null ? `, ${Math.round(weather.temperature)}°C` : ""}`, "muted")
+      } else {
+        ctx.print("  live weather is off (Settings → Sky).", "muted")
+      }
+    },
+  },
+  {
+    name: "trail",
+    aliases: ["path", "breadcrumbs"],
+    group: "site",
+    only: ["dock"],
+    help: { usage: "trail", description: "The notes you've walked through this visit" },
+    run: (ctx) => {
+      const index = useStore.getState().contentIndex ?? {}
+      const steps = readTrail().filter((s) => index[s.slug])
+      if (!steps.length) return ctx.print("no trail yet. go for a walk.", "muted")
+      const start = steps[0].at
+      steps.forEach((step, i) => {
+        const mins = Math.round((step.at - start) / 60_000)
+        ctx.print(`  ${String(i + 1).padStart(2)}  ${index[step.slug]!.title}${mins ? `  (+${mins}m)` : ""}`)
+      })
+      ctx.print(`  ${steps.length} notes. \`thread\` pulls the next one.`, "muted")
+    },
+  },
+  {
+    name: "thread",
+    aliases: ["onward", "follow"],
+    group: "site",
+    only: ["dock"],
+    help: { usage: "thread", description: "Follow a link from this note to one you haven't read yet" },
+    run: (ctx) => {
+      const note = currentNote()
+      if (!note) return noNote(ctx)
+      const index = useStore.getState().contentIndex ?? {}
+      const seen = new Set(readTrail().map((s) => s.slug))
+      const neighbours = [...(note.links ?? []), ...(note.backlinks ?? [])]
+        .filter((slug, i, all) => all.indexOf(slug) === i && index[slug] && !index[slug]!.private && !index[slug]!.system)
+      if (!neighbours.length) return ctx.print("this note is an island. try `random`.", "muted")
+      const fresh = neighbours.filter((slug) => !seen.has(slug))
+      const next = pickFrom(fresh.length ? fresh : neighbours)
+      const how = (note.links ?? []).includes(next) ? "links to" : "is linked from"
+      ctx.print(`${note.title} ${how}`, "muted")
+      ctx.print(`→ ${index[next]!.title}`, "accent")
+      if (!fresh.length) ctx.print("(you've read every neighbour; here's an old friend)", "muted")
+      ctx.open(next, index[next]!.title)
+    },
+  },
+  {
+    name: "ponder",
+    aliases: ["muse"],
+    group: "toys",
+    only: ["dock", "page"],
+    help: { usage: "ponder", description: "A thought from somewhere in the garden" },
+    run: (ctx) => {
+      const notes = Object.values(useStore.getState().contentIndex ?? {}).filter(
+        (n) => n.excerpt && n.excerpt.length > 60 && !n.private && !n.draft && !n.system,
+      )
+      if (!notes.length) return ctx.print("the garden is quiet.", "muted")
+      const note = pickFrom(notes)
+      // One sentence from the opening paragraph, so it reads as a thought.
+      const sentences = note.excerpt!.match(/[^.!?]+[.!?]+/g) ?? [note.excerpt!]
+      const line = pickFrom(sentences.filter((s) => s.trim().length > 30)) ?? sentences[0]
+      ctx.print("")
+      ctx.print(`  “${line.trim()}”`, "accent")
+      ctx.print(`    from ${note.title}  \`open ${note.slug}\``, "muted")
+    },
+  },
+  {
+    name: "glorp",
+    aliases: ["alien"],
+    group: "toys",
+    only: ["dock", "page"],
+    help: { usage: "glorp", description: "Say hello to glorp (it may come over)" },
+    run: (ctx) => {
+      const [antennae, face, body] = pickFrom(MOODS.happy)
+      ctx.printLines(["", `   ${antennae}`, `   ${face}`, `   ${body}`], "success")
+      const { contentIndex, activeGraphSlug } = useStore.getState()
+      const note = contentIndex?.[activeGraphSlug]
+      const now = new Date()
+      const said = contextualQuip({
+        date: now,
+        season: seasonOf(now),
+        moon: moonPhase(now).name,
+        noteTitle: note && activeGraphSlug !== "index" ? note.title : null,
+      })
+      ctx.print(`glorp: ${said ?? pickFrom(QUIPS.happy)}`, "accent")
+      useStore.getState().callGlorp()
     },
   },
   {

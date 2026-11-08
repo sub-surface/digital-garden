@@ -61,7 +61,7 @@ Cross-subdomain sessions use a cookie storage adapter in `src/lib/supabase.ts`.
 ### Pre-rendering, search index, baked graph (shipped 2026-09-12)
 
 - `emit-prerender.ts` renders each published note to an HTML fragment (`public/prerender/<slug>.html`). The Worker injects it into `#root` with an in-isolate LRU cache; `main.tsx` stashes it in `window.__PRERENDER_CACHE__` and `NoteBody` hands off to the compiled MDX without a flash. Delegated handlers (sidenotes, telescopic, panel clicks) work on either DOM.
-- `emit-search-index.ts` writes an inverted index consumed lazily by the search overlay and the OS Find window (`useContentSearch`).
+- `emit-search-index.ts` writes an inverted index consumed lazily by the dock prompt and the OS Find window (`useContentSearch`).
 - `emit-graph.ts` runs the D3 force relaxation at build time and bakes coordinates into `graph.json`.
 - `scripts/test-prerender.ts`, `test-search.ts`, `test-graph.ts` guard all three. Remaining work (benchmark, image optimisation) is in the ROADMAP.
 

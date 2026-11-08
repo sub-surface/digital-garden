@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { supabase } from "@/lib/supabase"
+import { supabaseNow } from "@/lib/supabase"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 import styles from "./Chat.module.scss"
 
@@ -10,6 +10,7 @@ const channelMap = new Map<string, RealtimeChannel>()
 const refCounts = new Map<string, number>()
 
 function getOrCreateChannel(roomId: string): RealtimeChannel | null {
+  const supabase = supabaseNow()
   if (!supabase) return null
   if (!channelMap.has(roomId)) {
     const ch = supabase.channel(`typing:${roomId}`)
@@ -26,6 +27,7 @@ function retainChannel(roomId: string) {
 function releaseChannel(roomId: string) {
   const count = (refCounts.get(roomId) ?? 1) - 1
   refCounts.set(roomId, count)
+  const supabase = supabaseNow()
   if (count <= 0 && supabase) {
     const ch = channelMap.get(roomId)
     if (ch) supabase.removeChannel(ch)
@@ -50,6 +52,8 @@ export function useTypingBroadcast(
   const channelRef = useRef<RealtimeChannel | null>(null)
 
   useEffect(() => {
+    // Chat runs only for a signed-in reader, so auth (and the client) is awake.
+    const supabase = supabaseNow()
     if (!supabase) return
     const ch = getOrCreateChannel(roomId)
     channelRef.current = ch
@@ -102,6 +106,8 @@ export function TypingIndicator({ roomId, currentUserId }: Props) {
   const [typingNames, setTypingNames] = useState<string[]>([])
 
   useEffect(() => {
+    // Chat runs only for a signed-in reader, so auth (and the client) is awake.
+    const supabase = supabaseNow()
     if (!supabase) return
 
     const ch = getOrCreateChannel(roomId)!
