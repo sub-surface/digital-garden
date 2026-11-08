@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { COMMANDS, COMMAND_NAMES, lookup } from "../src/features/terminal/commands"
+import { COMMANDS, COMMAND_NAMES, commandNames, lookup } from "../src/features/terminal/commands"
 import type { TerminalContext } from "../src/features/terminal/types"
 
 const seen = new Map<string, string>()
@@ -19,7 +19,8 @@ const helpOutput: string[] = []
 const help = lookup("help")!
 const noop = () => undefined
 const context: TerminalContext = {
-  surface: "page",
+  // The dock is the widest surface: every command exists there.
+  surface: "dock",
   startSession: noop,
   endSession: noop,
   print: (line) => { helpOutput.push(line) },
@@ -40,7 +41,14 @@ const context: TerminalContext = {
     playTrack: noop, togglePlay: noop, nextTrack: noop, prevTrack: noop, setVolume: noop,
   },
 }
-assert.deepEqual(help.complete?.(context, ""), COMMAND_NAMES, "help argument completion must use every command name")
+assert.deepEqual(help.complete?.(context, ""), commandNames("dock"), "help argument completion must use every command name on the surface")
+assert.deepEqual(commandNames("dock"), [...COMMAND_NAMES], "every command exists in the dock")
+
+// Site commands act on the page around the prompt; the OS desktop has none.
+for (const command of COMMANDS.filter((c) => c.only)) {
+  assert(!command.only!.includes("window"), `${command.name} is a site command and must not exist in the OS`)
+  assert.equal(lookup(command.name, "window"), undefined, `lookup('${command.name}', "window") must miss`)
+}
 await help.run(context, [])
 
 const listedHelpNames = new Set(helpOutput.flatMap((line) => line.trim().split(/\s+/)))

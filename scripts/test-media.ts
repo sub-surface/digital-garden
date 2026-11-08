@@ -1,4 +1,6 @@
 import assert from "node:assert/strict"
+import { existsSync, readFileSync } from "node:fs"
+import { join } from "node:path"
 import { musicAssetUrl } from "../src/lib/musicAsset"
 import { handleMusicAsset } from "../src/worker/media"
 import { addSecurityHeaders } from "../src/worker/security"
@@ -44,9 +46,18 @@ const security = new Headers()
 addSecurityHeaders(security)
 assert.match(
   security.get("Content-Security-Policy") ?? "",
-  /font-src 'self' data: https:\/\/fonts\.gstatic\.com/,
-  "embedded rendered fonts must remain CSP-compatible",
+  /font-src 'self' data:(;|$)/,
+  "fonts are self-hosted (public/fonts): font-src stays same-origin",
 )
+
+// Self-hosted fonts: every preload in index.html must point at a real file,
+// or the browser fetches nothing and the page paints in fallback fonts again.
+const indexHtml = readFileSync(join(import.meta.dirname, "..", "index.html"), "utf-8")
+const preloads = [...indexHtml.matchAll(/rel="preload" href="\/fonts\/([^"]+)"/g)].map((m) => m[1])
+assert(preloads.length >= 2, "index.html must preload the above-the-fold fonts")
+for (const file of preloads) {
+  assert(existsSync(join(import.meta.dirname, "..", "public", "fonts", file)), `preloaded font missing: ${file}`)
+}
 
 // Video embeds: the CSP must allow every player host videoEmbed.ts emits, or
 // the iframes are silently blocked in production (they were, until 2026-10).

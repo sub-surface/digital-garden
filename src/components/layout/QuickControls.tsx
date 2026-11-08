@@ -2,13 +2,20 @@ import { useState, useEffect, lazy, Suspense } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { useStore } from "@/store"
 import { useShell } from "@/hooks/useShell"
-import { MusicBar } from "@/components/ui/music/MusicBar"
-import { SearchButton } from "@/components/ui/SearchButton"
-import { RandomNoteButton } from "@/components/ui/RandomNoteButton"
-import { BgModeToggle } from "@/components/ui/BgModeToggle"
 import { ReaderToggle } from "@/components/ui/ReaderToggle"
 import { RecoveredControl } from "./RecoveredControl"
+import { NowSlot } from "./NowSlot"
 import styles from "./QuickControls.module.scss"
+
+/**
+ * The bar, in three clusters:
+ *   now      — the song while you listen, otherwise what's new in the garden
+ *   prompt   — opens the dock's prompt (search + every command)
+ *   you      — reader mode, chat, settings, profile, the clock
+ *
+ * Day/night, accent and background moved into Settings (`\`); every button
+ * here is also a prompt command, so the bar is a shortcut, not an interface.
+ */
 
 const NON_ARCADE_SLUGS = new Set(["graph", "constellation"])
 
@@ -107,19 +114,40 @@ function TerminalToggle() {
   )
 }
 
-function SideChatToggle() {
-  const shell = useShell()
-  const isSideChatOpen = useStore((s) => s.isSideChatOpen)
-  const toggleSideChat = useStore((s) => s.toggleSideChat)
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform)
 
-  if (shell !== "wiki") return null
-
+function PromptButton({ compact }: { compact: boolean }) {
+  const open = useStore((s) => s.dock === "prompt")
+  const toggleDock = useStore((s) => s.toggleDock)
   return (
     <button
-      className={`${styles.iconBtn} ${styles.chatToggle} ${isSideChatOpen ? styles.chatToggleActive : ""}`}
-      onClick={toggleSideChat}
-      title={isSideChatOpen ? "Close chat" : "Open chat"}
-      aria-label="Toggle side chat"
+      className={styles.promptBtn}
+      data-compact={compact || undefined}
+      data-active={open || undefined}
+      onClick={() => toggleDock("prompt")}
+      aria-label="Open the prompt: search, or run a command"
+      aria-expanded={open}
+      title="Search, or run a command"
+    >
+      <span className={styles.promptCaret} aria-hidden="true">›</span>
+      {!compact && <span className={styles.promptText}>search or command</span>}
+      <kbd className={styles.promptKey}>{isMac ? "⌘P" : "Ctrl P"}</kbd>
+    </button>
+  )
+}
+
+function ChatDockToggle() {
+  const shell = useShell()
+  const open = useStore((s) => s.dock === "chat")
+  const toggleDock = useStore((s) => s.toggleDock)
+  if (shell !== "wiki" && shell !== "main") return null
+  return (
+    <button
+      className={`${styles.iconBtn} ${open ? styles.iconBtnActive : ""}`}
+      onClick={() => toggleDock("chat")}
+      title={open ? "Close philchat (C)" : "philchat (C)"}
+      aria-label="Toggle philchat"
+      aria-pressed={open}
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -128,15 +156,30 @@ function SideChatToggle() {
   )
 }
 
+function SettingsButton() {
+  const open = useStore((s) => s.isThemePanelOpen)
+  const toggle = useStore((s) => s.toggleThemePanel)
+  return (
+    <button
+      className={`${styles.iconBtn} ${open ? styles.iconBtnActive : ""}`}
+      onClick={toggle}
+      title="Settings: look, reading, background (\)"
+      aria-label="Settings"
+      aria-expanded={open}
+      data-settings-trigger
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <line x1="4" y1="6" x2="20" y2="6" /><circle cx="9" cy="6" r="2" fill="var(--color-bg)" />
+        <line x1="4" y1="12" x2="20" y2="12" /><circle cx="15" cy="12" r="2" fill="var(--color-bg)" />
+        <line x1="4" y1="18" x2="20" y2="18" /><circle cx="7" cy="18" r="2" fill="var(--color-bg)" />
+      </svg>
+    </button>
+  )
+}
+
 export function QuickControls({ variant = "full" }: QuickControlsProps) {
   const [time, setTime] = useState(() => formatDateTime())
-  const theme = useStore((s) => s.theme)
-  const accentBase = useStore((s) => s.accentBase)
-  const cycleAccent = useStore((s) => s.cycleAccent)
-  const setTheme = (t: "light" | "dark") => useStore.getState().setTheme(t)
   const shell = useShell()
-  const isSideChatOpen = useStore((s) => s.isSideChatOpen)
-  const sideChatWidth = useStore((s) => s.sideChatWidth)
   const activeSlug = useStore((s) => s.activeGraphSlug)
   const isWiki =
     shell === "wiki" ||
@@ -148,70 +191,35 @@ export function QuickControls({ variant = "full" }: QuickControlsProps) {
     return () => clearInterval(id)
   }, [])
 
-  // Shift QuickControls left when side chat is open on wiki shell
-  const rightOffset = shell === "wiki" && isSideChatOpen ? sideChatWidth + 16 : undefined
-
   return (
-    <div
-      className={styles.quickControls}
-      data-variant={variant}
-      data-panel-ignore
-      data-reader-keep
-      style={rightOffset ? { right: `${rightOffset}px` } : undefined}
-    >
-      <ArcadeBackButton />
+    <div className={styles.quickControls} data-variant={variant} data-panel-ignore data-reader-keep>
+      <div className={styles.cluster} data-cluster="now">
+        <ArcadeBackButton />
+        {variant === "full" && <NowSlot scope={isWiki ? "wiki" : "garden"} music={shell === "main" && !isWiki} />}
+      </div>
 
-      {variant === "full" && !isWiki && <MusicBar />}
+      <div className={styles.cluster} data-cluster="prompt">
+        <PromptButton compact={shell === "wiki" || variant === "chat"} />
+      </div>
 
-      {variant === "full" && !isWiki && <SearchButton />}
-
-      {variant === "full" && <RandomNoteButton />}
-
-      {/* Day/Night Toggle */}
-      <button
-        className={styles.iconBtn}
-        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-        aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-      >
-        {theme === "dark" ? "\u263C" : "\u263E"}
-      </button>
-
-      {/* Theme Cycle Dot (ROYGBIV) */}
-      <button
-        className={styles.themeDot}
-        onClick={cycleAccent}
-        style={{ backgroundColor: accentBase }}
-        title="Cycle accent color"
-        aria-label="Cycle accent color"
-      />
-
-      <BgModeToggle />
-
-      {/* Reader Mode Toggle */}
-      {variant === "full" && <ReaderToggle />}
-
-      {/* Side Chat Toggle (wiki only) */}
-      <SideChatToggle />
-
-      {/* Terminal View Toggle (chat only) */}
-      <TerminalToggle />
-
-      {/* Profile Icon */}
-      {shell === "main" && <RecoveredControl />}
-      {shell !== "main" && (
-        <Suspense fallback={null}>
-          <ProfileControl />
-        </Suspense>
-      )}
-
-      {/* Clock + build stamp */}
-      <div className={styles.clockGroup}>
-        <span className={styles.clock}>
-          <span className={styles.clockDate}>{time.date} | </span>
-          <span className={styles.clockTime}>{time.time}</span>
-        </span>
-        <BuildStamp />
+      <div className={styles.cluster} data-cluster="you">
+        {variant === "full" && <ReaderToggle />}
+        <ChatDockToggle />
+        <TerminalToggle />
+        <SettingsButton />
+        {shell === "main" && <RecoveredControl />}
+        {shell !== "main" && (
+          <Suspense fallback={null}>
+            <ProfileControl />
+          </Suspense>
+        )}
+        <div className={styles.clockGroup}>
+          <span className={styles.clock}>
+            <span className={styles.clockDate}>{time.date} | </span>
+            <span className={styles.clockTime}>{time.time}</span>
+          </span>
+          <BuildStamp />
+        </div>
       </div>
     </div>
   )

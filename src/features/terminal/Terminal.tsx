@@ -19,7 +19,8 @@ import { useBootPlayback } from "@/features/boot/useBootPlayback"
 import { resolveSeed, persistResolvedSeed, formatSeed, randomSeed } from "@/features/boot/bootSeed"
 import type { BootTone } from "@/features/boot/bootTypes"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
-import { COMMANDS, COMMAND_NAMES, lookup } from "./commands"
+import { COMMANDS, commandNames, commandsFor, lookup } from "./commands"
+import { useContentSearch } from "@/hooks/useContentSearch"
 import type { Surface, TerminalContext, TerminalNote, TerminalSession } from "./types"
 import styles from "./Terminal.module.scss"
 
@@ -34,7 +35,23 @@ interface Props {
   header?: React.ReactNode
   /** Supplied by the OS so `exit` can close the window it lives in. */
   onClose?: () => void
+  /** Dock only: whether the prompt is the visible tab (focus follows it). */
+  active?: boolean
 }
+
+/** One row under the dock prompt. `value` is what Tab writes into the input. */
+interface Suggestion {
+  kind: "command" | "arg" | "note"
+  label: string
+  detail?: string
+  value: string
+  /** Enter on it runs this line; absent means Enter only completes. */
+  run?: string
+}
+
+const MAX_COMMAND_SUGGESTIONS = 5
+const MAX_NOTE_SUGGESTIONS = 5
+const MAX_ARG_SUGGESTIONS = 8
 
 const MAX_LINES = 400
 
@@ -56,7 +73,7 @@ function TerminalText({ text }: { text: string }) {
   )
 }
 
-export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin, header, onClose }: Props) {
+export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin, header, onClose, active = true }: Props) {
   // Resolution is pure during render. TanStack Router observes history writes,
   // so canonicalising here used to update <Transitioner> while Terminal was
   // still rendering. Persist/canonicalise only after commit.
@@ -66,7 +83,9 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
 
   const [mode, setMode] = useState<"attract" | "prompt">("attract")
   const [input, setInput] = useState("")
-  const [history, setHistory] = useState<string[]>([])
+  // History is shared and persisted, so ↑ in the dock finds yesterday's line.
+  const history = useStore((s) => s.promptHistory)
+  const pushPromptHistory = useStore((s) => s.pushPromptHistory)
   const [historyIdx, setHistoryIdx] = useState(-1)
   const [tabState, setTabState] = useState<{ matches: string[]; index: number } | null>(null)
   // The session lives in a ref (execute() reads it synchronously) with a mirror
@@ -120,10 +139,15 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
     collapsedRef.current = true
     setPaused(true)
     injectLine("", "normal")
-    injectLine("subsurfaces terminal — type `help`", "muted")
+    injectLine(
+      surface === "dock"
+        ? "the garden prompt. type to search, or `help` for what it can do."
+        : "subsurfaces terminal — type `help`",
+      "muted",
+    )
     injectLine("", "normal")
     setMode("prompt")
-  }, [setPaused, injectLine])
+  }, [setPaused, injectLine, surface])
 
   // In a window the attract sequence is just noise — a 680px MS-DOS Prompt
   // wants to be a prompt. Fullscreen still opens on the procedural boot.
@@ -149,8 +173,9 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
   }, [lines, activeText, mode])
 
   useEffect(() => {
-    if (mode === "prompt") inputRef.current?.focus()
-  }, [mode])
+    // preventScroll: in the dock, focusing must not scroll the page behind it.
+    if (mode === "prompt" && active) inputRef.current?.focus({ preventScroll: true })
+  }, [mode, active])
 
   // -------------------------------------------------------------------------
   // command context
@@ -254,7 +279,7 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
       injectLine(`${session ? session.prompt : ">"} ${line || ""}`, "accent")
       if (!line) return
 
-      setHistory((h) => [...h, line])
+      pushPromptHistory(line)
       setHistoryIdx(-1)
 
       // A session owns the prompt until it is left. `exit`/`quit` always work,
@@ -278,11 +303,11 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
       }
 
       const [name, ...args] = line.split(/\s+/)
-      const cmd = lookup(name)
+      const cmd = lookup(name, surface)
 
       if (!cmd) {
         injectLine(`${name}: command not found`, "error")
-        const near = COMMAND_NAMES.filter((n) => n.startsWith(name[0] ?? "")).slice(0, 6)
+        const near = commandNames(surface).filter((n) => n.startsWith(name[0] ?? "")).slice(0, 6)
         if (near.length) injectLine(`did you mean: ${near.join(", ")}?`, "muted")
         return
       }
@@ -302,16 +327,107 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
         )
       }
     },
-    [ctx, injectLine, role],
+    [ctx, injectLine, role, surface, pushPromptHistory],
   )
 
+  // -------------------------------------------------------------------------
+  // dock: live suggestions under the prompt
+  // -------------------------------------------------------------------------
+
+  const isDock = surface === "dock"
+  const trimmed = input.trimStart()
+  const firstSpace = trimmed.indexOf(" ")
+  const head = (firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace)).toLowerCase()
+  const headCmd = head ? lookup(head, surface) : undefined
+  const suggesting = isDock && mode === "prompt" && !sessionPrompt && trimmed.length > 0
+  // Free text searches the garden; a command with arguments doesn't.
+  const searchQuery = suggesting && trimmed.length >= 2 && !(headCmd && firstSpace !== -1) ? trimmed : ""
+  const { results: noteHits } = useContentSearch({ enabled: isDock, query: searchQuery, limit: MAX_NOTE_SUGGESTIONS })
+
+  const suggestions = useMemo<Suggestion[]>(() => {
+    if (!suggesting) return []
+    if (firstSpace !== -1) {
+      if (!headCmd?.complete) return []
+      const rest = trimmed.slice(firstSpace + 1)
+      return headCmd
+        .complete(ctx, rest)
+        .slice(0, MAX_ARG_SUGGESTIONS)
+        .map((candidate) => ({ kind: "arg", label: candidate, value: `${head} ${candidate}`, run: `${head} ${candidate}` }))
+    }
+    const commands: Suggestion[] = commandsFor(surface)
+      .filter((cmd) => cmd.name.startsWith(head) || cmd.aliases?.some((a) => a.startsWith(head)))
+      .slice(0, MAX_COMMAND_SUGGESTIONS)
+      .map((cmd) => {
+        const takesArgs = cmd.help.usage.includes(" ")
+        const needsArgs = /\s</.test(cmd.help.usage)
+        return {
+          kind: "command",
+          label: cmd.name,
+          detail: cmd.help.description,
+          value: takesArgs ? `${cmd.name} ` : cmd.name,
+          run: needsArgs ? undefined : cmd.name,
+        }
+      })
+    const notes: Suggestion[] = noteHits
+      .filter((hit) => hit.kind === "garden")
+      .map((hit) => ({ kind: "note", label: hit.title, detail: hit.target, value: `open ${hit.target}`, run: `open ${hit.target}` }))
+    return [...commands, ...notes]
+  }, [suggesting, firstSpace, headCmd, trimmed, head, ctx, surface, noteHits])
+
+  const [selected, setSelected] = useState(0)
+  // Moved with the arrows: Enter then means "this row", not "what I typed".
+  const [navigated, setNavigated] = useState(false)
+  const [lastInput, setLastInput] = useState(input)
+  if (lastInput !== input) {
+    setLastInput(input)
+    setSelected(0)
+    setNavigated(false)
+  }
+  const current = suggestions[Math.min(selected, suggestions.length - 1)]
+
+  // Requests from the rest of the site: `?` runs `keys`, "/" opens empty, etc.
+  const dockRequest = useStore((s) => s.dockRequest)
+  const handledRequest = useRef(dockRequest?.id ?? 0)
+  useEffect(() => {
+    if (!isDock || mode !== "prompt" || !dockRequest || dockRequest.id === handledRequest.current) return
+    handledRequest.current = dockRequest.id
+    if (dockRequest.run) void execute(dockRequest.run)
+    if (dockRequest.input !== undefined) setInput(dockRequest.input)
+  }, [isDock, mode, dockRequest, execute])
+
+  const submit = (line: string) => {
+    setInput("")
+    setTabState(null)
+    void execute(line)
+  }
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isDock && e.key === "Escape") {
+      e.preventDefault()
+      e.stopPropagation()
+      if (input) setInput("")
+      else onClose?.()
+      return
+    }
+
     if (e.key === "Enter") {
       e.preventDefault()
-      const value = input
-      setInput("")
-      setTabState(null)
-      void execute(value)
+      // In the dock: a typed command runs as typed; otherwise Enter takes the
+      // highlighted row (so "kant" + Enter opens the best match).
+      if (current && (navigated || !headCmd)) {
+        if (current.run) submit(current.run)
+        else setInput(current.value)
+        return
+      }
+      submit(input)
+      return
+    }
+
+    if (suggestions.length && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      e.preventDefault()
+      const step = e.key === "ArrowDown" ? 1 : -1
+      setSelected((i) => (i + step + suggestions.length) % suggestions.length)
+      setNavigated(true)
       return
     }
 
@@ -340,6 +456,12 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
 
     if (e.key === "Tab") {
       e.preventDefault()
+      // The dock shows its candidates, so Tab takes the highlighted one and the
+      // list re-forms around it (e.g. "bg" → "bg " → its modes).
+      if (isDock && current) {
+        setInput(current.value)
+        return
+      }
       if (tabState) {
         const idx = (tabState.index + 1) % tabState.matches.length
         setTabState({ ...tabState, index: idx })
@@ -347,16 +469,14 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
         return
       }
 
-      const firstSpace = input.indexOf(" ")
       let matches: string[]
-      if (firstSpace === -1) {
-        matches = COMMAND_NAMES
-          .filter((n) => n.startsWith(input.toLowerCase()))
-          .map(String)
+      if (input.indexOf(" ") === -1) {
+        matches = commandNames(surface).filter((n) => n.startsWith(input.toLowerCase()))
       } else {
-        const name = input.slice(0, firstSpace).toLowerCase()
-        const value = input.slice(firstSpace + 1)
-        const cmd = lookup(name)
+        const space = input.indexOf(" ")
+        const name = input.slice(0, space).toLowerCase()
+        const value = input.slice(space + 1)
+        const cmd = lookup(name, surface)
         matches = cmd?.complete
           ? cmd.complete(ctx, value).map((candidate) => `${name} ${candidate}`)
           : []
@@ -376,7 +496,31 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
     setTabState(null)
   }
 
-  const promptSymbol = sessionPrompt ?? (surface === "page" ? ">" : "C:\\GARDEN>")
+  const promptSymbol = sessionPrompt ?? (surface === "window" ? "C:\\GARDEN>" : ">")
+
+  const inputRow = mode === "prompt" && (
+    <div className={styles.inputRow}>
+      <span className={styles.promptSymbol}>{promptSymbol}</span>
+      <input
+        ref={inputRef}
+        id={isDock ? "dock-prompt-input" : "shared-terminal-input"}
+        name="terminal-command"
+        className={styles.input}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={onKeyDown}
+        spellCheck={false}
+        autoComplete="off"
+        autoCapitalize="off"
+        placeholder={isDock ? "search the garden, or type a command" : undefined}
+        aria-label={isDock ? "Prompt: search or type a command" : "Terminal input"}
+        role={isDock ? "combobox" : undefined}
+        aria-expanded={isDock ? suggestions.length > 0 : undefined}
+        aria-controls={isDock ? "dock-suggestions" : undefined}
+        aria-activedescendant={isDock && current ? `dock-suggestion-${suggestions.indexOf(current)}` : undefined}
+      />
+    </div>
+  )
 
   return (
     <div
@@ -384,12 +528,12 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
       data-surface={surface}
       onClick={() => {
         if (mode === "attract") collapseToPrompt()
-        else inputRef.current?.focus()
+        else if (!window.getSelection()?.toString()) inputRef.current?.focus({ preventScroll: true })
       }}
     >
       {header && <div className={styles.header}>{header}</div>}
 
-      {mode === "prompt" && (
+      {mode === "prompt" && !isDock && (
         <div className={styles.masthead} aria-label="Subsurfaces 95 terminal">
           <span>┌─ SUBSURFACES 95 ─────────────────────────────┐</span>
           <span>{`│ C:\\GARDEN · W:\\WIKI · X:\\CHAT · ${seedDisplay.padEnd(10)} │`}</span>
@@ -411,25 +555,40 @@ export function Terminal({ surface = "page", onOpen, onNavigate, onRequireLogin,
           </div>
         )}
 
-        {mode === "prompt" && (
-          <div className={styles.inputRow}>
-            <span className={styles.promptSymbol}>{promptSymbol}</span>
-            <input
-              ref={inputRef}
-              id="shared-terminal-input"
-              name="terminal-command"
-              className={styles.input}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-              spellCheck={false}
-              autoComplete="off"
-              autoCapitalize="off"
-              aria-label="Terminal input"
-            />
-          </div>
-        )}
+        {!isDock && inputRow}
       </div>
+
+      {isDock && (
+        <div className={styles.dockPrompt}>
+          {suggestions.length > 0 && (
+            <ul className={styles.suggestions} id="dock-suggestions" role="listbox" aria-label="Suggestions">
+              {suggestions.map((sug, i) => (
+                <li
+                  key={`${sug.kind}:${sug.value}`}
+                  id={`dock-suggestion-${i}`}
+                  role="option"
+                  aria-selected={sug === current}
+                  className={styles.suggestion}
+                  data-kind={sug.kind}
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={() => (sug.run ? submit(sug.run) : setInput(sug.value))}
+                  onPointerEnter={() => setSelected(i)}
+                >
+                  <span className={styles.suggestionKind}>{sug.kind === "note" ? "note" : sug.kind === "arg" ? "↳" : "cmd"}</span>
+                  <span className={styles.suggestionLabel}>{sug.label}</span>
+                  {sug.detail && <span className={styles.suggestionDetail}>{sug.detail}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {inputRow}
+          <div className={styles.dockHint} aria-hidden="true">
+            {input
+              ? "Tab completes · ↑↓ choose · Enter runs · Esc clears"
+              : "try random · here · toc · keys · help — Esc closes"}
+          </div>
+        </div>
+      )}
 
       {mode === "attract" && (
         <div className={styles.hint}>press any key</div>

@@ -228,8 +228,33 @@ forward because it only depends on a markdown file.
   parents). Lesson: after each deploy, probe the wiki home and a sample of
   pages in a capped headless browser; CI can't see these.
 
-Next: self-hosted, preloaded fonts (the remaining first-paint flicker is
-`display=swap` from Google Fonts); then phase 3 (docked prompt with tab
-completion, on the SideChat dock) and the QuickControls redesign (three
-clusters, visible clock, contextual left slot: song when playing, else
-recent activity; look settings in a drawer).
+## Progress 2026-11-08 (evening): fonts, the dock, the bar, Settings
+
+- **Self-hosted fonts.** `scripts/fetch-fonts.mjs` writes hashed woff2
+  files to `public/fonts/` (immutable cache), `public/fonts.css`, and the
+  preload tags in `index.html` (Plex Sans + Playfair, latin). Google is out
+  of the CSP. Run it only when the family list changes.
+- **Phase 3: the dock** (`src/features/dock/`). One right-hand panel, two
+  tabs: the prompt and philchat. It replaced the search overlay, command
+  palette, `?` cheat sheet, Ctrl+P MS-DOS window and the wiki's SideChat
+  (all deleted). It pushes the page over (`--dock-width`), is a full-screen
+  sheet on phones, and keeps its scrollback while closed. Store: one
+  `dock: "prompt" | "chat" | null` replaced five booleans.
+- **The prompt** is the existing terminal on a new `dock` surface: live
+  suggestions (commands, Tab-completable arguments, full-text note hits),
+  Enter runs what you typed or the highlighted row, persisted history, Esc
+  clears then closes. Keys: Ctrl/Cmd+P or K, `/`, `?` (runs `keys`), C
+  (philchat). New site commands (`siteCommands.ts`, never in the OS):
+  `here toc goto top backlinks cite share bg accent reader look player
+  philchat keys`.
+- **QuickControls**: three clusters. Now (the song once you've listened,
+  else the newest notes, rotating), the prompt button, then reader / chat /
+  settings / profile / clock. Day-night, accent dot, bg toggle, search and
+  random buttons left the bar; all are commands or in Settings.
+- **Settings** (`\`, was the ThemePanel): one sheet, Look / Reading /
+  Background, per-mode tuning behind a disclosure, reset-to-defaults,
+  outside-click closes, bottom sheet on phones (fixes mobile-audit P1 #1).
+  The chosen background is now remembered between visits.
+
+Next: phase 4 (rooms contract), then the cosy phases. Mobile phase still
+owes the rest of docs/mobile-audit.md.

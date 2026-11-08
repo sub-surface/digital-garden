@@ -21,42 +21,27 @@ export function CornerMenu({ variant = "default" }: CornerMenuProps = {}) {
   const clearStack = useStore((s) => s.clearStack)
   const toggleThemePanel = useStore((s) => s.toggleThemePanel)
   const toggleMusic = useStore((s) => s.toggleMusic)
-  const toggleSearch = useStore((s) => s.toggleSearch)
-  const toggleCommandPalette = useStore((s) => s.toggleCommandPalette)
-  const cycleBgMode = useStore((s) => s.cycleBgMode)
+  const openDock = useStore((s) => s.openDock)
   const toggleReaderMode = useStore((s) => s.toggleReaderMode)
   const isReaderMode = useStore((s) => s.isReaderMode)
-  const theme = useStore((s) => s.theme)
-  const cycleAccent = useStore((s) => s.cycleAccent)
-  const setTheme = (t: "light" | "dark") => useStore.getState().setTheme(t)
   const goRandom = useRandomNote()
   const containerRef = useRef<HTMLDivElement>(null)
 
   // The mobile arc is the only set of quick controls on small screens (the
   // top QuickControls bar is hidden ≤800px), so it mirrors that bar's actions.
-  const ARC_ITEMS: ArcItem[] = variant === "wiki"
-    ? [
-        { label: "Search", onClick: () => { toggleSearch(); setOpen(false); } },
-        { label: "Commands", onClick: () => { toggleCommandPalette(); setOpen(false); } },
-        { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },
-        { label: "Palette", onClick: () => { cycleAccent(); setOpen(false); } },
-        { label: "Bg", onClick: () => { cycleBgMode(); setOpen(false); } },
-        { label: "Reader", active: isReaderMode, onClick: () => { toggleThemePanel(); setOpen(false); } },
-        { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
-        { label: "⬡ Garden", href: "https://subsurfaces.net" },
-      ]
-    : [
-        { label: "Search", onClick: () => { toggleSearch(); setOpen(false); } },
-        { label: "Commands", onClick: () => { toggleCommandPalette(); setOpen(false); } },
-        { label: "Random", onClick: () => { goRandom(); setOpen(false); } },
-        { label: "Music", onClick: () => { toggleMusic(); setOpen(false); } },
-        { label: theme === "dark" ? "Light" : "Dark", onClick: () => { setTheme(theme === "dark" ? "light" : "dark"); setOpen(false); } },
-        { label: "Palette", onClick: () => { cycleAccent(); setOpen(false); } },
-        { label: "Bg", onClick: () => { cycleBgMode(); setOpen(false); } },
-        { label: "Reader", active: isReaderMode, onClick: () => { toggleThemePanel(); setOpen(false); } },
-        { label: "Theme", onClick: () => { toggleThemePanel(); setOpen(false); } },
-        ...(import.meta.env.DEV ? [{ label: "Dev", to: "/__dev", devOnly: true }] : []),
-      ]
+  const ARC_ITEMS: ArcItem[] = [
+    { label: "Prompt", onClick: () => { openDock("prompt"); setOpen(false) } },
+    ...(variant === "wiki"
+      ? []
+      : [
+          { label: "Random", onClick: () => { goRandom(); setOpen(false) } },
+          { label: "Music", onClick: () => { toggleMusic(); setOpen(false) } },
+        ]),
+    { label: "Reader", active: isReaderMode, onClick: () => { toggleReaderMode(); setOpen(false) } },
+    { label: "Settings", onClick: () => { toggleThemePanel(); setOpen(false) } },
+    ...(variant === "wiki" ? [{ label: "⬡ Garden", href: "https://subsurfaces.net" }] : []),
+    ...(import.meta.env.DEV && variant !== "wiki" ? [{ label: "Dev", to: "/__dev", devOnly: true }] : []),
+  ]
 
   // Close on outside click
   useEffect(() => {

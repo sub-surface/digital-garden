@@ -1,7 +1,7 @@
 /**
  * Canonical keyboard-shortcut registry — the single source of truth for global
- * bindings. `useHotkeys` reads `key` to dispatch; the cheat-sheet overlay (`?`)
- * renders `keys` + `label`. Keep the two in sync by editing only this file.
+ * bindings. `useHotkeys` reads `key` to dispatch; the prompt's `keys` command
+ * (also on `?`) lists `keys` + `label`. Keep the two in sync by editing only this file.
  *
  * `key` is the value matched in the keydown handler (already lowercased there).
  * `keys` is the display form (what the cheat sheet shows). `shell` narrows a
@@ -24,11 +24,12 @@ export interface Hotkey {
 
 export const HOTKEYS: Hotkey[] = [
   // Help / discovery
-  { key: "?", keys: ["?"], label: "Keyboard shortcuts", group: "Help" },
+  { key: "?", keys: ["?"], label: "This list (in the prompt)", group: "Help" },
   // Navigation
-  { key: "k", keys: ["Ctrl", "K"], label: "Search notes", group: "Navigation", shell: ["main", "wiki", "chat"] },
-  { key: "p", keys: ["Ctrl", "P"], label: "Open terminal", group: "Navigation", shell: ["main", "wiki", "chat"] },
-  { key: "p", keys: ["Ctrl", "Shift", "P"], label: "Command palette", group: "Navigation", shell: ["main", "wiki", "chat"] },
+  { key: "p", keys: ["Ctrl", "P"], label: "Prompt: search or run a command", group: "Navigation", shell: ["main", "wiki", "chat"] },
+  { key: "k", keys: ["Ctrl", "K"], label: "Prompt (same as Ctrl P)", group: "Navigation", shell: ["main", "wiki", "chat"] },
+  { key: "/", keys: ["/"], label: "Prompt, empty", group: "Navigation", shell: ["main", "wiki", "chat"] },
+  { key: "c", keys: ["C"], label: "philchat in the dock", group: "Navigation", shell: ["main", "wiki"] },
   { key: "r", keys: ["R"], label: "Random note", group: "Navigation", shell: ["main", "wiki"] },
   // Reading — size/width keys apply while reader mode is on
   { key: "f", keys: ["F"], label: "Reader mode", group: "Reading", shell: ["main", "wiki"] },
@@ -37,12 +38,12 @@ export const HOTKEYS: Hotkey[] = [
   { key: "]", keys: ["]"], label: "Wider column (reader)", group: "Reading", shell: ["main", "wiki"] },
   { key: "[", keys: ["["], label: "Narrower column (reader)", group: "Reading", shell: ["main", "wiki"] },
   // Appearance
-  { key: "\\", keys: ["\\"], label: "Theme panel", group: "Appearance" },
+  { key: "\\", keys: ["\\"], label: "Settings", group: "Appearance" },
   { key: "b", keys: ["B"], label: "Cycle background", group: "Appearance", shell: ["main"] },
   // Media
   { key: "m", keys: ["M"], label: "Play / pause music", group: "Media", shell: ["main"] },
   // Universal
-  { key: "Escape", keys: ["Esc"], label: "Close overlay", group: "Help" },
+  { key: "Escape", keys: ["Esc"], label: "Close the dock or a panel", group: "Help" },
 ]
 
 /** Cheat-sheet display order. */

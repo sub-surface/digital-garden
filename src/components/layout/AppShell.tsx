@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from "@tanstack/react-router"
-import { LazyThemePanel, LazyMusicPlayer, LazySearchOverlay } from "./lazyOverlay"
+import { LazyThemePanel, LazyMusicPlayer } from "./lazyOverlay"
 import { useEffect, Suspense, lazy } from "react"
 import { useStore } from "@/store"
 import { PanelStack } from "@/components/panel/PanelStack"
@@ -123,7 +123,6 @@ export function AppShell() {
         {!isWikiRoute && <LazyMusicPlayer />}
         {!isWikiRoute && <MobileMusicBar />}
         <QuickControls />
-        <LazySearchOverlay />
         <GraphOverlay />
         <GlobalOverlays />
         

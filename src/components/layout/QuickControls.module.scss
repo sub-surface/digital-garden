@@ -1,7 +1,8 @@
 .quickControls {
   position: fixed;
   top: 1.5rem;
-  right: 2rem;
+  // The dock pushes the bar over with the page.
+  right: calc(2rem + var(--dock-width, 0px));
   display: flex;
   align-items: center;
   gap: var(--space-4);
@@ -84,51 +85,149 @@
   }
 }
 
-.chatToggle {
-  @media (max-width: 700px) {
-    display: none;
-  }
-}
-
-.chatToggleActive {
-  opacity: 1;
-  color: var(--color-accent-base);
-}
-
 .iconBtnActive {
   color: var(--color-accent-base);
   opacity: 1;
 }
 
-.themeDot {
-  width: 10px;
-  height: 10px;
-  position: relative;
-  border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--color-overlay-tint) 10%, transparent);
+// ── Clusters ──
+
+.cluster {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  &:empty { display: none; }
+
+  & + & {
+    padding-left: var(--space-4);
+    border-left: 1px solid var(--color-border-light);
+  }
+}
+
+// "now": the song, or the newest note.
+.now {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  min-width: 0;
+}
+
+.nowPlay {
+  background: none;
+  border: 0;
+  min-width: 24px;
+  min-height: 24px;
+  color: inherit;
+  font-size: 0.85rem;
   cursor: pointer;
-  transition: transform var(--duration-fast), border-color 0.2s;
-  flex-shrink: 0;
+  opacity: 0.6;
 
-  &::after {
-    content: "";
-    position: absolute;
-    top: -8px;
-    bottom: -8px;
-    left: -8px;
-    right: -8px;
-  }
+  &:hover { opacity: 1; color: var(--color-accent-base); }
+}
 
-  &:hover {
-    transform: scale(1.3);
-    border-color: var(--color-text);
+.nowEvent {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  animation: nowIn 0.4s ease;
+
+  &:hover .nowLabel { color: var(--color-accent-base); }
+}
+
+.nowKind {
+  flex: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.85em;
+  opacity: 0.55;
+}
+
+.nowLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text);
+  opacity: 0.85;
+  transition: color 0.15s ease;
+}
+
+.nowWhen {
+  flex: none;
+  opacity: 0.5;
+}
+
+@keyframes nowIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+
+// With the dock open the bar has less room: the song stays; the newsreel, the
+// long date and the prompt button (the prompt is right there) go.
+:global(html[data-dock]) {
+  .nowEvent { display: none; }
+  .cluster[data-cluster="prompt"] { display: none; }
+  .clockDate { display: none; }
+}
+
+@media (max-width: 1200px) {
+  .now { max-width: 170px; }
+  .nowWhen { display: none; }
+}
+
+// "prompt": looks like a field, opens the dock.
+.promptBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  padding: 2px 6px 2px 8px;
+  background: color-mix(in srgb, var(--color-bg) 50%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  color: var(--color-text-muted);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+
+  &:hover,
+  &[data-active] {
+    border-color: color-mix(in srgb, var(--color-accent-base) 60%, var(--color-border));
+    color: var(--color-text);
   }
+}
+
+.promptCaret {
+  color: var(--color-accent-base);
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.promptText {
+  min-width: 12ch;
+  text-align: left;
+  opacity: 0.75;
+}
+
+.promptKey {
+  padding: 0 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 0.85em;
+  opacity: 0.6;
 }
 
 .clockGroup {
   margin-left: var(--space-2);
-  padding-left: var(--space-4);
-  border-left: 1px solid var(--color-border-light);
   flex-shrink: 0;
   height: 1.2rem;
   display: flex;

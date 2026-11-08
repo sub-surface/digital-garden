@@ -217,7 +217,7 @@ export function Desktop() {
 
       if (!isTyping(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
         // B — next background. The wallpaper is the site's ambient canvas, so
-        // this is the same cycle the main site's BgModeToggle walks.
+        // this is the same cycle the main site's B key walks.
         if (e.key === "b" || e.key === "B") {
           e.preventDefault()
           const { bgMode, setBgMode } = useStore.getState()
@@ -253,7 +253,7 @@ export function Desktop() {
         // Escape internally and call preventDefault before this window handler.
         if (e.defaultPrevented) return
         const overlays = useStore.getState()
-        if (overlays.isSearchOpen || overlays.isCheatSheetOpen || overlays.isThemePanelOpen) return
+        if (overlays.dock || overlays.isThemePanelOpen) return
         e.preventDefault()
         const state = useOS.getState()
         const top = focusedWindowId(state.windows)

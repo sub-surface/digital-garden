@@ -13,7 +13,7 @@ import type { BootTone } from "@/features/boot/bootTypes"
 export type Tone = BootTone
 
 /** Where the terminal is mounted. The only thing commands branch on. */
-export type Surface = "page" | "window" | "overlay"
+export type Surface = "page" | "window" | "dock"
 
 /** A garden note as the terminal sees it. */
 export interface TerminalNote {
@@ -99,7 +99,7 @@ export interface CommandHelp {
   description: string
 }
 
-export type CommandGroup = "system" | "content" | "music" | "people" | "toys" | "programs"
+export type CommandGroup = "system" | "site" | "content" | "music" | "people" | "toys" | "programs"
 
 export interface TerminalCommand {
   name: string
@@ -107,6 +107,9 @@ export interface TerminalCommand {
   group: CommandGroup
   help: CommandHelp
   requireRole?: "admin" | "editor"
+  /** Surfaces this command exists on; omit for all. Site commands act on the
+   *  page around the prompt, which the OS desktop doesn't have. */
+  only?: Surface[]
   /** Full argument-string candidates. The terminal owns cycling and insertion. */
   complete?: (ctx: TerminalContext, value: string) => readonly string[]
   run: (ctx: TerminalContext, args: string[]) => void | Promise<void>

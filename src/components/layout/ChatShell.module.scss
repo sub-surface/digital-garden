@@ -2,7 +2,8 @@
 // Full-viewport fixed layout: sidebar (rooms) + main (messages + input)
 
 .shell {
-  width: 100vw;
+  // The dock (src/features/dock) pushes the page over rather than covering it.
+  width: calc(100vw - var(--dock-width, 0px));
   height: 100dvh;
   background: transparent;
   overflow: hidden;

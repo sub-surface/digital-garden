@@ -48,7 +48,7 @@ export function RecoveredControl() {
               >
                 {note.title}
               </button>
-              <button type="button" title="Return to Recycle Bin" onClick={() => void setRestored(note.slug, false)}>Ã—</button>
+              <button type="button" title="Return to Recycle Bin" onClick={() => void setRestored(note.slug, false)}>×</button>
             </div>
           ))}
         </div>

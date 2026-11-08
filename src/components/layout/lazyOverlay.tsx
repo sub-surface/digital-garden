@@ -6,9 +6,9 @@ type StoreState = ReturnType<typeof useStore.getState>
 /**
  * An overlay whose code is downloaded the first time it opens.
  *
- * ThemePanel, MusicPlayer, Search, the command palette and the cheat sheet
- * were always mounted (each returning null while closed), so all of them sat
- * in the main chunk every visitor parses before anything is interactive.
+ * ThemePanel, MusicPlayer and the dock's predecessors were always mounted
+ * (each returning null while closed), so all of them sat in the main chunk
+ * every visitor parses before anything is interactive.
  * Once opened, the overlay stays mounted, so its own close animation and
  * internal state behave exactly as before.
  */
@@ -38,15 +38,7 @@ export const LazyMusicPlayer = lazyOverlay(
   (s) => s.isMusicExpanded,
   () => import("@/components/ui/music/MusicPlayer").then((m) => m.MusicPlayer),
 )
-export const LazySearchOverlay = lazyOverlay(
-  (s) => s.isSearchOpen,
-  () => import("@/components/ui/overlays/SearchOverlay").then((m) => m.SearchOverlay),
-)
-export const LazyCommandPalette = lazyOverlay(
-  (s) => s.isCommandPaletteOpen,
-  () => import("@/components/ui/overlays/CommandPalette").then((m) => m.CommandPalette),
-)
-export const LazyCheatSheet = lazyOverlay(
-  (s) => s.isCheatSheetOpen,
-  () => import("@/components/ui/overlays/KeyboardCheatSheet").then((m) => m.KeyboardCheatSheet),
+export const LazyDock = lazyOverlay(
+  (s) => s.dock !== null,
+  () => import("@/features/dock/Dock").then((m) => m.Dock),
 )

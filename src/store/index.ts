@@ -62,7 +62,7 @@ export const BG_MODES = [
 
 /**
  * Single source of truth for ambient-mode display names (ROADMAP §28.11).
- * ThemePanel's System-tab picker and BgModeToggle's tooltip used to carry
+ * ThemePanel's System-tab picker and the old BgModeToggle's tooltip used to carry
  * separate label lists that drifted (e.g. "Plate Scan" vs "Plate-scan") —
  * this spelling wins. `desc` is only used by ThemePanel.
  */
@@ -81,6 +81,15 @@ export const BG_META: Record<string, { label: string; desc: string }> = {
   lorenz: { label: "Lorenz", desc: "Strange attractor ribbon in phase space" },
   cartography: { label: "Cartography", desc: "Topographic contour drift and relief" },
 }
+
+export type DockTab = "prompt" | "chat"
+export interface DockRequest {
+  /** Increments per request, so the same request twice still fires. */
+  id: number
+  input?: string
+  run?: string
+}
+const PROMPT_HISTORY_MAX = 100
 
 export const ROYGBIV_ACCENTS = [
   "#b4424c", // Red
@@ -121,37 +130,25 @@ interface GardenStore {
   cycleReaderMeasure: (dir: 1 | -1) => void
   cycleReaderScale: (dir: 1 | -1) => void
 
-  // Keyboard cheat sheet (? overlay)
-  isCheatSheetOpen: boolean
-  toggleCheatSheet: () => void
-  setCheatSheet: (open: boolean) => void
-
-  // Command palette (Ctrl/Cmd+P)
-  isCommandPaletteOpen: boolean
-  toggleCommandPalette: () => void
-  setCommandPalette: (open: boolean) => void
-
-  // Cross-surface terminal (Ctrl/Cmd+P)
-  isTerminalOpen: boolean
-  toggleTerminal: () => void
-  setTerminal: (open: boolean) => void
-
-  // Search
-  isSearchOpen: boolean
-  setSearchOpen: (open: boolean) => void
-  toggleSearch: () => void
+  // The dock: one right-hand panel holding the prompt and (wiki/garden) chat.
+  // It replaced five overlays: search, command palette, cheat sheet, the
+  // Ctrl+P terminal window and the wiki's SideChat.
+  dock: DockTab | null
+  /** Something to do in the prompt when it next opens: type `input`, or run `run`. */
+  dockRequest: DockRequest | null
+  openDock: (tab: DockTab, request?: Omit<DockRequest, "id">) => void
+  closeDock: () => void
+  toggleDock: (tab: DockTab) => void
+  dockWidth: number
+  setDockWidth: (width: number) => void
+  /** Prompt history, newest last (persisted, capped). */
+  promptHistory: string[]
+  pushPromptHistory: (line: string) => void
 
   // Graph Overlay
   isGraphOpen: boolean
   setGraphOpen: (open: boolean) => void
   toggleGraph: () => void
-
-  // Side Chat
-  isSideChatOpen: boolean
-  toggleSideChat: () => void
-  setSideChatOpen: (open: boolean) => void
-  sideChatWidth: number
-  setSideChatWidth: (width: number) => void
 
   // Music
   isMusicOpen: boolean
@@ -240,8 +237,9 @@ const terminalUrlOverride =
 /** Keys persisted to localStorage under "garden-settings". Everything else is
  * session state (overlays, panel stack, content index) and must NOT persist. */
 const PERSISTED_KEYS = [
-  "theme", "accentBase", "readerMeasureCh", "readerScale", "sideChatWidth",
+  "theme", "accentBase", "readerMeasureCh", "readerScale", "dockWidth", "promptHistory",
   "chessBot", "chatDensity", "chatFontScale", "chatTerminal", "bgOpacity",
+  "bgMode", "bgStyle",
 ] as const
 
 /** Reader typography steps (ThemePanel steppers, QuickControls, `[ ] - =` keys). */
@@ -315,34 +313,29 @@ export const useStore = create<GardenStore>()(
       cycleReaderScale: (dir) =>
         set((s) => ({ readerScale: stepReader(READER_SCALE_STEPS, s.readerScale, dir) })),
 
-      // Search
-      isCheatSheetOpen: false,
-      toggleCheatSheet: () => set((s) => ({ isCheatSheetOpen: !s.isCheatSheetOpen })),
-      setCheatSheet: (isCheatSheetOpen) => set({ isCheatSheetOpen }),
-
-      isCommandPaletteOpen: false,
-      toggleCommandPalette: () => set((s) => ({ isCommandPaletteOpen: !s.isCommandPaletteOpen })),
-      setCommandPalette: (isCommandPaletteOpen) => set({ isCommandPaletteOpen }),
-
-      isTerminalOpen: false,
-      toggleTerminal: () => set((s) => ({ isTerminalOpen: !s.isTerminalOpen })),
-      setTerminal: (isTerminalOpen) => set({ isTerminalOpen }),
-
-      isSearchOpen: false,
-      setSearchOpen: (isSearchOpen) => set({ isSearchOpen }),
-      toggleSearch: () => set((s) => ({ isSearchOpen: !s.isSearchOpen })),
+      dock: null,
+      dockRequest: null,
+      openDock: (tab, request) =>
+        set((s) => ({
+          dock: tab,
+          dockRequest: request ? { ...request, id: (s.dockRequest?.id ?? 0) + 1 } : s.dockRequest,
+        })),
+      closeDock: () => set({ dock: null }),
+      toggleDock: (tab) => set((s) => ({ dock: s.dock === tab ? null : tab })),
+      dockWidth: legacy("sidechat-width", (v) => Math.max(380, parseInt(v, 10) || 380), 380),
+      setDockWidth: (dockWidth) => set({ dockWidth }),
+      promptHistory: [],
+      pushPromptHistory: (line) =>
+        set((s) => {
+          const prev = s.promptHistory
+          if (prev[prev.length - 1] === line) return {}
+          return { promptHistory: [...prev, line].slice(-PROMPT_HISTORY_MAX) }
+        }),
 
       // Graph Overlay
       isGraphOpen: false,
       setGraphOpen: (isGraphOpen) => set({ isGraphOpen }),
       toggleGraph: () => set((s) => ({ isGraphOpen: !s.isGraphOpen })),
-
-      // Side Chat
-      isSideChatOpen: false,
-      toggleSideChat: () => set((s) => ({ isSideChatOpen: !s.isSideChatOpen })),
-      setSideChatOpen: (isSideChatOpen) => set({ isSideChatOpen }),
-      sideChatWidth: legacy("sidechat-width", (v) => parseInt(v, 10) || 340, 340),
-      setSideChatWidth: (sideChatWidth) => set({ sideChatWidth }),
 
       // Music
       isMusicOpen: false,
@@ -431,12 +424,19 @@ export const useStore = create<GardenStore>()(
     {
       name: "garden-settings",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) =>
-        Object.fromEntries(PERSISTED_KEYS.map((k) => [k, s[k]])) as Pick<GardenStore, typeof PERSISTED_KEYS[number]>,
+      partialize: (s) => {
+        const out = Object.fromEntries(PERSISTED_KEYS.map((k) => [k, s[k]])) as Pick<GardenStore, typeof PERSISTED_KEYS[number]>
+        // Remember the background you chose, never one a page switched to
+        // (the chess/hexo boards, or SIGIL's chamber).
+        out.bgMode = (BG_MODES as readonly string[]).includes(s.lastBgMode) ? s.lastBgMode : "murmuration"
+        return out
+      },
       merge: (persisted, current) => {
         const merged = { ...current, ...(persisted as Partial<GardenStore>) }
         // URL override beats the persisted terminal preference for this session
         if (terminalUrlOverride) merged.chatTerminal = true
+        if (!(BG_MODES as readonly string[]).includes(merged.bgMode)) merged.bgMode = "murmuration"
+        merged.lastBgMode = merged.bgMode
         return merged
       },
       onRehydrateStorage: () => (state) => {

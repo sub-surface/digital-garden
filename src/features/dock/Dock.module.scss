@@ -1,0 +1,168 @@
+// The dock: fixed to the right edge, pushing the page over via --dock-width
+// (set by Dock.tsx, read by the shells and QuickControls).
+
+.dock {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 250;
+  display: flex;
+  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-left: 1px solid var(--color-border);
+  animation: dockIn 0.16s ease;
+
+  &[hidden] { display: none; }
+
+  &[data-resizing] { user-select: none; cursor: col-resize; }
+
+  @media (max-width: $bp-phone) {
+    left: 0;
+    width: 100vw;
+    border-left: 0;
+    background: color-mix(in srgb, var(--color-bg) 94%, transparent);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 1300; // over the CornerMenu (1200)
+  }
+}
+
+.resizeHandle {
+  flex: none;
+  width: 5px;
+  margin-left: -3px;
+  cursor: col-resize;
+  touch-action: none;
+  transition: background 0.15s;
+
+  &:hover,
+  .dock[data-resizing] & {
+    background: color-mix(in srgb, var(--color-accent-base) 50%, transparent);
+  }
+}
+
+.column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 2.6rem;
+  padding: 0 8px 0 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+}
+
+.tab {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  padding: 4px 8px;
+  color: inherit;
+  font: inherit;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  opacity: 0.7;
+
+  &:hover { opacity: 1; }
+
+  &[aria-selected="true"] {
+    opacity: 1;
+    color: var(--color-text);
+    border-bottom-color: var(--color-accent-base);
+  }
+}
+
+.keyHint {
+  opacity: 0.45;
+  font-size: 0.9em;
+
+  @media (max-width: $bp-phone) { display: none; }
+}
+
+.close {
+  background: none;
+  border: 0;
+  min-width: 28px;
+  min-height: 28px;
+  color: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0.6;
+
+  &:hover { opacity: 1; color: var(--color-accent-base); }
+}
+
+.pane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+
+  &[hidden] { display: none; }
+
+  > * { flex: 1; min-height: 0; }
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: chat;
+}
+
+.centered {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+}
+
+.loginBtn {
+  width: 100%;
+  max-width: 200px;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  font-family: var(--font-code);
+  font-size: 0.7rem;
+  padding: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: var(--color-accent-base);
+    color: var(--color-accent-base);
+  }
+}
+
+@keyframes dockIn {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock { animation: none; }
+}

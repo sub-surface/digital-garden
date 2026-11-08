@@ -44,11 +44,12 @@ Dev dashboard: `/__dev` (dev mode only).
 | `content/Wiki/` | Wiki section content | Yes |
 | `content/Media/` | Images, audio | Yes |
 | `public/notes/`, `public/prerender/` | **Auto-generated** rendered notes | **NO** |
-| `src/components/layout/` | AppShell, WikiShell, TerminalTitle, CornerMenu, ThemePanel, QuickControls, BgCanvas | Yes |
+| `src/components/layout/` | AppShell, WikiShell, TerminalTitle, CornerMenu, ThemePanel (Settings), QuickControls, BgCanvas | Yes |
+| `src/features/dock/` | The dock: one right-hand panel for the prompt and philchat (replaced search, command palette, cheat sheet, the Ctrl+P window and SideChat) | Yes |
 | `src/components/ui/` | Page + feature components, grouped: `chat/ wiki/ reader/ games/ shelves/ graph/ music/ overlays/ composer/` + small shared bits flat | Yes |
 | `src/components/panel/` | PanelStack, PanelCard, usePanelClick | Yes |
 | `src/features/boot/` | Reusable terminal/POST generators, playback, seed, rng, markdown and chatbot helpers (the old BootPage is retired) | Yes |
-| `src/features/terminal/` | Shared terminal for `/terminal`, Ctrl/Cmd+P, OS Prompt and DOS mode | Yes |
+| `src/features/terminal/` | Shared terminal for `/terminal`, the dock prompt, OS Prompt and DOS mode. `commands.ts` is the one command registry; `siteCommands.ts` holds the page-acting ones (`only: ["dock", ...]`) | Yes |
 | `src/features/os/` | SUBSURFACES 95 shell, window/store primitives, metadata-only lazy app registry and program implementations | Yes |
 | `src/components/mdx/` | MDXProvider + registered components | Yes |
 | `src/lib/` | Remark/rehype plugins | Yes |
@@ -111,7 +112,7 @@ Dev dashboard: `/__dev` (dev mode only).
 
 **Background modes** (`BgCanvas.tsx`): `murmuration` (default), `graph`, `vectors`, `dots`, `terminal`, `chamber`, `schematic`, `isometric`, `orrery`, `plate-scan`, `dendrite`, `lorenz`, `cartography` — all user-selectable, ordered by `BG_MODES` in the store — plus page-scoped `chess`/`hexo`. Game pages auto-switch their themed bg via the slug map in `BgCanvasInner` (`sigil`/`collider` → `chamber`); `chamber` is also user-selectable, so its auto-switch bypasses `setBgMode` (preserving `lastBgMode`) and reverts only when it was page-triggered (`autoChamberRef`). Background drawing functions are modularized in `src/lib/backgrounds/` with DPR clamped to max 1.25 and frame pacing throttled to a 144 FPS monitor cap. SIGIL board generation lives in `src/lib/sigil.ts` (pure, tested by `scripts/test-sigil.ts`).
 
-**Every ambient mode is config-driven** via `config.backgrounds.<mode>` (`src/config/site-defaults.ts`) — each `drawX(ctx, state, config)` reads its own block. The `\` **ThemePanel** dev tab is schema-driven: `BG_CONTROLS` in `ThemePanel.tsx` maps each mode → its sliders, and the dev tab contextually edits whatever mode is live. **Adding a mode = draw fn + one `config.backgrounds` block + one `BG_CONTROLS` entry + `BG_MODES`/`BgMode`/`BG_META` in the store.** That checklist is **type-enforced**, not just documented (ROADMAP §28.12): `BackgroundsConfig` in `src/types/backgrounds.ts` is a mapped type over `Exclude<BgMode, "chess" | "hexo">` and `site-defaults.ts` `satisfies` it, so a mode without its config block fails `tsc` by name. `BgCanvas` state/config are fully typed (`BgState`, no `any`). Mode **labels** live once, in `BG_META` beside `BG_MODES` in the store — `BgModeToggle` and `ThemePanel` both read it, so don't reintroduce a label `switch`. Global **`bgOpacity`** (persisted store key, System-tab "Intensity") is folded into `readerTarget`, so every mode honours it for free via the existing `* readerAlpha` sites.
+**Every ambient mode is config-driven** via `config.backgrounds.<mode>` (`src/config/site-defaults.ts`) — each `drawX(ctx, state, config)` reads its own block. The `\` **Settings** panel (`ThemePanel.tsx`) tunes backgrounds from a schema: `BG_CONTROLS` in `src/components/layout/bgControls.ts` maps each mode → its sliders, and the "Tune" disclosure edits whatever mode is live. **Adding a mode = draw fn + one `config.backgrounds` block + one `BG_CONTROLS` entry + `BG_MODES`/`BgMode`/`BG_META` in the store.** That checklist is **type-enforced**, not just documented (ROADMAP §28.12): `BackgroundsConfig` in `src/types/backgrounds.ts` is a mapped type over `Exclude<BgMode, "chess" | "hexo">` and `site-defaults.ts` `satisfies` it, so a mode without its config block fails `tsc` by name. `BgCanvas` state/config are fully typed (`BgState`, no `any`). Mode **labels** live once, in `BG_META` beside `BG_MODES` in the store — `ThemePanel` and the prompt's `bg` command both read it, so don't reintroduce a label `switch`. Global **`bgOpacity`** (persisted store key, Settings "Intensity") is folded into `readerTarget`, so every mode honours it for free via the existing `* readerAlpha` sites.
 
 ---
 
@@ -138,7 +139,7 @@ Dev dashboard: `/__dev` (dev mode only).
 | Shell | Activates when | Has | Doesn't have |
 |---|---|---|---|
 | AppShell | `subsurfaces.net` | Everything: BgCanvas, music, panels, graph, QuickControls | — |
-| WikiShell | `wiki.subsurfaces.net` or `VITE_WIKI_MODE=true` | MDXProvider, ThemePanel, SearchOverlay, LinkPreview, breadcrumb | Music, panels, graph |
+| WikiShell | `wiki.subsurfaces.net` or `VITE_WIKI_MODE=true` | ThemePanel, WikiSearchBox, LinkPreview, breadcrumb, dock (prompt + philchat) | Music, panels, graph |
 | ChatShell | `chat.subsurfaces.net` or `VITE_CHAT_MODE=true` | BgCanvas, ThemePanel, QuickControls (chat variant), ChatPage | Music, panels, graph, search |
 | OSShell | `os.subsurfaces.net` or `VITE_OS_MODE=true` | Finite POST/logon, windowed personal-machine desktop, shared terminal/programs | Main-site panel stack/navigation |
 
@@ -202,6 +203,7 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 22. **Math is statically rendered with KaTeX.** Use `$...$` for inline math and `$$...$$` for display math. `remark-math` and `rehype-katex` are wired into both the MDX build and the standalone runtime renderer; the wiki editor lazy-loads the same pair for preview. `src/styles/math.scss` compiles KaTeX's base styles with WOFF2 fonts only and then applies the site's layout rules. KaTeX supports mathematical LaTeX, not arbitrary document commands; malformed or unsupported expressions emit a build message and remain as a visible red error fallback instead of disappearing. Escape a literal currency sign as `\$` when another dollar sign appears later in the same paragraph, so the pair cannot be read as inline math. `scripts/test-math.ts` guards inline, display, accessible MathML, visible errors, and unmatched-currency behavior.
 23. **Client authentication has one owner.** `AuthProvider` wraps all shells in `main.tsx`; `useAuth()` only consumes that context. Never create another Supabase auth listener in a component or mount a second provider inside a shell. This keeps session/profile bootstrap singular across garden, wiki, chat, terminal and OS windows.
 24. **OS desktop chrome may import `appRegistry.tsx`, not `apps.tsx`.** The registry is metadata plus `lazy()` loaders; `apps.tsx` is the large built-in implementation chunk, and heavyweight terminal/wiki/chat/Solitaire surfaces have their own nested boundaries. Keep app code behind that line, wrap every window in `ProgramBoundary`, and add behavior coverage to `osInteractions.test.tsx`.
+25. **Every bar/menu action is also a prompt command.** QuickControls, the mobile CornerMenu and Settings are shortcuts onto the registry in `src/features/terminal/commands.ts` (+ `siteCommands.ts`), which the dock's prompt completes with Tab. Add a new user-facing action as a command first; `scripts/test-terminal.ts` checks registry/help/completion parity and that site commands never reach the OS.
 
 ---
 
@@ -244,7 +246,7 @@ SCSS files: `tokens.scss` → `base.scss` → `global.scss` (imports all others)
 
 ## Zustand Store (single flat store)
 
-Key slices: `theme`, `accentBase`, `bgMode`, `panelStack`, `activeGraphSlug`, `activeLayout`, `contentIndex`, `sessionOverrides`, overlay toggles (`isSearchOpen`, `isGraphOpen`, `isThemePanelOpen`, `isMusicOpen`).
+Key slices: `theme`, `accentBase`, `bgMode`, `panelStack`, `activeGraphSlug`, `activeLayout`, `contentIndex`, `sessionOverrides`, overlay toggles (`dock` = `"prompt" | "chat" | null`, `isGraphOpen`, `isThemePanelOpen`, `isMusicOpen`). The dock pushes the page over via the `--dock-width` CSS variable (set by `Dock.tsx`, read by the shells, QuickControls and Settings).
 
 ---
 

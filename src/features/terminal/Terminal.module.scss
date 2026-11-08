@@ -26,11 +26,99 @@
     line-height: 1.42;
   }
 
-  &[data-surface="overlay"] {
-    padding: 7px 10px 9px;
-    font-size: 12px;
-    line-height: 1.45;
+  // The dock: the site's own surface, not a DOS box. Theme colours, so it
+  // reads as part of the page in light mode too.
+  &[data-surface="dock"] {
+    background: transparent;
+    color: var(--color-text);
+    font-size: 12.5px;
+    line-height: 1.5;
+    cursor: auto;
+
+    .feed { padding: 10px 14px 6px; }
+    .line {
+      [data-syntax="command"] { color: var(--color-accent-base); }
+      [data-syntax="path"] { color: var(--color-text-muted); }
+      &[data-tone="muted"] { color: var(--color-text-muted); }
+    }
   }
+}
+
+.dockPrompt {
+  flex: none;
+  border-top: 1px solid var(--color-border);
+  padding: 8px 14px 10px;
+  background: color-mix(in srgb, var(--color-bg) 55%, transparent);
+
+  .inputRow {
+    align-items: center;
+    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg);
+    transition: border-color 0.15s ease;
+
+    &:focus-within { border-color: color-mix(in srgb, var(--color-accent-base) 60%, var(--color-border)); }
+  }
+
+  .input::placeholder { color: var(--color-text-muted); opacity: 0.7; }
+}
+
+.suggestions {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  max-height: 44vh;
+  overflow-y: auto;
+}
+
+.suggestion {
+  display: grid;
+  grid-template-columns: 2.6em auto 1fr;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &[aria-selected="true"] {
+    background: color-mix(in srgb, var(--color-accent-base) 14%, transparent);
+    .suggestionLabel { color: var(--color-accent-base); }
+  }
+}
+
+.suggestionKind {
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
+.suggestionLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 22ch;
+
+  .suggestion[data-kind="note"] & {
+    font-family: var(--font-body);
+    max-width: 30ch;
+  }
+}
+
+.suggestionDetail {
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dockHint {
+  margin-top: 6px;
+  color: var(--color-text-muted);
+  font-size: 10.5px;
+  opacity: 0.7;
 }
 
 .header {

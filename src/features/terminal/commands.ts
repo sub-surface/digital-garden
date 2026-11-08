@@ -14,7 +14,9 @@
  */
 
 import type { TerminalCommand, TerminalContext, TerminalNote } from "./types"
+import type { Surface } from "./types"
 import { normalizeSlug } from "@/lib/slug"
+import { SITE_COMMANDS } from "./siteCommands"
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -108,10 +110,10 @@ const system: TerminalCommand[] = [
     aliases: ["?", "man"],
     group: "system",
     help: { usage: "help [command]", description: "List commands, or explain one" },
-    complete: (_ctx, value) => matchesPrefix(COMMAND_NAMES, value),
+    complete: (ctx, value) => matchesPrefix(commandNames(ctx.surface), value),
     run: (ctx, args) => {
       if (args[0]) {
-        const cmd = lookup(args[0])
+        const cmd = lookup(args[0], ctx.surface)
         if (!cmd) return ctx.print(`help: no such command '${args[0]}'`, "error")
         ctx.print(`  ${cmd.help.usage}`, "accent")
         ctx.print(`  ${cmd.help.description}`)
@@ -121,6 +123,7 @@ const system: TerminalCommand[] = [
 
       const groups: [string, string][] = [
         ["system", "session"],
+        ["site", "this page"],
         ["content", "the garden"],
         ["music", "music"],
         ["people", "people"],
@@ -129,7 +132,7 @@ const system: TerminalCommand[] = [
       ]
 
       for (const [group, label] of groups) {
-        const names = COMMANDS.filter((c) => c.group === group).map((c) => c.name)
+        const names = commandsFor(ctx.surface).filter((c) => c.group === group).map((c) => c.name)
         if (!names.length) continue
         ctx.print("")
         ctx.print(`  ${label}`, "accent")
@@ -250,7 +253,7 @@ const system: TerminalCommand[] = [
     run: (ctx) => {
       const notes = ctx.notes()
       ctx.printLines([
-        `  surface   ${ctx.surface === "window" ? "windowed (SUBSURFACES 95)" : ctx.surface === "overlay" ? "garden overlay" : "fullscreen"}`,
+        `  surface   ${ctx.surface === "window" ? "windowed (SUBSURFACES 95)" : ctx.surface === "dock" ? "the dock" : "fullscreen"}`,
         `  notes     ${notes.length} indexed`,
         `  identity  ${ctx.user()?.username ?? "guest"}`,
         `  seed      ${ctx.seed.display}`,
@@ -824,6 +827,7 @@ const people2: TerminalCommand[] = [
 
 export const COMMANDS: readonly TerminalCommand[] = [
   ...system,
+  ...SITE_COMMANDS,
   ...content,
   ...music,
   ...people,
@@ -834,13 +838,31 @@ export const COMMANDS: readonly TerminalCommand[] = [
 
 const BY_NAME = new Map<string, TerminalCommand>()
 for (const cmd of COMMANDS) {
-  BY_NAME.set(cmd.name, cmd)
-  for (const alias of cmd.aliases ?? []) BY_NAME.set(alias, cmd)
+  for (const key of [cmd.name, ...(cmd.aliases ?? [])]) {
+    if (BY_NAME.has(key)) throw new Error(`terminal: duplicate command name '${key}'`)
+    BY_NAME.set(key, cmd)
+  }
 }
 
-export function lookup(name: string): TerminalCommand | undefined {
-  return BY_NAME.get(name.toLowerCase())
+const available = (cmd: TerminalCommand, surface?: Surface) => !surface || !cmd.only || cmd.only.includes(surface)
+
+/** The command a name or alias refers to, if it exists on `surface`. */
+export function lookup(name: string, surface?: Surface): TerminalCommand | undefined {
+  const cmd = BY_NAME.get(name.toLowerCase())
+  return cmd && available(cmd, surface) ? cmd : undefined
 }
 
-/** Every name and alias, for tab completion. */
-export const COMMAND_NAMES: readonly string[] = Array.from(BY_NAME.keys()).sort()
+export function commandsFor(surface?: Surface): TerminalCommand[] {
+  return COMMANDS.filter((cmd) => available(cmd, surface))
+}
+
+/** Every name and alias on `surface`, sorted, for tab completion. */
+export function commandNames(surface?: Surface): string[] {
+  return Array.from(BY_NAME.entries())
+    .filter(([, cmd]) => available(cmd, surface))
+    .map(([name]) => name)
+    .sort()
+}
+
+/** Every name and alias on any surface. */
+export const COMMAND_NAMES: readonly string[] = commandNames()

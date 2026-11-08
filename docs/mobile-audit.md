@@ -6,7 +6,7 @@ inferred rendering. This is the brief for phase 9 of
 
 ## P1 — broken / unusable
 
-1. **Theme and Reader do nothing on phones.** `ThemePanel.module.scss:16`
+1. **(Fixed 2026-11-08: Settings is a bottom sheet on phones; CornerMenu "Reader" toggles reader mode.)** **Theme and Reader do nothing on phones.** `ThemePanel.module.scss:16`
    hides `.floatingPanel` at ≤`$bp-phone`, but CornerMenu's "Reader" and
    "Theme" (`CornerMenu.tsx:44-57`) both just `toggleThemePanel()`, so they
    open an invisible panel and leave a live focus trap. → A phone bottom-sheet
