@@ -9,6 +9,8 @@ export interface NoteData {
   slug: string
   frontmatter: Record<string, unknown>
   html: string
+  /** h2–h4 with ids, extracted at build time (for the TOC). */
+  headings?: { id: string; text: string; level: number }[]
 }
 
 export class NoteMissingError extends Error {}

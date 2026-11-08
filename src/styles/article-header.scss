@@ -23,6 +23,9 @@
   font-family: var(--font-code);
   font-size: 0.75rem;
   opacity: 0.45;
+  // Reserve the tool buttons' height: they are lazy-loaded, and arriving
+  // ~1s after first paint they used to push the whole article down.
+  min-height: 1.85em;
 }
 
 .note-header__tools {

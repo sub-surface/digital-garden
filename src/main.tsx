@@ -18,9 +18,16 @@ if (typeof document !== "undefined") {
   if (prerenderEl) {
     const slug = prerenderEl.getAttribute("data-prerender-slug")
     const bodyEl = prerenderEl.querySelector(".prerendered-body")
+    let seed = null
+    try {
+      seed = JSON.parse(prerenderEl.querySelector("#prerender-seed")?.textContent || "null")
+    } catch {
+      // A malformed seed only costs the seamless hand-off, not the page.
+    }
     ;(window as any).__PRERENDER_CACHE__ = {
       slug,
       bodyHtml: bodyEl ? bodyEl.innerHTML : "",
+      seed,
     }
   }
 }

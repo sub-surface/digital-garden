@@ -5,7 +5,8 @@ import { NoteLayout } from "./NoteLayout"
 import { NoteFooter } from "./NoteFooter"
 import { NoteBody } from "./NoteBody"
 import { WikiInfobox } from "../wiki/WikiInfobox"
-import { Epigraph } from "@/components/mdx/Epigraph"
+import { NoteHeader, resolveArticleKind } from "./NoteHeader"
+import type { PrerenderSeed } from "./StaticArticle"
 import { resolveSlug } from "@/lib/content-loader"
 import { normalizeSlug } from "@/lib/slug"
 import { useIsWiki } from "@/hooks/useShell"
@@ -23,10 +24,14 @@ const CopyWikilinkButton = lazy(() => import("../CopyWikilinkButton").then((m) =
 
 /** Top-level collection folders whose breadcrumb crumb routes to a shelf page
  * instead of a (non-existent) /Folder page. Keyed lowercase. */
-const CRUMB_ALIASES: Record<string, string> = {
-  movies: "/movieshelf",
-  books: "/bookshelf",
-  music: "/music-library",
+/** The edge-injected seed, if it belongs to this slug (first page view only). */
+function usePrerenderSeed(slug: string): PrerenderSeed | null {
+  const [seed] = useState<PrerenderSeed | null>(() => {
+    const cache = typeof window !== "undefined" ? (window as any).__PRERENDER_CACHE__ : null
+    const candidate = cache?.seed as PrerenderSeed | null | undefined
+    return candidate && candidate.slug.toLowerCase() === slug.toLowerCase() ? candidate : null
+  })
+  return seed && seed.slug.toLowerCase() === slug.toLowerCase() ? seed : null
 }
 
 function resolveLayout(
@@ -43,36 +48,52 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
     [rawSlug]
   )
   
-  const [data, setData] = useState<{
+  // The Worker's first paint carries a seed (frontmatter, header, headings)
+  // for the page it rendered. Starting from it means the app's first render
+  // matches the static page exactly, instead of a bare header that fills in
+  // once the content index and note JSON arrive.
+  const seed = usePrerenderSeed(slug)
+
+  // State is tagged with the slug it belongs to and reset DURING render on
+  // navigation. The old reset-in-an-effect ran after the first paint, which
+  // would have wiped the seed one frame late (and showed stale data a frame).
+  type NoteData = {
+    forSlug: string
     frontmatter: Record<string, any>
     headings: { id: string; text: string; level: number }[]
-  }>({ frontmatter: {}, headings: [] })
-
-  // Reset frontmatter when slug changes so stale type/infobox don't persist
-  useEffect(() => {
-    setData({ frontmatter: {}, headings: [] })
-  }, [slug])
+  }
+  const [stored, setData] = useState<NoteData>(() => ({
+    forSlug: slug,
+    frontmatter: seed?.frontmatter ?? {},
+    headings: seed?.headings ?? [],
+  }))
+  const data: NoteData = stored.forSlug === slug ? stored : { forSlug: slug, frontmatter: {}, headings: [] }
 
   const contentIndex = useStore((s) => s.contentIndex)
   const sessionOverrides = useStore((s) => s.sessionOverrides)
 
   const handleLoad = useCallback((loaded: any) => {
-    setData(prev => ({
-      frontmatter: { ...prev.frontmatter, ...loaded.frontmatter },
-      headings: (loaded.headings && loaded.headings.length > 0) ? loaded.headings : prev.headings
-    }))
-  }, [])
+    setData((prev) => {
+      const base = prev.forSlug === slug ? prev : { forSlug: slug, frontmatter: {}, headings: [] }
+      return {
+        forSlug: slug,
+        frontmatter: { ...base.frontmatter, ...loaded.frontmatter },
+        headings: (loaded.headings && loaded.headings.length > 0) ? loaded.headings : base.headings,
+      }
+    })
+  }, [slug])
 
   const resolvedKey = contentIndex ? (resolveSlug(slug, contentIndex) ?? slug) : slug
   const meta = contentIndex?.[resolvedKey]
   const override = sessionOverrides[resolvedKey] || sessionOverrides[slug] || {}
   const fm = { ...data.frontmatter, ...override }
   
-  const title = (fm.title as string) ?? meta?.title ?? resolvedKey.split("/").pop()
-  const growth = (fm.growth as string) ?? meta?.growth
-  const date = (fm.date as string) ?? meta?.date
-  const tags = meta?.tags ?? []
-  const readingTime = meta?.readingTime
+  const seeded = seed?.header
+  const title = (fm.title as string) ?? meta?.title ?? seeded?.title ?? resolvedKey.split("/").pop()
+  const growth = (fm.growth as string) ?? meta?.growth ?? seeded?.growth
+  const date = (fm.date as string) ?? meta?.date ?? seeded?.date
+  const tags = meta?.tags ?? seeded?.tags ?? []
+  const readingTime = meta?.readingTime ?? seeded?.readingTime
   const layout = resolveLayout(fm, meta, resolvedKey)
   const type = (fm.type as string) ?? meta?.type
   const isWiki = useIsWiki()
@@ -113,61 +134,25 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
     <WikiInfobox type={type} data={{ ...fm, title }} slug={resolvedKey} />
   ) : null
 
-  // Breadcrumb: derive from slug parts
-  const breadcrumbParts = resolvedKey.includes("/")
-    ? resolvedKey.split("/").slice(0, -1)
-    : []
-
   const header = (
-    <>
-      <div className="note-header">
-        {layout === "article" && (
-          <div className="note-header__bar">
-            <div className="note-header__tools">
-              <Suspense fallback={null}>
-                {editableWikiSlugs && <WikiEditButton slug={resolvedKey} />}
-                <CopyWikilinkButton slug={resolvedKey} title={title} />
-                <BookmarkButton slug={resolvedKey} title={title} />
-              </Suspense>
-            </div>
-            <div className="note-header__crumbs">
-              {breadcrumbParts.map((part, i) => {
-                // Top-level collection folders have dedicated shelf pages; route
-                // their crumb there instead of /Movies (which has no page).
-                const href =
-                  i === 0 && CRUMB_ALIASES[part.toLowerCase()]
-                    ? CRUMB_ALIASES[part.toLowerCase()]
-                    : "/" + breadcrumbParts.slice(0, i + 1).join("/")
-                return (
-                  <span key={i}>
-                    {i > 0 && <span className="sep">/</span>}
-                    <a href={href}>{part.replace(/-/g, " ")}</a>
-                  </span>
-                )
-              })}
-            </div>
-          </div>
-        )}
-        {growth && (
-          <span className={`growth-badge growth-${growth}`}>{growth}</span>
-        )}
-        <h1 className="note-header__title">{title}</h1>
-        {(date || readingTime) && (
-          <div className="note-date note-header__meta">
-            {date && <span>{new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>}
-            {readingTime && <span>{readingTime} min read</span>}
-          </div>
-        )}
-        {tags.length > 0 && (
-          <div className="tag-list note-header__tags">
-            {tags.map((tag) => (
-              <a key={tag} href={`/tags/${tag}`} className="tag-pill">#{tag}</a>
-            ))}
-          </div>
-        )}
-      </div>
-      {quote && <Epigraph cite={quoteAuthor}>{quote}</Epigraph>}
-    </>
+    <NoteHeader
+      slug={resolvedKey}
+      layout={layout}
+      title={title ?? ""}
+      growth={growth}
+      date={date}
+      readingTime={readingTime}
+      tags={tags}
+      quote={quote}
+      quoteAuthor={quoteAuthor}
+      tools={
+        <Suspense fallback={null}>
+          {editableWikiSlugs && <WikiEditButton slug={resolvedKey} />}
+          <CopyWikilinkButton slug={resolvedKey} title={title} />
+          <BookmarkButton slug={resolvedKey} title={title} />
+        </Suspense>
+      }
+    />
   )
 
   // Game layout: bare, wide, centered — no header chrome, TOC, infobox or
@@ -185,13 +170,7 @@ export function NoteRenderer({ slug: rawSlug }: Props) {
   // duplicating layout. Frontmatter-first (mirrors resolveLayout): an explicit
   // `kind: essay|wiki` wins; otherwise default from slug/type (wiki/ slugs and
   // person infoboxes read as reference, everything else as essay).
-  const fmKind = ((fm as Record<string, any>).kind as string | undefined)?.toLowerCase()
-  const articleKind =
-    fmKind === "essay" || fmKind === "wiki"
-      ? fmKind
-      : slug.toLowerCase().startsWith("wiki/") || type === "chatter" || type === "philosopher"
-        ? "wiki"
-        : "essay"
+  const articleKind = resolveArticleKind(fm as Record<string, unknown>, slug, type)
 
   const isWikiIndex = resolvedKey.toLowerCase() === "wiki" || resolvedKey.toLowerCase() === "wiki/index"
 

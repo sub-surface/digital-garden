@@ -1,0 +1,43 @@
+@use "./breakpoints" as *;
+
+// The Worker's first paint (#prerender-root, from scripts/emit-prerender.ts)
+// is placed exactly where AppShell's main pane will be, so when React mounts
+// and replaces it, nothing moves. This MIRRORS AppShell.module.scss
+// (.workspace / .mainPane / .mainContent and the article/game full-width
+// rule): change one, change the other.
+
+#prerender-root {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+#prerender-root .prerender-pane {
+  width: var(--main-width);
+  min-width: var(--main-width);
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+}
+
+#prerender-root[data-layout="article"] .prerender-pane,
+#prerender-root[data-layout="game"] .prerender-pane {
+  width: 100%;
+  min-width: 100vw;
+  border-right: none;
+}
+
+#prerender-root .prerender-content {
+  padding: 2rem 3rem;
+}
+
+@media (max-width: $bp-phone) {
+  #prerender-root .prerender-pane {
+    width: 100%;
+    min-width: 100%;
+  }
+  #prerender-root .prerender-content {
+    padding: 1.5rem;
+  }
+}

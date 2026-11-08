@@ -12,6 +12,7 @@
 @use "./wiki-form";
 @use "./wiki-edit";
 @use "./math";
+@use "./prerender";
 
 @media print {
   // Hide all shell chrome

@@ -111,7 +111,9 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
       .then((note) => {
         if (cancelled) return
         setStatus({ kind: "ready", html: note.html, frontmatter: note.frontmatter })
-        onLoad?.({ frontmatter: note.frontmatter })
+        // Headings are computed at build time, so the TOC needn't wait for
+        // the body to mount and be scanned.
+        onLoad?.({ frontmatter: note.frontmatter, headings: note.headings })
       })
       .catch((err) => {
         if (cancelled) return

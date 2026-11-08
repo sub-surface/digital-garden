@@ -82,20 +82,23 @@ Simple thought without an epigraph.
 
   assert.match(essayHtml, /id="prerender-root"/, "Must contain #prerender-root container")
   assert.match(essayHtml, /data-prerender-slug="sample-essay"/, "Must carry data-prerender-slug attribute")
-  assert.match(essayHtml, /class="article-layout"/, "Must use article-layout for layout: article")
-  assert.match(essayHtml, /class="epigraph-quote">Space is not an empirical concept\.<\/blockquote>/, "Must render epigraph quote")
-  assert.match(essayHtml, /class="epigraph-author">— Immanuel Kant<\/cite>/, "Must render epigraph author")
-  assert.match(essayHtml, /<h1 class="article-title">The Nature of Space<\/h1>/, "Must render title in header")
+  assert.match(essayHtml, /<article class="article-layout"/, "Must use article-layout for layout: article")
+  assert.match(essayHtml, /class="epigraph__quote">Space is not an empirical concept\.<\/div>/, "Must render epigraph quote (the real <Epigraph>)")
+  assert.match(essayHtml, /class="epigraph__cite">Immanuel Kant<\/div>/, "Must render epigraph author once (no doubled dash)")
+  assert.match(essayHtml, /<h1 class="note-header__title">The Nature of Space<\/h1>/, "Must render title via NoteHeader")
+  assert.match(essayHtml, /<span>12 Sept 2026<\/span>/, "Dates are formatted exactly as the app does (UTC)")
+  assert.match(essayHtml, /<script type="application\/json" id="prerender-seed">\{"slug":"sample-essay"/, "Must carry the client seed")
+  assert.doesNotMatch(essayHtml.split("prerender-seed")[1].split("</script>")[0], /</, "Seed JSON must not contain a raw <")
   assert.match(essayHtml, /class="katex"/, "Inline math must be compiled to KaTeX")
-  assert.match(essayHtml, /class="tag">#philosophy<\/span>/, "Tags must be rendered")
+  assert.match(essayHtml, /class="tag-pill">#philosophy<\/a>/, "Tags must be rendered")
 
   // Verify note output
   const noteHtmlPath = path.join(PUBLIC_DIR, "prerender", prerenderFileName("simple-note"))
   assert.ok(fs.existsSync(noteHtmlPath), "Note HTML file must exist")
   const noteHtml = fs.readFileSync(noteHtmlPath, "utf-8")
 
-  assert.match(noteHtml, /class="note-layout"/, "Must use note-layout for default notes")
-  assert.match(noteHtml, /class="growth-badge">evergreen<\/span>/, "Must render growth badge")
+  assert.match(noteHtml, /<article class="note-layout"/, "Must use note-layout for default notes")
+  assert.match(noteHtml, /class="growth-badge growth-evergreen">evergreen<\/span>/, "Must render growth badge")
   assert.doesNotMatch(noteHtml, /class="epigraph"/, "Must not render epigraph when not present")
 
   // Verify manifest
