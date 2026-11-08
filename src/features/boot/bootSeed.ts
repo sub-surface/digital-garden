@@ -122,11 +122,15 @@ function writeCanonicalUrl(
   url.searchParams.set("seed", formatSeed(seed))
   const relativeUrl = `${url.pathname}${url.search}${url.hash}`
 
+  // Keep the router's own entry state (__TSR_key, __TSR_index). Writing `{}`
+  // erased it, which is what sent useScrollManager down the code path that
+  // froze the OS boot.
+  const state = window.history.state ?? {}
   try {
     if (historyMode === "push") {
-      window.history.pushState({}, "", relativeUrl)
+      window.history.pushState({ ...state, __TSR_key: undefined, key: undefined }, "", relativeUrl)
     } else {
-      window.history.replaceState({}, "", relativeUrl)
+      window.history.replaceState(state, "", relativeUrl)
     }
   } catch {
     // The page still works if history mutation is blocked.

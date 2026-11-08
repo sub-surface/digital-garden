@@ -3,9 +3,14 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import { useScrollManager } from "./useScrollManager"
 
 // Mock @tanstack/react-router's useLocation
+// Mirrors TanStack's real ParsedLocation: `search` is a parsed null-prototype
+// object, `searchStr` its string form. The old mock used `search: ""`, which
+// hid the "Cannot convert object to primitive value" freeze.
+const parsedSearch = () => Object.create(null) as Record<string, unknown>
 let mockLocation = {
   pathname: "/Wiki/Bibliography",
-  search: "",
+  search: parsedSearch(),
+  searchStr: "",
   hash: "",
 }
 
@@ -30,7 +35,8 @@ describe("useScrollManager", () => {
 
     mockLocation = {
       pathname: "/Wiki/Bibliography",
-      search: "",
+      search: parsedSearch(),
+      searchStr: "",
       hash: "",
     }
   })
@@ -39,6 +45,13 @@ describe("useScrollManager", () => {
     document.body.innerHTML = ""
     sessionStorage.clear()
     vi.restoreAllMocks()
+  })
+
+  it("survives a history entry with no router key (the OS boot freeze)", () => {
+    // What the OS boot's seed write used to do: wipe TanStack's entry state.
+    window.history.replaceState({}, "", "/?seed=ABC")
+    mockLocation = { pathname: "/", search: parsedSearch(), searchStr: "?seed=ABC", hash: "" }
+    expect(() => render(<TestComponent />)).not.toThrow()
   })
 
   it("scrolls immediately when target element is present in DOM", () => {
@@ -50,7 +63,8 @@ describe("useScrollManager", () => {
 
     mockLocation = {
       pathname: "/Wiki/Bibliography",
-      search: "",
+      search: parsedSearch(),
+      searchStr: "",
       hash: "#Haack-Evidence-1993",
     }
 
@@ -65,7 +79,8 @@ describe("useScrollManager", () => {
   it("observes DOM and scrolls when target element mounts asynchronously", async () => {
     mockLocation = {
       pathname: "/Wiki/Bibliography",
-      search: "",
+      search: parsedSearch(),
+      searchStr: "",
       hash: "#Haack-Evidence-1993",
     }
 
@@ -94,7 +109,8 @@ describe("useScrollManager", () => {
     window.history.replaceState({ __TSR_key: "page_a" }, "", "/Wiki/Concepts/Bad-Faith")
     mockLocation = {
       pathname: "/Wiki/Concepts/Bad-Faith",
-      search: "",
+      search: parsedSearch(),
+      searchStr: "",
       hash: "",
     }
 
@@ -125,7 +141,8 @@ describe("useScrollManager", () => {
     window.history.replaceState({ __TSR_key: "page_b" }, "", "/Wiki/Concepts/Other")
     mockLocation = {
       pathname: "/Wiki/Concepts/Other",
-      search: "",
+      search: parsedSearch(),
+      searchStr: "",
       hash: "",
     }
     rerender(<TestComponent />)
@@ -137,7 +154,8 @@ describe("useScrollManager", () => {
     window.history.replaceState({ __TSR_key: "page_a" }, "", "/Wiki/Concepts/Bad-Faith")
     mockLocation = {
       pathname: "/Wiki/Concepts/Bad-Faith",
-      search: "",
+      search: parsedSearch(),
+      searchStr: "",
       hash: "",
     }
     act(() => {

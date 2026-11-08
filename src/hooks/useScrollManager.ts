@@ -128,10 +128,15 @@ export function useScrollManager() {
       savePosition(prevKey, prevTop)
     }
 
-    // Unique key for the active history entry
+    // Unique key for the active history entry. `location.search` is TanStack's
+    // PARSED search (a null-prototype object): concatenating it threw "Cannot
+    // convert object to primitive value" whenever history.state lacked a router
+    // key, which the OS boot's seed write used to cause. The throw repeated
+    // inside React and froze os.subsurfaces.net with nothing visible in the
+    // console. searchStr is the string form.
     const historyKey =
       (typeof window !== "undefined" && (window.history.state?.__TSR_key || window.history.state?.key)) ||
-      location.pathname + location.search
+      location.pathname + location.searchStr
 
     currentKeyRef.current = historyKey
 
@@ -261,5 +266,5 @@ export function useScrollManager() {
     }
 
     return cleanup
-  }, [location.pathname, location.search, location.hash])
+  }, [location.pathname, location.searchStr, location.hash])
 }
