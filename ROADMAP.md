@@ -138,8 +138,7 @@ See [`docs/os.md`](docs/os.md).
 - [ ] Program-host hardening: browser-check every `SYSTEM_PAGES` entry at narrow/default/maximised sizes; replace page-level fixed-position assumptions.
 - [ ] Visual certification of the 2026-08-02 continuation (`npm run dev:os`): logon, widgets, Solitaire, program host, production audio.
 - [ ] Account filesystem sync (needs visible revision history and an explicit conflict model first).
-- [ ] FILAMENT: the descent (web → halo → nucleus/GEODESIC → holographic coda), light-cone timeline, observer's survey, merger trees, lensing, BAO — milestones M1–M10 in [`docs/filament.md`](docs/filament.md).
-- [ ] FILAMENT: Celestrium observational bridge: ingest Gaia DR3 stellar streams / CatWISE-DESI quasar dipole candidates from `../astro-theory` into the comoving simulation buffers with a diagnostic overlay against simulated LCDM.
+- [x] FILAMENT extracted into its own project (`../filament`, planned `filament.subsurfaces.net`) on 2026-11-08; its milestones (M1–M10, Celestrium bridge) now live in that repo's `docs/filament.md`. The garden keeps only a `/filament` "has moved" notice.
 - [ ] Paint: selection/move, layers, image import, animation, wallpaper handoff.
 - [ ] Petri: accessories, mini-games, desktop roaming. Owner wants it reworked as an alien with distinct interactions and animations (it already reacts to music).
 - [ ] More OS toys from the owner list: tiny explorable collect-items world, virtual garden that grows, virtual aquarium, alien pet that can be fed/played with/trained. (Visualiser, desktop theming, weather widget, wiki hub are done; the space-exploration game belongs in the arcade.)

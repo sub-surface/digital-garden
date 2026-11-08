@@ -1,0 +1,24 @@
+.moved {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--space-12) var(--space-4);
+  font-family: var(--font-code);
+  text-align: center;
+
+  h1 {
+    margin-bottom: var(--space-3);
+    font-size: 1.6rem;
+  }
+
+  p {
+    margin: 0 0 var(--space-3);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--color-text-muted);
+  }
+
+  a {
+    color: var(--color-accent);
+  }
+}

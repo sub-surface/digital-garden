@@ -94,22 +94,6 @@ const GAMES: GameCard[] = [
   { href: "persian-carpet", name: "Persian Carpet", blurb: "Born from a shower thought about asking Claude to weave cute rugs. Seed a loom, pick a dye lot, find the deliberate flaw.", live: true, section: "toys" },
   { href: "sigil", name: "SIGIL", blurb: "Inscribe the plate: route leader lines between instrument pairs without crossing. Solved boards read as drawn sigils. Daily plate included.", live: true, section: "games" },
   { href: "collider", name: "Collider", blurb: "Fire particle tracks through an invisible flow field to strike specimen targets. Aim is skill; the currents are the puzzle. A toy.", live: true, section: "games" },
-  {
-    href: "filament",
-    name: "FILAMENT",
-    blurb:
-      "One continuous zoom from the cosmic web to a black hole. A universe from recombination to now on a real ΛCDM clock, drawn from its folded dark-matter sheet; scroll into any halo and it is resimulated as a galaxy on the fast multipole method; keep going and its heart is a black hole on exact geodesics. Scrub cosmic time; time runs in the deepest layer you can see.",
-    live: true,
-    section: "featured",
-  },
-  {
-    href: "filament?level=nucleus",
-    name: "GEODESIC",
-    blurb:
-      "The bottom of FILAMENT's descent: a black hole, exactly. S-stars on their wide ellipses, and near the hole rosettes that precess, zoom-whirls, and plunges that freeze at the horizon, all on Schwarzschild geodesics; the shadow at 3√3 M and a gas ring blazing blue on its approaching side. Throw your own bodies in. To arrive here from the cosmic web, open FILAMENT and keep zooming.",
-    live: true,
-    section: "featured",
-  },
   { href: "apparatus", name: "Apparatus", blurb: "A seeded studio for generative dithered plates — compose whole plates, lock the good bits and re-roll the rest, then re-emulate through vintage output devices (Mac 1-bit, Game Boy, CGA, plotter…). Square by default; exports SVG/PNG.", live: true, section: "featured" },
 ]
 

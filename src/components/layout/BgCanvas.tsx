@@ -24,12 +24,6 @@ import {
   drawCartography,
 } from "@/lib/backgrounds"
 
-/**
- * Pages that draw their own full-bleed sky and must not have a second ambient
- * canvas showing through them.
- */
-const BG_SUPPRESSED = new Set(["filament"])
-
 /** Maximum refresh rate cap: preserves 144Hz fluidity while preventing runaway frame loops on 240Hz+ */
 const MAX_FPS = 144
 const MIN_FRAME_INTERVAL = 1000 / MAX_FPS // ~6.94ms
@@ -59,10 +53,8 @@ const MOUSE_ACTIVE_MS = 500
 const ALPHA_EPS = 0.0005
 
 export function BgCanvas() {
-  const activeSlug = useStore((s) => s.activeGraphSlug)
   // Skip entirely on mobile — canvas is CSS-hidden at the phone breakpoint.
   if (isPhoneViewport()) return null
-  if (BG_SUPPRESSED.has(activeSlug.toLowerCase())) return null
   return <BgCanvasInner />
 }
 

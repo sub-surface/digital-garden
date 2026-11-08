@@ -1261,7 +1261,7 @@
   background: var(--color-bg);
 }
 
-.programHost:is([data-program="filament"], [data-program="hex-life"], [data-program="graph"], [data-program="constellation"]) {
+.programHost:is([data-program="hex-life"], [data-program="graph"], [data-program="constellation"]) {
   overflow: hidden;
 }
 
@@ -1270,11 +1270,6 @@
   padding: clamp(16px, 4vw, 36px);
 
   > * { width: min(100%, 76rem); margin-inline: auto; }
-}
-
-.programHost[data-program="filament"] > * {
-  height: 100% !important;
-  min-height: 0 !important;
 }
 
 .widgets {
