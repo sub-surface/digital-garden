@@ -5,9 +5,8 @@ import { WikiAuthModal } from "./WikiAuthModal"
 import { useStore } from "@/store"
 import { resolveSlug } from "@/lib/content-loader"
 import { apiPost, apiErrorMessage } from "@/lib/api"
-import { loadTurnstile } from "@/lib/turnstile"
+import { useTurnstile } from "@/hooks/useTurnstile"
 
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
 
 interface Props {
   slug: string
@@ -36,7 +35,6 @@ export function WikiEditPage({ slug }: Props) {
   const [originalContent, setOriginalContent] = useState("")
   const [loadingContent, setLoadingContent] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [turnstileToken, setTurnstileToken] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<{ prUrl: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -69,25 +67,9 @@ export function WikiEditPage({ slug }: Props) {
     fetchContent()
   }, [slug, contentIndex])
 
-  useEffect(() => {
-    if (!session || role === "pending") return
-    let cancelled = false
-    loadTurnstile().then(() => {
-      if (cancelled) return
-      const el = document.getElementById("cf-turnstile-edit")
-      if (!el || el.childElementCount > 0) return
-      if (typeof window !== "undefined" && (window as any).turnstile && TURNSTILE_SITE_KEY) {
-        ;(window as any).turnstile.render("#cf-turnstile-edit", {
-          sitekey: TURNSTILE_SITE_KEY,
-          callback: (token: string) => setTurnstileToken(token),
-          "expired-callback": () => setTurnstileToken(""),
-        })
-      }
-    }).catch((err) => console.warn("Turnstile script failed to load:", err))
-    return () => {
-      cancelled = true
-    }
-  }, [session, role])
+
+  const turnstile = useTurnstile(Boolean(session && role !== "pending"))
+  const turnstileToken = turnstile.token
 
   const handleSubmit = async () => {
     if (!session || !turnstileToken || !editSummary.trim()) return
@@ -103,6 +85,7 @@ export function WikiEditPage({ slug }: Props) {
       if (data.prUrl) setResult({ prUrl: data.prUrl })
     } catch (e) {
       setError(apiErrorMessage(e, "Submission failed."))
+      turnstile.reset()
     } finally {
       setSubmitting(false)
     }
@@ -199,7 +182,7 @@ export function WikiEditPage({ slug }: Props) {
           </div>
 
           <div className="wiki-form-turnstile">
-            <div id="cf-turnstile-edit" />
+            <div ref={turnstile.containerRef} />
           </div>
 
           {error && <div className="wiki-form-error">&gt; {error}</div>}

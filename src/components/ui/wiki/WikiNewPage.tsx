@@ -3,9 +3,8 @@ import { useAuth } from "@/hooks/useAuth"
 import { WikiMarkdownEditor } from "../WikiMarkdownEditor"
 import { WikiAuthModal } from "./WikiAuthModal"
 import { apiPost, apiErrorMessage } from "@/lib/api"
-import { loadTurnstile } from "@/lib/turnstile"
+import { useTurnstile } from "@/hooks/useTurnstile"
 
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
 
 type ArticleType = "philosopher" | "concept" | "movement" | "misc" | "custom"
 
@@ -101,7 +100,6 @@ export function WikiNewPage() {
     typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("title") ?? "",
   )
   const [content, setContent] = useState("")
-  const [turnstileToken, setTurnstileToken] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<{ prUrl: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -122,26 +120,9 @@ export function WikiNewPage() {
     setStep(3)
   }
 
-  // Load Turnstile on step 3
-  useEffect(() => {
-    if (step !== 3 || !session) return
-    let cancelled = false
-    loadTurnstile().then(() => {
-      if (cancelled) return
-      const el = document.getElementById("cf-turnstile-new")
-      if (!el || el.childElementCount > 0) return
-      if (typeof window !== "undefined" && (window as any).turnstile && TURNSTILE_SITE_KEY) {
-        ;(window as any).turnstile.render("#cf-turnstile-new", {
-          sitekey: TURNSTILE_SITE_KEY,
-          callback: (token: string) => setTurnstileToken(token),
-          "expired-callback": () => setTurnstileToken(""),
-        })
-      }
-    }).catch((err) => console.warn("Turnstile script failed to load:", err))
-    return () => {
-      cancelled = true
-    }
-  }, [step, session])
+
+  const turnstile = useTurnstile(Boolean(step === 3 && !!session))
+  const turnstileToken = turnstile.token
 
   const handleSubmit = async () => {
     if (!session || !turnstileToken || !editSummary.trim()) return
@@ -162,6 +143,7 @@ export function WikiNewPage() {
       if (data.prUrl) setResult({ prUrl: data.prUrl })
     } catch (e) {
       setError(apiErrorMessage(e, "Submission failed."))
+      turnstile.reset()
     } finally {
       setSubmitting(false)
     }
@@ -323,7 +305,7 @@ export function WikiNewPage() {
           </div>
 
           <div className="wiki-form-turnstile">
-            <div id="cf-turnstile-new" />
+            <div ref={turnstile.containerRef} />
           </div>
 
           {error && <div className="wiki-form-error">&gt; {error}</div>}

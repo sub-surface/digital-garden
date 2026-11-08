@@ -62,6 +62,9 @@ function useAuthController(): AuthContextValue {
   // `requestSeq` drops responses that resolve after a newer request or sign-out.
   const profileFor = useRef<string | null>(null)
   const requestSeq = useRef(0)
+  // Whose profile is actually in state. profileFor is cleared on a failed
+  // fetch (to allow a retry), so it can't answer this.
+  const profileOwner = useRef<string | null>(null)
 
   useEffect(() => {
     if (!supabase) {
@@ -73,6 +76,7 @@ function useAuthController(): AuthContextValue {
       setSession(next)
       if (!next) {
         profileFor.current = null
+        profileOwner.current = null
         requestSeq.current++
         setProfile(EMPTY_PROFILE)
         setLoading(false)
@@ -80,7 +84,14 @@ function useAuthController(): AuthContextValue {
       }
       if (profileFor.current !== next.user.id) {
         profileFor.current = next.user.id
-        fetchProfile(next.access_token)
+        // A different account must never inherit the previous one's role while
+        // its own profile loads (or if that load fails and the outage fallback
+        // below keeps "the role we already know").
+        if (profileOwner.current !== next.user.id) {
+          profileOwner.current = null
+          setProfile(EMPTY_PROFILE)
+        }
+        fetchProfile(next.access_token, next.user.id)
       }
     }
 
@@ -141,7 +152,7 @@ function useAuthController(): AuthContextValue {
     })
   }, [])
 
-  async function fetchProfile(accessToken: string) {
+  async function fetchProfile(accessToken: string, userId: string) {
     const seq = ++requestSeq.current
     try {
       const data = await apiGet<{
@@ -154,6 +165,7 @@ function useAuthController(): AuthContextValue {
         claimed_slug?: string | null
       }>("/api/auth/me", { token: accessToken })
       if (seq !== requestSeq.current) return
+      profileOwner.current = userId
       setProfile({
         role: data.role as UserRole,
         username: data.username,

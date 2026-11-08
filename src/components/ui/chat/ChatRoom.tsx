@@ -408,12 +408,11 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
         showToast("usage: /color #rrggbb")
         return
       }
-      try {
-        await apiPatch("/api/auth/profile", { name_color: hex }, { token: accessToken })
-        showCommandOutput(`name colour set to ${hex}`)
-      } catch {
-        showToast("Failed to update colour")
-      }
+      // updateProfile is the one owner of profile writes: it uses the routed
+      // PUT (this used to PATCH, which 404'd) and refreshes local auth state.
+      const { error } = await updateProfile({ name_color: hex })
+      if (error) showToast(`Failed to update colour: ${error}`)
+      else showCommandOutput(`name colour set to ${hex}`)
       return
     }
 
@@ -541,11 +540,11 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       const term = args.join(" ").trim()
       if (!term) { showToast("usage: /search <term>"); return }
       try {
-        const data = await apiGet<{ results?: Array<{ body: string; profiles?: { username?: string }; created_at: string; deleted_at?: string | null }> }>(
+        const data = await apiGet<{ messages?: Array<{ body: string; profiles?: { username?: string }; created_at: string; deleted_at?: string | null }> }>(
           `/api/chat/search?q=${encodeURIComponent(term)}&limit=10`,
           { token: accessToken },
         )
-        const results = data.results ?? []
+        const results = data.messages ?? []
         if (results.length === 0) {
           showCommandOutput(`No results for "${term}"`)
         } else {
@@ -603,7 +602,7 @@ export function ChatRoom({ roomId, roomName, accessToken, currentUserId, current
       showCommandOutput(`Kicked ${username}: deleted ${deleted} message${deleted === 1 ? "" : "s"}`)
       return
     }
-  }, [roomId, messages, currentUsername, isAdmin, accessToken, handleDelete, handleEdit, handlePin, handleReact, handleSend, setReplyTo, showToast, setSearchQuery, setSearchOpen])
+  }, [roomId, messages, currentUsername, isAdmin, accessToken, handleDelete, handleEdit, handlePin, handleReact, handleSend, setReplyTo, showToast, setSearchQuery, setSearchOpen, updateProfile])
 
   const hasRoomSelector = rooms && rooms.length > 0 && onRoomChange
 

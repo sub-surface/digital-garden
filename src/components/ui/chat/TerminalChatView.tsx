@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, KeyboardEvent, type ReactNode } from "react"
 import type { ChatMessage } from "@/types/chat"
-import { apiGet, apiPatch, apiPost } from "@/lib/api"
+import { apiGet, apiPost } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
 import { parseMessageBodyWithFootnotes } from "@/lib/parseMessageBody"
 import { fetchEmoteIndex, getEmoteCache, emoteSrc } from "@/lib/emoteIndex"
 import { useStore } from "@/store"
@@ -215,6 +216,7 @@ export function TerminalChatView({
   onPin,
   onBoot,
 }: Props) {
+  const { updateProfile } = useAuth()
   const chatDensity = useStore((s) => s.chatDensity)
   const setChatDensity = useStore((s) => s.setChatDensity)
   const chatFontScale = useStore((s) => s.chatFontScale)
@@ -542,12 +544,8 @@ export function TerminalChatView({
           appendLocalLine("usage: /color #rrggbb")
           return
         }
-        try {
-          await apiPatch("/api/auth/profile", { name_color: hex }, { token: accessToken })
-          appendLocalLine(`-- name colour set to ${hex} --`)
-        } catch {
-          appendLocalLine("-- failed to update colour --")
-        }
+        const { error } = await updateProfile({ name_color: hex })
+        appendLocalLine(error ? `-- failed to update colour: ${error} --` : `-- name colour set to ${hex} --`)
         return
       }
 
@@ -695,11 +693,11 @@ export function TerminalChatView({
         if (!term) { appendLocalLine("usage: /search <term>"); return }
         appendLocalLine(`-- searching for "${term}"… --`)
         try {
-          const data = await apiGet<{ results?: Array<{ id: string; body: string; created_at: string; profiles?: { username?: string }; deleted_at?: string | null }> }>(
+          const data = await apiGet<{ messages?: Array<{ id: string; body: string; created_at: string; profiles?: { username?: string }; deleted_at?: string | null }> }>(
             `/api/chat/search?q=${encodeURIComponent(term)}&limit=10&include_deleted=true`,
             { token: accessToken },
           )
-          const results = data.results ?? []
+          const results = data.messages ?? []
           if (results.length === 0) {
             appendLocalLine(`-- no results for "${term}" --`)
           } else {
@@ -805,7 +803,7 @@ export function TerminalChatView({
     } else {
       await onSend(body)
     }
-  }, [input, messages, currentUsername, roomId, accessToken, onSend, onDelete, onEdit, onPin, onBoot, onReact, isAdmin, shrugPending, showTimestamps, cleared, replyContext, lastReadTimestamp, watched, chatDensity, setChatDensity, chatFontScale, setChatFontScale, appendLocalLine])
+  }, [input, messages, currentUsername, roomId, accessToken, onSend, onDelete, onEdit, onPin, onBoot, onReact, isAdmin, shrugPending, showTimestamps, cleared, replyContext, lastReadTimestamp, watched, chatDensity, setChatDensity, chatFontScale, setChatFontScale, appendLocalLine, updateProfile])
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {

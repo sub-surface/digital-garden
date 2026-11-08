@@ -95,6 +95,9 @@ function classifyWord(
   const mdImg = MARKDOWN_IMAGE_RE.exec(word);
   if (mdImg) {
     const url = mdImg[2];
+    // Same scheme gate as bare links. Without it `![x](javascript:…)` or a
+    // data: URL became an <a href> once the message's one embed was spent.
+    if (!URL_RE.test(url)) return null;
     if (!embedUsed) {
       return { type: "image", url };
     }

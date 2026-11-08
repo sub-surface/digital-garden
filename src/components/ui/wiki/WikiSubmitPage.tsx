@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { apiPost, apiErrorMessage } from "@/lib/api"
-import { loadTurnstile } from "@/lib/turnstile"
+import { useTurnstile } from "@/hooks/useTurnstile"
 
-// VITE_TURNSTILE_SITE_KEY — set in .env.local for dev (use 1x00000000000000000000AA test key)
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"
 
 // ── Survey question definitions ──
 
@@ -455,7 +453,6 @@ export function WikiSubmitForm() {
     }
     return INITIAL_FORM
   })
-  const [turnstileToken, setTurnstileToken] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<{ prUrl: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -466,26 +463,9 @@ export function WikiSubmitForm() {
     setFormData((prev) => ({ ...prev, [key]: value }))
   }
 
-  // Load Turnstile widget when reaching final step
-  useEffect(() => {
-    if (step !== TOTAL_STEPS) return
-    let cancelled = false
-    loadTurnstile().then(() => {
-      if (cancelled) return
-      const el = document.getElementById("cf-turnstile")
-      if (!el || el.childElementCount > 0) return
-      if (typeof window !== "undefined" && (window as any).turnstile && TURNSTILE_SITE_KEY) {
-        ;(window as any).turnstile.render("#cf-turnstile", {
-          sitekey: TURNSTILE_SITE_KEY,
-          callback: (token: string) => setTurnstileToken(token),
-          "expired-callback": () => setTurnstileToken(""),
-        })
-      }
-    }).catch((err) => console.warn("Turnstile script failed to load:", err))
-    return () => {
-      cancelled = true
-    }
-  }, [step])
+
+  const turnstile = useTurnstile(Boolean(step === TOTAL_STEPS))
+  const turnstileToken = turnstile.token
 
   const handleSubmit = async () => {
     if (!turnstileToken) {
@@ -514,6 +494,7 @@ export function WikiSubmitForm() {
       if (data.prUrl) setResult({ prUrl: data.prUrl })
     } catch (e) {
       setError(apiErrorMessage(e, "Submission failed. Please try again."))
+      turnstile.reset()
     } finally {
       setSubmitting(false)
     }
@@ -827,7 +808,7 @@ export function WikiSubmitForm() {
 
           {/* Cloudflare Turnstile */}
           <div className="wiki-form-turnstile">
-            <div id="cf-turnstile" />
+            <div ref={turnstile.containerRef} />
           </div>
 
           {error && (
