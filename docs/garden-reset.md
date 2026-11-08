@@ -171,11 +171,11 @@ default for reduced-motion, with a single toggle.
 | # | Phase | Changes for readers | Size |
 |---|---|---|---|
 | 0 | Review fixes + OS boot hang | **Shipped 2026-11-08** | — |
-| 1 | Corpus + one md pipeline + static HTML | notes appear instantly, work without JS | L |
-| 2 | Islands runtime; retire MDX-as-JS for .md | smaller pages; same components | M |
+| 1 | One md pipeline + static HTML notes | **Shipped 2026-11-08** (typed corpus `Doc` union still to do) | L |
+| 2 | Islands runtime; retire MDX-as-JS | **Shipped 2026-11-08**: 410 → 84 JS chunks, build ~1m → ~30s | M |
 | 3 | The one prompt (registry + docked garden line) | Ctrl+P feels native everywhere | M |
 | 4 | Rooms contract + lint boundary; OS as host | systems reached through notes | L |
-| 5 | Filament → own project | garden lighter; Filament free to be rewritten | M |
+| 5 | Filament → own project | **Shipped 2026-11-08**: filament.subsurfaces.net (private repo sub-surface/filament); −13k lines | M |
 | 6 | Desk + `desk` CLI + mobile index | a living homepage | M |
 | 7 | Pebbles; Light & weather | readers leave a trace; the site has a time of day | S–M |
 | 8 | Sweep: activeOverlay, single chat view, GameCabinet, dep cuts | fewer bugs, less code | M |
