@@ -212,3 +212,24 @@ forward because it only depends on a markdown file.
 - **Filament deploy.** The extracted project (`Psychograph\filament`) needs
   its GitHub repo and Worker; merge `reset/filament-out` into the garden
   once filament.subsurfaces.net resolves.
+
+## Progress 2026-11-08 (later)
+
+- **Performance pass (part 1)**: main chunk 353 → 271 KB (lazy overlays via
+  `lazyOverlay()`, all-lazy note components, lazy `/__dev`, no `buffer`);
+  background capped at 60 fps and settles to 30 fps after 30 s idle;
+  GameOfLife and clock hot paths fixed.
+- **Seamless first paint**: `NoteHeader` is rendered by the app and, at
+  build time, by `emit-prerender` (`StaticArticle`); the fragment carries a
+  seed so the app's first render matches it; `theme-boot.js` applies the
+  saved theme before paint. No movement between first paint and hydration.
+- Two wiki-home regressions found and fixed the same day (React 19
+  `dangerouslySetInnerHTML` identity loop; nested islands under lazy
+  parents). Lesson: after each deploy, probe the wiki home and a sample of
+  pages in a capped headless browser; CI can't see these.
+
+Next: self-hosted, preloaded fonts (the remaining first-paint flicker is
+`display=swap` from Google Fonts); then phase 3 (docked prompt with tab
+completion, on the SideChat dock) and the QuickControls redesign (three
+clusters, visible clock, contextual left slot: song when playing, else
+recent activity; look settings in a drawer).
