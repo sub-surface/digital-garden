@@ -26,15 +26,23 @@ function utf8Base64(text: string): string {
   return btoa(bin)
 }
 
-function notifyAdmin(env: Env, subject: string, text: string, html: string) {
+/** Fire-and-forget admin email. Must be registered with waitUntil: a bare
+ * promise after the response is returned may be cancelled by the runtime. */
+function notifyAdmin(env: Env, waitUntil: RouteCtx["waitUntil"], subject: string, text: string, html: string) {
   if (!env.EMAIL) return
-  env.EMAIL.send({
+  waitUntil(env.EMAIL.send({
     from: { email: "system@subsurfaces.net", name: "Subsurface Wiki" },
     to: "admin@subsurfaces.net",
     subject,
     text,
     html,
-  }).catch((err) => console.error("Email send error:", err))
+  }).catch((err) => console.error("Email send error:", err)))
+}
+
+/** GitHub contents paths: encode each segment. encodeURI leaves `?` and `#`
+ * intact, so `Wiki/a#b.md` used to commit to `Wiki/a`. */
+function ghPath(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/")
 }
 
 interface PrFile { path: string; base64: string; sha?: string; message: string }
@@ -58,7 +66,7 @@ async function openPullRequest(
 
   try {
     for (const f of files) {
-      const res = await gh(`${CONTENT_REPO}/contents/${encodeURI(f.path)}`, "PUT", {
+      const res = await gh(`${CONTENT_REPO}/contents/${ghPath(f.path)}`, "PUT", {
         message: f.message, content: f.base64, branch, ...(f.sha ? { sha: f.sha } : {}),
       })
       if (!res.ok) throw new Error(`commit ${f.path}: ${res.status} ${(await res.text()).slice(0, 200)}`)
@@ -118,7 +126,7 @@ const SURVEY_SECTIONS: [string, [string, string][]][] = [
   ]],
 ]
 
-export async function handleSubmit({ request, env }: RouteCtx): Promise<Response> {
+export async function handleSubmit({ request, env, waitUntil }: RouteCtx): Promise<Response> {
   if (!env.TURNSTILE_SECRET_KEY || !env.GITHUB_TOKEN) {
     return jsonResponse({ error: "Server misconfiguration" }, 500)
   }
@@ -198,7 +206,7 @@ export async function handleSubmit({ request, env }: RouteCtx): Promise<Response
       body: `New wiki profile submission for **${name.replace(/[*_`[\]]/g, "")}** (${safeName}).\n\nSubmitted via wiki.subsurfaces.net/wiki/submit`,
     })
 
-    notifyAdmin(env, `New Profile Submission: ${safeName}`,
+    notifyAdmin(env, waitUntil, `New Profile Submission: ${safeName}`,
       `A new profile has been submitted by ${name} (${safeName}).\n\nReview it here: ${html_url}`,
       `<p>A new profile has been submitted (@${escapeHtml(safeName)}).</p><p><a href="${html_url}">Review Pull Request</a></p>`)
 
@@ -261,7 +269,7 @@ async function logEdit(env: Env, slug: string, userId: string, prUrl: string, ed
   if (!res.ok) console.error(`[wiki] edit_log insert failed (${res.status}) for ${prUrl}`)
 }
 
-export async function handleEdit({ request, env, auth }: RouteCtx): Promise<Response> {
+export async function handleEdit({ request, env, auth, waitUntil }: RouteCtx): Promise<Response> {
   const denied = requireEditor(auth!.role)
   if (denied) return denied
 
@@ -290,14 +298,14 @@ export async function handleEdit({ request, env, auth }: RouteCtx): Promise<Resp
 
   // Fails closed: an unreadable lock table must not let edits through to locked pages.
   // Case-insensitive: locks are keyed by whatever casing the admin typed.
-  const lockPattern = slug.replace(/[\\%_]/g, (c) => `\\${c}`)
+  const lockPattern = slug.replace(/[\\%_*]/g, (c) => `\\${c}`)
   const lockRes = await supabaseRest(env, `page_locks?slug=ilike.${encodeURIComponent(lockPattern)}&select=slug`)
   if (!lockRes.ok) return upstreamError("page lock check", lockRes, "Could not check page lock")
   if ((await lockRes.json<unknown[]>()).length > 0) return jsonResponse({ error: "This page is locked" }, 403)
 
   try {
     const filePath = `content/${contentPath}`
-    const fileRes = await ghApi(env)(`${CONTENT_REPO}/contents/${encodeURI(filePath)}?ref=master`, "GET")
+    const fileRes = await ghApi(env)(`${CONTENT_REPO}/contents/${ghPath(filePath)}?ref=master`, "GET")
     if (!fileRes.ok) return upstreamError("edit source lookup", fileRes, "Could not find the source file on GitHub", 404)
     const { sha } = await fileRes.json<{ sha: string }>()
 
@@ -312,7 +320,7 @@ export async function handleEdit({ request, env, auth }: RouteCtx): Promise<Resp
     })
 
     await logEdit(env, slug, auth!.id, html_url, editSummary)
-    notifyAdmin(env, `New Wiki Edit: ${slug}`,
+    notifyAdmin(env, waitUntil, `New Wiki Edit: ${slug}`,
       `An edit to ${slug} was submitted by ${auth!.email}.\n\nReview it here: ${html_url}`,
       `<p>An edit to <strong>${escapeHtml(slug)}</strong> was submitted by ${escapeHtml(auth!.email)}.</p><p><a href="${html_url}">Review Pull Request</a></p>`)
 
@@ -323,7 +331,7 @@ export async function handleEdit({ request, env, auth }: RouteCtx): Promise<Resp
   }
 }
 
-export async function handleNew({ request, env, auth }: RouteCtx): Promise<Response> {
+export async function handleNew({ request, env, auth, waitUntil }: RouteCtx): Promise<Response> {
   const denied = requireEditor(auth!.role)
   if (denied) return denied
 
@@ -359,7 +367,7 @@ export async function handleNew({ request, env, auth }: RouteCtx): Promise<Respo
 
     const slug = filePath.replace(/^content\//, "").replace(/\.mdx?$/, "")
     await logEdit(env, slug, auth!.id, html_url, editSummary)
-    notifyAdmin(env, `New Article: ${title}`,
+    notifyAdmin(env, waitUntil, `New Article: ${title}`,
       `A new article "${title}" was submitted by ${auth!.email}.\n\nReview it here: ${html_url}`,
       `<p>A new article <strong>${escapeHtml(title)}</strong> was submitted by ${escapeHtml(auth!.email)}.</p><p><a href="${html_url}">Review Pull Request</a></p>`)
 
@@ -431,9 +439,11 @@ export async function handleLockStatus({ env, url }: RouteCtx): Promise<Response
   const slug = url.searchParams.get("slug")
   if (!slug || !env.SUPABASE_URL) return jsonResponse({ locked: false })
 
-  const pattern = slug.replace(/[\\%_]/g, (c) => `\\${c}`)
+  const pattern = slug.replace(/[\\%_*]/g, (c) => `\\${c}`)
   const res = await supabaseRest(env, `page_locks?slug=ilike.${encodeURIComponent(pattern)}&select=slug,reason`)
-  if (!res.ok) return jsonResponse({ locked: false })
+  // Fail visibly, like the edit path: "unlocked" during an outage invites a
+  // whole edit that the POST will then refuse.
+  if (!res.ok) return upstreamError("lock status", res, "Could not check page lock")
   const locks = await res.json<{ slug: string; reason: string }[]>()
   if (locks.length === 0) return jsonResponse({ locked: false })
   return jsonResponse({ locked: true, reason: locks[0].reason })

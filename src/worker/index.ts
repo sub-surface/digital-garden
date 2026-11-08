@@ -9,6 +9,7 @@ import {
   handleGifSearch, handleChessGif, handleUserClaim, handleClaimBySlug,
 } from "./chat"
 import { handleChatCommand } from "./chatBot"
+import { checkBanStatus } from "./chat"
 import { handleApiKeys } from "./keys"
 import { handleAdmin } from "./admin"
 import { addSecurityHeaders } from "./security"
@@ -23,6 +24,9 @@ import { handleWidgetNews, handleWidgetWeather } from "./widgets"
  *    and never call verifyAuth themselves.
  *  - Write methods (POST/PUT/PATCH/DELETE) are rate-limited per user/IP when
  *    the WRITE_LIMITER binding is configured (no-op otherwise).
+ *  - refuseBanned: write methods from a currently-banned user are refused
+ *    with 403 before the handler runs (fails closed: an unreadable ban state
+ *    is a 500, not an allow). Chat message POST still checks in-handler too.
  *  - The dispatcher owns CORS, security headers, and the error boundary: a
  *    thrown handler becomes a logged, correlatable JSON 500 instead of a bare
  *    exception with no CORS headers.
@@ -31,6 +35,7 @@ interface Route {
   method?: string
   pattern: RegExp
   auth?: "user" | "admin"
+  refuseBanned?: boolean
   handler: (ctx: RouteCtx) => Promise<Response>
 }
 
@@ -47,10 +52,10 @@ const routes: Route[] = [
   { method: "GET", pattern: /^\/api\/chat\/messages\/([^/]+)$/, auth: "user", handler: handleChatMessageById },
   { pattern: /^\/api\/chat\/messages\/[^/]+$/, auth: "user", handler: handleChatMessages },
   { method: "GET", pattern: /^\/api\/chat\/pins$/, auth: "user", handler: handleChatPins },
-  { pattern: /^\/api\/chat\/reactions$/, auth: "user", handler: handleChatReactions },
+  { pattern: /^\/api\/chat\/reactions$/, auth: "user", refuseBanned: true, handler: handleChatReactions },
   { method: "GET", pattern: /^\/api\/chat\/search$/, auth: "user", handler: handleChatSearch },
   { method: "GET", pattern: /^\/api\/chat\/users\/([^/]+)\/mini$/, handler: handleChatUserMini },
-  { method: "POST", pattern: /^\/api\/chat\/claim$/, auth: "user", handler: handleChatClaim },
+  { method: "POST", pattern: /^\/api\/chat\/claim$/, auth: "user", refuseBanned: true, handler: handleChatClaim },
   { method: "POST", pattern: /^\/api\/chat\/(ban|unban)$/, auth: "admin", handler: handleChatBan },
   { method: "GET", pattern: /^\/api\/chat\/gif-search$/, auth: "user", handler: handleGifSearch },
   { method: "POST", pattern: /^\/api\/chess\/gif$/, handler: handleChessGif },
@@ -66,8 +71,8 @@ const routes: Route[] = [
   { method: "GET", pattern: /^\/api\/claims\/by-slug\/(.+)$/, handler: handleClaimBySlug },
   { method: "GET", pattern: /^\/api\/user\/(.+)$/, handler: handleUserProfile },
 
-  { method: "POST", pattern: /^\/api\/edit$/, auth: "user", handler: handleEdit },
-  { method: "POST", pattern: /^\/api\/new$/, auth: "user", handler: handleNew },
+  { method: "POST", pattern: /^\/api\/edit$/, auth: "user", refuseBanned: true, handler: handleEdit },
+  { method: "POST", pattern: /^\/api\/new$/, auth: "user", refuseBanned: true, handler: handleNew },
   { method: "GET", pattern: /^\/api\/lock-status$/, handler: handleLockStatus },
 
   { pattern: /^\/api\/bookmarks/, auth: "user", handler: handleBookmarks },
@@ -89,24 +94,33 @@ async function dispatch(request: Request, env: Env, ctx: ExecutionContext, url: 
     if (!match) continue
 
     const waitUntil = (p: Promise<unknown>) => ctx.waitUntil(p)
-    const auth = route.auth ? await verifyAuth(request, env, waitUntil) : null
-    if (route.auth && !auth) return jsonResponse({ error: "Unauthorized" }, 401)
-    if (route.auth === "admin" && auth!.role !== "admin") {
-      return jsonResponse({ error: "Admin access required" }, 403)
-    }
-
-    // Rate-limit writes: per user when authed, per IP otherwise.
-    if (WRITE_METHODS.has(request.method) && env.WRITE_LIMITER) {
-      const key = auth?.id ?? request.headers.get("CF-Connecting-IP") ?? "anon"
-      try {
-        const { success } = await env.WRITE_LIMITER.limit({ key })
-        if (!success) return jsonResponse({ error: "Too many requests — slow down" }, 429)
-      } catch (e) {
-        console.error(`[${requestId}] rate-limiter error (allowing request):`, e)
-      }
-    }
-
+    // One boundary around the whole pipeline: auth resolution and the ban
+    // lookup hit Supabase too, and used to escape as bare exceptions with no
+    // CORS headers or requestId.
     try {
+      const auth = route.auth ? await verifyAuth(request, env, waitUntil) : null
+      if (route.auth && !auth) return jsonResponse({ error: "Unauthorized" }, 401)
+      if (route.auth === "admin" && auth!.role !== "admin") {
+        return jsonResponse({ error: "Admin access required" }, 403)
+      }
+
+      const isWrite = WRITE_METHODS.has(request.method)
+      if (route.refuseBanned && auth && isWrite) {
+        const ban = await checkBanStatus(env, auth.id)
+        if (ban.banned) return jsonResponse({ error: ban.reason ?? "You are banned" }, 403)
+      }
+
+      // Rate-limit writes: per user when authed, per IP otherwise.
+      if (isWrite && env.WRITE_LIMITER) {
+        const key = auth?.id ?? request.headers.get("CF-Connecting-IP") ?? "anon"
+        try {
+          const { success } = await env.WRITE_LIMITER.limit({ key })
+          if (!success) return jsonResponse({ error: "Too many requests — slow down" }, 429)
+        } catch (e) {
+          console.error(`[${requestId}] rate-limiter error (allowing request):`, e)
+        }
+      }
+
       return await route.handler({ request, env, url, match, auth, waitUntil })
     } catch (err) {
       console.error(`[${requestId}] ${request.method} ${url.pathname} handler threw:`, err)

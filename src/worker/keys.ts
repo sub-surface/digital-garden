@@ -1,5 +1,5 @@
 import { RouteCtx } from "./types"
-import { jsonResponse, supabaseRest, upstreamError, readJson } from "./lib"
+import { jsonResponse, supabaseRest, upstreamError, readJson, invalidateAuthCache } from "./lib"
 
 export async function hashApiKey(key: string): Promise<string> {
   const data = new TextEncoder().encode(key)
@@ -48,6 +48,9 @@ export async function handleApiKeys({ request, env, url, auth }: RouteCtx): Prom
       { revoked_at: new Date().toISOString() },
     )
     if (!res.ok) return upstreamError("api-key revoke", res, "Failed to revoke key")
+    // The auth cache is keyed by bearer token; without this a revoked key kept
+    // authenticating in this isolate for up to the cache TTL.
+    invalidateAuthCache(auth!.id)
     return jsonResponse({ ok: true })
   }
 

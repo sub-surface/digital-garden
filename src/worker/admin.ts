@@ -43,7 +43,17 @@ export async function handleAdmin({ request, env, url, auth }: RouteCtx): Promis
   if (pathname === "/api/admin/log" && request.method === "GET") {
     const res = await supabaseRest(env, "edit_log?select=id,slug,pr_url,created_at,user_id&order=created_at.desc&limit=50")
     if (!res.ok) return upstreamError("admin log", res, "Failed to fetch log")
-    return jsonResponse(await res.json())
+    const entries = await res.json<{ user_id: string | null }[]>()
+    // edit_log stores only user_id; the dashboard's "who" column needs the
+    // editor's email, which used to render as "—" for every row.
+    const ids = [...new Set(entries.map((e) => e.user_id).filter((id): id is string => !!id && isUuid(id)))]
+    let emails = new Map<string, string>()
+    if (ids.length) {
+      const people = await supabaseRest(env, `profiles?id=in.(${ids.join(",")})&select=id,email`)
+      if (!people.ok) return upstreamError("admin log editors", people, "Failed to fetch log editors")
+      emails = new Map((await people.json<{ id: string; email: string }[]>()).map((p) => [p.id, p.email]))
+    }
+    return jsonResponse(entries.map((e) => ({ ...e, email: e.user_id ? emails.get(e.user_id) ?? null : null })))
   }
 
   // GET /api/admin/locks
