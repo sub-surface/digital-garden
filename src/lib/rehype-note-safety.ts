@@ -22,7 +22,14 @@ import { VIDEO_FRAME_HOSTS } from "./videoEmbed"
 
 const BLOCKED_ELEMENTS = new Set([
   "script", "object", "embed", "applet", "base", "meta", "link", "frame", "frameset", "noscript", "template",
+  // SVG animation can SET attributes at runtime (`<animate attributeName="href"
+  // to="javascript:…">`), bypassing every attribute check below; foreignObject
+  // re-enters HTML parsing inside SVG; forms submit; style tags restyle the
+  // page. None appear in the corpus (checked 2026-11-08).
+  "animate", "animatemotion", "animatetransform", "set", "discard", "foreignobject", "form", "style",
 ])
+/** Attributes that only drive SVG animation or re-target other attributes. */
+const BLOCKED_ATTRS = new Set(["attributename", "attributetype", "values", "to", "from", "by", "begin", "xlinkactuate", "xlinkshow"])
 const URL_PROPS = new Set(["href", "src", "action", "poster", "cite", "background", "xLinkHref", "formAction", "data"])
 const SAFE_SCHEME = /^(https?:|mailto:|tel:|music:)/i
 const RELATIVE = /^(\/(?!\/)|#|\.{0,2}\/|[^:/?#]+(?:[/?#]|$))/
@@ -30,7 +37,7 @@ const RELATIVE = /^(\/(?!\/)|#|\.{0,2}\/|[^:/?#]+(?:[/?#]|$))/
 export function isSafeUrl(raw: string, prop: string): boolean {
   // Browsers ignore whitespace and control characters inside a scheme
   // (`java\tscript:`); compare on the stripped form.
-  const value = raw.replace(/[\u0000- \u007f]/g, "")
+  const value = raw.replace(/[\u0000-\u0020\u007f]/g, "")
   if (!value) return true
   if (SAFE_SCHEME.test(value)) return true
   if (prop === "src" && /^data:image\/(png|gif|jpe?g|webp|avif);/i.test(value)) return true
@@ -63,7 +70,7 @@ export function rehypeNoteSafety() {
       const props = node.properties ?? {}
       for (const key of Object.keys(props)) {
         const lower = key.toLowerCase()
-        if (lower.startsWith("on") || lower === "srcdoc" || lower === "formaction") {
+        if (lower.startsWith("on") || lower === "srcdoc" || lower === "formaction" || BLOCKED_ATTRS.has(lower)) {
           delete props[key]
           continue
         }

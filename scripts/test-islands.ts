@@ -48,10 +48,13 @@ assert.deepEqual(literalValue({ type: "ArrayExpression", elements: [{ type: "Lit
     '<object data="x.swf"></object>',
     "raw html: <script>alert(1)</script>",
     '<img src="data:text/html,<script>alert(1)</script>" />',
+    '<svg><a><animate attributeName="href" to="javascript:alert(1)" /><text>x</text></a></svg>',
+    '<svg><foreignObject><img src="x" onerror="alert(1)" /></foreignObject></svg>',
+    '<form action="https://evil.example"><button>go</button></form>',
   ]
   for (const attack of attacks) {
     const { html } = await renderNoteHtml(attack)
-    assert.doesNotMatch(html, /\son[a-z]+=|javascript:|<script|<object|evil\.example|data:text/i, `neutralised: ${attack} -> ${html}`)
+    assert.doesNotMatch(html, /\son[a-z]+=|javascript:|<script|<object|<animate|<foreignobject|<form|evil\.example|data:text/i, `neutralised: ${attack} -> ${html}`)
   }
   const kept = await renderNoteHtml(
     "[home](/garden) [web](https://example.org) ![p](/content/Media/a.png) [play](music:Hello)\n\n" +

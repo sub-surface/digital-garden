@@ -199,3 +199,16 @@ forward because it only depends on a markdown file.
 - The **procedural boot generator** (≈1.5k lines + 1k chatbot) powers the
   /terminal attract mode and the OS full boot: keep as a room's easter egg,
   or retire.
+
+## Follow-ups recorded during phase 1
+
+- **Sanitizer → allowlist.** `src/lib/rehype-note-safety.ts` is a hardened
+  denylist (scripts, plugins, SVG animation, foreignObject, forms, `on*`,
+  unsafe URL schemes, non-video iframes). The robust end state is
+  `rehype-sanitize` with a schema extended for KaTeX (MathML + SVG + inline
+  styles), sidenote inputs/labels, telescopic/callout markup, island
+  `data-*` attributes and VIDEO_FRAME_HOSTS iframes. Adopt it only with a
+  corpus diff proving every one of the 326 rendered notes is unchanged.
+- **Filament deploy.** The extracted project (`Psychograph\filament`) needs
+  its GitHub repo and Worker; merge `reset/filament-out` into the garden
+  once filament.subsurfaces.net resolves.
