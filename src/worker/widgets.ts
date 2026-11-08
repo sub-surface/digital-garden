@@ -74,7 +74,7 @@ export async function handleWidgetWeather({ request, url, waitUntil }: RouteCtx)
   // needlessly precise location to the provider.
   const lat = latitude.toFixed(2)
   const lon = longitude.toFixed(2)
-  return cached(`weather/${lat}/${lon}`, 600, waitUntil, async () => {
+  const response = await cached(`weather/${lat}/${lon}`, 600, waitUntil, async () => {
     const endpoint = new URL("https://api.open-meteo.com/v1/forecast")
     endpoint.searchParams.set("latitude", lat)
     endpoint.searchParams.set("longitude", lon)
@@ -100,4 +100,12 @@ export async function handleWidgetWeather({ request, url, waitUntil }: RouteCtx)
       attribution: "Open-Meteo",
     })
   })
+  // The edge cache is keyed by the rounded coordinates, so it's safe to share.
+  // The response to a parameterless request is not: the same URL answers with
+  // a different place per reader, so no shared cache may keep it.
+  if (!fromConnection) return response
+  const personal = new Response(response.body, response)
+  personal.headers.set("Cache-Control", "private, no-store")
+  personal.headers.set("Vary", "*")
+  return personal
 }
