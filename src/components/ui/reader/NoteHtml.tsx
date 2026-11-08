@@ -1,4 +1,4 @@
-import React, { Suspense, useLayoutEffect, useRef, useState } from "react"
+import React, { Suspense, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { mdxComponents } from "@/components/mdx/MDXProvider"
 import { ImageLightbox } from "./ImageLightbox"
@@ -30,7 +30,13 @@ const registry = mdxComponents as unknown as Record<string, React.ComponentType<
  *  (ConceptGrid, Classifieds…) seeing the cards as their direct children. */
 function StaticChildren({ html, inline }: { html: string; inline: boolean }) {
   const Tag = inline ? "span" : "div"
-  return <Tag style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: html }} />
+  // MEMOISED on purpose. React 19 diffs dangerouslySetInnerHTML by object
+  // identity, so a fresh `{ __html }` per render rewrote these children on
+  // every render, recreating the nested island placeholders the discovery
+  // pass then mounted again: an infinite update loop (React #185) on any page
+  // with nested islands, e.g. the wiki home's ConceptGrid > ConceptCard.
+  const inner = useMemo(() => ({ __html: html }), [html])
+  return <Tag style={{ display: "contents" }} dangerouslySetInnerHTML={inner} />
 }
 
 function IslandFailure({ name, message }: { name: string; message: string }) {
@@ -59,6 +65,9 @@ export function NoteHtml({ html, containerRef }: { html: string; containerRef?: 
     if (!root) return
     const found: Island[] = []
     root.querySelectorAll<HTMLElement>("[data-island]:not([data-island-mounted])").forEach((el) => {
+      // A nested placeholder is detached once its parent island is cleared
+      // above; it reappears inside the parent's static children next pass.
+      if (!el.isConnected) return
       el.setAttribute("data-island-mounted", "")
       let props: Record<string, unknown> = {}
       try {
