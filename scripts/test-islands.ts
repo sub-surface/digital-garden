@@ -15,9 +15,9 @@ import { ISLAND_NAMES } from "../src/components/mdx/island-names"
 
 // 1. Registry parity, read from source text (the provider imports SCSS).
 const provider = fs.readFileSync("src/components/mdx/MDXProvider.tsx", "utf8")
-const block = provider.slice(provider.indexOf("export const mdxComponents = {"))
+const block = provider.slice(provider.indexOf("export const mdxComponents"))
 const body = block.slice(0, block.indexOf("\n}"))
-const keys = [...body.matchAll(/^\s{2}([A-Z][A-Za-z0-9]*),?\s*$/gm)].map((m) => m[1]).sort()
+const keys = [...body.matchAll(/^\s{2}([A-Z][A-Za-z0-9]*)[,:]/gm)].map((m) => m[1]).sort()
 assert.deepEqual([...ISLAND_NAMES].sort(), keys, "ISLAND_NAMES must match mdxComponents' component keys")
 
 // 2. Literal evaluation refuses code.

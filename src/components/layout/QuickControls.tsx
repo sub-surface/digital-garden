@@ -56,18 +56,19 @@ function BuildStamp() {
   )
 }
 
+// Built once: toLocale*String constructs a fresh formatter on every call,
+// and this runs every second.
+const WEEKDAY = new Intl.DateTimeFormat("en-GB", { weekday: "long" })
+const MONTH = new Intl.DateTimeFormat("en-GB", { month: "long" })
+const CLOCK = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })
+
 function formatDateTime(): { date: string; time: string } {
   const d = new Date()
-  const dayName = d.toLocaleDateString("en-GB", { weekday: "long" })
-  const monthName = d.toLocaleDateString("en-GB", { month: "long" })
+  const dayName = WEEKDAY.format(d)
+  const monthName = MONTH.format(d)
   const day = d.getDate()
   const year = d.getFullYear()
-  const time = d.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  })
+  const time = CLOCK.format(d)
   
   // Custom ordinal suffix
   const getOrdinal = (n: number) => {

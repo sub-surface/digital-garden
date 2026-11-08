@@ -64,6 +64,10 @@ export function GameOfLife({
     let raf = 0
     let acc = 0
     let lastT = 0
+    // Reading a CSS variable forces style recalculation; it changes only with
+    // the theme, so re-read it every 30 frames rather than every frame.
+    let accent = "#b4424c"
+    let drawsSinceAccent = Infinity
 
     const draw = () => {
       const g = gridRef.current
@@ -71,9 +75,10 @@ export function GameOfLife({
       const cw = canvas.width / cols
       const ch = canvas.height / rows
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      const accent =
-        getComputedStyle(document.documentElement).getPropertyValue("--color-accent-base").trim() ||
-        "#b4424c"
+      if (drawsSinceAccent++ >= 30) {
+        accent = getComputedStyle(document.documentElement).getPropertyValue("--color-accent-base").trim() || "#b4424c"
+        drawsSinceAccent = 0
+      }
       ctx.fillStyle = accent
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {

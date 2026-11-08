@@ -24,8 +24,12 @@ import {
   drawCartography,
 } from "@/lib/backgrounds"
 
-/** Maximum refresh rate cap: preserves 144Hz fluidity while preventing runaway frame loops on 240Hz+ */
-const MAX_FPS = 144
+/**
+ * Frame cap. The modes advance a fixed step per frame and were tuned at
+ * 60 Hz, so 60 is both the intended speed and the CPU ceiling; the old 144
+ * cap made high-refresh monitors run them 2.4x faster at 2.4x the cost.
+ */
+const MAX_FPS = 60
 const MIN_FRAME_INTERVAL = 1000 / MAX_FPS // ~6.94ms
 
 /** Idle cap for slow, purely time-based ambient modes (and any mode while dimmed by reader mode). */
@@ -49,6 +53,8 @@ const SLOW_MODES = new Set<string>([
 const STATIC_MODES = new Set<string>(["chess", "hexo"])
 /** Full frame rate is restored for this long after the last cursor movement. */
 const MOUSE_ACTIVE_MS = 500
+/** No input for this long: the reader is reading. The garden settles to 30 fps. */
+const IDLE_SETTLE_MS = 30_000
 /** Below this, the canvas is visually empty: skip drawing entirely. */
 const ALPHA_EPS = 0.0005
 
@@ -225,11 +231,14 @@ function BgCanvasInner() {
     }
 
     let lastMouseMove = -Infinity
+    let lastInput = performance.now()
     const mouseMove = (e: MouseEvent) => {
       stateRef.current.mx = e.clientX
       stateRef.current.my = e.clientY
       lastMouseMove = e.timeStamp
+      lastInput = e.timeStamp
     }
+    const anyInput = (e: Event) => { lastInput = e.timeStamp }
 
     // Coalesce resize bursts (window drags fire per pixel) into one resize per frame:
     // each resize reallocates the canvas and reseeds/rebuilds mode state (e.g. plate-scan dither).
@@ -246,6 +255,9 @@ function BgCanvasInner() {
 
     window.addEventListener("resize", onResize)
     window.addEventListener("mousemove", mouseMove, { passive: true })
+    window.addEventListener("keydown", anyInput, { passive: true })
+    window.addEventListener("scroll", anyInput, { passive: true, capture: true })
+    window.addEventListener("pointerdown", anyInput, { passive: true })
     resize()
 
     // Draw a single frame of current mode
@@ -303,6 +315,9 @@ function BgCanvasInner() {
         if (resizeRaf) cancelAnimationFrame(resizeRaf)
         window.removeEventListener("resize", onResize)
         window.removeEventListener("mousemove", mouseMove)
+        window.removeEventListener("keydown", anyInput)
+        window.removeEventListener("scroll", anyInput, { capture: true })
+        window.removeEventListener("pointerdown", anyInput)
       }
     }
 
@@ -320,11 +335,12 @@ function BgCanvasInner() {
       const state = stateRef.current
       const dt = timestamp - lastPaintTime
 
-      // Frame pacing: max 144 FPS (-1ms buffer absorbs timestamp jitter on 144Hz displays).
+      // Frame pacing: max 60 FPS (-1ms buffer absorbs timestamp jitter).
       // Drops to 30 FPS while reader mode dims the canvas to ~nothing, and for slow
       // wall-clock-driven modes while the cursor is idle.
       const dimmed = state.readerTarget < 0.1 && state.readerAlpha < 0.1
-      const slow = dimmed || (isSlowMode && timestamp - lastMouseMove > MOUSE_ACTIVE_MS)
+      const idle = timestamp - lastInput > IDLE_SETTLE_MS
+      const slow = dimmed || idle || (isSlowMode && timestamp - lastMouseMove > MOUSE_ACTIVE_MS)
       if (dt < (slow ? SLOW_FRAME_INTERVAL : MIN_FRAME_INTERVAL) - 1.0) {
         return
       }
@@ -389,6 +405,9 @@ function BgCanvasInner() {
       if (resizeRaf) cancelAnimationFrame(resizeRaf)
       window.removeEventListener("resize", onResize)
       window.removeEventListener("mousemove", mouseMove)
+      window.removeEventListener("keydown", anyInput)
+      window.removeEventListener("scroll", anyInput, { capture: true })
+      window.removeEventListener("pointerdown", anyInput)
       document.removeEventListener("visibilitychange", onVisibility)
       stop()
     }

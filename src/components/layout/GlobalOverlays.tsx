@@ -1,6 +1,5 @@
 import { lazy, Suspense } from "react"
-import { KeyboardCheatSheet } from "@/components/ui/overlays/KeyboardCheatSheet"
-import { CommandPalette } from "@/components/ui/overlays/CommandPalette"
+import { LazyCheatSheet, LazyCommandPalette } from "./lazyOverlay"
 import { ContentIndexErrorBanner } from "@/components/ui/ContentIndexErrorBanner"
 import { useStore } from "@/store"
 
@@ -23,8 +22,8 @@ function LazyTerminalOverlay() {
 export function GlobalOverlays() {
   return (
     <>
-      <KeyboardCheatSheet />
-      <CommandPalette />
+      <LazyCheatSheet />
+      <LazyCommandPalette />
       <LazyTerminalOverlay />
       <ContentIndexErrorBanner />
     </>

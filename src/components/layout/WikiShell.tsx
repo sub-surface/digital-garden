@@ -1,6 +1,6 @@
 import { Outlet, useLocation } from "@tanstack/react-router"
+import { LazyThemePanel } from "./lazyOverlay"
 import { useStore } from "@/store"
-import { ThemePanel } from "./ThemePanel"
 import { BgCanvas } from "./BgCanvas"
 import { QuickControls } from "./QuickControls"
 import { TerminalTitle } from "./TerminalTitle"
@@ -42,7 +42,7 @@ export function WikiShell() {
       >
         <SkipToContent />
         <BgCanvas />
-        <ThemePanel />
+        <LazyThemePanel />
         <QuickControls />
         <LinkPreview />
         <SearchOverlay />

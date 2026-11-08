@@ -1,6 +1,6 @@
 import { Outlet } from "@tanstack/react-router"
+import { LazyThemePanel } from "./lazyOverlay"
 import { useStore } from "@/store"
-import { ThemePanel } from "./ThemePanel"
 import { BgCanvas } from "./BgCanvas"
 import { TerminalTitle } from "./TerminalTitle"
 import { QuickControls } from "./QuickControls"
@@ -27,7 +27,7 @@ export function ChatShell() {
     >
       <SkipToContent />
       <BgCanvas />
-      <ThemePanel />
+      <LazyThemePanel />
 
       <NotificationBanner />
       <TerminalTitle context="chat" />

@@ -3,10 +3,10 @@ import {
   createRoute,
   createRootRoute,
   redirect,
+  lazyRouteComponent,
 } from "@tanstack/react-router"
 import { AppShell } from "@/components/layout/AppShell"
 import { NoteRenderer } from "@/components/ui/reader/NoteRenderer"
-import { DevDashboard } from "@/components/dev/DevDashboard"
 import { NotFound } from "@/components/ui/NotFound"
 import { useEffect, lazy, Suspense } from "react"
 import { useStore } from "@/store"
@@ -35,7 +35,8 @@ const rootRoute = createRootRoute({
 const devRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/__dev",
-  component: DevDashboard,
+  // Dev-only tool: never in the main chunk visitors download.
+  component: lazyRouteComponent(() => import("@/components/dev/DevDashboard"), "DevDashboard"),
 })
 
 // Full Graph Route (Explicit)

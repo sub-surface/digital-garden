@@ -1,127 +1,66 @@
-import React, { Suspense, lazy, useState } from "react"
-import { useStore } from "@/store"
-import { BookCard } from "./BookCard"
-import { MovieCard } from "./MovieCard"
-import { Gallery } from "./Gallery"
-import { Query } from "./Query"
-import { OnThisDay } from "./OnThisDay"
-import { GameOfLife } from "./GameOfLife"
-import { AsciiAvatar } from "./AsciiAvatar"
-import { Epigraph } from "./Epigraph"
-import { Tape } from "./Tape"
-import { WeighIn } from "./WeighIn"
-import { Clipping } from "./Clipping"
-import { Classifieds, Classified } from "./Classifieds"
-import { ChuckleRating } from "./ChuckleRating"
-import { FactionTree } from "./FactionTree"
-import { ChronicleCard, ChronicleGrid } from "./ChronicleCard"
-import { ChatterCard, ChatterGrid } from "./ChatterCard"
-import { ConceptCard, ConceptGrid } from "./ConceptCard"
-import { BroadsheetColumns } from "./BroadsheetColumns"
-import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
+import { lazy, Suspense, type ComponentType } from "react"
 
-const LazyWikiSubmitForm = lazy(() => import("@/components/ui/wiki/WikiSubmitPage").then((m) => ({ default: m.WikiSubmitForm })))
-const LazyPhotoAlbums = lazy(() => import("@/components/ui/shelves/PhotographyPage").then((m) => ({ default: m.PhotoAlbums })))
-const LazyMachineGod = lazy(() => import("./MachineGod").then((m) => ({ default: m.MachineGod })))
-const LazyWikiGraph = lazy(() => import("./WikiGraph").then((m) => ({ default: m.WikiGraph })))
-const LazyEmbedGraph = lazy(() => import("./EmbedGraph").then((m) => ({ default: m.EmbedGraph })))
+/**
+ * The note-component registry: what an island named in a note hydrates as.
+ *
+ * Every entry is lazy. Islands mount after the note's static HTML is already
+ * on screen (NoteHtml wraps each in Suspense), so a component's code is only
+ * downloaded on a page that uses it. Previously all of them sat in the main
+ * chunk that every visitor parses first.
+ *
+ * Keep the keys in parity with ISLAND_NAMES (island-names.ts): enforced by
+ * scripts/test-islands.ts.
+ */
 
-function WikiGraph(props: any) {
-  return (
-    <Suspense fallback={<div className="loading-shimmer" style={{ height: props?.height || 520, margin: "24px 0" }}>Waking the constellation...</div>}>
-      <LazyWikiGraph {...props} />
-    </Suspense>
-  )
+type AnyComponent = ComponentType<any>
+
+function named<M extends Record<string, unknown>>(load: () => Promise<M>, name: keyof M): AnyComponent {
+  return lazy(() => load().then((m) => ({ default: m[name] as AnyComponent })))
 }
 
-function EmbedGraph(props: any) {
-  return (
-    <Suspense fallback={<div className="loading-shimmer" style={{ height: props?.height || 520, margin: "24px 0" }}>Waking the constellation...</div>}>
-      <LazyEmbedGraph {...props} />
-    </Suspense>
-  )
-}
-
-function WikiSubmitForm() {
-  return (
-    <Suspense fallback={null}>
-      <LazyWikiSubmitForm />
-    </Suspense>
-  )
-}
-
-function PhotoAlbums() {
-  return (
-    <Suspense fallback={null}>
-      <LazyPhotoAlbums />
-    </Suspense>
-  )
-}
-
-function MachineGod() {
-  return (
-    <Suspense fallback={null}>
-      <LazyMachineGod />
-    </Suspense>
-  )
-}
-
-function MDXImage(props: any) {
-  const dims = useStore(s => s.imageDimensions?.[props.src])
-  const [zoomed, setZoomed] = useState(false)
-  return (
-    <>
-      <img
-        {...props}
-        width={dims?.width || props.width}
-        height={dims?.height || props.height}
-        onClick={() => setZoomed(true)}
-        style={{ cursor: "zoom-in", ...(props.style || {}) }}
-      />
-      {zoomed && (
-        <ImageLightbox src={props.src} alt={props.alt} onClose={() => setZoomed(false)} />
-      )}
-    </>
-  )
-}
-
-export const mdxComponents = {
-  BookCard,
-  MovieCard,
-  Gallery,
-  Query,
-  OnThisDay,
-  GameOfLife,
-  WikiSubmitForm,
-  AsciiAvatar,
-  PhotoAlbums,
-  MachineGod,
-  Epigraph,
-  Tape,
-  WeighIn,
-  Clipping,
-  Classifieds,
-  Classified,
-  ChuckleRating,
-  FactionTree,
-  ChronicleCard,
-  ChronicleGrid,
-  ChatterCard,
-  ChatterGrid,
-  ConceptCard,
-  ConceptGrid,
-  BroadsheetColumns,
-  WikiGraph,
-  EmbedGraph,
-  // Add more custom components here
-  img: MDXImage,
-  a: (props: any) => {
-    const isInternal = props.href?.startsWith("/") || props.href?.startsWith(window.location.origin)
+/** The graphs are tall: reserve their height while the code loads. */
+function withShimmer(Inner: AnyComponent): AnyComponent {
+  return function Shimmered(props: { height?: number }) {
     return (
-      <a 
-        {...props} 
-        className={`${props.className || ""} ${isInternal ? "internal-link" : "external-link"}`}
-      />
+      <Suspense
+        fallback={
+          <div className="loading-shimmer" style={{ height: props?.height || 520, margin: "24px 0" }}>
+            Waking the constellation...
+          </div>
+        }
+      >
+        <Inner {...props} />
+      </Suspense>
     )
   }
+}
+
+export const mdxComponents: Record<string, AnyComponent> = {
+  BookCard: named(() => import("./BookCard"), "BookCard"),
+  MovieCard: named(() => import("./MovieCard"), "MovieCard"),
+  Gallery: named(() => import("./Gallery"), "Gallery"),
+  Query: named(() => import("./Query"), "Query"),
+  OnThisDay: named(() => import("./OnThisDay"), "OnThisDay"),
+  GameOfLife: named(() => import("./GameOfLife"), "GameOfLife"),
+  WikiSubmitForm: named(() => import("@/components/ui/wiki/WikiSubmitPage"), "WikiSubmitForm"),
+  AsciiAvatar: named(() => import("./AsciiAvatar"), "AsciiAvatar"),
+  PhotoAlbums: named(() => import("@/components/ui/shelves/PhotographyPage"), "PhotoAlbums"),
+  MachineGod: named(() => import("./MachineGod"), "MachineGod"),
+  Epigraph: named(() => import("./Epigraph"), "Epigraph"),
+  Tape: named(() => import("./Tape"), "Tape"),
+  WeighIn: named(() => import("./WeighIn"), "WeighIn"),
+  Clipping: named(() => import("./Clipping"), "Clipping"),
+  Classifieds: named(() => import("./Classifieds"), "Classifieds"),
+  Classified: named(() => import("./Classifieds"), "Classified"),
+  ChuckleRating: named(() => import("./ChuckleRating"), "ChuckleRating"),
+  FactionTree: named(() => import("./FactionTree"), "FactionTree"),
+  ChronicleCard: named(() => import("./ChronicleCard"), "ChronicleCard"),
+  ChronicleGrid: named(() => import("./ChronicleCard"), "ChronicleGrid"),
+  ChatterCard: named(() => import("./ChatterCard"), "ChatterCard"),
+  ChatterGrid: named(() => import("./ChatterCard"), "ChatterGrid"),
+  ConceptCard: named(() => import("./ConceptCard"), "ConceptCard"),
+  ConceptGrid: named(() => import("./ConceptCard"), "ConceptGrid"),
+  BroadsheetColumns: named(() => import("./BroadsheetColumns"), "BroadsheetColumns"),
+  WikiGraph: withShimmer(named(() => import("./WikiGraph"), "WikiGraph")),
+  EmbedGraph: withShimmer(named(() => import("./EmbedGraph"), "EmbedGraph")),
 }

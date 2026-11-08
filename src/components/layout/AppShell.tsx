@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from "@tanstack/react-router"
+import { LazyThemePanel, LazyMusicPlayer, LazySearchOverlay } from "./lazyOverlay"
 import { useEffect, Suspense, lazy } from "react"
 import { useStore } from "@/store"
 import { PanelStack } from "@/components/panel/PanelStack"
@@ -15,15 +16,12 @@ const OSShell = lazy(() => import("@/features/os/OSShell").then(m => ({ default:
 import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
 import { BgCanvas } from "./BgCanvas"
-import { ThemePanel } from "./ThemePanel"
 import { QuickControls } from "./QuickControls"
 import { GlobalOverlays } from "./GlobalOverlays"
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
 import { SkipToContent } from "@/components/ui/SkipToContent"
 import { LinkPreview } from "@/components/ui/reader/LinkPreview"
-import { MusicPlayer } from "@/components/ui/music/MusicPlayer"
 import { MobileMusicBar } from "@/components/ui/music/MobileMusicBar"
-import { SearchOverlay } from "@/components/ui/overlays/SearchOverlay"
 import { GraphOverlay } from "@/components/ui/graph/GraphOverlay"
 import { CookieConsent } from "./CookieConsent"
 import styles from "./AppShell.module.scss"
@@ -120,12 +118,12 @@ export function AppShell() {
       >
         <SkipToContent />
         <BgCanvas />
-        <ThemePanel />
+        <LazyThemePanel />
         <LinkPreview />
-        {!isWikiRoute && <MusicPlayer />}
+        {!isWikiRoute && <LazyMusicPlayer />}
         {!isWikiRoute && <MobileMusicBar />}
         <QuickControls />
-        <SearchOverlay />
+        <LazySearchOverlay />
         <GraphOverlay />
         <GlobalOverlays />
         

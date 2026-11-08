@@ -1,6 +1,3 @@
-// Polyfill Buffer for gray-matter (runs in browser)
-import { Buffer } from "buffer"
-;(globalThis as any).Buffer = Buffer
 
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
