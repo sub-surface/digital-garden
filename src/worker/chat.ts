@@ -148,9 +148,7 @@ export async function handleChatMessages(ctx: RouteCtx): Promise<Response> {
 
   // POST /api/chat/messages — send a message
   if (request.method === "POST") {
-    const ban = await checkBanStatus(env, auth!.id)
-    if (ban.banned) return jsonResponse({ error: ban.reason ?? "You are banned" }, 403)
-
+    // Ban check: enforced for every authed write by the dispatcher.
     let body: { room_id?: string; body?: string; reply_to?: string | null }
     try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
     if (!body.room_id?.trim() || !body.body?.trim()) return jsonResponse({ error: "room_id and body required" }, 400)

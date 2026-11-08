@@ -1,6 +1,5 @@
 import { Env, RouteCtx } from "./types"
 import { jsonResponse, supabaseRest } from "./lib"
-import { checkBanStatus } from "./chat"
 import { PERSONAS, generateReply, type PersonaId } from "../features/boot/chatbot"
 
 /** Concurrency lock: room_id -> timestamp (ms) of the last started debate. */
@@ -76,9 +75,7 @@ export async function handleChatCommand({ request, env, auth, waitUntil }: Route
     return jsonResponse({ error: "Method not allowed" }, 405)
   }
 
-  const ban = await checkBanStatus(env, auth!.id)
-  if (ban.banned) return jsonResponse({ error: ban.reason ?? "You are banned" }, 403)
-
+  // Ban check: enforced for every authed write by the dispatcher.
   let payload: { room_id?: string; command?: string; args?: string[] }
   try {
     payload = await request.json()

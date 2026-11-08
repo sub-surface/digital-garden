@@ -24,9 +24,11 @@ import { handleWidgetNews, handleWidgetWeather } from "./widgets"
  *    and never call verifyAuth themselves.
  *  - Write methods (POST/PUT/PATCH/DELETE) are rate-limited per user/IP when
  *    the WRITE_LIMITER binding is configured (no-op otherwise).
- *  - refuseBanned: write methods from a currently-banned user are refused
- *    with 403 before the handler runs (fails closed: an unreadable ban state
- *    is a 500, not an allow). Chat message POST still checks in-handler too.
+ *  - Bans: every authenticated write from a currently-banned user is refused
+ *    with 403 before the handler runs. Deny by default, so a new write route
+ *    is covered without anyone remembering to opt in; `allowBanned` marks the
+ *    few deliberate exceptions. Fails closed: an unreadable ban state is a
+ *    500, not an allow.
  *  - The dispatcher owns CORS, security headers, and the error boundary: a
  *    thrown handler becomes a logged, correlatable JSON 500 instead of a bare
  *    exception with no CORS headers.
@@ -35,7 +37,8 @@ interface Route {
   method?: string
   pattern: RegExp
   auth?: "user" | "admin"
-  refuseBanned?: boolean
+  /** Let banned users write here (private, self-only data). */
+  allowBanned?: boolean
   handler: (ctx: RouteCtx) => Promise<Response>
 }
 
@@ -52,10 +55,10 @@ const routes: Route[] = [
   { method: "GET", pattern: /^\/api\/chat\/messages\/([^/]+)$/, auth: "user", handler: handleChatMessageById },
   { pattern: /^\/api\/chat\/messages\/[^/]+$/, auth: "user", handler: handleChatMessages },
   { method: "GET", pattern: /^\/api\/chat\/pins$/, auth: "user", handler: handleChatPins },
-  { pattern: /^\/api\/chat\/reactions$/, auth: "user", refuseBanned: true, handler: handleChatReactions },
+  { pattern: /^\/api\/chat\/reactions$/, auth: "user", handler: handleChatReactions },
   { method: "GET", pattern: /^\/api\/chat\/search$/, auth: "user", handler: handleChatSearch },
   { method: "GET", pattern: /^\/api\/chat\/users\/([^/]+)\/mini$/, handler: handleChatUserMini },
-  { method: "POST", pattern: /^\/api\/chat\/claim$/, auth: "user", refuseBanned: true, handler: handleChatClaim },
+  { method: "POST", pattern: /^\/api\/chat\/claim$/, auth: "user", handler: handleChatClaim },
   { method: "POST", pattern: /^\/api\/chat\/(ban|unban)$/, auth: "admin", handler: handleChatBan },
   { method: "GET", pattern: /^\/api\/chat\/gif-search$/, auth: "user", handler: handleGifSearch },
   { method: "POST", pattern: /^\/api\/chess\/gif$/, handler: handleChessGif },
@@ -71,14 +74,14 @@ const routes: Route[] = [
   { method: "GET", pattern: /^\/api\/claims\/by-slug\/(.+)$/, handler: handleClaimBySlug },
   { method: "GET", pattern: /^\/api\/user\/(.+)$/, handler: handleUserProfile },
 
-  { method: "POST", pattern: /^\/api\/edit$/, auth: "user", refuseBanned: true, handler: handleEdit },
-  { method: "POST", pattern: /^\/api\/new$/, auth: "user", refuseBanned: true, handler: handleNew },
+  { method: "POST", pattern: /^\/api\/edit$/, auth: "user", handler: handleEdit },
+  { method: "POST", pattern: /^\/api\/new$/, auth: "user", handler: handleNew },
   { method: "GET", pattern: /^\/api\/lock-status$/, handler: handleLockStatus },
 
-  { pattern: /^\/api\/bookmarks/, auth: "user", handler: handleBookmarks },
-  { pattern: /^\/api\/os\/restores$/, auth: "user", handler: handleRestores },
+  { pattern: /^\/api\/bookmarks/, auth: "user", allowBanned: true, handler: handleBookmarks },
+  { pattern: /^\/api\/os\/restores$/, auth: "user", allowBanned: true, handler: handleRestores },
 
-  { pattern: /^\/api\/(keys|admin\/api-keys)(\/[^/]+)?$/, auth: "user", handler: handleApiKeys },
+  { pattern: /^\/api\/(keys|admin\/api-keys)(\/[^/]+)?$/, auth: "user", allowBanned: true, handler: handleApiKeys },
 
   { pattern: /^\/api\/admin\//, auth: "admin", handler: handleAdmin },
 ]
@@ -105,7 +108,8 @@ async function dispatch(request: Request, env: Env, ctx: ExecutionContext, url: 
       }
 
       const isWrite = WRITE_METHODS.has(request.method)
-      if (route.refuseBanned && auth && isWrite) {
+      // Admins can't be banned (handleChatBan refuses), so skip their lookup.
+      if (auth && isWrite && !route.allowBanned && auth.role !== "admin") {
         const ban = await checkBanStatus(env, auth.id)
         if (ban.banned) return jsonResponse({ error: ban.reason ?? "You are banned" }, 403)
       }
