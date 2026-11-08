@@ -122,7 +122,7 @@ const GROWTH_GLYPH: Record<string, string> = { larval: "◌", becoming: "◐", a
 /**
  * An essay, as a card: a thin letterboxed strip of its image (the owner's
  * choice of picture carries the mood), then the typography does the work:
- * small-caps kicker, the title in Playfair, a two-line italic standfirst, and
+ * small-caps kicker, the title in Playfair, a two-line standfirst in Plex, and
  * a quiet footer with growth and reading time.
  */
 function EssayCard({ note, lead }: { note: NoteMetadata; lead: boolean }) {

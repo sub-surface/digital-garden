@@ -306,28 +306,26 @@ function ModeNav({ current: forced }: { current?: ModeId }) {
   const navigate = useNavigate()
   const activeSlug = useStore((s) => s.activeGraphSlug)
   const current: ModeId = forced ?? (activeSlug.toLowerCase() === "arcade" ? "arcade" : "notes")
+  // The room you're in is the page itself; the nav lists only the others.
+  const others = MODES.filter((mode) => mode.id !== current)
   return (
-    <nav className={styles.chatNav} aria-label="Modes">
-      {MODES.map((mode, i) => (
+    <nav className={styles.chatNav} aria-label="Other rooms">
+      {others.map((mode, i) => (
         <span key={mode.id} className={styles.modeItem}>
           {i > 0 && <span className={styles.chatNavDivider} />}
-          {mode.id === current ? (
-            <span className={`${styles.chatNavLink} ${styles.modeCurrent}`} aria-current="page">{mode.label}</span>
-          ) : (
-            <a
-              className={styles.chatNavLink}
-              href={mode.href}
-              data-panel-ignore
-              onClick={(e) => {
-                // Inside the garden, notes and arcade are routes, not page loads.
-                if (forced || (mode.id !== "notes" && mode.id !== "arcade")) return
-                e.preventDefault()
-                navigate(mode.id === "notes" ? { to: "/" } : { to: "/$", params: { _splat: "arcade" } })
-              }}
-            >
-              {mode.label}
-            </a>
-          )}
+          <a
+            className={styles.chatNavLink}
+            href={mode.href}
+            data-panel-ignore
+            onClick={(e) => {
+              // Inside the garden, notes and arcade are routes, not page loads.
+              if (forced || (mode.id !== "notes" && mode.id !== "arcade")) return
+              e.preventDefault()
+              navigate(mode.id === "notes" ? { to: "/" } : { to: "/$", params: { _splat: "arcade" } })
+            }}
+          >
+            {mode.label}
+          </a>
         </span>
       ))}
     </nav>

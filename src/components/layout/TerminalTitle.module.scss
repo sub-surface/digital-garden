@@ -112,12 +112,3 @@
   align-items: center;
   gap: 8px;
 }
-
-.modeCurrent {
-  color: var(--color-text);
-  opacity: 1;
-  cursor: default;
-  text-decoration: underline;
-  text-decoration-color: var(--color-accent-base);
-  text-underline-offset: 4px;
-}

@@ -11,14 +11,23 @@ growth: becoming
 
 ## How to Use This Site
 
-- **Play some music while you browse**: Use the compact music player at the bottom of your screen. Click the expand arrow to see the full player with cover art, progress bar, and volume control. [Start with this track](music:Eden) or `Press M to Play`.
+- **Wander**: links open notes beside the one you're reading, so you can follow a thought without losing your place. Hover a link to peek at it first.
 
-- **Search for topics**: Press `Ctrl+K` to open the search dialog. Or explore connections in the graph view panel on the right.
+- **The prompt**: press `Ctrl P` (or `/`) to open the prompt on the right. Type anything to search the whole garden, or try a command: `random`, `here`, `toc`, `thread`, `trail`, `ponder`, `sky`, `glorp`. `Tab` completes, `help` lists everything, and `?` shows the keyboard shortcuts.
 
-- **Cycle styles:** `Press \` (front slash) to open the theme menu. 
-- **Cycle Backgrounds:** `Press B` to cycle backgrounds.
+- **Play some music while you browse**: press `M` to play or pause, or [start with this track](music:Eden). The turntable opens from the bar at the top.
 
-- **About the site**: This [digital garden](https://github.com/sub-surface/digital-garden) was a total rebuild of [Quartz](https://quartz.jzhao.xyz/), a static site generator for knowledge gardens and digital gardens. My custom rebuild with claude rewrote the entire thing with react in mind. 
+- **Reading**: press `F` for reader mode, which hides everything but the text; `-` and `+` change the size, `[` and `]` the line length.
+
+- **Settings**: press `\` (backslash) for the theme, accent colour, reading and background (`B` cycles backgrounds). The sky lives there too: seasonal flurries, light that follows the sun, and live weather.
+
+- **Chat**: press `C` to open philchat beside the note you're reading.
+
+- **The other rooms**: the [wiki](https://wiki.subsurfaces.net), the [OS](https://os.subsurfaces.net) and the [arcade](/arcade) are linked at the top left.
+
+- **What's changed**: every change to the site is in the [commit history](https://github.com/sub-surface/digital-garden/commits/master). The short code at the top right is the commit you're looking at.
+
+- **About the site**: This [digital garden](https://github.com/sub-surface/digital-garden) began as a rebuild of [Quartz](https://quartz.jzhao.xyz/), a static site generator for digital gardens, and is now its own thing, written in React with Claude. The notes are written in Obsidian and turned into pages when the site is built.
 
 ---
 

@@ -1,12 +1,16 @@
+// Link previews: a quiet card that shows the opening of the note itself (a
+// slice of its built HTML; see LinkPreview.tsx). Meta line, title, a couple of
+// paragraphs fading out, and one way onward.
 .link-preview {
   position: fixed;
   z-index: 1000;
-  width: 320px;
-  background: var(--glass-bg-heavy);
-  backdrop-filter: var(--glass-blur);
-  border: var(--glass-border);
+  width: 340px;
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
   pointer-events: auto;
   transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
   max-height: 420px;
@@ -110,10 +114,10 @@
 
   &__image {
     width: 100%;
-    height: 140px;
+    aspect-ratio: 4 / 1;
     overflow: hidden;
     flex-shrink: 0;
-    border-bottom: var(--glass-border);
+    border-bottom: 1px solid var(--color-border);
     border-radius: 6px 6px 0 0;
 
     img {
@@ -121,61 +125,131 @@
       height: 100%;
       object-fit: cover;
       display: block;
+      filter: saturate(0.85);
     }
   }
 
   &__body {
-    padding: var(--space-4);
+    position: relative;
+    padding: 0.85rem 1rem 0.7rem;
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
+    gap: 0.4rem;
     overflow: hidden;
     flex: 1;
     min-height: 0;
   }
 
+  &__meta {
+    font-family: var(--font-code);
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-accent-base);
+    opacity: 0.85;
+  }
+
+  &__title {
+    font-family: var(--font-header);
+    font-size: 1.08rem;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--color-text);
+    text-wrap: balance;
+  }
+
+  // The opening of the note: real paragraphs, fading out at the bottom rather
+  // than being chopped by a line clamp.
   &__excerpt {
-    font-size: 0.82rem;
+    position: relative;
+    max-height: 9.6em;
+    overflow: hidden;
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 300;
     line-height: 1.55;
     color: var(--color-text);
-    margin: 0;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 5;
-    -webkit-box-orient: vertical;
+    mask-image: linear-gradient(to bottom, #000 62%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent);
+
+    p, ul, ol, blockquote { margin: 0 0 0.55em; }
+    ul, ol { padding-left: 1.1em; }
+    blockquote {
+      padding-left: 0.6em;
+      border-left: 2px solid var(--color-border);
+      color: var(--color-text-muted);
+    }
 
     a {
-      color: var(--color-accent);
+      color: var(--color-accent-base);
       text-decoration: none;
-      &:hover { text-decoration: underline; }
+      &::after { content: none !important; }
     }
 
     code {
       font-family: var(--font-code);
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       background: var(--color-highlight);
       padding: 0 3px;
       border-radius: 2px;
     }
 
-    .preview-quote {
-      border-left: 2px solid var(--color-secondary);
-      padding-left: var(--space-2);
-      color: var(--color-text-muted);
-      font-style: italic;
+    .katex { font-size: 1em; }
+  }
+
+  &__section {
+    font-family: var(--font-code);
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+  }
+
+  &__skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 4px 0 6px;
+
+    i {
       display: block;
+      height: 7px;
+      border-radius: 4px;
+      background: color-mix(in srgb, var(--color-overlay-tint) 8%, transparent);
+      animation: previewPulse 1.2s ease-in-out infinite;
+
+      &:nth-child(2) { width: 88%; }
+      &:nth-child(3) { width: 62%; }
     }
   }
 
-  &__title {
+  &__empty {
     font-family: var(--font-code);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    color: var(--color-accent);
-    margin: 0;
-    letter-spacing: 0.05em;
-    opacity: 0.9;
-    flex-shrink: 0;
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+  }
+
+  &__open {
+    align-self: flex-end;
+    margin-top: 0.1rem;
+    padding: 2px 0;
+    background: none;
+    border: 0;
+    color: var(--color-text-muted);
+    font-family: var(--font-code);
+    font-size: 0.64rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: color 0.15s ease;
+
+    span { display: inline-block; transition: transform 0.15s ease; }
+
+    &:hover {
+      color: var(--color-accent-base);
+      span { transform: translateX(2px); }
+    }
+  }
+
+  &:not(.link-preview--footnote) &__rich {
+    padding: 0.85rem 1rem;
   }
 
   &__rich {
@@ -188,36 +262,12 @@
       margin-bottom: var(--space-3);
     }
   }
+}
 
-  &__tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-1);
-    margin-top: var(--space-1);
-  }
+@keyframes previewPulse {
+  50% { opacity: 0.45; }
+}
 
-  &__footer {
-    display: flex;
-    justify-content: flex-end;
-    padding-top: var(--space-2);
-    border-top: 1px solid var(--color-border-light);
-  }
-
-  &__expand-btn {
-    background: none;
-    border: 1px solid var(--color-border);
-    color: var(--color-text-muted);
-    font-family: var(--font-code);
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border-radius: 2px;
-    cursor: pointer;
-    transition: all 0.1s var(--ease-default);
-
-    &:hover {
-      border-color: var(--color-accent);
-      color: var(--color-accent);
-      background: var(--color-highlight);
-    }
-  }
+@media (prefers-reduced-motion: reduce) {
+  .link-preview__skeleton i { animation: none; }
 }

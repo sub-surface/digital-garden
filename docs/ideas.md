@@ -59,9 +59,10 @@ end of this list, give or take the canvas.
 - **Weather, more of it.** Fog as a haze, thunder as a rare far-off flash,
   wind bending the falling things. Today: rain and snow only.
 - **Pebbles.** One-line marks a reader leaves beside a paragraph, shown
-  faintly in the margin. Open question (for session 2): who can post
-  (signed-in only, or anyone with a captcha), moderation, and whether they're
-  public or just yours.
+  faintly in the margin. **Decided: pebbles are public** (everyone sees
+  everyone's). Still open for session 2: who can post (signed-in only, or
+  anyone with Turnstile), and moderation (the chat ban model, plus the owner
+  hiding a pebble).
 - **Glorp, further.** Glorp in the OS as the pet (done), peeking in the
   garden (done). Next: an ASCII alien generator (seeded by username) for
   default wiki avatars; glorp reacting to the season and the weather; glorp
@@ -80,8 +81,10 @@ end of this list, give or take the canvas.
   ponder`), Settings as one sheet.
 - Seasonal flurries, Light follows the sun, live weather (rain, snow).
 - Essay cards: thin image strip, typographic body.
-- The modes nav (`notes · wiki · os · arcade`); FILAMENT and p(doom) in the
-  arcade.
+- The modes nav (the rooms you're not in: notes, wiki, os, arcade); FILAMENT
+  and p(doom) in the arcade.
+- Link previews read the built note (no runtime markdown), quieter card.
+- Housekeeping brought up to date, with the commit history linked.
 - The OS pet is glorp.
 
 ## Decided against (for now)

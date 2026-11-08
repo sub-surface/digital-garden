@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { useStore } from "@/store"
-import { escapeAttr, escapeHtml } from "@/lib/escape"
-import { stripFrontmatter } from "@/lib/frontmatter"
+import { useNavigate } from "@tanstack/react-router"
+import { useShell } from "@/hooks/useShell"
+import { loadNote, type NoteData } from "@/lib/note-loader"
+import type { NoteMetadata } from "@/types/content"
 
 interface PreviewState {
   id: string
   slug: string
   title: string
-  excerpt: string
-  body: string        // first ~300 chars of note body (plain text)
-  bodyHtml: string    // body with wikilinks rendered as <a> tags
-  image: string       // first image URL found in the note, or ""
-  tags: string[]
+  meta: string        // folder · date · reading time
+  bodyHtml: string    // a slice of the built note HTML ("" while loading)
+  loading: boolean
+  missing: boolean
+  image: string       // the note's image, if it has one
   x: number
   y?: number
   bottom?: number
@@ -76,148 +78,94 @@ function computePosition(
   return { x, y: rect.bottom + GAP, pos: "below" }
 }
 
-// Extract the first image URL (external http or internal /content/) from markdown
-function extractFirstImage(md: string): string {
-  const body = stripFrontmatter(md)
-  // External image: ![alt](url)
-  const extMatch = body.match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/)
-  if (extMatch) return extMatch[1]
-  // Internal wikilink image: ![[filename.ext]]
-  const wikiMatch = body.match(/!\[\[([^\]]+\.(png|jpe?g|gif|webp|svg))\]\]/i)
-  if (wikiMatch) return `/content/Media/${wikiMatch[1]}`
-  // Internal markdown image: ![alt](/content/... or relative)
-  const intMatch = body.match(/!\[[^\]]*\]\(([^)]+\.(png|jpe?g|gif|webp|svg))\)/i)
-  if (intMatch) return intMatch[1].startsWith("http") ? intMatch[1] : `/content/${intMatch[1]}`
-  return ""
-}
-
 /**
- * Resolve an internal link exactly as the browser will, and keep it only if it
- * stays on this origin. Regex checks lose to the URL parser: `/\host` and
- * `/\/host` normalise to `//host` (backslash is a slash in http URLs), and the
- * parser also strips tabs/newlines. Return the ABSOLUTE validated URL, never
- * the parsed path: `/.//host` is same-origin, but its normalised pathname is
- * `//host`, which re-parses as protocol-relative if emitted as a relative href.
+ * What a preview shows, read from the SAME built note JSON the reader renders
+ * (lib/note-loader). It used to fetch the raw markdown and regex it into HTML
+ * at runtime: no maths, broken sidenotes, a second renderer to keep in step.
+ * Now the preview is a slice of the real note, and hovering a link warms the
+ * cache, so clicking it opens instantly.
  */
-function sameOriginPath(path: string): string | null {
-  try {
-    const url = new URL(path, window.location.origin)
-    return url.origin === window.location.origin ? url.href : null
-  } catch {
-    return null
+interface PreviewBody {
+  html: string
+  image: string
+  missing?: boolean
+}
+
+const PREVIEW_CHARS = 420
+// Never in a preview: components, margin furniture, media, code blocks.
+const STRIP = [
+  "[data-island]", "aside", "input", "label", "figure", "img", "picture", "video", "audio",
+  "iframe", "pre", "table", "hr", "script", "style", "sup", ".note-build-error", ".katex-display",
+  ".telescopic", "[class*=callout]", "h1",
+].join(",")
+
+function sliceOf(nodes: Element[]): string {
+  const out: string[] = []
+  let chars = 0
+  for (const node of nodes) {
+    if (!/^(P|BLOCKQUOTE|UL|OL|H2|H3|H4)$/.test(node.tagName)) continue
+    const text = (node.textContent ?? "").trim()
+    if (!text) continue
+    if (/^H[234]$/.test(node.tagName)) {
+      if (out.length) break // stop at the next section
+      continue
+    }
+    out.push(node.outerHTML)
+    chars += text.length
+    if (chars >= PREVIEW_CHARS) break
   }
+  return out.join("")
 }
 
-// Convert markdown body to HTML with wikilinks/md-links as <a> tags, strip other formatting.
-// The result goes through dangerouslySetInnerHTML, and wiki notes are user-submitted, so
-// the source is ESCAPED FIRST and the markup below is the only HTML that can appear.
-// Truncation happens on the source (at a word boundary), never on the generated HTML,
-// which used to be sliced mid-tag.
-function mdToBodyHtml(md: string): string {
-  let src = stripFrontmatter(md)
-    .replace(/!\[\[[^\]]*\]\]/g, "")             // note embeds (not images)
-    .replace(/!\[[^\]]*\]\([^)]+\)/g, "")        // inline images
-    .replace(/~~|__/g, "")
-  if (src.length > 600) src = src.slice(0, 600).replace(/\s\S*$/, "")
-  return escapeHtml(src)
-    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target: string, alias?: string) => {
-      const label = alias || target
-      const href = sameOriginPath("/" + target.trim().replace(/\s+/g, "-"))
-      return href ? `<a href="${escapeAttr(href)}" class="internal-link">${label}</a>` : label
-    })
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_, label: string, href: string) =>
-      `<a href="${escapeAttr(href)}" class="external-link" target="_blank" rel="noopener">${label}</a>`)
-    .replace(/\[([^\]]+)\]\((\/[^)\s]+)\)/g, (_, label: string, path: string) => {
-      const href = sameOriginPath(path)
-      return href ? `<a href="${escapeAttr(href)}" class="internal-link">${label}</a>` : label
-    })
-    .replace(/^#{1,6}\s+(.+)$/gm, "<strong>$1</strong>")  // headings → bold
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/^&gt;\s+(.+)$/gm, "<span class=\"preview-quote\">$1</span>")
-    .replace(/\n{2,}/g, " · ")
-    .replace(/\s+/g, " ")
-    .trim()
-}
+function buildPreview(note: NoteData, anchor?: string): PreviewBody {
+  const doc = new DOMParser().parseFromString(`<div id="root">${note.html}</div>`, "text/html")
+  const root = doc.getElementById("root")!
+  const image = typeof note.frontmatter.image === "string" ? note.frontmatter.image : root.querySelector("img")?.getAttribute("src") ?? ""
+  root.querySelectorAll(STRIP).forEach((el) => el.remove())
 
-// Plain text fallback (for excerpt field)
-function mdToPlain(md: string): string {
-  return stripFrontmatter(md)
-    .replace(/!\[\[[^\]]*\]\]/g, "")
-    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, t, a) => a || t)
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/[*_`~>]/g, "")
-    .replace(/\n{2,}/g, " · ")
-    .replace(/\n/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 320)
-}
-
-interface FetchedBody { plain: string; html: string; image: string; rawMd: string }
-const bodyCache = new Map<string, FetchedBody>()
-
-function extractAnchorContent(rawMd: string, anchor: string): { title: string; html: string } | null {
-  const normKey = anchor.toLowerCase().replace(/^[#\[\]]+|[\[\]]+$/g, "").trim()
-  if (!normKey) return null
-
-  const lines = rawMd.split("\n")
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const lower = line.toLowerCase()
-
-    const hasId = lower.includes(`id="${normKey}"`) || lower.includes(`id='${normKey}'`)
-    const hasBracket = lower.includes(`[${normKey}]`) || lower.includes(`**[${normKey}]**`) || lower.includes(`**${normKey}**`)
-    const isHeading = line.startsWith("#") && lower.includes(normKey)
-
-    if (hasId || hasBracket || isHeading) {
-      const chunk: string[] = [line]
-      for (let j = i + 1; j < lines.length; j++) {
-        const next = lines[j]
-        if (next.trim().startsWith("*") || next.trim().startsWith("-") || next.startsWith("#")) break
-        if (next.trim().length === 0 && j + 1 < lines.length && (lines[j + 1].trim().startsWith("*") || lines[j + 1].startsWith("#"))) break
-        chunk.push(next)
-      }
-      const rawText = chunk.join("\n").replace(/<span[^>]*>/g, "").replace(/<\/span>/g, "").trim()
-      return {
-        title: `Citation: [${anchor.replace(/^[#\[\]]+|[\[\]]+$/g, "")}]`,
-        html: mdToBodyHtml(rawText),
+  if (anchor) {
+    const target = root.querySelector(`#${CSS.escape(anchor)}`)
+    if (target) {
+      const after: Element[] = []
+      for (let el = target.nextElementSibling; el; el = el.nextElementSibling) after.push(el)
+      const body = sliceOf(after)
+      if (body) {
+        // Built as a node, never by pasting text into a string: textContent
+        // is decoded, so a heading reading "&lt;img onerror=…&gt;" would
+        // become live markup.
+        const label = doc.createElement("p")
+        label.className = "link-preview__section"
+        label.textContent = target.textContent ?? ""
+        return { html: label.outerHTML + body, image: "" }
       }
     }
   }
-  return null
+  return { html: sliceOf(Array.from(root.children)), image: image.startsWith("http") || image.startsWith("/") ? image : "" }
 }
 
-async function fetchBody(slug: string, contentPath?: string): Promise<FetchedBody> {
-  if (bodyCache.has(slug)) return bodyCache.get(slug)!
-  const paths = contentPath
-    ? [`/content/${contentPath}`]
-    : [`/content/${slug}.md`, `/content/${slug}.mdx`, `/content/${slug}/index.md`]
-  for (const p of paths) {
-    try {
-      const res = await fetch(p)
-      if (res.ok && !res.headers.get("content-type")?.includes("text/html")) {
-        const text = await res.text()
-        const result: FetchedBody = {
-          plain: mdToPlain(text),
-          html: mdToBodyHtml(text),
-          image: extractFirstImage(text),
-          rawMd: text,
-        }
-        bodyCache.set(slug, result)
-        return result
-      }
-    } catch { /* ignore */ }
+async function fetchPreview(slug: string, anchor?: string): Promise<PreviewBody> {
+  try {
+    return buildPreview(await loadNote(slug), anchor)
+  } catch {
+    return { html: "", image: "", missing: true }
   }
-  return { plain: "", html: "", image: "", rawMd: "" }
+}
+
+const DATE = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+
+function metaLine(meta: NoteMetadata | undefined): string {
+  if (!meta) return ""
+  const folder = meta.folder?.split("/").pop()?.replace(/-/g, " ")
+  const date = meta.date && !Number.isNaN(Date.parse(meta.date)) ? DATE.format(new Date(meta.date)) : null
+  return [folder, date, meta.readingTime ? `${meta.readingTime} min` : null].filter(Boolean).join(" · ")
 }
 
 export function LinkPreview() {
   const [stack, setStack] = useState<PreviewState[]>([])
   const contentIndex = useStore((s) => s.contentIndex)
   const pushCard = useStore((s) => s.pushCard)
+  const shell = useShell()
+  const navigate = useNavigate()
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const currentSlug = useRef("")
   const highlightedSidenote = useRef<HTMLElement | null>(null)
@@ -271,40 +219,27 @@ export function LinkPreview() {
       }
     }
 
+    const willFetch = !isFootnote && !localAnchorHtml && !meta?.system
     const initial: PreviewState = {
       id, depth, slug: previewKey, isFootnote,
       footnoteHtml: footnoteHtml || localAnchorHtml,
-      title: isFootnote
-        ? `Footnote ${anchor.textContent}`
-        : targetAnchor
-        ? `Citation: [${targetAnchor}]`
-        : (meta?.title ?? slug.split("/").pop() ?? ""),
-      excerpt: meta?.excerpt ?? "",
-      body: "",
-      bodyHtml: localAnchorHtml || "",
+      title: isFootnote ? `Footnote ${anchor.textContent}` : (meta?.title ?? slug.split("/").pop()?.replace(/-/g, " ") ?? ""),
+      meta: isFootnote ? "" : metaLine(meta),
+      bodyHtml: "",
+      loading: willFetch,
+      missing: false,
       image: "",
-      tags: meta?.tags ?? [],
       x, y, bottom, pos,
     }
 
     setStack(prev => [...prev, initial])
     currentSlug.current = previewKey
 
-    // Fetch body content async and patch state — synthesized system-page
-    // entries have no content file to fetch (see synthesizeSystemPages).
-    if (!isFootnote && !meta?.system) {
-      fetchBody(slug, meta?.contentPath).then(({ plain, html, image, rawMd }) => {
-        let finalHtml = html
-        let finalTitle = meta?.title ?? slug.split("/").pop() ?? ""
-        if (targetAnchor && rawMd) {
-          const extracted = extractAnchorContent(rawMd, targetAnchor)
-          if (extracted) {
-            finalHtml = extracted.html
-            finalTitle = extracted.title
-          }
-        }
+    // Synthesized system pages (games, shelves) have no note body to show.
+    if (willFetch) {
+      void fetchPreview(slug, targetAnchor).then(({ html, image, missing }) => {
         setStack(prev => prev.map(p =>
-          p.id === id ? { ...p, title: finalTitle, body: plain, bodyHtml: finalHtml, image } : p
+          p.id === id ? { ...p, bodyHtml: html, image, loading: false, missing: Boolean(missing) } : p
         ))
       })
     }
@@ -422,7 +357,9 @@ export function LinkPreview() {
           key={p.id}
           state={p}
           onOpen={() => {
-            pushCard({ url: `/${p.slug}`, slug: p.slug, title: p.title, html: "" }, -1)
+            // The garden opens it beside the current note; the wiki has no panels.
+            if (shell === "main") pushCard({ url: `/${p.slug}`, slug: p.slug, title: p.title, html: "" }, -1)
+            else navigate({ to: "/$", params: { _splat: p.slug } })
             popTo(0)
           }}
           onEnter={() => {
@@ -442,8 +379,8 @@ function PreviewCard({ state, onOpen, onEnter }: {
 }) {
   const dims = useStore((s) => state.image ? s.imageDimensions?.[state.image] : undefined)
   const maxHeight = state.bottom && typeof window !== "undefined"
-    ? Math.min(420, Math.max(160, window.innerHeight - state.bottom - 12))
-    : 420
+    ? Math.min(380, Math.max(160, window.innerHeight - state.bottom - 12))
+    : 380
 
   return (
     <div
@@ -454,19 +391,16 @@ function PreviewCard({ state, onOpen, onEnter }: {
         bottom: state.bottom,
         maxHeight: state.isFootnote ? 260 : maxHeight,
         zIndex: 1000 + state.depth,
-        boxShadow: state.isFootnote
-          ? "0 4px 14px rgba(0,0,0,0.35)"
-          : `0 ${4 + state.depth * 2}px ${12 + state.depth * 4}px rgba(0,0,0,0.25)`
       }}
       data-panel-ignore
       data-pos={state.pos}
       data-depth={state.depth}
       onMouseEnter={onEnter}
     >
-      {state.isFootnote && state.footnoteHtml ? (
+      {state.isFootnote || state.footnoteHtml ? (
         <div
           className="link-preview__rich"
-          dangerouslySetInnerHTML={{ __html: state.footnoteHtml }}
+          dangerouslySetInnerHTML={{ __html: state.footnoteHtml ?? "" }}
         />
       ) : (
         <>
@@ -476,27 +410,19 @@ function PreviewCard({ state, onOpen, onEnter }: {
             </div>
           )}
           <div className="link-preview__body">
-            <h4 className="link-preview__title">{state.title}</h4>
-            {state.bodyHtml ? (
-              <p className="link-preview__excerpt" dangerouslySetInnerHTML={{ __html: state.bodyHtml }} />
-            ) : state.excerpt ? (
-              <p className="link-preview__excerpt">{state.excerpt}</p>
-            ) : null}
-            {state.tags.length > 0 && (
-              <div className="link-preview__tags">
-                {state.tags.map(t => (
-                  <a key={t} href={`/tags/${t}`} className="tag-pill">#{t}</a>
-                ))}
-              </div>
+            {state.meta && <div className="link-preview__meta">{state.meta}</div>}
+            <div className="link-preview__title">{state.title}</div>
+            {state.loading ? (
+              <div className="link-preview__skeleton" aria-hidden="true"><i /><i /><i /></div>
+            ) : state.bodyHtml ? (
+              // A slice of the built note: already sanitised by the pipeline.
+              <div className="link-preview__excerpt" dangerouslySetInnerHTML={{ __html: state.bodyHtml }} />
+            ) : (
+              <div className="link-preview__empty">{state.missing ? "This note couldn't be loaded." : "A page, not a note: open it to see."}</div>
             )}
-            <div className="link-preview__footer">
-              <button
-                className="link-preview__expand-btn"
-                onClick={(e) => { e.stopPropagation(); onOpen() }}
-              >
-                OPEN →
-              </button>
-            </div>
+            <button className="link-preview__open" onClick={(e) => { e.stopPropagation(); onOpen() }}>
+              open beside <span aria-hidden="true">→</span>
+            </button>
           </div>
         </>
       )}

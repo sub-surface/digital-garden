@@ -1,6 +1,5 @@
 /**
- * The site's rooms, named once, top-left. The one you're in is marked rather
- * than linked (TerminalTitle). Also reachable from the prompt (`mode`).
+ * The site's rooms, named once. TerminalTitle lists the ones you're not in. Also reachable from the prompt (`mode`).
  */
 export const MODES = [
   { id: "notes", label: "notes", href: "https://subsurfaces.net" },
