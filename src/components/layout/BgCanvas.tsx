@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import { useStore } from "@/store"
 import { isPhoneViewport } from "@/config/breakpoints"
+import { loadGraphData } from "@/lib/content-loader"
 import type {
   BgState,
   GraphNode,
@@ -104,6 +105,13 @@ function BgCanvasInner() {
     h: 0,
   })
 
+  // Read config through a ref: ThemePanel sliders produce a new config object
+  // per tick, and having it as an effect dependency tore down and rebuilt the
+  // whole loop (graph mode also refetched and reshuffled its nodes).
+  const configRef = useRef(config)
+  // Repaints the still frame when the loop is off (reduced motion / bg off).
+  const redrawStillRef = useRef<(() => void) | null>(null)
+
   // True when chamber was auto-selected by the sigil page
   const autoChamberRef = useRef(false)
 
@@ -148,7 +156,27 @@ function BgCanvasInner() {
 
   useEffect(() => {
     stateRef.current.colorValid = false
+    redrawStillRef.current?.()
   }, [theme, accentBase])
+
+  useEffect(() => {
+    configRef.current = config
+    redrawStillRef.current?.()
+  }, [config])
+
+  // Graph nodes for the graph background, via the shared cached loader (this
+  // used to be a second, uncached fetch of /graph.json on every effect run).
+  useEffect(() => {
+    if (bgMode !== "graph") return
+    let cancelled = false
+    loadGraphData()
+      .then((data) => {
+        if (cancelled) return
+        layoutGraph(stateRef.current, data as GraphJsonData)
+      })
+      .catch((e) => console.warn("BgCanvas: graph data prefetch failed:", e))
+    return () => { cancelled = true }
+  }, [bgMode])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -228,57 +256,6 @@ function BgCanvasInner() {
     window.addEventListener("mousemove", mouseMove, { passive: true })
     resize()
 
-    // Fetch graph nodes only when graph background mode is active
-    if (bgMode === "graph") {
-      fetch("/graph.json")
-        .then((res) => res.json())
-        .then((data: GraphJsonData) => {
-          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
-          if (data.nodes) {
-            for (const n of data.nodes) {
-              if (n.x !== undefined && n.y !== undefined) {
-                if (n.x < minX) minX = n.x
-                if (n.x > maxX) maxX = n.x
-                if (n.y < minY) minY = n.y
-                if (n.y > maxY) maxY = n.y
-              }
-            }
-          }
-          const hasCoords = isFinite(minX) && maxX > minX && maxY > minY
-          const spanX = maxX - minX || 1
-          const spanY = maxY - minY || 1
-          const pad = 60
-          const availW = Math.max(100, window.innerWidth - pad * 2)
-          const availH = Math.max(100, window.innerHeight - pad * 2)
-
-          const nodes: GraphNode[] = data.nodes
-            ? data.nodes.map((n) => {
-                const posX = hasCoords && n.x !== undefined
-                  ? pad + ((n.x - minX) / spanX) * availW
-                  : Math.random() * window.innerWidth
-                const posY = hasCoords && n.y !== undefined
-                  ? pad + ((n.y - minY) / spanY) * availH
-                  : Math.random() * window.innerHeight
-
-                return {
-                  ...n,
-                  x: posX,
-                  y: posY,
-                  vx: (Math.random() - 0.5) * 0.2,
-                  vy: (Math.random() - 0.5) * 0.2,
-                }
-              })
-            : []
-          stateRef.current.nodes = nodes
-          stateRef.current.links = data.links || []
-
-          const map = new Map<string, GraphNode>()
-          nodes.forEach((n) => map.set(n.id, n))
-          stateRef.current.nodeMap = map
-        })
-        .catch((e) => console.warn("BgCanvas: graph data prefetch failed:", e))
-    }
-
     // Draw a single frame of current mode
     const draw = () => {
       const state = stateRef.current
@@ -290,33 +267,33 @@ function BgCanvasInner() {
       ctx.clearRect(0, 0, state.w, state.h)
 
       if (bgMode === "vectors" || bgMode === "dots") {
-        drawField(ctx, state, bgMode, config)
+        drawField(ctx, state, bgMode, configRef.current)
       } else if (bgMode === "terminal") {
-        drawTerminalPops(ctx, state, config)
+        drawTerminalPops(ctx, state, configRef.current)
       } else if (bgMode === "chess") {
         drawChess(ctx, state)
       } else if (bgMode === "hexo") {
         drawHexo(ctx, state)
       } else if (bgMode === "graph") {
-        drawGraph(ctx, state, config)
+        drawGraph(ctx, state, configRef.current)
       } else if (bgMode === "murmuration") {
-        drawMurmuration(ctx, state, config)
+        drawMurmuration(ctx, state, configRef.current)
       } else if (bgMode === "chamber") {
-        drawChamber(ctx, state, config)
+        drawChamber(ctx, state, configRef.current)
       } else if (bgMode === "schematic") {
-        drawSchematic(ctx, state, config)
+        drawSchematic(ctx, state, configRef.current)
       } else if (bgMode === "isometric") {
-        drawIsometric(ctx, state, config)
+        drawIsometric(ctx, state, configRef.current)
       } else if (bgMode === "orrery") {
-        drawOrrery(ctx, state, config)
+        drawOrrery(ctx, state, configRef.current)
       } else if (bgMode === "plate-scan") {
-        drawPlateScan(ctx, state, config)
+        drawPlateScan(ctx, state, configRef.current)
       } else if (bgMode === "dendrite") {
-        drawDendrite(ctx, state, config)
+        drawDendrite(ctx, state, configRef.current)
       } else if (bgMode === "lorenz") {
-        drawLorenz(ctx, state, config)
+        drawLorenz(ctx, state, configRef.current)
       } else if (bgMode === "cartography") {
-        drawCartography(ctx, state, config)
+        drawCartography(ctx, state, configRef.current)
       }
     }
 
@@ -328,7 +305,9 @@ function BgCanvasInner() {
       draw()
       // The loop is off, so a resize (which clears the canvas) must repaint the still.
       redrawStill = draw
+      redrawStillRef.current = draw
       return () => {
+        redrawStillRef.current = null
         if (resizeRaf) cancelAnimationFrame(resizeRaf)
         window.removeEventListener("resize", onResize)
         window.removeEventListener("mousemove", mouseMove)
@@ -421,7 +400,7 @@ function BgCanvasInner() {
       document.removeEventListener("visibilitychange", onVisibility)
       stop()
     }
-  }, [bgMode, bgStyle, theme, accentBase, config])
+  }, [bgMode, bgStyle])
 
   return (
     <canvas
@@ -440,4 +419,49 @@ function BgCanvasInner() {
       }}
     />
   )
+}
+
+function layoutGraph(state: BgState, data: GraphJsonData) {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+  if (data.nodes) {
+    for (const n of data.nodes) {
+      if (n.x !== undefined && n.y !== undefined) {
+        if (n.x < minX) minX = n.x
+        if (n.x > maxX) maxX = n.x
+        if (n.y < minY) minY = n.y
+        if (n.y > maxY) maxY = n.y
+      }
+    }
+  }
+  const hasCoords = isFinite(minX) && maxX > minX && maxY > minY
+  const spanX = maxX - minX || 1
+  const spanY = maxY - minY || 1
+  const pad = 60
+  const availW = Math.max(100, window.innerWidth - pad * 2)
+  const availH = Math.max(100, window.innerHeight - pad * 2)
+
+  const nodes: GraphNode[] = data.nodes
+    ? data.nodes.map((n) => {
+        const posX = hasCoords && n.x !== undefined
+          ? pad + ((n.x - minX) / spanX) * availW
+          : Math.random() * window.innerWidth
+        const posY = hasCoords && n.y !== undefined
+          ? pad + ((n.y - minY) / spanY) * availH
+          : Math.random() * window.innerHeight
+
+        return {
+          ...n,
+          x: posX,
+          y: posY,
+          vx: (Math.random() - 0.5) * 0.2,
+          vy: (Math.random() - 0.5) * 0.2,
+        }
+      })
+    : []
+  state.nodes = nodes
+  state.links = data.links || []
+
+  const map = new Map<string, GraphNode>()
+  nodes.forEach((n) => map.set(n.id, n))
+  state.nodeMap = map
 }

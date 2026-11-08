@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useStore } from "@/store"
-import { useMusic } from "./MusicContext"
+import { useMusic, useMusicClock } from "./MusicContext"
 import { usePopoutPlayer } from "./usePopoutPlayer"
 import { startScratch, prewarmScratch, type ScratchSession } from "@/lib/scratchEngine"
 import styles from "./MusicPlayer.module.scss"
@@ -16,8 +16,6 @@ export function MusicPlayer() {
     currentTrackIndex,
     isPlaying,
     volume,
-    currentTime,
-    duration,
     playTrack,
     togglePlay,
     nextTrack,
@@ -29,6 +27,7 @@ export function MusicPlayer() {
     audioRef,
     effectsInput,
   } = useMusic()
+  const { currentTime, duration } = useMusicClock()
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const vinylRef = useRef<HTMLDivElement>(null)

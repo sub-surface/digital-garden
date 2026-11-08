@@ -13,7 +13,7 @@ import { useStore, BG_MODES, BG_META, type BgMode } from "@/store"
 import { SYSTEM_PAGES } from "@/config/system-pages"
 import { PROGRAMS } from "@/features/terminal/commands"
 import type { NoteMetadata } from "@/types/content"
-import { useMusic } from "@/components/ui/music/MusicContext"
+import { useMusic, useMusicClock } from "@/components/ui/music/MusicContext"
 import { EQ_BANDS, EQ_PRESETS, type EqGains } from "@/components/ui/music/musicEffects"
 import { useAuth } from "@/hooks/useAuth"
 import { ImageLightbox } from "@/components/ui/reader/ImageLightbox"
@@ -33,7 +33,7 @@ import {
 import { OSIcon, type IconName } from "./OSIcon"
 import { playOSSound } from "./osSounds"
 import { APPS } from "./appRegistry"
-import { dosName, fileExt, useOpenNote } from "./appNavigation"
+import { dosName, fileExt, localFileWindow, useOpenNote } from "./appNavigation"
 import {
   insertNext,
   moveQueueItem,
@@ -561,13 +561,7 @@ export function ExplorerApp({ args, windowId }: AppProps) {
   }, [address, isHome, setWindowTitle, windowId])
 
   const openLocalFile = (id: string, name: string) => {
-    const paint = isPaintFile(name)
-    openWindow({
-      appId: paint ? "paint" : "notepad",
-      args: { fileId: id },
-      title: `${name} — ${paint ? "Paint" : "Notepad"}`,
-      ...(paint ? { w: 720, h: 600 } : {}),
-    })
+    openWindow(localFileWindow({ id, name }))
   }
   const activate = (action: () => void, event: React.MouseEvent) => {
     if (!doubleClick && event.detail === 1) action()
@@ -728,15 +722,7 @@ export function FindApp({ args }: AppProps) {
     if (!result) return
     if (result.kind === "local") {
       const file = files.find((candidate) => candidate.id === result.target)
-      if (file) {
-        const paint = isPaintFile(file.name)
-        openWindow({
-          appId: paint ? "paint" : "notepad",
-          args: { fileId: file.id },
-          title: `${file.name} — ${paint ? "Paint" : "Notepad"}`,
-          ...(paint ? { w: 720, h: 600 } : {}),
-        })
-      }
+      if (file) openWindow(localFileWindow(file))
       return
     }
     const note = notes?.[result.target]
@@ -1650,11 +1636,12 @@ function mediaTime(seconds: number) {
 
 export function MediaPlayerApp() {
   const {
-    tracks, currentTrackIndex, currentTrack, isPlaying, currentTime, duration, volume,
+    tracks, currentTrackIndex, currentTrack, isPlaying, volume,
     playTrack, togglePlay, stop, nextTrack, prevTrack, seek, setVolume, analyser,
     repeatMode, setRepeatMode, queue, setQueue, queueIndex, setQueueIndex,
     eqEnabled, crossfadeSeconds, isCrossfading,
   } = useMusic()
+  const { currentTime, duration } = useMusicClock()
   const openWindow = useOS((state) => state.openWindow)
   const visualizerDetached = useOS((state) => state.windows.some((win) =>
     win.appId === "media-pane"

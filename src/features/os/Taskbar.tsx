@@ -70,6 +70,7 @@ export function Taskbar({ onOpenShortcut }: Props) {
       <div className={styles.taskbar}>
         <button
           className={styles.startBtn}
+          data-start-button
           aria-expanded={isStartOpen}
           onClick={() => setStartOpen(!isStartOpen)}
         >
@@ -287,7 +288,11 @@ function StartMenu({ onOpenShortcut }: Props) {
 
   useEffect(() => {
     const dismissOutside = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) setStartOpen(false)
+      const target = event.target as Element | null
+      // The Start button toggles itself; closing here first made its click
+      // (which runs after this re-render) reopen the menu.
+      if (target?.closest?.("[data-start-button]")) return
+      if (!menuRef.current?.contains(target as Node)) setStartOpen(false)
     }
     document.addEventListener("pointerdown", dismissOutside, true)
     return () => document.removeEventListener("pointerdown", dismissOutside, true)

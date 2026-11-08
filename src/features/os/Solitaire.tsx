@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { focusedWindowId, useOS } from "./osStore"
+import type { AppProps } from "./appTypes"
 import {
   SUITS,
   canFound,
@@ -70,7 +72,11 @@ function CardFace({ card, selected, onClick, onDoubleClick, className, style }: 
   )
 }
 
-export function SolitaireApp() {
+export function SolitaireApp({ windowId }: Partial<AppProps> = {}) {
+  // Hotkeys belong to the focused window only. Minimized windows now stay
+  // mounted, so a page-wide listener would let N in any other program deal a
+  // hidden game (and count it in the stats).
+  const isFocused = useOS((state) => !windowId || focusedWindowId(state.windows) === windowId)
   const recordGame = useSolitaireStats((state) => state.recordGame)
   const recordWin = useSolitaireStats((state) => state.recordWin)
   const games = useSolitaireStats((state) => state.games)
@@ -153,6 +159,7 @@ export function SolitaireApp() {
   }
 
   useEffect(() => {
+    if (!isFocused) return
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
       if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA") return
@@ -162,7 +169,7 @@ export function SolitaireApp() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [draw, start])
+  }, [draw, start, isFocused])
 
   const cascade = useMemo(() => Array.from({ length: 36 }, (_, index) => ({
     id: index,

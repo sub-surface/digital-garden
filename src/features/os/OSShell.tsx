@@ -7,7 +7,7 @@
 
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { BgCanvas } from "@/components/layout/BgCanvas"
-import { useMusic } from "@/components/ui/music/MusicContext"
+import { useMusic, useMusicClock } from "@/components/ui/music/MusicContext"
 import { useStore } from "@/store"
 import { usePhoneViewport } from "@/hooks/usePhoneViewport"
 import { OSBoot, OSSplash } from "./OSBoot"
@@ -16,6 +16,7 @@ import { Desktop } from "./Desktop"
 import styles from "./OS.module.scss"
 import { playOSSound } from "./osSounds"
 import { OSLogon } from "./OSLogon"
+import { defineMachine, useMachine } from "@/lib/machine"
 
 const Constellation = lazy(() =>
   import("@/components/ui/graph/ConstellationPage").then((m) => ({ default: m.ConstellationPage })),
@@ -26,6 +27,27 @@ const Terminal = lazy(() =>
 )
 
 type Stage = "post" | "splash" | "logon" | "desktop" | "dos"
+
+type ShellEvent =
+  | { type: "BOOTED" }
+  | { type: "SPLASH_DONE"; logon: boolean }
+  | { type: "LOGGED_ON" }
+  | { type: "LOG_OFF" }
+  | { type: "DOS" }
+  | { type: "EXIT_DOS" }
+
+/**
+ * Every legal move of the shell, in one place. Before this the transitions
+ * were bare setStage calls spread over a timer, two child callbacks and two
+ * window events, so e.g. an `os:logon` event during the POST was honoured.
+ */
+const shellMachine = defineMachine<Stage, ShellEvent>({
+  post: { BOOTED: "splash" },
+  splash: { SPLASH_DONE: (e) => (e.logon ? "logon" : "desktop") },
+  logon: { LOGGED_ON: "desktop" },
+  desktop: { LOG_OFF: "logon", DOS: "dos" },
+  dos: { EXIT_DOS: "desktop", LOG_OFF: "logon" },
+}, "os-shell")
 
 /** Boot plays once per tab, not once per navigation. */
 const BOOTED_KEY = "subsurfaces95:booted"
@@ -52,14 +74,14 @@ export function OSShell() {
   const bootSequence = useOSSettings((s) => s.bootSequence)
   // Read once, on mount: flipping the setting later must not restart a desktop
   // that is already up.
-  const [stage, setStage] = useState<Stage>(() =>
+  const [stage, send] = useMachine(shellMachine, () =>
     hasBooted() || useOSSettings.getState().bootSequence === "off"
       ? useOSSettings.getState().showLogon ? "logon" : "desktop"
       : "post",
   )
 
-  const enterDesktop = useCallback((setupWiki = false) => {
-    setStage("desktop")
+  // Side effects of arriving at the desktop from the splash or the logon.
+  const desktopArrived = useCallback((setupWiki = false) => {
     const settings = useOSSettings.getState()
     if (settings.soundEnabled && settings.soundEvents?.startup) playOSSound("startup", settings.soundVolume)
     if (setupWiki) {
@@ -69,22 +91,22 @@ export function OSShell() {
 
   const finishPost = useCallback(() => {
     markBooted()
-    setStage("splash")
-  }, [])
+    send({ type: "BOOTED" })
+  }, [send])
 
   // Start-menu session actions use events rather than a prop channel threaded
   // through Desktop and Taskbar. Logoff returns to the native account screen;
   // DOS mode swaps the desktop for the shared fullscreen terminal.
   useEffect(() => {
-    const toDos = () => setStage("dos")
-    const toLogon = () => setStage("logon")
+    const toDos = () => send({ type: "DOS" })
+    const toLogon = () => send({ type: "LOG_OFF" })
     window.addEventListener("os:dos-mode", toDos)
     window.addEventListener("os:logon", toLogon)
     return () => {
       window.removeEventListener("os:dos-mode", toDos)
       window.removeEventListener("os:logon", toLogon)
     }
-  }, [])
+  }, [send])
 
   if (isPhone) return <PhoneGuard />
 
@@ -97,7 +119,7 @@ export function OSShell() {
           type="button"
           className={styles.crtBtn}
           style={{ position: "fixed", right: 16, top: 16, zIndex: 100000 }}
-          onClick={() => setStage("desktop")}
+          onClick={() => send({ type: "EXIT_DOS" })}
         >
           EXIT
         </button>
@@ -115,12 +137,14 @@ export function OSShell() {
         <OSBoot onComplete={finishPost} variant={bootSequence === "full" ? "full" : "post"} />
       )}
       {stage === "splash" && <OSSplash onDone={() => {
-        if (useOSSettings.getState().showLogon) setStage("logon")
-        else enterDesktop()
+        const logon = useOSSettings.getState().showLogon
+        send({ type: "SPLASH_DONE", logon })
+        if (!logon) desktopArrived()
       }} />}
       {stage === "logon" && <OSLogon onContinue={({ guest, rememberGuest, setupWiki }) => {
         if (guest && rememberGuest) useOSSettings.getState().setShowLogon(false)
-        enterDesktop(setupWiki)
+        send({ type: "LOGGED_ON" })
+        desktopArrived(setupWiki)
       }} />}
 
       {stage === "desktop" && <ScreenSaver />}
@@ -188,6 +212,7 @@ function ScreenSaver() {
   const delaySeconds = useOSSettings((s) => s.saverDelay)
   const saverMode = useOSSettings((s) => s.saverMode)
   const music = useMusic()
+  const { progress } = useMusicClock()
   const [active, setActive] = useState(false)
   // Mirrored in a ref so the pointermove handler can decide whether anything
   // changed WITHOUT calling setState — pointermove fires continuously, and this
@@ -213,12 +238,17 @@ function ScreenSaver() {
       }, Math.max(10, delaySeconds) * 1000)
     }
 
+    // Only undo our own change: if the user switched background while the
+    // saver ran (B key), restoring would clobber their choice.
+    const restoreBg = () => {
+      const previous = previousBgRef.current
+      previousBgRef.current = null
+      if (previous && useStore.getState().bgMode === saverMode) useStore.setState({ bgMode: previous })
+    }
+
     const onActivity = () => {
       if (activeRef.current) {
-        if (previousBgRef.current) {
-          useStore.setState({ bgMode: previousBgRef.current })
-          previousBgRef.current = null
-        }
+        restoreBg()
         activeRef.current = false
         setActive(false)
         arm()
@@ -237,10 +267,7 @@ function ScreenSaver() {
       clearTimeout(timer)
       activeRef.current = false
       setActive(false)
-      if (previousBgRef.current) {
-        useStore.setState({ bgMode: previousBgRef.current })
-        previousBgRef.current = null
-      }
+      restoreBg()
       events.forEach((e) => window.removeEventListener(e, onActivity))
     }
   }, [enabled, delaySeconds, saverMode])
@@ -264,7 +291,7 @@ function ScreenSaver() {
             <strong>{music.currentTrack.title}</strong>
             <em>{music.currentTrack.artist}</em>
             <div className={styles.saverProgress}>
-              <i style={{ width: `${Math.max(0, Math.min(100, music.progress * 100))}%` }} />
+              <i style={{ width: `${Math.max(0, Math.min(100, progress * 100))}%` }} />
             </div>
           </div>
         </div>

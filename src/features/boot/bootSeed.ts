@@ -144,39 +144,6 @@ export function persistResolvedSeed(
   return { source, value, display: formatSeed(value) }
 }
 
-export interface BootPalette {
-  name: string
-  /** Accent colour applied to the boot terminal for this seed. */
-  accent: string
-}
-
-/**
- * One of four ambient palettes, chosen deterministically from the seed. Only
- * the terminal accent is recoloured; the OLED-dark base stays constant so the
- * page never clashes with the rest of the site.
- */
-export const BOOT_PALETTES: readonly BootPalette[] = [
-  { name: "phosphor", accent: "#8ef0a7" },
-  { name: "amber", accent: "#ffc66d" },
-  { name: "ice", accent: "#8ed7e8" },
-  { name: "violet", accent: "#d2a3e8" },
-  { name: "temple", accent: "#55ffff" },
-]
-
-export function paletteForSeed(seed: number): BootPalette {
-  const index = mixSeed(seed, "palette") % BOOT_PALETTES.length
-  return BOOT_PALETTES[index]
-}
-
-export function canonicalSeedUrl(seed: number): string {
-  const display = formatSeed(seed)
-  if (!hasWindow()) return `/boot?seed=${encodeURIComponent(display)}`
-
-  const url = new URL(window.location.href)
-  url.searchParams.set("seed", display)
-  return url.toString()
-}
-
 /**
  * Resolve URL -> storage -> generated seed, then canonicalise the URL.
  * An explicit but invalid URL seed generates a fresh seed instead of silently

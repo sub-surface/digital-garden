@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import type { Track } from "@/types/content"
 import { musicAssetUrl } from "@/lib/musicAsset"
 import {
@@ -19,9 +19,6 @@ interface MusicContextType {
   currentTrackIndex: number
   isPlaying: boolean
   volume: number
-  progress: number
-  duration: number
-  currentTime: number
   playTrack: (target: number | string, queuePosition?: number) => void
   togglePlay: () => void
   stop: () => void
@@ -56,13 +53,34 @@ interface MusicContextType {
   isCrossfading: boolean
 }
 
+/**
+ * The playback clock changes ~4×/s while playing. It lives in its own context
+ * so that only the few components that draw a scrubber or a time readout
+ * re-render on every tick. When it shared one value with everything else,
+ * every useMusic() consumer re-rendered per tick: AppShell (via useHotkeys),
+ * the whole MDX note body, the terminal, the OS taskbar.
+ */
+export interface MusicClock {
+  progress: number
+  duration: number
+  currentTime: number
+}
+
 const MusicContext = createContext<MusicContextType | undefined>(undefined)
+const MusicClockContext = createContext<MusicClock | undefined>(undefined)
 const { fadeIn: FADE_IN_CURVE, fadeOut: FADE_OUT_CURVE } = equalPowerCurves(96)
 
 export function useMusic() {
   const context = useContext(MusicContext)
   if (!context) throw new Error("useMusic must be used within a MusicProvider")
   return context
+}
+
+/** Position/duration of the active track. Subscribe only where time is drawn. */
+export function useMusicClock() {
+  const clock = useContext(MusicClockContext)
+  if (!clock) throw new Error("useMusicClock must be used within a MusicProvider")
+  return clock
 }
 
 export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -729,47 +747,80 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else setIsPlaying(false)
   }
 
+  const value = useMemo<MusicContextType>(() => ({
+    tracks,
+    currentTrackIndex,
+    isPlaying,
+    volume,
+    playTrack,
+    togglePlay,
+    stop,
+    nextTrack,
+    prevTrack,
+    setVolume,
+    seek,
+    currentTrack,
+    analyser,
+    audioRef,
+    effectsInput,
+    repeatMode,
+    setRepeatMode,
+    queue,
+    setQueue,
+    queueIndex,
+    setQueueIndex,
+    eqEnabled: effects.eqEnabled,
+    setEqEnabled,
+    eqGains: effects.eqGains,
+    setEqGain,
+    setEqGains,
+    highpassHz: effects.highpassHz,
+    setHighpassHz,
+    lowpassHz: effects.lowpassHz,
+    setLowpassHz,
+    resetEqualizer,
+    crossfadeSeconds: effects.crossfadeSeconds,
+    setCrossfadeSeconds,
+    isCrossfading,
+  }), [
+    analyser,
+    audioRef,
+    currentTrack,
+    currentTrackIndex,
+    effects,
+    effectsInput,
+    isCrossfading,
+    isPlaying,
+    nextTrack,
+    playTrack,
+    prevTrack,
+    queue,
+    queueIndex,
+    repeatMode,
+    resetEqualizer,
+    seek,
+    setCrossfadeSeconds,
+    setEqEnabled,
+    setEqGain,
+    setEqGains,
+    setHighpassHz,
+    setLowpassHz,
+    setQueue,
+    setQueueIndex,
+    setRepeatMode,
+    setVolume,
+    stop,
+    togglePlay,
+    tracks,
+    volume,
+  ])
+  const clock = useMemo<MusicClock>(() => ({ progress, duration, currentTime }), [progress, duration, currentTime])
+
   return (
-    <MusicContext.Provider value={{
-      tracks,
-      currentTrackIndex,
-      isPlaying,
-      volume,
-      progress,
-      duration,
-      currentTime,
-      playTrack,
-      togglePlay,
-      stop,
-      nextTrack,
-      prevTrack,
-      setVolume,
-      seek,
-      currentTrack,
-      analyser,
-      audioRef,
-      effectsInput,
-      repeatMode,
-      setRepeatMode,
-      queue,
-      setQueue,
-      queueIndex,
-      setQueueIndex,
-      eqEnabled: effects.eqEnabled,
-      setEqEnabled,
-      eqGains: effects.eqGains,
-      setEqGain,
-      setEqGains,
-      highpassHz: effects.highpassHz,
-      setHighpassHz,
-      lowpassHz: effects.lowpassHz,
-      setLowpassHz,
-      resetEqualizer,
-      crossfadeSeconds: effects.crossfadeSeconds,
-      setCrossfadeSeconds,
-      isCrossfading,
-    }}>
+    <MusicContext.Provider value={value}>
+      <MusicClockContext.Provider value={clock}>
       {children}
+      </MusicClockContext.Provider>
       <audio
         ref={attachDeckA}
         crossOrigin="anonymous"

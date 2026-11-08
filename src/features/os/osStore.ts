@@ -232,7 +232,6 @@ interface OSStore {
   /** Merge args into a window; `undefined` removes a stale argument. */
   updateWindowArgs: (id: string, args: Record<string, string | undefined>) => void
   setWindowTitle: (id: string, title: string) => void
-  setWindowState: (id: string, state: WindowState) => void
   toggleMinimize: (id: string) => void
   toggleMaximize: (id: string) => void
   toggleShade: (id: string) => void
@@ -357,9 +356,6 @@ export const useOS = create<OSStore>((set, get) => ({
 
   setWindowTitle: (id, title) =>
     set((s) => ({ windows: s.windows.map((w) => (w.id === id ? { ...w, title } : w)) })),
-
-  setWindowState: (id, state) =>
-    set((s) => ({ windows: s.windows.map((w) => (w.id === id ? { ...w, state } : w)) })),
 
   toggleMinimize: (id) =>
     set((s) => ({

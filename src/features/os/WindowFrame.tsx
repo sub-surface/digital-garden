@@ -28,8 +28,16 @@ interface Props {
 }
 
 export function WindowFrame({ win, icon, focused, bounds, menus, status, children }: Props) {
-  const { focusWindow, closeWindow, toggleMinimize, toggleMaximize, toggleShade, moveWindow, resizeWindow } =
-    useOS()
+  // Per-action selectors: actions are stable, so a window no longer
+  // re-renders on every store change (each focus click used to re-render
+  // every open window and its live document).
+  const focusWindow = useOS((s) => s.focusWindow)
+  const closeWindow = useOS((s) => s.closeWindow)
+  const toggleMinimize = useOS((s) => s.toggleMinimize)
+  const toggleMaximize = useOS((s) => s.toggleMaximize)
+  const toggleShade = useOS((s) => s.toggleShade)
+  const moveWindow = useOS((s) => s.moveWindow)
+  const resizeWindow = useOS((s) => s.resizeWindow)
 
   const maximized = win.state === "maximized"
   const shaded = win.state === "shaded"
@@ -55,7 +63,11 @@ export function WindowFrame({ win, icon, focused, bounds, menus, status, childre
     disabled: maximized,
   })
 
-  if (win.state === "minimized") return null
+  // Minimized and shaded windows stay MOUNTED and are only hidden. Unmounting
+  // them threw away program state: Paint lost an unsaved picture, Solitaire
+  // dealt a new game (and bumped its stats) on restore.
+  const minimized = win.state === "minimized"
+  const hiddenStyle = minimized ? { display: "none" } : undefined
 
   return (
     <>
@@ -68,7 +80,8 @@ export function WindowFrame({ win, icon, focused, bounds, menus, status, childre
 
       <div
         className={`${styles.window} ${maximized ? styles.windowMax : ""}`}
-        style={maximized ? { zIndex: win.z } : { left: win.x, top: win.y, width: win.w, height: shaded ? undefined : win.h, zIndex: win.z }}
+        style={maximized ? { zIndex: win.z, ...hiddenStyle } : { left: win.x, top: win.y, width: win.w, height: shaded ? undefined : win.h, zIndex: win.z, ...hiddenStyle }}
+        aria-hidden={minimized || undefined}
         data-focused={focused}
         data-shaded={shaded || undefined}
         // Capture phase: focus must win even when the click lands on a control
@@ -160,7 +173,7 @@ export function WindowFrame({ win, icon, focused, bounds, menus, status, childre
           </div>
         )}
 
-        {!shaded && <div className={styles.docArea}>{children}</div>}
+        <div className={styles.docArea} style={shaded ? { display: "none" } : undefined}>{children}</div>
 
         {!shaded && status && status.length > 0 && (
           <div className={styles.statusBar}>

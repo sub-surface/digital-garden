@@ -105,11 +105,49 @@ function documentIsHidden(): boolean {
   return typeof document !== "undefined" && document.hidden
 }
 
+/**
+ * Wakes parked playback. While paused or hidden the loop used to poll every
+ * 64ms forever (a collapsed /terminal prompt kept a 15Hz timer alive for the
+ * life of the page); now it parks on a promise that resume() or a
+ * visibilitychange resolves.
+ */
+interface Waker {
+  current: (() => void) | null
+}
+
+function parkUntilActive(
+  signal: AbortSignal,
+  pausedRef: MutableRefObject<boolean>,
+  waker: Waker,
+): Promise<void> {
+  if (signal.aborted) return Promise.reject(new PlaybackAbortedError())
+  return new Promise((resolve, reject) => {
+    const check = () => {
+      if (pausedRef.current || documentIsHidden()) return
+      cleanup()
+      resolve()
+    }
+    const onAbort = () => {
+      cleanup()
+      reject(new PlaybackAbortedError())
+    }
+    const cleanup = () => {
+      if (waker.current === check) waker.current = null
+      signal.removeEventListener("abort", onAbort)
+      if (typeof document !== "undefined") document.removeEventListener("visibilitychange", check)
+    }
+    waker.current = check
+    signal.addEventListener("abort", onAbort, { once: true })
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", check)
+  })
+}
+
 async function waitForActiveTime(
   durationMs: number,
   signal: AbortSignal,
   pausedRef: MutableRefObject<boolean>,
   speedRef: MutableRefObject<number>,
+  waker: Waker,
 ): Promise<void> {
   let remaining = Math.max(0, durationMs)
   let previous = now()
@@ -117,11 +155,13 @@ async function waitForActiveTime(
   while (remaining > 0) {
     if (signal.aborted) throw new PlaybackAbortedError()
 
-    const inactiveBeforeWait = pausedRef.current || documentIsHidden()
+    if (pausedRef.current || documentIsHidden()) {
+      await parkUntilActive(signal, pausedRef, waker)
+      previous = now() // parked time is not playback time
+      continue
+    }
     const speed = speedRef.current
-    const realTimeNeeded = inactiveBeforeWait
-      ? CLOCK_SLICE_MS
-      : Math.min(CLOCK_SLICE_MS, remaining / speed)
+    const realTimeNeeded = Math.min(CLOCK_SLICE_MS, remaining / speed)
 
     await abortableDelay(Math.max(8, realTimeNeeded), signal)
 
@@ -193,6 +233,7 @@ export function useBootPlayback({
   const reducedMotionRef = useRef(reducedMotion)
   const maxLinesRef = useRef(sanitizeMaxLines(maxLines))
   const onToneRef = useRef(onTone)
+  const wakerRef = useRef<Waker["current"]>(null)
 
   useEffect(() => {
     speedRef.current = sanitizeSpeed(speed)
@@ -217,12 +258,14 @@ export function useBootPlayback({
   const setPaused = useCallback((paused: boolean) => {
     pausedRef.current = paused
     setPausedState(paused)
+    if (!paused) wakerRef.current?.()
   }, [])
 
   const togglePaused = useCallback(() => {
     const next = !pausedRef.current
     pausedRef.current = next
     setPausedState(next)
+    if (!next) wakerRef.current?.()
   }, [])
 
   const injectLine = useCallback((text: string, tone: BootTone = "normal", kind: BootEventKind = "line") => {
@@ -320,6 +363,7 @@ export function useBootPlayback({
           signal,
           pausedRef,
           speedRef,
+          wakerRef,
         )
         return
       }
@@ -344,7 +388,7 @@ export function useBootPlayback({
             if (event.tone === "accent" || event.kind === "heading") { charDelay *= 1.5 + Math.random() * 0.5 }
             else if (event.tone === "muted" || event.kind === "frame") { charDelay *= 0.6 }
             
-            await waitForActiveTime(charDelay, signal, pausedRef, speedRef)
+            await waitForActiveTime(charDelay, signal, pausedRef, speedRef, wakerRef)
           }
         }
 
@@ -355,7 +399,7 @@ export function useBootPlayback({
       if (event.tone === "accent" || event.kind === "heading" || event.tone === "warning") { holdMs *= 1.5 + Math.random() }
       else if (event.tone === "muted" || event.kind === "frame") { holdMs *= 0.6 }
 
-      await waitForActiveTime(holdMs, signal, pausedRef, speedRef)
+      await waitForActiveTime(holdMs, signal, pausedRef, speedRef, wakerRef)
     }
 
     const run = async (): Promise<void> => {

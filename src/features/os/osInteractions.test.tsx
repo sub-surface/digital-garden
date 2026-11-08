@@ -14,7 +14,7 @@ import { MenuRow } from "./Taskbar"
 import { useOSLinks } from "./useOSLinks"
 
 const useMusicMock = vi.hoisted(() => vi.fn())
-vi.mock("@/components/ui/music/MusicContext", () => ({ useMusic: useMusicMock }))
+vi.mock("@/components/ui/music/MusicContext", () => ({ useMusic: useMusicMock, useMusicClock: () => useMusicMock() }))
 
 function LinkHarness({ openSlug }: { openSlug: (slug: string) => void }) {
   useOSLinks(openSlug)

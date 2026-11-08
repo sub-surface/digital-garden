@@ -169,7 +169,6 @@ interface GardenStore {
    * folded into the reader-dim pipeline so all modes honour it for free. */
   bgOpacity: number
   setBgMode: (mode: GardenStore["bgMode"]) => void
-  toggleGraphBackground: () => void
   cycleBgMode: () => void
   setBgStyle: (style: GardenStore["bgStyle"]) => void
   setBgOpacity: (v: number) => void
@@ -362,10 +361,6 @@ export const useStore = create<GardenStore>()(
         set((s) => ({
           bgMode,
           lastBgMode: bgMode === "chess" || bgMode === "hexo" ? s.lastBgMode : bgMode,
-        })),
-      toggleGraphBackground: () =>
-        set((s) => ({
-          bgMode: s.bgMode === "graph" ? s.lastBgMode : "graph",
         })),
       cycleBgMode: () =>
         set((s) => {

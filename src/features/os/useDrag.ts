@@ -151,7 +151,6 @@ export function useDrag({ geometry, bounds, onCommit, disabled }: UseDragOptions
   return {
     /** Non-null only while a drag is in flight. */
     ghost,
-    isDragging: ghost !== null,
     handlers: { onPointerMove: move, onPointerUp: end, onPointerCancel: end },
     beginMove: (e: React.PointerEvent) => begin(e, "move"),
     beginResize: (edge: ResizeEdge) => (e: React.PointerEvent) => begin(e, "resize", edge),

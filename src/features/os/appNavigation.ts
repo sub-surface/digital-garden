@@ -2,6 +2,7 @@ import { useCallback } from "react"
 import { classifyLayout } from "@/lib/layout"
 import type { NoteMetadata } from "@/types/content"
 import { useOS } from "./osStore"
+import { isPaintFile } from "./paintModel"
 
 /** Extension by layout — articles are documents, system pages are executables. */
 export function fileExt(note: Pick<NoteMetadata, "slug" | "layout" | "type" | "system">): string {
@@ -40,4 +41,19 @@ export function useOpenNote() {
       ...(appId === "program" ? { w: 860, h: 640 } : {}),
     })
   }, [openWindow])
+}
+
+/**
+ * Window request for a file in My Documents: pictures open in Paint, anything
+ * else in Notepad. One definition for Explorer and Find, which carried
+ * identical copies.
+ */
+export function localFileWindow(file: { id: string; name: string }) {
+  const paint = isPaintFile(file.name)
+  return {
+    appId: paint ? "paint" : "notepad",
+    args: { fileId: file.id },
+    title: `${file.name} — ${paint ? "Paint" : "Notepad"}`,
+    ...(paint ? { w: 720, h: 600 } : {}),
+  }
 }

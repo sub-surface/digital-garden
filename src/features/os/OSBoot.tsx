@@ -113,7 +113,7 @@ function FullBoot({ onComplete }: { onComplete: () => void }) {
     [],
   )
 
-  const { lines, activeText, emittedCount } = useBootPlayback({
+  const { lines, activeText, emittedCount, error } = useBootPlayback({
     seed: seedInfo.value,
     reducedMotion: reduced,
     maxLines: 120,
@@ -125,9 +125,11 @@ function FullBoot({ onComplete }: { onComplete: () => void }) {
     completeRef.current()
   }, [])
 
+  // A playback fault used to freeze the boot until a key press; hand over to
+  // the desktop instead (the fault is already logged by the playback hook).
   useEffect(() => {
-    if (emittedCount >= FULL_BOOT_EVENTS) finish()
-  }, [emittedCount, finish])
+    if (emittedCount >= FULL_BOOT_EVENTS || error) finish()
+  }, [emittedCount, error, finish])
 
   useEffect(() => {
     window.addEventListener("keydown", finish)
