@@ -7,7 +7,6 @@ import { TerminalTitle } from "./TerminalTitle"
 import { CornerMenu } from "./CornerMenu"
 import { LinkPreview } from "@/components/ui/reader/LinkPreview"
 import { SearchOverlay } from "@/components/ui/overlays/SearchOverlay"
-import { MDXProvider } from "@/components/mdx/MDXProvider"
 import { WikiSearchBox } from "@/components/ui/wiki/WikiSearchBox"
 import { SideChat } from "@/components/ui/chat/SideChat"
 import { NotificationBanner } from "@/components/ui/NotificationBanner"
@@ -25,7 +24,7 @@ export function WikiShell() {
   const location = useLocation()
 
   return (
-    <MDXProvider>
+    <>
       <div
         className={styles.shell}
         data-wiki
@@ -71,6 +70,6 @@ export function WikiShell() {
         </div>
         <CornerMenu variant="wiki" />
       </div>
-    </MDXProvider>
+    </>
   )
 }

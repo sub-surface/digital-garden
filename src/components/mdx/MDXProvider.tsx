@@ -1,5 +1,4 @@
 import React, { Suspense, lazy, useState } from "react"
-import { MDXProvider as BaseMDXProvider } from "@mdx-js/react"
 import { useStore } from "@/store"
 import { BookCard } from "./BookCard"
 import { MovieCard } from "./MovieCard"
@@ -125,12 +124,4 @@ export const mdxComponents = {
       />
     )
   }
-}
-
-export function MDXProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <BaseMDXProvider components={mdxComponents as any}>
-      {children}
-    </BaseMDXProvider>
-  )
 }

@@ -3,7 +3,8 @@ import { useTelescopicHandlers } from "../TelescopicHandler"
 import { NotFound } from "../NotFound"
 import { useMusic } from "@/components/ui/music/MusicContext"
 import { useStore } from "@/store"
-import { mdxComponents } from "@/components/mdx/MDXProvider"
+import { loadNote, NoteMissingError } from "@/lib/note-loader"
+import { NoteHtml } from "./NoteHtml"
 import { TagPage } from "./TagPage"
 import { FolderPage } from "./FolderPage"
 import { SYSTEM_PAGES } from "@/config/system-pages"
@@ -31,10 +32,17 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
     () => normalizeSlug(resolvedSlug.replace(/\.mdx?$/, "")),
     [resolvedSlug]
   )
-  const [loading, setLoading] = useState(true)
-  const [MDXComponent, setMDXComponent] = useState<React.ComponentType<any> | null>(null)
-  const [frontmatter, setFrontmatter] = useState<Record<string, any>>({})
-  const [notFound, setNotFound] = useState(false)
+  // One status instead of loading/notFound/MDXComponent flags that had to be
+  // kept consistent by hand.
+  type Status =
+    | { kind: "loading" }
+    | { kind: "ready"; html: string; frontmatter: Record<string, any> }
+    | { kind: "missing" }
+  const [status, setStatus] = useState<Status>({ kind: "loading" })
+  const loading = status.kind === "loading"
+  const notFound = status.kind === "missing"
+  const frontmatter = status.kind === "ready" ? status.frontmatter : {}
+  const bodyHtml = status.kind === "ready" ? status.html : null
   
   const contentRef = useRef<HTMLDivElement>(null)
   const { playTrack, tracks } = useMusic()
@@ -63,7 +71,7 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
     const el = contentRef.current
     el.addEventListener("click", handleClick)
     return () => el.removeEventListener("click", handleClick)
-  }, [playTrack, tracks, MDXComponent])
+  }, [playTrack, tracks, bodyHtml])
 
   // Handle "System" pages that aren't MDX files
   const isTagPage = slug.toLowerCase() === "tags" || slug.toLowerCase().startsWith("tags/")
@@ -76,7 +84,7 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
 
   useEffect(() => {
     if (isSystemPage) {
-      setLoading(false)
+      setStatus({ kind: "ready", html: "", frontmatter: {} })
       if (onLoad) {
         // Provide default system frontmatter
         let systemTitle = slug.charAt(0).toUpperCase() + slug.slice(1).toLowerCase()
@@ -98,69 +106,18 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
     }
 
     let cancelled = false
-    setLoading(true)
-    setNotFound(false)
-    setMDXComponent(null)
-
-    async function load() {
-      try {
-        const paths = [
-          `/src/content/${slug}.md`,
-          `/src/content/${slug}.mdx`,
-          `/src/content/${slug}/index.md`,
-          `/src/content/${slug}/index.mdx`
-        ].map(p => p.toLowerCase())
-        
-        const notes = import.meta.glob(["/src/content/**/*.{md,mdx}", "!/src/content/**/_template.{md,mdx}"])
-        let match = ""
-        
-        // Case-insensitive match
-        for (const p of Object.keys(notes)) {
-          if (paths.includes(p.toLowerCase())) {
-            match = p
-            break
-          }
-        }
-
-        // Basename fallback match across all content notes (e.g. bare "Quigley" or "The-Evolution-Deliberation")
-        if (!match) {
-          const baseTarget = slug.split("/").pop()!.toLowerCase()
-          for (const p of Object.keys(notes)) {
-            const noteBase = p.replace(/\.mdx?$/, "").split("/").pop()!.toLowerCase()
-            if (noteBase === baseTarget) {
-              match = p
-              break
-            }
-          }
-        }
-
-        if (match) {
-          const mod = (await notes[match]()) as any
-          if (!cancelled) {
-            setMDXComponent(() => mod.default)
-            setFrontmatter(mod.frontmatter || {})
-            if (onLoad) {
-              onLoad({ frontmatter: mod.frontmatter || {} })
-            }
-            setLoading(false)
-            return
-          }
-        } else {
-          if (!cancelled) {
-            setNotFound(true)
-            setLoading(false)
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load MDX note:", err)
-        if (!cancelled) {
-          setNotFound(true)
-          setLoading(false)
-        }
-      }
-    }
-
-    load()
+    setStatus({ kind: "loading" })
+    loadNote(slug)
+      .then((note) => {
+        if (cancelled) return
+        setStatus({ kind: "ready", html: note.html, frontmatter: note.frontmatter })
+        onLoad?.({ frontmatter: note.frontmatter })
+      })
+      .catch((err) => {
+        if (cancelled) return
+        if (!(err instanceof NoteMissingError)) console.error("Failed to load note:", err)
+        setStatus({ kind: "missing" })
+      })
     return () => { cancelled = true }
   }, [slug, isSystemPage, isTagPage, isFolderPage, sysPage, onLoad])
 
@@ -185,14 +142,14 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
         onLoad({ headings: extracted })
       }
     }
-  }, [MDXComponent, hasPrerender, slug, onLoad])
+  }, [bodyHtml, hasPrerender, slug, onLoad])
 
-  // Clear prerender stash once interactive component is mounted
+  // The edge-injected stash has done its job once the real body is in.
   useEffect(() => {
-    if (MDXComponent && typeof window !== "undefined" && (window as any).__PRERENDER_CACHE__) {
+    if (bodyHtml !== null && typeof window !== "undefined" && (window as any).__PRERENDER_CACHE__) {
       ;(window as any).__PRERENDER_CACHE__ = null
     }
-  }, [MDXComponent])
+  }, [bodyHtml])
 
   if (loading && !hasPrerender) return <div className="note-loading">Loading...</div>
   if (notFound) return <NotFound />
@@ -231,10 +188,8 @@ export function NoteBody({ slug: rawSlug, onLoad }: Props) {
           <img src={posterSrc} alt={(frontmatter.title as string) || ""} loading="lazy" />
         </figure>
       )}
-      {MDXComponent ? (
-        <Suspense fallback={<div>Loading component...</div>}>
-          <MDXComponent components={mdxComponents as any} />
-        </Suspense>
+      {bodyHtml !== null ? (
+        <NoteHtml html={bodyHtml} />
       ) : hasPrerender ? (
         <div
           className="prerendered-body-content"

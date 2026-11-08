@@ -1,46 +1,24 @@
-import { unified } from "unified"
-import remarkParse from "remark-parse"
-import remarkGfm from "remark-gfm"
-import remarkMath from "remark-math"
-import remarkFrontmatter from "remark-frontmatter"
-import remarkRehype from "remark-rehype"
-import rehypeKatex from "rehype-katex"
-import rehypeRaw from "rehype-raw"
-import rehypeSlug from "rehype-slug"
-import rehypeStringify from "rehype-stringify"
-import matter from "gray-matter"
-import { remarkWikilinks } from "./remark-wikilinks"
-import { remarkTelescopic } from "./remark-telescopic"
-import { remarkCallouts } from "./remark-callouts"
-import { rehypeSidenotes } from "./rehype-sidenotes-runtime"
-import { rehypeImagePaths } from "./rehype-image-paths"
+import { parse as parseYaml } from "yaml"
+import { splitFrontmatter } from "./frontmatter"
+import { renderNoteHtml } from "./note-pipeline"
 
-const processor = unified()
-  .use(remarkParse)
-  .use(remarkFrontmatter, ["yaml"])
-  .use(remarkGfm)
-  .use(remarkMath)
-  .use(remarkWikilinks)
-  .use(remarkTelescopic)
-  .use(remarkCallouts)
-  .use(remarkRehype, { allowDangerousHtml: true })
-  .use(rehypeRaw)
-  .use(rehypeSlug)
-  .use(rehypeKatex)
-  .use(rehypeImagePaths)
-  .use(rehypeSidenotes)
-  .use(rehypeStringify)
-
+/**
+ * Parse a note into frontmatter + HTML, through THE note pipeline
+ * (src/lib/note-pipeline.ts). Build-time only: prerender and tests.
+ *
+ * Frontmatter goes through `yaml` (what the retired MDX build used),
+ * not gray-matter: gray-matter's js-yaml turns `date: 2026-01-01` into a Date,
+ * which would change every date a page displays.
+ */
 export interface ParsedNote {
   frontmatter: Record<string, unknown>
   html: string
+  errors: string[]
 }
 
 export async function parseMarkdown(source: string): Promise<ParsedNote> {
-  const { content, data } = matter(source)
-  const result = await processor.process(content)
-  return {
-    frontmatter: data,
-    html: String(result),
-  }
+  const { yaml, body } = splitFrontmatter(source)
+  const frontmatter = (yaml ? parseYaml(yaml) : null) ?? {}
+  const { html, errors } = await renderNoteHtml(body)
+  return { frontmatter, html, errors }
 }

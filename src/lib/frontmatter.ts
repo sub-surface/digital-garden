@@ -23,3 +23,9 @@ export function stripFrontmatter(src: string): string {
   const match = src.match(/^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/)
   return match ? src.slice(match[0].length) : src
 }
+
+/** Split a note into its raw YAML frontmatter text and its body. */
+export function splitFrontmatter(src: string): { yaml: string | null; body: string } {
+  const match = src.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
+  return match ? { yaml: match[1], body: src.slice(match[0].length) } : { yaml: null, body: src }
+}

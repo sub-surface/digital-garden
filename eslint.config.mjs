@@ -37,7 +37,7 @@ export default [
     ignores: [
       "dist/**",
       "content/**",
-      "src/content/**",
+      ".claude/**",
       ".wrangler/**",
       "scratch/**",
       "public/**",

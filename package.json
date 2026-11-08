@@ -10,7 +10,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck:worker": "tsc -p tsconfig.worker.json",
     "lint": "eslint . --max-warnings 0",
-    "test": "tsx scripts/test-slugs.ts && tsx scripts/test-footnotes.ts && tsx scripts/test-math.ts && tsx scripts/test-sigil.ts && tsx scripts/test-chatbot.ts && tsx scripts/test-fmm.ts && tsx scripts/test-composer.ts && tsx scripts/test-layout.ts && tsx scripts/test-terminal.ts && tsx scripts/test-media.ts && tsx scripts/test-links.ts && tsx scripts/test-os.ts && tsx scripts/test-backgrounds.ts && tsx scripts/test-embed-graph.ts && tsx scripts/test-prerender.ts && tsx scripts/test-search.ts && tsx scripts/test-graph.ts && npm run test:ui && tsx scripts/test-og.ts && node scripts/test-package-scripts.mjs",
+    "test": "tsx scripts/test-slugs.ts && tsx scripts/test-footnotes.ts && tsx scripts/test-islands.ts && tsx scripts/test-math.ts && tsx scripts/test-sigil.ts && tsx scripts/test-chatbot.ts && tsx scripts/test-fmm.ts && tsx scripts/test-composer.ts && tsx scripts/test-layout.ts && tsx scripts/test-terminal.ts && tsx scripts/test-media.ts && tsx scripts/test-links.ts && tsx scripts/test-os.ts && tsx scripts/test-backgrounds.ts && tsx scripts/test-embed-graph.ts && tsx scripts/test-prerender.ts && tsx scripts/test-search.ts && tsx scripts/test-graph.ts && npm run test:ui && tsx scripts/test-og.ts && node scripts/test-package-scripts.mjs",
     "test:ui": "vitest run --config vitest.config.ts",
     "check": "npm test && npm run lint && npm run typecheck:worker && npm run build",
     "preview": "vite preview",
@@ -18,7 +18,6 @@
     "dash": "node scripts/dash.mjs"
   },
   "dependencies": {
-    "@mdx-js/react": "^3.1.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tanstack/react-router": "^1.112.0",
     "buffer": "^6.0.3",
@@ -26,6 +25,7 @@
     "d3": "^7.9.0",
     "github-slugger": "^2.0.0",
     "gray-matter": "^4.0.3",
+    "hast-util-to-html": "^9.0.6",
     "katex": "^0.19.1",
     "react": "^19.0.0",
     "react-chessboard": "^5.10.0",
@@ -38,7 +38,7 @@
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.0",
     "remark-math": "^6.0.0",
-    "remark-mdx-frontmatter": "^6.0.0",
+    "remark-mdx": "^3.1.1",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.1",
     "sass": "^1.83.0",
@@ -48,7 +48,6 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261021.1",
-    "@mdx-js/rollup": "^3.1.0",
     "@resvg/resvg-js": "^2.6.2",
     "@tanstack/router-plugin": "^1.112.0",
     "@testing-library/jest-dom": "^6.6.3",

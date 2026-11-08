@@ -1,6 +1,5 @@
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
-import mdx from "@mdx-js/rollup"
 import { resolve, join } from "path"
 import { execSync } from "child_process"
 import { readFileSync, existsSync } from "fs"
@@ -45,20 +44,6 @@ function resolveCommitSha(): string {
 
 const COMMIT_SHA = resolveCommitSha()
 
-import remarkGfm from "remark-gfm"
-import remarkMath from "remark-math"
-import remarkFrontmatter from "remark-frontmatter"
-import remarkMdxFrontmatter from "remark-mdx-frontmatter"
-import rehypeKatex from "rehype-katex"
-import rehypeSlug from "rehype-slug"
-import rehypeRaw from "rehype-raw"
-
-// Import our custom plugins
-import { remarkWikilinks } from "./src/lib/remark-wikilinks"
-import { remarkTelescopic } from "./src/lib/remark-telescopic"
-import { remarkCallouts } from "./src/lib/remark-callouts"
-import { remarkSidenotes } from "./src/lib/remark-sidenotes"
-import { rehypeImagePaths } from "./src/lib/rehype-image-paths"
 
 export default defineConfig(({ command }) => ({
   define: {
@@ -71,36 +56,11 @@ export default defineConfig(({ command }) => ({
     } : undefined,
   },
   plugins: [
-    {
-      enforce: 'pre',
-      ...mdx({
-        mdExtensions: [],
-        mdxExtensions: ['.md', '.mdx'],
-        remarkPlugins: [
-          remarkFrontmatter,
-          remarkMdxFrontmatter,
-          remarkGfm,
-          remarkMath,
-          remarkWikilinks,
-          remarkTelescopic,
-          remarkCallouts,
-          remarkSidenotes,
-        ],
-        rehypePlugins: [
-          rehypeSlug,
-          [rehypeRaw, { passThrough: ['mdxjsEsm', 'mdxJsxFlowElement', 'mdxJsxTextElement'] }],
-          rehypeKatex,
-          rehypeImagePaths,
-        ],
-        providerImportSource: "@mdx-js/react",
-      })
-    },
     react()
   ],
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
-      "content": resolve(__dirname, "src/content"),
     },
   },
   css: {
@@ -146,7 +106,6 @@ export default defineConfig(({ command }) => ({
           if (id.includes("node_modules")) {
             if (id.includes("react-dom") || id.includes("/react/") || id.includes("scheduler")) return "vendor-react"
             if (id.includes("@supabase") || id.includes("@gotrue") || id.includes("gotrue-js") || id.includes("realtime-js") || id.includes("postgrest-js") || id.includes("storage-js")) return "vendor-supabase"
-            if (id.includes("@mdx-js")) return "vendor-mdx"
           }
         },
       },

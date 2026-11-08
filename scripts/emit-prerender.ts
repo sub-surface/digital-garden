@@ -9,7 +9,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { parseMarkdown } from "../src/lib/markdown"
-import { prerenderFileName, slugifyPath } from "../src/lib/slug"
+import { noteDataFileName, prerenderFileName, slugifyPath } from "../src/lib/slug"
 import { escapeHtml, escapeAttr } from "../src/lib/escape"
 import { classifyLayout } from "../src/lib/layout"
 
@@ -28,6 +28,11 @@ export async function emitPrerender(
     fs.rmSync(prerenderDir, { recursive: true, force: true })
   }
   fs.mkdirSync(prerenderDir, { recursive: true })
+  // Client note data: what NoteBody renders (the note's own frontmatter + the
+  // body HTML with island placeholders). Replaces the per-note MDX chunks.
+  const notesDir = path.join(publicDir, "notes")
+  if (fs.existsSync(notesDir)) fs.rmSync(notesDir, { recursive: true, force: true })
+  fs.mkdirSync(notesDir, { recursive: true })
 
   const start = Date.now()
   let count = 0
@@ -43,6 +48,9 @@ export async function emitPrerender(
     const raw = fs.readFileSync(file, "utf-8")
     try {
       const parsed = await parseMarkdown(raw)
+      // Build problems are already rendered in-page as visible red blocks;
+      // say so in the build log too, rather than letting them ship quietly.
+      for (const message of parsed.errors) console.warn(`[prerender] ${slug}: ${message}`)
       const fm = { ...meta, ...parsed.frontmatter }
       const layout = classifyLayout(slug, { layout: fm.layout, type: fm.type })
       const title = (fm.title as string) || meta.title || slug.split("/").pop() || slug
@@ -96,6 +104,12 @@ export async function emitPrerender(
     </div>
   </div>
 </div>`
+
+      fs.writeFileSync(
+        path.join(notesDir, noteDataFileName(slug)),
+        JSON.stringify({ slug, frontmatter: parsed.frontmatter, html: parsed.html }),
+        "utf-8",
+      )
 
       const outName = prerenderFileName(slug)
       const dest = path.join(prerenderDir, outName)

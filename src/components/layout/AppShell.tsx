@@ -25,7 +25,6 @@ import { MusicPlayer } from "@/components/ui/music/MusicPlayer"
 import { MobileMusicBar } from "@/components/ui/music/MobileMusicBar"
 import { SearchOverlay } from "@/components/ui/overlays/SearchOverlay"
 import { GraphOverlay } from "@/components/ui/graph/GraphOverlay"
-import { MDXProvider } from "@/components/mdx/MDXProvider"
 import { CookieConsent } from "./CookieConsent"
 import styles from "./AppShell.module.scss"
 
@@ -108,7 +107,7 @@ export function AppShell() {
     location.pathname.toLowerCase().startsWith("/wiki")
 
   return (
-    <MDXProvider>
+    <>
       <div
         className={styles.shell}
         data-reader={isReaderMode ? "true" : undefined}
@@ -163,6 +162,6 @@ export function AppShell() {
         {!isImmersive && <CornerMenu />}
         <CookieConsent />
       </div>
-    </MDXProvider>
+    </>
   )
 }

@@ -117,6 +117,11 @@ export function ogCardFiles(slug: string): string[] {
  * Filename of a note's pre-rendered HTML fragment: `Wiki/Concepts/Double Bind` → `wiki-concepts-double-bind.html`.
  * Matches the case-insensitive asset resolution contract of ogCardName.
  */
+/** Client note data (frontmatter + body HTML), served from /notes/. */
+export function noteDataFileName(slug: string): string {
+  return prerenderFileName(slug).replace(/\.html$/, ".json")
+}
+
 export function prerenderFileName(slug: string): string {
   return `${normalizeSlug(slug).replace(/\//g, "-").toLowerCase()}.html`
 }

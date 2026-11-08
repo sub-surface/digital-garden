@@ -61,8 +61,8 @@ export function remarkSidenotes() {
     })
 
     // 4. Build a parent-map so we can walk up from a footnoteReference to
-    // its nearest block-level ancestor (mirrors rehype-sidenotes-runtime.ts's
-    // approach for the same problem on the hast side).
+    // its nearest block-level ancestor (a parent-map walk; this is the only
+    // sidenote implementation since rehype-sidenotes-runtime was removed).
     const parentMap = new Map<object, { parent: Parent; index: number }>()
     visit(tree, (node, index, parent) => {
       if (parent && index !== undefined) {

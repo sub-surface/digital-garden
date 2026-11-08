@@ -1,17 +1,10 @@
-import { unified } from "unified"
-import remarkParse from "remark-parse"
-import remarkGfm from "remark-gfm"
-import remarkRehype from "remark-rehype"
-import rehypeStringify from "rehype-stringify"
 import assert from "node:assert/strict"
-import { rehypeSidenotes } from "../src/lib/rehype-sidenotes-runtime.js"
+import { renderNoteHtml } from "../src/lib/note-pipeline.js"
 
-const processor = unified()
-  .use(remarkParse)
-  .use(remarkGfm)
-  .use(remarkRehype)
-  .use(rehypeSidenotes)
-  .use(rehypeStringify)
+// Exercises THE note pipeline (remark-sidenotes), the one published notes use.
+// It used to test rehype-sidenotes-runtime, a second implementation no
+// published note went through.
+const processor = { process: async (md: string) => (await renderNoteHtml(md)).html }
 
 const markdown = `
 Testing footnotes here[^1] and another one[^2].

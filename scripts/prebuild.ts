@@ -26,7 +26,6 @@ import { emitGraph } from "./emit-graph"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CONTENT_DIR = path.resolve(__dirname, "../content")
 const PUBLIC_DIR = path.resolve(__dirname, "../public")
-const SRC_CONTENT_DIR = path.resolve(__dirname, "../src/content")
 
 const IGNORE_PATTERNS = ["private", "templates", ".obsidian", "Misc", "Daily"]
 const SITE_URL = "https://subsurfaces.net"
@@ -396,23 +395,6 @@ function emitPublicContentCopies({ files }: Model) {
   console.log(`  public/content/: ${files.length} files copied`)
 }
 
-function emitSrcContentCopies({ files }: Model) {
-  // Wiped + resynced every run: Vite/MDX imports compiled copies from here.
-  if (fs.existsSync(SRC_CONTENT_DIR)) {
-    fs.rmSync(SRC_CONTENT_DIR, { recursive: true, force: true })
-  }
-  fs.mkdirSync(SRC_CONTENT_DIR, { recursive: true })
-
-  for (const file of files) {
-    const slug = slugifyPath(path.relative(CONTENT_DIR, file))
-    const ext = path.extname(file)
-    const dest = path.join(SRC_CONTENT_DIR, `${slug}${ext}`)
-    fs.mkdirSync(path.dirname(dest), { recursive: true })
-    fs.copyFileSync(file, dest)
-  }
-  console.log(`  src/content/: ${files.length} files synced for MDX (slugified names)`)
-}
-
 function emitMediaAndDimensions() {
   const mediaDir = path.join(CONTENT_DIR, "Media")
   if (!fs.existsSync(mediaDir)) return
@@ -690,7 +672,6 @@ async function main() {
     emitBrokenLinks,
     emitFolders,
     emitPublicContentCopies,
-    emitSrcContentCopies,
     emitRss,
     emitSitemap,
   ]
@@ -699,6 +680,10 @@ async function main() {
   // Pre-calculated D3 Constellation Force Relaxation (SSG Pipeline Phase 3b)
   const graph = emitGraph(model, PUBLIC_DIR)
   console.log(`  public/graph.json: ${graph.nodeCount} nodes, ${graph.linkCount} links (pre-relaxed) in ${graph.durationMs}ms`)
+
+  // Image dimensions first: the note renderer (rehype-image-paths) reads
+  // public/image-dimensions.json while rendering, for width/height (CLS).
+  emitMediaAndDimensions()
 
   // Pre-render static HTML fragments (ROADMAP §5 / SSG Pipeline Phase 1)
   const prerender = await emitPrerender(model, CONTENT_DIR, PUBLIC_DIR)
@@ -711,7 +696,6 @@ async function main() {
   // Model-independent emitters
   emitMusicSeed()
   emitAlbums()
-  emitMediaAndDimensions()
   emitEmoteIndex()
   emitOgImages()
 

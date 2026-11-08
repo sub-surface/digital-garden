@@ -43,7 +43,7 @@ Dev dashboard: `/__dev` (dev mode only).
 | `content/` | Source markdown/MDX (Obsidian vault) | Yes |
 | `content/Wiki/` | Wiki section content | Yes |
 | `content/Media/` | Images, audio | Yes |
-| `src/content/` | **Auto-generated** by prebuild | **NO** |
+| `public/notes/`, `public/prerender/` | **Auto-generated** rendered notes | **NO** |
 | `src/components/layout/` | AppShell, WikiShell, TerminalTitle, CornerMenu, ThemePanel, QuickControls, BgCanvas | Yes |
 | `src/components/ui/` | Page + feature components, grouped: `chat/ wiki/ reader/ games/ shelves/ graph/ music/ overlays/ composer/` + small shared bits flat | Yes |
 | `src/components/panel/` | PanelStack, PanelCard, usePanelClick | Yes |
@@ -67,11 +67,20 @@ Dev dashboard: `/__dev` (dev mode only).
 
 ## How Content Works
 
-1. Markdown/MDX files live in `content/`
-2. `scripts/prebuild.ts` scans them → generates manifests in `public/` + syncs MDX copies to `src/content/`
-3. Vite compiles MDX to JS at build time via `@mdx-js/rollup`
-4. At runtime, `NoteBody` uses `import.meta.glob` to dynamically import compiled MDX
-5. **Never fetch markdown at runtime** — it's all build-time compiled
+1. Markdown/MDX files live in `content/` (the vault, the only source of truth)
+2. `scripts/prebuild.ts` scans them and renders every note through **the one
+   note pipeline** (`src/lib/note-pipeline.ts` → `renderNoteHtml`) to HTML
+3. Components in notes (`<Query … />`, `<ConceptCard>`) become **island
+   placeholders** — `<div data-island="Name" data-props='…'>` — via
+   `src/lib/remark-islands.ts`. Props must be literals (strings, numbers,
+   arrays/objects of literals); anything else is a build error shown in-page
+4. Prebuild writes `public/notes/<slug>.json` ({frontmatter, html}) for the
+   client and `public/prerender/<slug>.html` for the Worker's first paint
+5. At runtime `NoteBody` fetches the note JSON (`src/lib/note-loader.ts`) and
+   `NoteHtml` sets the HTML once, then hydrates only the islands with portals
+6. **Never fetch or parse markdown at runtime** — notes ship as built HTML.
+   There is no MDX-to-JS compile anymore (retired 2026-11-08: 295 of 328
+   notes had no components, yet each was a 50–290 KB JS chunk)
 
 **Excluded folders:** `private`, `templates`, `.obsidian`, `Misc`, `Daily`
 
@@ -168,16 +177,16 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 
 ## Gotchas (read these)
 
-1. **`src/content/` is wiped on every prebuild.** Never edit files there. It is also **gitignored** (ROADMAP §28.14) — it used to be tracked, which made 167 derived files look like source and invited edits the next prebuild silently destroyed. Same policy for every prebuild-generated manifest in `public/`; the only committed exceptions are `public/music.json` (written by `npm run sync:music`) and `public/og/` (see #20).
+1. **Rendered notes are generated, never edited.** `public/notes/` and `public/prerender/` are wiped and rewritten every prebuild, and gitignored (the old `src/content/` MDX copies are gone; they were once tracked, which made 167 derived files look like source — ROADMAP §28.14). Same policy for every prebuild-generated manifest in `public/`; the only committed exceptions are `public/music.json` (written by `npm run sync:music`) and `public/og/` (see #20).
 2. **`usePanelClick`** intercepts all internal link clicks at capture phase. Hash-only links (`#heading`) are skipped. `shell !== "main"` bail-out — wiki/chat/os let all links navigate normally.
 3. **`BgCanvas` is z-index 0.** All containers must be `background: transparent`. Global bg color on `body` only.
-4. **`import.meta.glob` is build-time.** New content files need a rebuild. `npm run dev` watches automatically.
+4. **Notes are build-time HTML.** New or edited content needs a prebuild (`npm run dev` watches `content/`). A note component must be in BOTH `mdxComponents` (MDXProvider.tsx, the React registry islands hydrate from) and `ISLAND_NAMES` (`src/components/mdx/island-names.ts`, pure data the build validates against); `scripts/test-islands.ts` enforces parity and that every published note renders with zero build errors.
 5. **`src/worker/` is NOT in the Vite SPA build.** Excluded from `tsconfig.json`; compiled by Wrangler/CF. VS Code errors against it are ignorable — type-check it with `npm run typecheck:worker`.
 6. **System pages use a paired registry.** Add pure title/layout/date metadata in `src/config/system-pages-meta.ts` and the matching lazy React component in `src/config/system-pages.ts`; `scripts/test-layout.ts` enforces key parity. Add content-driven layout rules only in `src/lib/layout.ts`'s `classifyLayout()`.
-7. **Sidenote footnotes — two plugins, two pipelines, never both at once.** `remark-sidenotes.ts` is the one that matters for published notes — wired into `vite.config.ts`'s MDX build. It converts footnote identifiers to sequential Roman numerals for display (the `[^bateson]`-style identifier is just an internal key, never shown to readers), and inserts the checkbox/label/aside triplet as siblings of the nearest *block* ancestor rather than inline — an `<aside>` can't legally nest inside a `<p>`/heading, and letting the HTML parser silently hoist it out breaks the CSS `:checked + label + aside` sibling chain the narrow-viewport toggle depends on. `rehype-sidenotes-runtime.ts` is unrelated to that pipeline — it's only for `markdown.ts`'s standalone `unified()` processor — now build-time only (`scripts/emit-prerender.ts`, `scripts/test-math.ts`); LinkPreview does its own escaped regex rendering — which unwraps the first `<p>` inside footnote definitions. Don't wrap sidenote content in block elements there either.
+7. **Sidenote footnotes: one plugin.** `remark-sidenotes.ts` (in the one note pipeline) converts footnote identifiers to sequential Roman numerals for display (the `[^bateson]`-style identifier is just an internal key, never shown to readers), and inserts the checkbox/label/aside triplet as siblings of the nearest *block* ancestor rather than inline — an `<aside>` can't legally nest inside a `<p>`/heading, and letting the HTML parser hoist it out breaks the CSS `:checked + label + aside` sibling chain the narrow-viewport toggle depends on. (`rehype-sidenotes-runtime.ts`, a second implementation, was removed.) LinkPreview does its own escaped regex rendering, which unwraps the first `<p>` inside footnote definitions; don't wrap sidenote content in block elements there either.
 8. **Case sensitivity:** Routes are case-insensitive at runtime. CF is case-sensitive for static assets — keep media filenames consistent. This bit us for real once: `og:image` was built from the *request* casing, so `/Abbas` got a working card and `/abbas` a 404 (ROADMAP §28.16). Any static path derived from a slug must go through a single canonical casing — `ogCardName()` in `src/lib/slug.ts` is the pattern (lowercase, shared by both generators, the Worker, and the guard).
 9. **Graph route** exists as both a dedicated route AND a NoteRenderer system page. Dedicated route wins via router specificity.
-10. **MDX content files use JSX syntax for inline HTML.** Use `className` not `class`, `htmlFor` not `for`, etc. in any raw HTML inside `.md`/`.mdx` files — they are compiled as JSX by `@mdx-js/rollup`.
+10. **MDX content files use JSX syntax for inline HTML.** Use `className` not `class`, `htmlFor` not `for`, etc. in any raw HTML inside `.md`/`.mdx` files — they are parsed as MDX (`remark-mdx`), and `remark-islands` turns lowercase JSX into plain HTML elements.
 11. **`remark-telescopic` wikilinks must be slugified.** The telescopic plugin processes its own wikilink syntax independently of `remark-wikilinks` — any wikilink href must be lowercased with spaces→hyphens manually (no slug-map access at build time).
 12. **`music:` links match by `t.title` (case-insensitive), handled in `NoteBody` only.** `NoteBody` resolves `music:TrackName` via `tracks.findIndex(t => t.title.toLowerCase() === ...)`. `usePanelClick` deliberately bails on `music:` (it used to duplicate this). Track slugs are not used for matching.
 12b. **Music is SoundCloud-driven, NOT note-driven.** `public/music.json` is the committed source of truth, written by `npm run sync:music` (SoundCloud → R2). `prebuild` does NOT generate it (only seeds `[]` if missing). Audio/covers live in the `subsurfaces-music` R2 bucket. See `docs/music-workflow.md`. Per-track `content/Music/*.md` notes are now optional liner notes only.
@@ -204,7 +213,7 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 | New system page | Add matching metadata + component entries to `src/config/system-pages-meta.ts` and `src/config/system-pages.ts` |
 | New floating UI | `position: fixed` inside AppShell, correct z-index, no transform on parent |
 | New frontmatter field | `NoteMeta` in `prebuild.ts` + `NoteMetadata` in `src/types/content.ts` |
-| New MDX component | Register in `src/components/mdx/MDXProvider.tsx` |
+| New note component | Add to `mdxComponents` in `src/components/mdx/MDXProvider.tsx` AND to `ISLAND_NAMES` in `src/components/mdx/island-names.ts` (props must be literals) |
 | New remark/rehype plugin | Add to `vite.config.ts` plugin array in correct order |
 | New wiki submit field | Update `WikiSubmitPage.tsx` form + `src/worker/wiki.ts` submit formatter (user text must go through `yamlStr()`) |
 | New API endpoint | Handler `(ctx: RouteCtx) => Response` in the right `src/worker/*.ts` module + one row in the route table in `src/worker/index.ts` (declare `auth` there) |
@@ -239,11 +248,11 @@ Key slices: `theme`, `accentBase`, `bgMode`, `panelStack`, `activeGraphSlug`, `a
 
 ---
 
-## MDX Plugin Order (vite.config.ts)
+## Note Pipeline Order (src/lib/note-pipeline.ts)
 
-**Remark:** frontmatter → mdx-frontmatter → gfm → math → wikilinks → telescopic → callouts → sidenotes
-**Rehype:** slug → raw → KaTeX → imagePaths
+**Parse:** remark-parse → remark-mdx → frontmatter → **islands**
+**Remark:** gfm → math → wikilinks → telescopic → callouts → sidenotes
+**Rehype:** slug → raw → KaTeX → imagePaths → linkClasses
 
-Sidenotes runs at the remark stage (`remark-sidenotes.ts`) — rehype-level footnote
-sections are never emitted inside MDX, so it builds the sidenote markup itself
-from the mdast footnote nodes. See gotcha #7.
+`remark-islands` runs first, so every later plugin sees ordinary nodes.
+Sidenotes are built at the remark stage from mdast footnote nodes (gotcha #7).
