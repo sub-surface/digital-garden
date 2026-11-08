@@ -37,7 +37,33 @@ assert.deepEqual(literalValue({ type: "ArrayExpression", elements: [{ type: "Lit
   assert.match(good.html, /&#x22;limit&#x22;:3/, "numeric literal props stay numbers")
 }
 
-// 4. The whole corpus renders cleanly.
+// 4. Safety: wiki contributions land here too, and the client uses innerHTML.
+{
+  const attacks = [
+    '<img src="x.png" onError="alert(1)" />',
+    '<a href="javascript:alert(1)">x</a>',
+    '<a href=" java	script:alert(1)">x</a>',
+    '<div onClick="alert(1)">x</div>',
+    '<iframe src="https://evil.example/x"></iframe>',
+    '<object data="x.swf"></object>',
+    "raw html: <script>alert(1)</script>",
+    '<img src="data:text/html,<script>alert(1)</script>" />',
+  ]
+  for (const attack of attacks) {
+    const { html } = await renderNoteHtml(attack)
+    assert.doesNotMatch(html, /\son[a-z]+=|javascript:|<script|<object|evil\.example|data:text/i, `neutralised: ${attack} -> ${html}`)
+  }
+  const kept = await renderNoteHtml(
+    "[home](/garden) [web](https://example.org) ![p](/content/Media/a.png) [play](music:Hello)\n\n" +
+      "![](https://www.youtube.com/watch?v=dQw4w9WgXcQ)",
+  )
+  assert.match(kept.html, /href="\/garden"/)
+  assert.match(kept.html, /href="https:\/\/example\.org"/)
+  assert.match(kept.html, /href="music:Hello"/)
+  assert.match(kept.html, /youtube-nocookie\.com\/embed/, "allow-listed video embeds survive")
+}
+
+// 5. The whole corpus renders cleanly.
 const EXCLUDED = new Set(["private", "templates", ".obsidian", "Misc", "Daily"])
 const files: string[] = []
 ;(function walk(dir: string) {

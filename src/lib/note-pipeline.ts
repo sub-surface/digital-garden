@@ -29,6 +29,7 @@ import { remarkCallouts } from "./remark-callouts"
 import { remarkSidenotes } from "./remark-sidenotes"
 import { remarkIslands } from "./remark-islands"
 import { rehypeImagePaths } from "./rehype-image-paths"
+import { rehypeNoteSafety } from "./rehype-note-safety"
 import { ISLAND_NAMES } from "../components/mdx/island-names"
 import { visit } from "unist-util-visit"
 
@@ -64,7 +65,9 @@ export const remarkNotePlugins: PluggableList = [
 /** Rehype stage, either side of rehype-raw (headings get ids from rehypeSlug
  *  before raw HTML is parsed, as they always have). */
 export const rehypeBeforeRaw: PluggableList = [rehypeSlug]
-export const rehypeAfterRaw: PluggableList = [rehypeKatex, rehypeImagePaths, rehypeLinkClasses]
+// rehypeNoteSafety must stay LAST: it is what makes innerHTML safe for wiki
+// contributions (see the file header).
+export const rehypeAfterRaw: PluggableList = [rehypeKatex, rehypeImagePaths, rehypeLinkClasses, rehypeNoteSafety]
 
 export interface RenderedNote {
   html: string
