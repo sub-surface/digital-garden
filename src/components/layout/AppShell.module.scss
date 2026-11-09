@@ -148,6 +148,16 @@
     container: panel / inline-size;
   }
 
+  // Reader mode sizes the pane to its content (flex: 0 1 auto; width: auto),
+  // but the inline-size container above reports a content width of 0, which
+  // collapsed the pane to one character. A phone is narrower than any measure,
+  // so the pane simply fills the screen.
+  .shell[data-reader="true"] .mainPane {
+    flex: 1;
+    width: 100%;
+    max-width: 100%;
+  }
+
   .shell[data-reader="true"] .mainContent {
     padding: 1.25rem 1rem calc(5rem + env(safe-area-inset-bottom, 0px));
   }

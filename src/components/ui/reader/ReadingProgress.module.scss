@@ -22,6 +22,22 @@
   transition: transform 0.08s linear;
 }
 
+// Where scroll-driven animations exist, the browser fills the bar from the
+// page's scroll timeline (--page, base.scss) and ReadingProgress.tsx skips
+// its scroll listener.
+@keyframes fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@supports (animation-timeline: scroll()) {
+  .bar {
+    animation: fill linear both;
+    animation-timeline: --page;
+    transition: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bar {
     transition: none;

@@ -8,6 +8,9 @@ import { ImageLightbox } from "../reader/ImageLightbox"
 import { EmotePopup } from "./EmotePopup"
 import styles from "./Chat.module.scss"
 
+// Textareas size to their text in CSS where field-sizing exists (Chat.module.scss).
+const FIELD_SIZING = typeof CSS !== "undefined" && !!CSS.supports?.("field-sizing: content")
+
 const FALLBACK_EMOTES: EmoteEntry[] = [
   { name: "kek", ext: "gif" },
   { name: "based", ext: "gif" },
@@ -367,9 +370,11 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, o
       el.focus()
       const len = el.value.length
       el.setSelectionRange(len, len)
-      // Auto-size to content
-      el.style.height = "auto"
-      el.style.height = el.scrollHeight + "px"
+      // Auto-size to content (CSS field-sizing does it where supported)
+      if (!FIELD_SIZING) {
+        el.style.height = "auto"
+        el.style.height = el.scrollHeight + "px"
+      }
     }
   }, [editing])
 
@@ -476,8 +481,10 @@ export function MessageRow({ msg, compact = false, onReply, onReact, onDelete, o
               value={editBody}
               onChange={(e) => {
                 setEditBody(e.target.value)
-                e.target.style.height = "auto"
-                e.target.style.height = e.target.scrollHeight + "px"
+                if (!FIELD_SIZING) {
+                  e.target.style.height = "auto"
+                  e.target.style.height = e.target.scrollHeight + "px"
+                }
               }}
               onKeyDown={handleEditKeyDown}
               rows={1}

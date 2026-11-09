@@ -70,6 +70,39 @@
 
 // Inline-card mode, shared by notes on touch and articles below
 // $article-narrow: the marker in the text is the toggle.
+// Tapped-open sidenote cards unfold to their natural height and fold away
+// again. The browser animates to and from `auto` itself (interpolate-size),
+// so nothing is measured; browsers without it open the card instantly, as
+// before. Used by both card blocks below.
+@mixin sidenote-card-motion {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  height: 0;
+  padding-block: 0;
+  opacity: 0;
+  transition:
+    height 0.25s var(--ease-default, ease),
+    padding-block 0.25s var(--ease-default, ease),
+    opacity 0.2s ease,
+    display 0.25s allow-discrete;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+@mixin sidenote-card-open {
+  height: auto;
+  padding-block: var(--space-4);
+  opacity: 1;
+
+  @starting-style {
+    height: 0;
+    padding-block: 0;
+    opacity: 0;
+  }
+}
+
 @mixin sidenote-tap-mode {
   .footnote-marker a {
     display: none;
@@ -226,6 +259,7 @@
       font-size: 0.9rem;
       line-height: 1.55;
       color: var(--color-text-muted);
+      @include sidenote-card-motion;
 
       p {
         margin-bottom: var(--space-2);
@@ -235,6 +269,7 @@
 
     .sidenote-checkbox:checked + .sidenote-toggle + .sidenote {
       display: block !important;
+      @include sidenote-card-open;
     }
 
     .footnotes-section {
@@ -262,10 +297,12 @@
       border-radius: 6px;
       border-left: 2px solid var(--color-primary);
       font-size: 0.9rem;
+      @include sidenote-card-motion;
     }
 
     .sidenote-checkbox:checked + .sidenote-toggle + .sidenote {
       display: block;
+      @include sidenote-card-open;
     }
   }
 }

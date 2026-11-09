@@ -397,6 +397,9 @@
   font-size: 0.88rem;
   padding: 4px 6px;
   resize: none;
+  // The browser sizes the box to its text (MessageRow's JS does it where
+  // field-sizing isn't supported).
+  field-sizing: content;
   min-height: 32px;
   max-height: 120px;
   line-height: 1.5;
@@ -641,6 +644,9 @@
   font-size: 0.88rem;
   padding: 7px 4px;
   resize: none;
+  // Grows with the message up to max-height, then scrolls (browsers without
+  // field-sizing keep the single row).
+  field-sizing: content;
   min-height: 36px;
   max-height: 120px;
   line-height: 1.5;

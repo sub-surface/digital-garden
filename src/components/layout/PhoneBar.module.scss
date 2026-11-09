@@ -2,6 +2,15 @@
 
 $bar-h: 52px;
 
+// The bar's visible height, for the things that sit on top of it (music
+// player, glorp). Its height is known, so it's worked out here rather than
+// measured in JS: 0 while it's hidden or absent (the dock is open).
+@media (max-width: $bp-phone) {
+  :global(html):has(.bar:not([data-hidden])) {
+    --phone-bar-h: calc(#{$bar-h} + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .bar {
   position: fixed;
   left: 0;
@@ -45,6 +54,19 @@ $bar-h: 52px;
     opacity: 0.8;
     pointer-events: none;
   }
+
+  // Native: driven by the page's scroll timeline (base.scss) instead of --read.
+  @supports (timeline-scope: --page) {
+    &::before {
+      animation: read linear both;
+      animation-timeline: --page;
+    }
+  }
+}
+
+@keyframes read {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
 .icon {

@@ -7,12 +7,18 @@ import styles from "./ReadingProgress.module.scss"
  * `.mainPane` container (id="main-content"), not the window, so we measure that.
  *
  * Mounted only by ArticleLayout, so it's article-only by construction.
+ *
+ * Where the browser has scroll-driven animations, CSS fills the bar from the
+ * page's scroll timeline (see the module) and the listener below never runs.
  */
+const NATIVE = typeof CSS !== "undefined" && !!CSS.supports?.("animation-timeline: scroll()")
+
 export function ReadingProgress() {
   const [progress, setProgress] = useState(0)
   const frameRef = useRef<number | null>(null)
 
   useEffect(() => {
+    if (NATIVE) return
     // The scroll container is the main pane; fall back to the documentElement
     // (wiki/other shells) if it isn't present.
     const scroller =
@@ -47,7 +53,7 @@ export function ReadingProgress() {
 
   return (
     <div className={styles.track} aria-hidden="true" data-panel-ignore>
-      <div className={styles.bar} style={{ transform: `scaleX(${progress})` }} />
+      <div className={styles.bar} style={NATIVE ? undefined : { transform: `scaleX(${progress})` }} />
     </div>
   )
 }

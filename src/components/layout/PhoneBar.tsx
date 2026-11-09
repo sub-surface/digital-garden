@@ -18,12 +18,16 @@ import styles from "./PhoneBar.module.scss"
  *   reading  A−  100%  A+                         × reader
  *
  * It slides away while you scroll down and returns on scroll up. Its visible
- * height is published as `--phone-bar-h` on <html> so the music player and
- * glorp can sit on top of it. `···` opens a sheet with the rest: random,
+ * height is published as `--phone-bar-h` on <html> (by CSS, from its known
+ * height: see the module) so the music player and glorp can sit on top of it. `···` opens a sheet with the rest: random,
  * settings, philchat, the other rooms, about, privacy.
  *
  * Every action here is also a prompt command (gotcha #25).
  */
+// Reading progress comes from CSS scroll-driven animation where it exists
+// (PhoneBar.module.scss); otherwise the scroll listener writes --read.
+const NATIVE_READ = typeof CSS !== "undefined" && !!CSS.supports?.("timeline-scope: --page")
+
 export function PhoneBar({ variant = "default" }: { variant?: "default" | "wiki" }) {
   const isWiki = variant === "wiki"
   const navigate = useNavigate()
@@ -74,7 +78,7 @@ export function PhoneBar({ variant = "default" }: { variant?: "default" | "wiki"
       else if (run > 24) setHidden(true)
       // Reading progress for the page's own scroller: a hairline along the
       // bar's top edge, written straight to style (no re-render per frame).
-      if (el.id === "main-content" || el.dataset.testid === "main-pane") {
+      if (!NATIVE_READ && (el.id === "main-content" || el.dataset.testid === "main-pane")) {
         const max = el.scrollHeight - el.clientHeight
         barRef.current?.style.setProperty("--read", max > 0 ? String(Math.min(1, top / max)) : "0")
       }
@@ -84,16 +88,6 @@ export function PhoneBar({ variant = "default" }: { variant?: "default" | "wiki"
   }, [])
 
   const isHidden = hidden && !pinned
-
-  // Publish the bar's visible height for things that sit on top of it.
-  useEffect(() => {
-    const root = document.documentElement
-    const h = isHidden ? "0px" : `${barRef.current?.offsetHeight ?? 0}px`
-    root.style.setProperty("--phone-bar-h", h)
-    return () => {
-      root.style.removeProperty("--phone-bar-h")
-    }
-  }, [isHidden, showMusic, isReaderMode])
 
   // The sheet closes on Escape, a tap outside, or any action in it.
   useEffect(() => {

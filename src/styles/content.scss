@@ -404,3 +404,32 @@
     }
   }
 }
+
+// The TOC list folds to and from its natural height when minimised
+// (TableOfContents keeps it mounted with `hidden`). interpolate-size lets the
+// browser animate `auto` itself; without it, it just shows and hides.
+.toc-list {
+  interpolate-size: allow-keywords;
+  overflow: clip;
+  height: auto;
+  opacity: 1;
+  transition:
+    height 0.25s var(--ease-default, ease),
+    opacity 0.2s ease,
+    display 0.25s allow-discrete;
+
+  @starting-style {
+    height: 0;
+    opacity: 0;
+  }
+
+  &[hidden] {
+    display: none;
+    height: 0;
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}

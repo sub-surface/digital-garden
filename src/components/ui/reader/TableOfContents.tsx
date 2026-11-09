@@ -92,88 +92,87 @@ export function TableOfContents({ headings, className }: Props) {
         </button>
       </div>
 
-      {!isMinimised && (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          {sections.map((sec) => {
-            const hasChildren = sec.children.length > 0
-            const isCollapsed = Boolean(collapsedSections[sec.heading.id])
+      {/* Always rendered, hidden when minimised, so CSS can fold it both ways (toc-list in content.scss). */}
+      <ul className="toc-list" hidden={isMinimised} style={{ listStyle: "none", padding: 0, margin: 0 }}>
+        {sections.map((sec) => {
+          const hasChildren = sec.children.length > 0
+          const isCollapsed = Boolean(collapsedSections[sec.heading.id])
 
-            return (
-              <li key={sec.heading.id} style={{ marginBottom: "var(--space-1)" }}>
-                <div
+          return (
+            <li key={sec.heading.id} style={{ marginBottom: "var(--space-1)" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "0.25rem",
+                }}
+              >
+                <a
+                  href={`#${sec.heading.id}`}
+                  style={{ flex: 1, minWidth: 0 }}
+                >
+                  {sec.heading.text}
+                </a>
+
+                {hasChildren && (
+                  <button
+                    type="button"
+                    onClick={(e) => toggleSection(sec.heading.id, e)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--color-text-muted)",
+                      cursor: "pointer",
+                      fontFamily: "var(--font-code)",
+                      fontSize: "0.75rem",
+                      padding: "2px 4px",
+                      lineHeight: 1,
+                      borderRadius: "3px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: 0.8,
+                      transition: "opacity 0.15s ease, color 0.15s ease",
+                    }}
+                    title={isCollapsed ? `Expand ${sec.children.length} subheadings` : `Collapse ${sec.children.length} subheadings`}
+                    aria-label={isCollapsed ? `Expand subsections for ${sec.heading.text}` : `Collapse subsections for ${sec.heading.text}`}
+                    aria-expanded={!isCollapsed}
+                  >
+                    {isCollapsed ? "+" : "−"}
+                  </button>
+                )}
+              </div>
+
+              {hasChildren && !isCollapsed && (
+                <ul
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "0.25rem",
+                    listStyle: "none",
+                    paddingLeft: "14px",
+                    margin: "var(--space-1) 0 0 0",
+                    borderLeft: "1px solid var(--color-border-light, rgba(255, 255, 255, 0.1))",
                   }}
                 >
-                  <a
-                    href={`#${sec.heading.id}`}
-                    style={{ flex: 1, minWidth: 0 }}
-                  >
-                    {sec.heading.text}
-                  </a>
-
-                  {hasChildren && (
-                    <button
-                      type="button"
-                      onClick={(e) => toggleSection(sec.heading.id, e)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "var(--color-text-muted)",
-                        cursor: "pointer",
-                        fontFamily: "var(--font-code)",
-                        fontSize: "0.75rem",
-                        padding: "2px 4px",
-                        lineHeight: 1,
-                        borderRadius: "3px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        opacity: 0.8,
-                        transition: "opacity 0.15s ease, color 0.15s ease",
-                      }}
-                      title={isCollapsed ? `Expand ${sec.children.length} subheadings` : `Collapse ${sec.children.length} subheadings`}
-                      aria-label={isCollapsed ? `Expand subsections for ${sec.heading.text}` : `Collapse subsections for ${sec.heading.text}`}
-                      aria-expanded={!isCollapsed}
-                    >
-                      {isCollapsed ? "+" : "−"}
-                    </button>
-                  )}
-                </div>
-
-                {hasChildren && !isCollapsed && (
-                  <ul
-                    style={{
-                      listStyle: "none",
-                      paddingLeft: "14px",
-                      margin: "var(--space-1) 0 0 0",
-                      borderLeft: "1px solid var(--color-border-light, rgba(255, 255, 255, 0.1))",
-                    }}
-                  >
-                    {sec.children.map((sub) => (
-                      <li key={sub.id} style={{ marginBottom: "var(--space-1)" }}>
-                        <a
-                          href={`#${sub.id}`}
-                          style={{
-                            display: "block",
-                            fontSize: "0.8em",
-                            opacity: 0.85,
-                          }}
-                        >
-                          {sub.text}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
+                  {sec.children.map((sub) => (
+                    <li key={sub.id} style={{ marginBottom: "var(--space-1)" }}>
+                      <a
+                        href={`#${sub.id}`}
+                        style={{
+                          display: "block",
+                          fontSize: "0.8em",
+                          opacity: 0.85,
+                        }}
+                      >
+                        {sub.text}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          )
+        })}
+      </ul>
     </nav>
   )
 }

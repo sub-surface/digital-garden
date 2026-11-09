@@ -42,6 +42,22 @@
     }
   }
 
+  // Anchor-positioned (LinkPreview's anchoredStyle): the browser may flip the
+  // card to either side of the link, so bridge the gap on both.
+  &[data-pos="anchored"] {
+    &::before,
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 14px;
+      background: transparent;
+    }
+    &::before { top: -14px; }
+    &::after { bottom: -14px; }
+  }
+
   // Re-allow overflow for ::before bridge
   overflow: visible;
 

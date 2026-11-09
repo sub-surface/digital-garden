@@ -49,17 +49,21 @@ export function Dock() {
     }
   }, [tab, width, isPhone])
 
-  // Phones: the on-screen keyboard shrinks the *visual* viewport but not the
-  // layout one, so a bottom:0 sheet runs under the keyboard and hides the
-  // prompt's results. Track the visible height while the sheet is open.
-  const [visibleHeight, setVisibleHeight] = useState<number | null>(null)
+  // Phones and the on-screen keyboard. `interactive-widget=resizes-content`
+  // (index.html) makes Chromium and Firefox shrink the layout viewport, so the
+  // bottom:0 sheet already sits on the keyboard. iOS Safari ignores it and lets
+  // the keyboard cover the layout viewport. This handles only that remainder:
+  // lift the sheet by however far the keyboard overlaps it (0 wherever the
+  // browser has already resized). Setting a height from visualViewport instead
+  // misfired with bottom address bars (Vivaldi), leaving a gap or an overlap.
+  const [keyboardInset, setKeyboardInset] = useState(0)
   useEffect(() => {
     const vv = window.visualViewport
     if (!isPhone || !tab || !vv) {
-      setVisibleHeight(null)
+      setKeyboardInset(0)
       return
     }
-    const update = () => setVisibleHeight(Math.round(vv.height + vv.offsetTop))
+    const update = () => setKeyboardInset(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)))
     update()
     vv.addEventListener("resize", update)
     vv.addEventListener("scroll", update)
@@ -126,7 +130,7 @@ export function Dock() {
     <aside
       ref={panelRef}
       className={styles.dock}
-      style={isPhone ? (visibleHeight ? { bottom: "auto", height: visibleHeight } : undefined) : { width }}
+      style={isPhone ? (keyboardInset ? { bottom: keyboardInset } : undefined) : { width }}
       hidden={!tab}
       aria-label="Dock"
       data-panel-ignore

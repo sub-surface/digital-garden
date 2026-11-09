@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, type CSSProperties } from "react"
 import { useStore } from "@/store"
 import { useNavigate } from "@tanstack/react-router"
 import { useShell } from "@/hooks/useShell"
@@ -17,7 +17,9 @@ interface PreviewState {
   x: number
   y?: number
   bottom?: number
-  pos: "above" | "below"
+  pos: "above" | "below" | "anchored"
+  /** CSS anchor name on the hovered link, where anchor positioning exists. */
+  anchorName?: string
   isFootnote?: boolean
   footnoteHtml?: string
   depth: number
@@ -26,8 +28,14 @@ interface PreviewState {
 const DELAY = 320       // hover-in delay before a preview opens
 const HIDE_DELAY = 110  // grace period after leaving — just enough to reach the card
 const MAX_DEPTH = 4
-const PREVIEW_W = 300
-const PREVIEW_H = 200
+const PREVIEW_W = 340 // matches .link-preview's width in link-preview.scss
+const PREVIEW_H = 200 // a guess at the card's height, used only without anchor positioning
+
+// Where the browser supports CSS anchor positioning, it places the card against
+// the link with the card's real size, flips it above when it won't fit below,
+// and keeps it on the link while the page scrolls. computePosition() remains
+// the fallback (it has to guess the height, so tall cards could clip).
+const SUPPORTS_ANCHOR = typeof CSS !== "undefined" && !!CSS.supports?.("anchor-name: --a")
 
 function extractSlug(href: string): string | null {
   try {
@@ -169,6 +177,17 @@ export function LinkPreview() {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const currentSlug = useRef("")
   const highlightedSidenote = useRef<HTMLElement | null>(null)
+  const anchors = useRef(new Map<string, HTMLElement>())
+
+  // Take the anchor name off a link once its card has closed.
+  useEffect(() => {
+    const live = new Set(stack.map((p) => p.id))
+    for (const [id, el] of anchors.current) {
+      if (live.has(id)) continue
+      el.style.removeProperty("anchor-name")
+      anchors.current.delete(id)
+    }
+  }, [stack])
 
   const popTo = useCallback((depth: number) => {
     setStack(prev => {
@@ -186,9 +205,16 @@ export function LinkPreview() {
     if (depth >= MAX_DEPTH) return
 
     const meta = contentIndex?.[slug]
-    const rect = anchor.getBoundingClientRect()
-    const { x, y, bottom, pos } = computePosition(rect, depth, isFootnote)
     const id = Math.random().toString(36).slice(2)
+    let place: Pick<PreviewState, "x" | "y" | "bottom" | "pos" | "anchorName">
+    if (SUPPORTS_ANCHOR) {
+      const anchorName = `--lp-${id}`
+      anchor.style.setProperty("anchor-name", anchorName)
+      anchors.current.set(id, anchor)
+      place = { x: 0, pos: "anchored", anchorName }
+    } else {
+      place = computePosition(anchor.getBoundingClientRect(), depth, isFootnote)
+    }
 
     let footnoteHtml: string | undefined
     if (isFootnote) {
@@ -229,7 +255,7 @@ export function LinkPreview() {
       loading: willFetch,
       missing: false,
       image: "",
-      x, y, bottom, pos,
+      ...place,
     }
 
     setStack(prev => [...prev, initial])
@@ -372,6 +398,30 @@ export function LinkPreview() {
   )
 }
 
+/**
+ * The card's placement under CSS anchor positioning. Previews open below the
+ * link (footnotes above, nearer the marker) and flip to the other side when
+ * they don't fit; horizontally they centre on the link, clamped to the
+ * viewport, and cascade right with depth like the fallback.
+ */
+function anchoredStyle(state: PreviewState): CSSProperties {
+  const w = state.isFootnote ? 280 : PREVIEW_W
+  const gap = state.isFootnote ? 6 : 10
+  const shift = w / 2 - state.depth * 20
+  const style: Record<string, string | number> = {
+    positionAnchor: state.anchorName!,
+    left: `clamp(12px, calc(anchor(center) - ${shift}px), calc(100vw - ${w + 12}px))`,
+    positionTryFallbacks: "flip-block",
+    positionVisibility: "anchors-visible",
+    margin: 0,
+    maxHeight: `min(${state.isFootnote ? 260 : 380}px, calc(100dvh - 24px))`,
+    zIndex: 1000 + state.depth,
+  }
+  if (state.isFootnote) Object.assign(style, { bottom: "anchor(top)", marginBottom: gap })
+  else Object.assign(style, { top: "anchor(bottom)", marginTop: gap })
+  return style as CSSProperties
+}
+
 function PreviewCard({ state, onOpen, onEnter }: {
   state: PreviewState
   onOpen: () => void
@@ -385,7 +435,7 @@ function PreviewCard({ state, onOpen, onEnter }: {
   return (
     <div
       className={`link-preview ${state.isFootnote ? "link-preview--footnote" : ""}`}
-      style={{
+      style={state.anchorName ? anchoredStyle(state) : {
         left: state.x,
         top: state.y,
         bottom: state.bottom,

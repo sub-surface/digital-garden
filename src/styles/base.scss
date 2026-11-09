@@ -142,6 +142,19 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+// The page's scroll position as a named timeline, so reading-progress lines
+// (ReadingProgress, PhoneBar) are driven by the browser's scroll, with no JS
+// per scroll event. Both shells scroll #main-content, not the window;
+// timeline-scope lifts the name to <body> so chrome outside the pane (the
+// PhoneBar) can use it too. Browsers without it keep the JS path.
+#main-content {
+  scroll-timeline: --page block;
+}
+
+body {
+  timeline-scope: --page;
+}
+
 body[data-banner] {
   [id],
   .citation-key,
