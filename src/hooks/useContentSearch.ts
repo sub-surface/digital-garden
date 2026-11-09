@@ -24,7 +24,7 @@ interface Options {
   limit?: number
 }
 
-interface SearchIndexPayload {
+export interface SearchIndexPayload {
   slugs: string[]
   index: Record<string, number[]>
 }
@@ -54,7 +54,8 @@ function tokensWithPrefix(prefix: string): string[] {
   return out
 }
 
-function loadSearchIndexPayload(): Promise<SearchIndexPayload | null> {
+/** The pre-computed search index, fetched at most once (also used by the concordance background). */
+export function loadSearchIndexPayload(): Promise<SearchIndexPayload | null> {
   if (cachedIndexPayload) return Promise.resolve(cachedIndexPayload)
   if (indexFetchPromise) return indexFetchPromise
 

@@ -64,48 +64,75 @@ export const SITE_DEFAULTS = {
       "wind": 0.05,
       "opacity": 0.34
     },
-    "schematic": {
-      "anchors": 9,
-      "driftSpeed": 1,
-      "opacity": 1
-    },
     "isometric": {
-      "count": 10,
+      "count": 14,
       "spin": 1,
       "parallax": 1,
       "opacity": 1
     },
     "orrery": {
-      "rings": 6,
-      "spin": 1,
+      "timelapse": 0,
+      "labels": 1,
       "opacity": 1
     },
-    "plate-scan": {
-      "panSpeed": 1,
-      "scanSpeed": 1,
-      "cell": 4,
-      "opacity": 1
+    "lightning": {
+      "frequency": 9,
+      "branching": 0.5,
+      "glow": 1,
+      "opacity": 0.6
     },
-    "dendrite": {
-      "branches": 4,
-      "speed": 1.2,
-      "branchChance": 0.08,
-      "curl": 0.5,
-      "opacity": 0.35
-    },
-    "lorenz": {
-      "flowType": 0,
+    "attractor": {
       "speed": 1.0,
       "rotSpeed": 0.6,
-      "trail": 1200,
+      "trail": 1600,
+      "morph": 45,
       "opacity": 0.4
     },
     "cartography": {
-      "lines": 14,
+      "lines": 16,
       "speed": 0.6,
       "relief": 1.6,
-      "elevation": 0.002,
+      "elevation": 0.0022,
       "opacity": 0.3
+    },
+    "prose": {
+      "size": 15,
+      "hold": 14,
+      "drift": 1,
+      "opacity": 0.5
+    },
+    "sediment": {
+      "rate": 1.5,
+      "size": 12,
+      "opacity": 0.5
+    },
+    "palimpsest": {
+      "layers": 3,
+      "speed": 1,
+      "size": 17,
+      "opacity": 0.5
+    },
+    "rivers": {
+      "measure": 420,
+      "size": 14,
+      "flow": 1,
+      "opacity": 0.5
+    },
+    "cutup": {
+      "lines": 9,
+      "interval": 3.5,
+      "size": 16,
+      "opacity": 0.5
+    },
+    "concordance": {
+      "stars": 700,
+      "twinkle": 1,
+      "opacity": 0.6
+    },
+    "teletype": {
+      "speed": 14,
+      "size": 13,
+      "opacity": 0.45
     }
   } satisfies BackgroundsConfig
 }

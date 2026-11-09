@@ -16,6 +16,8 @@ import type { BgMode } from "@/store"
 export interface ColorCache {
   secondary: string
   palette: string[]
+  /** --color-text, for the monochrome and typographic modes. */
+  text: string
 }
 
 // drawField dots constellation
@@ -62,24 +64,6 @@ export interface Track {
   gy: number
 }
 
-// drawSchematic
-export interface Anchor {
-  i: number
-  phase: number
-  glyphs: string
-}
-
-// drawIsometric
-export interface Cube {
-  x: number
-  y: number
-  s: number
-  depth: number
-  spin: number
-  phase: number
-  glyph: string | null
-}
-
 // Raw /graph.json payload — mirrors scripts/prebuild.ts's emitGraph() and
 // ConstellationPage.tsx's RawNode/RawLink.
 export interface GraphJsonNode {
@@ -110,40 +94,6 @@ export interface GraphNode extends GraphJsonNode {
 
 export type GraphLink = GraphJsonLink
 
-// drawDendrite
-export interface DendriteSegment {
-  x1: number
-  y1: number
-  x2: number
-  y2: number
-  depth: number
-  alpha: number
-}
-
-export interface DendriteTree {
-  x: number
-  y: number
-  angle: number
-  segments: DendriteSegment[]
-  tips: Array<{ x: number; y: number; angle: number; depth: number; life: number }>
-  age: number
-  maxAge: number
-  color: string
-}
-
-// drawLorenz
-export interface LorenzState {
-  x: number
-  y: number
-  z: number
-  history: Float32Array
-  head: number
-  count: number
-  theta: number
-  phi: number
-  flowType: number
-}
-
 export interface BgState {
   mx: number
   my: number
@@ -160,17 +110,24 @@ export interface BgState {
   boidGrid: number[][]
   emitters: Emitter[]
   tracks: Track[]
-  anchors: Anchor[]    // schematic
-  cubes: Cube[]         // isometric
-  dendrites: DendriteTree[] // dendrite
-  lorenz: LorenzState | null // lorenz
-  cartoSeed: number    // cartography
-  plate: HTMLCanvasElement | null  // plate-scan offscreen still
-  plateKey: string
   lastFrame: number
+  /**
+   * The drawing surface in CSS px. On phones this is a virtual viewport
+   * larger than the screen (see `scale`), so every mode draws at desktop
+   * proportions and the canvas shrinks the result.
+   */
   w: number
   h: number
+  /** Screen px per drawing px: 1 on desktop, < 1 on phones. */
+  scale: number
+  /** Bumped whenever the surface is resized: modules that keep their own scratch state reseed on change. */
+  epoch: number
+  /** The note being read (the typographic modes draw from it). */
+  slug: string
 }
+
+// Newer modes keep their own scratch state in a module-level WeakMap keyed on
+// BgState (reseeding when `epoch` changes) rather than adding fields here.
 
 // ── config.backgrounds.<mode> shapes ──
 // Each interface's fields are exactly what site-defaults.ts defines for that
@@ -241,12 +198,6 @@ export interface MurmurationConfig {
   opacity: number
 }
 
-export interface SchematicConfig {
-  anchors: number
-  driftSpeed: number
-  opacity: number
-}
-
 export interface IsometricConfig {
   count: number
   spin: number
@@ -255,31 +206,28 @@ export interface IsometricConfig {
 }
 
 export interface OrreryConfig {
-  rings: number
-  spin: number
+  /** Days of planetary motion per second; 0 is real time (today's sky). */
+  timelapse: number
+  /** 1 shows planet names, 0 just the marks. */
+  labels: number
   opacity: number
 }
 
-export interface PlateScanConfig {
-  panSpeed: number
-  scanSpeed: number
-  cell: number
+export interface LightningConfig {
+  /** Strikes per minute. */
+  frequency: number
+  branching: number
+  /** Width of the soft halo around each channel. */
+  glow: number
   opacity: number
 }
 
-export interface DendriteConfig {
-  branches: number
-  speed: number
-  branchChance: number
-  curl: number
-  opacity: number
-}
-
-export interface LorenzConfig {
-  flowType: number
+export interface AttractorConfig {
   speed: number
   rotSpeed: number
   trail: number
+  /** Seconds before the ribbon becomes the next attractor. */
+  morph: number
   opacity: number
 }
 
@@ -288,6 +236,57 @@ export interface CartographyConfig {
   speed: number
   relief: number
   elevation: number
+  opacity: number
+}
+
+export interface ProseConfig {
+  size: number
+  /** Seconds a passage holds before it scatters. */
+  hold: number
+  drift: number
+  opacity: number
+}
+
+export interface SedimentConfig {
+  /** Words per second. */
+  rate: number
+  size: number
+  opacity: number
+}
+
+export interface PalimpsestConfig {
+  layers: number
+  speed: number
+  size: number
+  opacity: number
+}
+
+export interface RiversConfig {
+  /** Column width in px: narrower justified columns open more rivers. */
+  measure: number
+  size: number
+  flow: number
+  opacity: number
+}
+
+export interface CutupConfig {
+  lines: number
+  /** Seconds between cuts. */
+  interval: number
+  size: number
+  opacity: number
+}
+
+export interface ConcordanceConfig {
+  stars: number
+  twinkle: number
+  opacity: number
+}
+
+export interface TeletypeConfig {
+  /** Characters per second. */
+  speed: number
+  size: number
   opacity: number
 }
 
@@ -315,13 +314,18 @@ interface BgModeConfigShapes {
   dots: DotsConfig
   terminal: TerminalConfig
   chamber: ChamberConfig
-  schematic: SchematicConfig
   isometric: IsometricConfig
   orrery: OrreryConfig
-  "plate-scan": PlateScanConfig
-  dendrite: DendriteConfig
-  lorenz: LorenzConfig
+  lightning: LightningConfig
+  attractor: AttractorConfig
   cartography: CartographyConfig
+  prose: ProseConfig
+  sediment: SedimentConfig
+  palimpsest: PalimpsestConfig
+  rivers: RiversConfig
+  cutup: CutupConfig
+  concordance: ConcordanceConfig
+  teletype: TeletypeConfig
 }
 
 export type BackgroundsConfig = { [K in ConfigurableBgMode]: BgModeConfigShapes[K] }

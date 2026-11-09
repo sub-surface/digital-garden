@@ -74,6 +74,13 @@ figcaption {
   border-bottom: 1px solid var(--color-border-light);
   padding: var(--space-4) 0;
 
+  // Right-aligned: when shrinkwrap caps the quote's width (even lines), it
+  // stays against the right edge.
+  &__quote,
+  &__quote p {
+    margin-left: auto;
+  }
+
   &__quote p:last-child {
     margin-bottom: var(--space-2);
   }

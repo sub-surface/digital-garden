@@ -50,16 +50,27 @@ function applyTheme(theme: "light" | "dark") {
 /** All ambient modes are user-selectable; chess/hexo are page-scoped boards. */
 export type BgMode =
   | "murmuration" | "graph" | "vectors" | "dots" | "terminal"
-  | "chamber" | "schematic" | "isometric" | "orrery" | "plate-scan"
-  | "dendrite" | "lorenz" | "cartography"
+  | "chamber" | "isometric" | "orrery" | "lightning" | "attractor" | "cartography"
+  | "prose" | "sediment" | "palimpsest" | "rivers" | "cutup" | "concordance" | "teletype"
   | "chess" | "hexo"
 
 /** The user-facing cycle/picker order (page-scoped boards excluded). */
 export const BG_MODES = [
   "murmuration", "graph", "vectors", "dots", "terminal",
-  "chamber", "schematic", "isometric", "orrery", "plate-scan",
-  "dendrite", "lorenz", "cartography",
+  "chamber", "isometric", "orrery", "lightning", "attractor", "cartography",
+  "prose", "sediment", "palimpsest", "rivers", "cutup", "concordance", "teletype",
 ] as const
+
+/**
+ * Persisted modes that were renamed or retired (2026-11-09), so a saved
+ * setting lands somewhere sensible instead of falling back to the default.
+ */
+const BG_MODE_RENAMES: Record<string, BgMode> = {
+  lorenz: "attractor",
+  dendrite: "lightning",
+  schematic: "isometric",
+  "plate-scan": "cartography",
+}
 
 /**
  * Single source of truth for ambient-mode display names (ROADMAP §28.11).
@@ -71,16 +82,21 @@ export const BG_META: Record<string, { label: string; desc: string }> = {
   murmuration: { label: "Murmuration", desc: "A flock that flees your cursor" },
   graph: { label: "Graph", desc: "The knowledge graph, drifting" },
   vectors: { label: "Vectors", desc: "A flow field of little arrows" },
-  dots: { label: "Dots", desc: "A living constellation lattice" },
+  dots: { label: "Dots", desc: "A monochrome constellation lattice" },
   terminal: { label: "Terminal", desc: "Glyph rain and boot pops" },
   chamber: { label: "Chamber", desc: "Bubble-chamber particle tracks" },
-  schematic: { label: "Schematic", desc: "Blueprint leader lines" },
-  isometric: { label: "Isometric", desc: "Wireframe cubes, cursor parallax" },
-  orrery: { label: "Orrery", desc: "Nested astrolabe rings" },
-  "plate-scan": { label: "Plate-scan", desc: "Dithered still, scanline sweep" },
-  dendrite: { label: "Dendrite", desc: "Reaction-diffusion Lichtenberg trees" },
-  lorenz: { label: "Lorenz", desc: "Strange attractor ribbon in phase space" },
-  cartography: { label: "Cartography", desc: "Topographic contour drift and relief" },
+  isometric: { label: "Isometric", desc: "Wireframe solids, cursor parallax" },
+  orrery: { label: "Orrery", desc: "The solar system as it stands today" },
+  lightning: { label: "Lightning", desc: "Strikes that fork across the sky" },
+  attractor: { label: "Attractor", desc: "Strange attractors, each becoming the next" },
+  cartography: { label: "Cartography", desc: "Contour lines around drifting hills" },
+  prose: { label: "Prose", desc: "The page's own words, scattering and settling" },
+  sediment: { label: "Sediment", desc: "Words settling into strata, oldest deepest" },
+  palimpsest: { label: "Palimpsest", desc: "Passages scraped back and written over" },
+  rivers: { label: "Rivers", desc: "Water running down the gaps in justified type" },
+  cutup: { label: "Cut-up", desc: "Sentences from the garden, cut and respliced" },
+  concordance: { label: "Concordance", desc: "Every word in the garden as a star" },
+  teletype: { label: "Teletype", desc: "The margins, typed out far back" },
 }
 
 export type DockTab = "prompt" | "chat"
@@ -481,6 +497,7 @@ export const useStore = create<GardenStore>()(
       },
       merge: (persisted, current) => {
         const merged = { ...current, ...(persisted as Partial<GardenStore>) }
+        merged.bgMode = BG_MODE_RENAMES[merged.bgMode] ?? merged.bgMode
         if (!(BG_MODES as readonly string[]).includes(merged.bgMode)) merged.bgMode = "murmuration"
         merged.lastBgMode = merged.bgMode
         return merged

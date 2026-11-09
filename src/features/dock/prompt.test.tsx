@@ -43,10 +43,10 @@ describe("the dock prompt", () => {
 
   it("Enter on an argument row runs it", () => {
     const { input } = setup()
-    fireEvent.change(input, { target: { value: "bg lor" } })
+    fireEvent.change(input, { target: { value: "bg attr" } })
     fireEvent.keyDown(input, { key: "ArrowDown" })
     fireEvent.keyDown(input, { key: "Enter" })
-    expect(useStore.getState().bgMode).toBe("lorenz")
+    expect(useStore.getState().bgMode).toBe("attractor")
   })
 
   it("Esc clears the input first, then closes", () => {

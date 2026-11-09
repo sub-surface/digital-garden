@@ -1,134 +1,179 @@
 import type { BgState } from "@/types/backgrounds"
 import type { SiteConfig } from "@/config/site-defaults"
 import { simplex } from "./simplex"
+import { perState, FONT } from "./scratch"
 
 // ── Cartography background ──
-// Topographic contour drift & terrain relief.
-// Slices continuous elevation isoclines across a procedural noise landscape.
-// Features:
-//   - Major index contours every 4th line (bolder gauge, matching geological survey maps).
-//   - Cursor surveyor interaction: cursor acts as a benchmark station with elevation tags.
-//   - Batched into two Path2D stroke passes for peak 144 FPS performance.
-export function drawCartography(
-  ctx: CanvasRenderingContext2D,
-  state: BgState,
-  config: SiteConfig
-) {
+// A survey map: contour lines around drifting hills, the way a real
+// topographic sheet draws them. Closed rings round each summit, crowding
+// where the ground is steep, every fifth line an index contour (bolder, with
+// its height on it), spot heights on the tops, and the cursor as the
+// surveyor's station with a live reading.
+//
+// Elevation is fractal noise sampled on a grid; contours are traced with
+// marching squares (each cell's four corners say which edges an isoline
+// crosses; interpolating along those edges puts it exactly where the
+// height passes the level). The terrain drifts slowly, as if the sheet
+// were being redrawn under you.
+
+const CELL = 13
+const INDEX_EVERY = 5
+const MAX_M = 3000
+
+interface Scene {
+  seed: number
+  cols: number
+  rows: number
+  h: Float32Array
+}
+
+const scene = perState<Scene>((state) => {
+  const cols = Math.ceil(state.w / CELL) + 2
+  const rows = Math.ceil(state.h / CELL) + 2
+  return { seed: Math.random() * 1000, cols, rows, h: new Float32Array(cols * rows) }
+})
+
+// Marching-squares edge pairs per case (edges: 0 top, 1 right, 2 bottom, 3 left).
+// Saddles (5, 10) are split one way; at this scale the choice is invisible.
+const CASES: number[][] = [
+  [], [3, 2], [2, 1], [3, 1], [1, 0], [3, 0, 1, 2], [2, 0], [3, 0],
+  [0, 3], [0, 2], [0, 1, 2, 3], [0, 1], [1, 3], [1, 2], [2, 3], [],
+]
+
+export function drawCartography(ctx: CanvasRenderingContext2D, state: BgState, config: SiteConfig) {
   const p = config.backgrounds.cartography
   if (!p) return
-  const W = state.w
-  const H = state.h
-  const lineCount = Math.max(3, Math.round(p.lines ?? 14))
-  const speed = p.speed ?? 0.6
+  const s = scene(state)
+  const { cols, rows, h } = s
+  const levels = Math.max(4, Math.round(p.lines ?? 16))
+  const freq = p.elevation ?? 0.0022
   const relief = p.relief ?? 1.6
-  const freq = p.elevation ?? 0.002
-  const baseAlpha = (p.opacity ?? 0.3) * state.readerAlpha
-  const now = (performance.now() / 1000) * speed
+  const t = (performance.now() / 1000) * (p.speed ?? 0.6) * 0.02
+  const op = (p.opacity ?? 0.3) * state.readerAlpha
+  const ink = state.colorCache.secondary
 
-  // Initialize session terrain seed
-  if (!state.cartoSeed) {
-    state.cartoSeed = Math.random() * 1000
+  // Elevation field, 0..1. Relief sharpens the summits (a power curve), so
+  // high ground stands out of gentler lowland.
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      const x = (i * CELL) * freq + s.seed, y = (j * CELL) * freq
+      let v = simplex(x + t, y - t * 0.6) * 0.62
+        + simplex(x * 2.1 - t * 1.3, y * 2.1 + 40) * 0.26
+        + simplex(x * 4.7 + 90, y * 4.7 + t * 2) * 0.12
+      v = v * 0.5 + 0.5
+      h[j * cols + i] = Math.pow(Math.min(1, Math.max(0, v)), 0.6 + relief * 0.35)
+    }
   }
-  const seed = state.cartoSeed
 
-  const standardPath = new Path2D()
-  const indexPath = new Path2D()
-  const labels: Array<{ text: string; x: number; y: number }> = []
+  const minor = new Path2D()
+  const index = new Path2D()
+  const labels: { x: number; y: number; a: number; m: number }[] = []
+  const lastLabel = new Map<number, { x: number; y: number }[]>()
 
-  const stepX = 24 // 24px step across viewport for smooth curves
-  const cols = Math.ceil(W / stepX) + 2
-
-  const hasCursor = state.mx > -9000
-  const mx = state.mx, my = state.my
-
-  for (let k = 1; k <= lineCount; k++) {
-    const baseNormY = k / (lineCount + 1)
-    const baseY = baseNormY * H
-    const isIndexLine = k % 4 === 0
-    const targetPath = isIndexLine ? indexPath : standardPath
-
-    let first = true
-    let labelPlaced = false
-
-    for (let c = -1; c <= cols; c++) {
-      const x = c * stepX
-
-      // Multi-octave elevation noise
-      const n1 = simplex(x * freq + seed, baseY * freq + now * 0.08)
-      const n2 = simplex(x * freq * 2.2 + seed + 50, baseY * freq * 2.2 - now * 0.05)
-      const n3 = simplex(x * freq * 5.1, baseY * freq * 5.1 + now * 0.12)
-
-      let dy = (n1 * 0.6 + n2 * 0.3 + n3 * 0.1) * relief * 42
-
-      // Cursor elevation deflection (mountain surveyor beacon)
-      if (hasCursor) {
-        const cdx = x - mx
-        const cdy = (baseY + dy) - my
-        const dist2 = cdx * cdx + cdy * cdy
-        if (dist2 < 40000 && dist2 > 0) { // 200px radius
-          const dist = Math.sqrt(dist2)
-          const bend = (1 - dist / 200) * 28
-          dy -= (cdy / dist) * bend
+  for (let j = 0; j < rows - 1; j++) {
+    for (let i = 0; i < cols - 1; i++) {
+      const a = h[j * cols + i], b = h[j * cols + i + 1]
+      const c = h[(j + 1) * cols + i + 1], d = h[(j + 1) * cols + i]
+      const lo = Math.min(a, b, c, d), hi = Math.max(a, b, c, d)
+      // Only the levels that actually cross this cell
+      const l0 = Math.ceil(lo * (levels + 1)), l1 = Math.floor(hi * (levels + 1))
+      for (let l = Math.max(1, l0); l <= Math.min(levels, l1); l++) {
+        const iso = l / (levels + 1)
+        const k = (a > iso ? 8 : 0) | (b > iso ? 4 : 0) | (c > iso ? 2 : 0) | (d > iso ? 1 : 0)
+        const edges = CASES[k]
+        if (!edges.length) continue
+        const x0 = (i - 1) * CELL, y0 = (j - 1) * CELL
+        const pt = (e: number): [number, number] => {
+          if (e === 0) return [x0 + ((iso - a) / (b - a)) * CELL, y0]
+          if (e === 1) return [x0 + CELL, y0 + ((iso - b) / (c - b)) * CELL]
+          if (e === 2) return [x0 + ((iso - d) / (c - d)) * CELL, y0 + CELL]
+          return [x0, y0 + ((iso - a) / (d - a)) * CELL]
+        }
+        const isIndex = l % INDEX_EVERY === 0
+        const path = isIndex ? index : minor
+        for (let e = 0; e < edges.length; e += 2) {
+          const [ax, ay] = pt(edges[e]), [bx, by] = pt(edges[e + 1])
+          path.moveTo(ax, ay)
+          path.lineTo(bx, by)
+          // A height on index contours, where the line runs fairly level,
+          // spaced well apart along the same contour
+          if (isIndex && Math.abs(by - ay) < Math.abs(bx - ax) * 0.5 && ax > 40 && ax < state.w - 60 && ay > 30 && ay < state.h - 30) {
+            const near = lastLabel.get(l) ?? []
+            if (near.every((q) => Math.hypot(q.x - ax, q.y - ay) > 260) && labels.length < 14) {
+              near.push({ x: ax, y: ay })
+              lastLabel.set(l, near)
+              labels.push({ x: (ax + bx) / 2, y: (ay + by) / 2, a: Math.atan2(by - ay, bx - ax), m: Math.round(iso * MAX_M) })
+            }
+          }
         }
       }
-
-      const y = baseY + dy
-
-      if (first) {
-        targetPath.moveTo(x, y)
-        first = false
-      } else {
-        targetPath.lineTo(x, y)
-      }
-
-      // Elevation label on index contours near center
-      if (isIndexLine && !labelPlaced && x > W * 0.35 && x < W * 0.65 && (c % 8 === 0)) {
-        const elev = Math.round(baseNormY * 2400 + 400)
-        labels.push({ text: `${elev}m`, x: x + 4, y: y - 4 })
-        labelPlaced = true
-      }
     }
   }
 
-  ctx.strokeStyle = state.colorCache.secondary
+  ctx.strokeStyle = ink
+  ctx.lineCap = "round"
+  ctx.lineWidth = 0.8
+  ctx.globalAlpha = op * 0.55
+  ctx.stroke(minor)
+  ctx.lineWidth = 1.5
+  ctx.globalAlpha = op * 0.95
+  ctx.stroke(index)
 
-  // 1. Standard contour lines
-  ctx.lineWidth = 0.9
-  ctx.globalAlpha = baseAlpha * 0.7
-  ctx.stroke(standardPath)
+  // Heights along index contours, set along the line
+  ctx.font = `8px ${FONT.mono}`
+  ctx.fillStyle = ink
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+  ctx.globalAlpha = op * 0.9
+  for (const lb of labels) {
+    let a = lb.a
+    if (a > Math.PI / 2) a -= Math.PI
+    if (a < -Math.PI / 2) a += Math.PI
+    ctx.save()
+    ctx.translate(lb.x, lb.y - 5)
+    ctx.rotate(a)
+    ctx.fillText(String(lb.m), 0, 0)
+    ctx.restore()
+  }
 
-  // 2. Index contour lines (bold)
-  ctx.lineWidth = 1.8
-  ctx.globalAlpha = baseAlpha * 1.15
-  ctx.stroke(indexPath)
-
-  // 3. Elevation typography
-  if (labels.length > 0) {
-    ctx.font = "9px 'IBM Plex Mono', monospace"
-    ctx.fillStyle = state.colorCache.secondary
-    ctx.globalAlpha = baseAlpha * 0.85
-    for (let l = 0; l < labels.length; l++) {
-      const lbl = labels[l]
-      ctx.fillText(lbl.text, lbl.x, lbl.y)
+  // Spot heights: summits (higher than everything within three cells)
+  ctx.textAlign = "left"
+  for (let j = 3; j < rows - 3; j += 3) {
+    for (let i = 3; i < cols - 3; i += 3) {
+      const v = h[j * cols + i]
+      if (v < 0.55) continue
+      let top = true
+      for (let dj = -3; dj <= 3 && top; dj++) for (let di = -3; di <= 3; di++) {
+        if ((di || dj) && h[(j + dj) * cols + i + di] >= v) { top = false; break }
+      }
+      if (!top) continue
+      const x = (i - 1) * CELL, y = (j - 1) * CELL
+      ctx.globalAlpha = op
+      ctx.beginPath()
+      ctx.moveTo(x, y - 3); ctx.lineTo(x + 3, y + 2); ctx.lineTo(x - 3, y + 2); ctx.closePath()
+      ctx.fill()
+      ctx.globalAlpha = op * 0.8
+      ctx.fillText(String(Math.round(v * MAX_M)), x + 6, y)
     }
   }
 
-  // 4. Surveyor reticle at cursor
-  if (hasCursor) {
-    ctx.strokeStyle = state.colorCache.secondary
+  // The surveyor's station: the height under the cursor
+  if (state.mx > -9000) {
+    const gi = Math.min(cols - 2, Math.max(0, state.mx / CELL + 1)), gj = Math.min(rows - 2, Math.max(0, state.my / CELL + 1))
+    const i = Math.floor(gi), j = Math.floor(gj), fx = gi - i, fy = gj - j
+    const v = (h[j * cols + i] * (1 - fx) + h[j * cols + i + 1] * fx) * (1 - fy)
+      + (h[(j + 1) * cols + i] * (1 - fx) + h[(j + 1) * cols + i + 1] * fx) * fy
+    const mx = state.mx, my = state.my
     ctx.lineWidth = 1
-    ctx.globalAlpha = baseAlpha * 1.3
-    const r = 8
+    ctx.globalAlpha = op * 1.4
     ctx.beginPath()
-    ctx.moveTo(mx - r, my); ctx.lineTo(mx + r, my)
-    ctx.moveTo(mx, my - r); ctx.lineTo(mx, my + r)
-    ctx.arc(mx, my, 4, 0, Math.PI * 2)
+    ctx.moveTo(mx - 10, my); ctx.lineTo(mx - 3, my)
+    ctx.moveTo(mx + 3, my); ctx.lineTo(mx + 10, my)
+    ctx.moveTo(mx, my - 10); ctx.lineTo(mx, my - 3)
+    ctx.moveTo(mx, my + 3); ctx.lineTo(mx, my + 10)
     ctx.stroke()
-
-    ctx.font = "9px 'IBM Plex Mono', monospace"
-    ctx.fillStyle = state.colorCache.secondary
-    ctx.fillText(`BM ${Math.round(my)}`, mx + 12, my - 6)
+    ctx.fillText(`△ ${Math.round(v * MAX_M)} m`, mx + 13, my - 8)
   }
-
+  ctx.textBaseline = "alphabetic"
   ctx.globalAlpha = 1
 }

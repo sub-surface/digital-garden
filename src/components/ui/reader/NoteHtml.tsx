@@ -1,4 +1,5 @@
 import React, { Suspense, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { hugPullquotes } from "@/lib/shrinkwrap"
 import { createPortal } from "react-dom"
 import { mdxComponents } from "@/components/mdx/MDXProvider"
 import { ImageLightbox } from "./ImageLightbox"
@@ -57,6 +58,13 @@ export function NoteHtml({ html, containerRef }: { html: string; containerRef?: 
     if (!root) return
     root.innerHTML = html
     setIslands([])
+  }, [html, ref])
+
+  // Pull quotes set their lines even (lib/shrinkwrap: measured off-DOM).
+  useLayoutEffect(() => {
+    const root = ref.current
+    if (!root) return
+    return hugPullquotes(root)
   }, [html, ref])
 
   // Discover placeholders: now, and whenever nodes are added under the root.

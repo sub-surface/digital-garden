@@ -2,7 +2,6 @@ import assert from "node:assert/strict"
 import { simplex } from "../src/lib/backgrounds/simplex.js"
 import { MURM } from "../src/lib/backgrounds/murmuration.js"
 import { CHAMBER_GLYPHS } from "../src/lib/backgrounds/chamber.js"
-import { SCHEMATIC_GLYPHS } from "../src/lib/backgrounds/schematic.js"
 import { GLYPH_POOL } from "../src/lib/backgrounds/isometric.js"
 
 // ── 1. Simplex noise tests ──
@@ -46,7 +45,6 @@ import { GLYPH_POOL } from "../src/lib/backgrounds/isometric.js"
 // ── 3. Glyph pool safety ──
 {
   assert.ok(CHAMBER_GLYPHS.length > 0, "CHAMBER_GLYPHS must not be empty")
-  assert.ok(SCHEMATIC_GLYPHS.length > 0, "SCHEMATIC_GLYPHS must not be empty")
   assert.ok(GLYPH_POOL.length > 0, "GLYPH_POOL must not be empty")
 }
 
@@ -101,24 +99,74 @@ import { GLYPH_POOL } from "../src/lib/backgrounds/isometric.js"
   assert.equal(pool[1].x, 2)
 }
 
-// ── 6. Dendrite tree spawning and tip dynamics ──
+// ── 6. Orrery ephemeris: the planets where they really are ──
 {
-  const { spawnTree } = await import("../src/lib/backgrounds/dendrite.js")
-  const mockState = { w: 1200, h: 800 } as any
-  const tree = spawnTree(mockState, "#b4424c")
-  assert.ok(tree.tips.length > 0, "spawnTree must initialize with at least one active tip")
-  assert.equal(tree.segments.length, 0, "spawnTree segments start empty")
-  assert.ok(tree.maxAge > 300, "tree maxAge must allow full growth lifecycle")
+  const { PLANETS, planetXY, eccentricAnomaly } = await import("../src/lib/backgrounds/orrery.js")
+  // Kepler's equation round-trips
+  for (const e of [0, 0.2, 0.9, 0.967]) {
+    for (const M of [-3, -1, 0.3, 2.5]) {
+      const E = eccentricAnomaly(M, e)
+      assert.ok(Math.abs(E - e * Math.sin(E) - M) < 1e-8, `Kepler solve e=${e} M=${M}`)
+    }
+  }
+  const J2000 = 2451545
+  const earth = PLANETS.find((p) => p.name === "Earth")!
+  // Earth ~1 AU from the Sun all year, nearest in early January (perihelion)
+  const r = (jd: number) => Math.hypot(...planetXY(earth, jd))
+  assert.ok(Math.abs(r(J2000) - 0.983) < 0.003, `Earth on 2000-01-01 ~0.983 AU, got ${r(J2000)}`)
+  assert.ok(Math.abs(r(J2000 + 183) - 1.0167) < 0.003, `Earth in early July ~1.017 AU, got ${r(J2000 + 183)}`)
+  // At the March equinox the Sun is at ecliptic longitude 0, so Earth is at 180°
+  const [ex, ey] = planetXY(earth, 2451623.8) // 2000-03-20 07:35 UT
+  const lon = (Math.atan2(ey, ex) * 180) / Math.PI
+  assert.ok(Math.abs(Math.abs(lon) - 180) < 1.5, `Earth heliocentric longitude at the equinox ~180°, got ${lon}`)
+  // Every orbit's size is right to a few percent
+  for (const p of PLANETS) {
+    const d = Math.hypot(...planetXY(p, J2000 + 9000))
+    assert.ok(d > p.a[0] * 0.75 && d < p.a[0] * 1.25, `${p.name} distance ${d} vs a=${p.a[0]}`)
+  }
 }
 
-// ── 7. Lorenz chaotic attractor numerical stability ──
+// ── 7. Attractors stay finite and bounded ──
 {
-  const { initLorenz } = await import("../src/lib/backgrounds/lorenz.js")
-  for (let flowType = 0; flowType <= 3; flowType++) {
-    const ls = initLorenz(flowType)
-    assert.equal(ls.history.length, 3000 * 3, "history buffer must be preallocated")
-    assert.ok(!Number.isNaN(ls.x) && !Number.isNaN(ls.y) && !Number.isNaN(ls.z), `initial coordinates for attractor ${flowType} must be valid numbers`)
+  const { SYSTEMS } = await import("../src/lib/backgrounds/attractor.js")
+  const o: [number, number, number] = [0, 0, 0]
+  for (const sys of SYSTEMS) {
+    let [x, y, z] = sys.start
+    for (let i = 0; i < 20000; i++) {
+      sys.f(x, y, z, o)
+      x += o[0] * sys.dt; y += o[1] * sys.dt; z += o[2] * sys.dt
+    }
+    assert.ok([x, y, z].every((v) => Number.isFinite(v) && Math.abs(v) < 500), `${sys.name} must stay on its attractor, got ${[x, y, z]}`)
   }
+}
+
+// ── 7b. Off-DOM text layout (lib/textlayout) ──
+{
+  const tl = await import("../src/lib/textlayout.js")
+  tl.setMeasure((text) => text.length * 10) // monospace: 10px per character
+  const p = tl.prepare("aaaa bbbb cccc dddd e", "x")
+  assert.equal(p.space, 10)
+  // 4+1+4 = 9 chars per two words → 90px; three words need 140px
+  assert.equal(tl.lineCount(p, 95), 3, "greedy breaking at 95px")
+  assert.deepEqual(tl.layoutLines(p, 95).map((l) => l.text), ["aaaa bbbb", "cccc dddd", "e"])
+  // Shrink-wrap keeps the line count and evens the lines
+  const q = tl.prepare("one two three four five six seven", "x")
+  const wide = 300
+  const n = tl.lineCount(q, wide)
+  const tight = tl.shrinkWrap(q, wide)
+  assert.ok(tight < wide && tl.lineCount(q, tight) === n, `shrinkWrap ${tight} keeps ${n} lines`)
+  // Hyphenated words break after the hyphen
+  const h = tl.prepare("well-known", "x")
+  assert.deepEqual(h.words, ["well-", "known"])
+  assert.equal(tl.lineText(h, 0, 2), "well-known")
+  // Per-line widths (text around a shape)
+  assert.equal(tl.lineCount(p, (i) => (i === 0 ? 45 : 200)), 2)
+  // Justified word positions fill the line exactly
+  const line = tl.layoutLines(p, 95)[0]
+  const xs = tl.justify(p, line, 120)
+  assert.equal(xs[0], 0)
+  assert.equal(xs[1] + p.widths[1], 120)
+  tl.setMeasure(null)
 }
 
 // ── 8. Cartography contour relief determinism ──

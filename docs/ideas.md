@@ -58,9 +58,16 @@ end of this list, give or take the canvas.
 - **The moon.** Draw the current phase (the maths is in
   `src/features/ambience/sky.ts`) in the orrery and the sky: a small moon in
   the corner at night when Light & weather is on.
-- **An accurate orrery.** The `orrery` background drawn from real planetary
-  positions (low-precision Keplerian elements are plenty) for today's date,
-  with the time scrubbable.
+- **Glorp wanders through a paragraph.** Text that reflows around glorp,
+  live, as it drifts across a block of prose (per-line widths from
+  `src/lib/textlayout.ts`, the in-house cut of pretext's idea).
+- **Telescopic text that reflows smoothly.** When a block expands, each line
+  glides to its new place instead of jumping. Needs rich inline layout
+  (links, italics) in `textlayout.ts`; the owner can supply pretext's
+  rich-inline and line-breaking files for reference. Plan: measure the real
+  lines once per tap, animate in CSS.
+- **`<Shape>`: prose poured into a silhouette** (an aperture, an eye, a lens),
+  via per-line widths.
 - **Weather, more of it.** Fog as a haze, thunder as a rare far-off flash,
   wind bending the falling things. Today: rain and snow only.
 - **Pebbles.** One-line marks a reader leaves beside a paragraph, shown
@@ -97,6 +104,20 @@ end of this list, give or take the canvas.
   A− / A+ / × reader), and `···` for a sheet with the rest. Hides on scroll
   down, back on scroll up.
 
+- Backgrounds on phones, at desktop proportions (a virtual viewport scaled
+  down, 30 fps), and a round of backgrounds (2026-11-09): plate-scan and
+  schematic retired; cartography as real contours (marching squares, index
+  lines, spot heights); Lorenz became Attractor (six systems in an endless
+  cycle, three ribbons showing chaos); dendrite became Lightning; dots in one
+  ink; vectors several times cheaper; isometric with more solids and a
+  tesseract; the orrery from real orbital elements (today's sky, the zodiac,
+  the belt, the Moon, Halley). New typographic modes: prose, sediment,
+  palimpsest, rivers, cut-up, concordance, teletype, set with an off-DOM
+  layout module (`src/lib/textlayout.ts`) that also evens the lines of
+  epigraphs and pull quotes.
+- The browser lays things out (2026-11-09): scroll-timeline reading progress,
+  anchor-positioned link previews, `field-sizing` chat boxes, folding
+  sidenote cards and TOC, keyboard via `interactive-widget`.
 - Reader mode: keys, wider ranges, controls that stay visible, padding under
   the bar, "Show background".
 - OS music visualizer; customisable desktop (themes, wallpapers, widgets).

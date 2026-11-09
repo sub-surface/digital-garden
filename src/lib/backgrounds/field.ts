@@ -1,11 +1,18 @@
 import type { BgState, FieldConfig, DotNode } from "@/types/backgrounds"
 import type { SiteConfig } from "@/config/site-defaults"
-import { simplex, PM } from "./simplex"
+import { simplex } from "./simplex"
 
 // ── Field background (vectors and dots) ──
 // Vectors: dynamic direction vectors undulating in a 2D simplex noise current.
-// Dots: living constellation lattice where each node drifts off its grid point
-// on noise current and nearby nodes form aperiodic celestial links.
+// Dots: a monochrome constellation lattice (one ink, brightness from the noise)
+// where each node drifts off its grid point and nearby nodes link up.
+//
+// Vectors used to lag: each needle was a filled ellipse (curve rasterisation,
+// ~1000 per frame), the grid ran two cells past every edge, and a third noise
+// octave added only jitter. Needles are now 4-point diamonds (same silhouette
+// at ry≈1), the overdraw is one cell, the octave is gone, and both modes are
+// in BgCanvas's SLOW_MODES (their motion is a pure function of time, so 30 fps
+// while the cursor is still changes nothing but cost).
 // Optimized: reuses dotNodes array on BgState to eliminate per-frame allocations,
 // and batches every cell/link into per-(colour, alpha-level) Path2Ds so a frame is
 // a few dozen fill/stroke calls instead of several thousand. Alpha is quantised
@@ -47,14 +54,13 @@ export function drawField(
   // Read once: window.scrollY inside the cell loop can force layout every iteration
   const scrollY = window.scrollY || 0
   const sy0 = scrollY % step
-  const pad = step * 2
+  const pad = step
   const range = Math.PI * (p.range || 1.2)
   const radius = p.radius || 110
   const radius2 = radius * radius
   const vortex = p.vortex || 0.9
   const readerAlpha = state.readerAlpha
   const pal = state.colorCache.palette
-  const palLen = pal.length
   const mx = state.mx, my = state.my
 
   const isVectors = mode === "vectors"
@@ -69,7 +75,7 @@ export function drawField(
     resetBuckets(ellipsePaths, levels)
     resetBuckets(arrowPaths, levels)
   } else {
-    resetBuckets(dotPaths, palLen * levels)
+    resetBuckets(dotPaths, levels)
   }
 
   let dotCount = 0
@@ -82,10 +88,7 @@ export function drawField(
       const docY = vy + scrollY
       const nx = x * sc, ny = docY * sc
 
-      let a = 0
-      a += simplex(nx, ny + t) * 0.55
-      a += simplex(nx * 2.2, ny * 2.2 + t * 2.5) * 0.3
-      a += simplex(nx * 5, ny * 5 + t * 6) * 0.15
+      let a = simplex(nx, ny + t) * 0.62 + simplex(nx * 2.2, ny * 2.2 + t * 2.5) * 0.38
       a *= range
 
       const dx = x - mx, dy = vy - my
@@ -97,7 +100,7 @@ export function drawField(
       }
 
       const intensity = simplex(nx + 100, ny + 100 + t * 1.2) * 0.5 + 0.5
-      const baseAlpha = 0.05 + intensity * 0.15
+      const baseAlpha = isVectors ? 0.05 + intensity * 0.15 : 0.03 + intensity * 0.24
       const finalAlpha = baseAlpha * readerAlpha
       if (finalAlpha < 0.01) continue
 
@@ -107,10 +110,14 @@ export function drawField(
       if (isVectors) {
         const curRx = minRx + intensity * (vRx - minRx)
         const ca = Math.cos(a), sa = Math.sin(a)
-        // moveTo first: ellipse() would otherwise join to the previous subpath with a stray edge
+        // The needle: a thin diamond along the angle (tip, flank, tail, flank).
         const ep = bucket(ellipsePaths, lvl)
+        const ox = -sa * vRy, oy = ca * vRy
         ep.moveTo(x + curRx * ca, vy + curRx * sa)
-        ep.ellipse(x, vy, curRx, vRy, a, 0, TAU)
+        ep.lineTo(x + ox, vy + oy)
+        ep.lineTo(x - curRx * ca, vy - curRx * sa)
+        ep.lineTo(x - ox, vy - oy)
+        ep.closePath()
 
         const tipX = x + curRx * ca, tipY = vy + curRx * sa
         const ha = 3 + intensity * 2
@@ -123,7 +130,7 @@ export function drawField(
         ap.lineTo(tipX - ha * cp, tipY - ha * sp)
         ap.closePath()
       } else {
-        const ci = PM[(Math.floor(x * 7) + PM[Math.floor(docY * 3) & 255]) & 255] % palLen
+        const ci = 0 // one ink: brightness carries the variation
         const dotR = dMin + intensity * dSpan
         const drift = step * 0.4 * (simplex(nx * 1.5, ny * 1.5 - t) * 0.5 + 0.5)
         const dxp = x + Math.cos(a) * drift
@@ -163,14 +170,13 @@ export function drawField(
     return
   }
 
-  for (let ci = 0; ci < palLen; ci++) {
-    ctx.fillStyle = pal[ci]
-    for (let l = 0; l < levels; l++) {
-      const dp = dotPaths[ci * levels + l]
-      if (!dp) continue
-      ctx.globalAlpha = (0.05 + (l / ALPHA_LEVELS) * 0.15) * readerAlpha
-      ctx.fill(dp)
-    }
+  const ink = state.colorCache.text || pal[3]
+  ctx.fillStyle = ink
+  for (let l = 0; l < levels; l++) {
+    const dp = dotPaths[l]
+    if (!dp) continue
+    ctx.globalAlpha = (0.03 + (l / ALPHA_LEVELS) * 0.24) * (p.opacity ?? 1) * readerAlpha
+    ctx.fill(dp)
   }
 
   // Constellation links: connect each dot to neighbours within ~1.6 steps
@@ -178,9 +184,9 @@ export function drawField(
     const maxD = step * 1.6
     const maxD2 = maxD * maxD
     // closeness * min(alpha) tops out at 0.2 * readerAlpha
-    const linkMax = 0.2 * readerAlpha
+    const linkMax = 0.27 * readerAlpha
     const linkLevels = LINK_LEVELS + 1
-    resetBuckets(linkPaths, palLen * linkLevels)
+    resetBuckets(linkPaths, linkLevels)
     for (let i = 0; i < dotCount; i++) {
       const a0 = dotNodes[i]
       const jEnd = Math.min(i + 24, dotCount)
@@ -194,20 +200,18 @@ export function drawField(
           (closeness * Math.min(a0.alpha, b0.alpha) / linkMax) * LINK_LEVELS
         )
         if (lvl <= 0) continue
-        const lp = bucket(linkPaths, a0.ci * linkLevels + Math.min(LINK_LEVELS, lvl))
+        const lp = bucket(linkPaths, Math.min(LINK_LEVELS, lvl))
         lp.moveTo(a0.x, a0.y)
         lp.lineTo(b0.x, b0.y)
       }
     }
     ctx.lineWidth = 1
-    for (let ci = 0; ci < palLen; ci++) {
-      ctx.strokeStyle = pal[ci]
-      for (let l = 1; l < linkLevels; l++) {
-        const lp = linkPaths[ci * linkLevels + l]
-        if (!lp) continue
-        ctx.globalAlpha = (l / LINK_LEVELS) * linkMax * 0.35
-        ctx.stroke(lp)
-      }
+    ctx.strokeStyle = ink
+    for (let l = 1; l < linkLevels; l++) {
+      const lp = linkPaths[l]
+      if (!lp) continue
+      ctx.globalAlpha = (l / LINK_LEVELS) * linkMax * 0.35 * (p.opacity ?? 1)
+      ctx.stroke(lp)
     }
   }
   ctx.globalAlpha = 1

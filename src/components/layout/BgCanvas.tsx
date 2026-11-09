@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import { useStore } from "@/store"
-import { isPhoneViewport } from "@/config/breakpoints"
+import { PHONE_BREAKPOINT } from "@/config/breakpoints"
 import { loadGraphData } from "@/lib/content-loader"
 import type {
   BgState,
@@ -13,16 +13,57 @@ import {
   drawField,
   drawTerminalPops,
   drawChamber,
-  drawSchematic,
   drawIsometric,
   drawOrrery,
-  drawPlateScan,
   drawChess,
   drawHexo,
-  drawDendrite,
-  drawLorenz,
+  drawLightning,
+  drawAttractor,
   drawCartography,
+  drawProse,
+  drawSediment,
+  drawPalimpsest,
+  drawRivers,
+  drawCutup,
+  drawConcordance,
+  drawTeletype,
 } from "@/lib/backgrounds"
+import type { SiteConfig } from "@/config/site-defaults"
+import type { BgMode } from "@/store"
+
+type Draw = (ctx: CanvasRenderingContext2D, state: BgState, config: SiteConfig) => void
+
+/** One entry per mode: the whole dispatch. */
+const DRAW: Record<BgMode, Draw> = {
+  murmuration: drawMurmuration,
+  graph: drawGraph,
+  vectors: (ctx, state, config) => drawField(ctx, state, "vectors", config),
+  dots: (ctx, state, config) => drawField(ctx, state, "dots", config),
+  terminal: drawTerminalPops,
+  chamber: drawChamber,
+  isometric: drawIsometric,
+  orrery: drawOrrery,
+  lightning: drawLightning,
+  attractor: drawAttractor,
+  cartography: drawCartography,
+  prose: drawProse,
+  sediment: drawSediment,
+  palimpsest: drawPalimpsest,
+  rivers: drawRivers,
+  cutup: drawCutup,
+  concordance: drawConcordance,
+  teletype: drawTeletype,
+  chess: (ctx, state) => drawChess(ctx, state),
+  hexo: (ctx, state) => drawHexo(ctx, state),
+}
+
+/**
+ * Phones draw into a virtual viewport 1/PHONE_SCALE times the screen and the
+ * canvas shrinks it: every mode keeps its desktop proportions (a flock is a
+ * flock, not five big birds) with no per-mode code. Phones also run at
+ * the slow 30 fps rate throughout, for the battery.
+ */
+const PHONE_SCALE = 0.62
 
 /**
  * Frame cap. The modes advance a fixed step per frame and were tuned at
@@ -38,15 +79,19 @@ const DIMMED_FRAME_INTERVAL = 1000 / 8
 /**
  * Modes whose motion is a pure function of wall-clock time (or static), so a
  * 30 FPS cap does not change their speed, only their temporal resolution.
- * Per-frame-stepped modes (murmuration, graph, chamber, dendrite, lorenz,
- * terminal) are deliberately absent: capping them would slow the simulation.
+ * Per-frame-stepped modes (murmuration, graph, chamber, terminal) and the
+ * ones with flowing motion that reads better at 60 (lightning, attractor,
+ * prose, sediment, rivers, cut-up) are absent.
  */
 const SLOW_MODES = new Set<string>([
   "orrery",
-  "schematic",
   "isometric",
-  "plate-scan",
   "cartography",
+  "vectors",
+  "dots",
+  "palimpsest",
+  "concordance",
+  "teletype",
   "chess",
   "hexo",
 ])
@@ -60,12 +105,6 @@ const IDLE_SETTLE_MS = 30_000
 const ALPHA_EPS = 0.0005
 
 export function BgCanvas() {
-  // Skip entirely on mobile — canvas is CSS-hidden at the phone breakpoint.
-  if (isPhoneViewport()) return null
-  return <BgCanvasInner />
-}
-
-function BgCanvasInner() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bgMode = useStore((s) => s.bgMode)
   const bgStyle = useStore((s) => s.bgStyle)
@@ -82,7 +121,7 @@ function BgCanvasInner() {
     my: -9999,
     readerAlpha: 1,
     readerTarget: 1,
-    colorCache: { secondary: "", palette: [] },
+    colorCache: { secondary: "", palette: [], text: "" },
     colorValid: false,
     nodes: [],
     links: [],
@@ -93,16 +132,12 @@ function BgCanvasInner() {
     boidGrid: [],
     emitters: [],
     tracks: [],
-    anchors: [],
-    cubes: [],
-    dendrites: [],
-    lorenz: null,
-    cartoSeed: 0,
-    plate: null,
-    plateKey: "",
     lastFrame: 0,
     w: 0,
     h: 0,
+    scale: 1,
+    epoch: 0,
+    slug: "",
   })
 
   // Read config through a ref: ThemePanel sliders produce a new config object
@@ -150,6 +185,11 @@ function BgCanvasInner() {
     }
   }, [activeSlug])
 
+  // The typographic modes draw from the note being read.
+  useEffect(() => {
+    stateRef.current.slug = activeSlug
+  }, [activeSlug])
+
   useEffect(() => {
     stateRef.current.readerTarget = (isReaderMode && !readerShowBg ? 0.04 : 1) * bgOpacity
   }, [isReaderMode, readerShowBg, bgOpacity])
@@ -186,35 +226,37 @@ function BgCanvasInner() {
     let lastW = -1
     let lastH = -1
     let lastDpr = -1
+    let phone = false
 
     const resize = () => {
       const w = window.innerWidth
       const h = window.innerHeight
-      // Carmack/Torvalds optimization: clamp DPR to max 1.25 on high-DPI (Retina/4K)
-      // screens to eliminate 50–75% fillrate load without visible loss of sharpness.
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.25)
+      phone = w <= PHONE_BREAKPOINT
+      // Clamp DPR to 1.25 on high-DPI desktop screens (50-75% less fill, no
+      // visible loss). Phones get 1.5: their lines are drawn at 0.62x, and at
+      // 1.25 hairlines would smear.
+      const dpr = Math.min(window.devicePixelRatio || 1, phone ? 1.5 : 1.25)
       // Mobile URL-bar show/hide and similar fire resize with an unchanged size;
       // resetting canvas.width would clear the canvas and reseed every mode.
       if (w === lastW && h === lastH && dpr === lastDpr) return
       lastW = w
       lastH = h
       lastDpr = dpr
-      stateRef.current.w = w
-      stateRef.current.h = h
+      const scale = phone ? PHONE_SCALE : 1
+      stateRef.current.scale = scale
+      stateRef.current.w = w / scale
+      stateRef.current.h = h / scale
 
       canvas.width = Math.round(w * dpr)
       canvas.height = Math.round(h * dpr)
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0)
       stateRef.current.colorValid = false
 
-      // Reseed viewport-dependent state
+      // Reseed viewport-dependent state (modules that keep their own scratch
+      // state watch `epoch`)
       stateRef.current.boids = []
       stateRef.current.emitters = []
-      stateRef.current.anchors = []
-      stateRef.current.cubes = []
-      stateRef.current.dendrites = []
-      stateRef.current.cartoSeed = 0
-      stateRef.current.plateKey = ""
+      stateRef.current.epoch++
     }
 
     const refreshColors = () => {
@@ -229,14 +271,16 @@ function BgCanvasInner() {
         css("--color-text-muted") || "#8e8e93",
         css("--color-border") || "#2a2a30",
       ]
+      stateRef.current.colorCache.text = css("--color-text") || "#e0e0e0"
       stateRef.current.colorValid = true
     }
 
     let lastMouseMove = -Infinity
     let lastInput = performance.now()
     const mouseMove = (e: MouseEvent) => {
-      stateRef.current.mx = e.clientX
-      stateRef.current.my = e.clientY
+      // Into drawing coordinates (the phone surface is scaled)
+      stateRef.current.mx = e.clientX / stateRef.current.scale
+      stateRef.current.my = e.clientY / stateRef.current.scale
       lastMouseMove = e.timeStamp
       lastInput = e.timeStamp
     }
@@ -272,35 +316,7 @@ function BgCanvasInner() {
       if (!state.colorValid) refreshColors()
       ctx.clearRect(0, 0, state.w, state.h)
 
-      if (bgMode === "vectors" || bgMode === "dots") {
-        drawField(ctx, state, bgMode, configRef.current)
-      } else if (bgMode === "terminal") {
-        drawTerminalPops(ctx, state, configRef.current)
-      } else if (bgMode === "chess") {
-        drawChess(ctx, state)
-      } else if (bgMode === "hexo") {
-        drawHexo(ctx, state)
-      } else if (bgMode === "graph") {
-        drawGraph(ctx, state, configRef.current)
-      } else if (bgMode === "murmuration") {
-        drawMurmuration(ctx, state, configRef.current)
-      } else if (bgMode === "chamber") {
-        drawChamber(ctx, state, configRef.current)
-      } else if (bgMode === "schematic") {
-        drawSchematic(ctx, state, configRef.current)
-      } else if (bgMode === "isometric") {
-        drawIsometric(ctx, state, configRef.current)
-      } else if (bgMode === "orrery") {
-        drawOrrery(ctx, state, configRef.current)
-      } else if (bgMode === "plate-scan") {
-        drawPlateScan(ctx, state, configRef.current)
-      } else if (bgMode === "dendrite") {
-        drawDendrite(ctx, state, configRef.current)
-      } else if (bgMode === "lorenz") {
-        drawLorenz(ctx, state, configRef.current)
-      } else if (bgMode === "cartography") {
-        drawCartography(ctx, state, configRef.current)
-      }
+      DRAW[bgMode]?.(ctx, state, configRef.current)
     }
 
     // Honour prefers-reduced-motion: paint one static frame, run no loop
@@ -345,7 +361,8 @@ function BgCanvasInner() {
       const slow = dimmed || idle || (isSlowMode && timestamp - lastMouseMove > MOUSE_ACTIVE_MS)
       // Under reader mode the canvas is at ~4% (and CSS opacity 0.12): nobody
       // can see motion there, so 8 fps is plenty.
-      const interval = dimmed ? DIMMED_FRAME_INTERVAL : slow ? SLOW_FRAME_INTERVAL : MIN_FRAME_INTERVAL
+      // Phones never run faster than 30 fps (battery)
+      const interval = dimmed ? DIMMED_FRAME_INTERVAL : slow || phone ? SLOW_FRAME_INTERVAL : MIN_FRAME_INTERVAL
       if (dt < interval - 1.0) {
         return
       }
