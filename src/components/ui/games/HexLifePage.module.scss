@@ -72,6 +72,11 @@
   @container panel (min-width: 0px) {
     left: calc(24px + 1rem);
   }
+  // Phones have no panel cards (so no tab), but the main pane is a "panel"
+  // container there too (AppShell.module.scss) — undo the tab offset.
+  @media (max-width: $bp-phone) {
+    left: 1rem;
+  }
 }
 
 .panel {
@@ -82,6 +87,11 @@
   // Inside a panel card, clear the 24px card-header tab on the left.
   @container panel (min-width: 0px) {
     left: calc(24px + 1rem);
+  }
+  // Phones have no panel cards (so no tab), but the main pane is a "panel"
+  // container there too (AppShell.module.scss) — undo the tab offset.
+  @media (max-width: $bp-phone) {
+    left: 1rem;
   }
   z-index: 1600;
   width: 290px;

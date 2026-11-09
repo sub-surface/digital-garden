@@ -3,7 +3,7 @@
 .peek {
   position: fixed;
   left: 2.25rem;
-  bottom: 0;
+  bottom: var(--phone-bar-h, 0px); // peeks up over the phone bar, not behind it
   z-index: 120;
   display: flex;
   align-items: flex-end;

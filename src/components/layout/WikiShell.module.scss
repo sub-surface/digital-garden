@@ -3,6 +3,7 @@
   width: calc(100vw - var(--dock-width, 0px));
   transition: width 0.15s ease;
   height: 100vh;
+  height: 100dvh; // iOS: the visible viewport, not the one behind the toolbar
   background: transparent;
   overflow: hidden;
   display: flex;

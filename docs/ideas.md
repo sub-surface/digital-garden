@@ -11,7 +11,7 @@ end of this list, give or take the canvas.
 
 1. **Mobile, the whole site.** Work through [`mobile-audit.md`](./mobile-audit.md):
    the sidenote "footnote header" marker, `100vh` → `dvh`, wide tables, the
-   dock and Settings as phone sheets (started), CornerMenu tidy.
+   dock and Settings as phone sheets (started), the phone chrome.
 2. **philchat as a small social space.** Bring `chat.subsurfaces.net` back
    out of cold storage (git tag `cold-storage/chat-shell`) as a quiet feed
    for friends: profiles, notes and edits as events, pebbles (below). The
@@ -38,7 +38,12 @@ end of this list, give or take the canvas.
    (below).
 8. **The 404 roguelike.** Small, abstract, visual, endlessly permutable.
 9. **The infinite canvas** (probably two sessions). Built as a room that
-   reads the corpus, so it can't break the reader.
+   reads the corpus, so it can't break the reader. It is the natural
+   evolution of the site's original idea, Matuschak-style notes opening to
+   the side: create a note and branch off spatially, more freeform than a
+   mind map, an organic view of the connections rather than a list or the
+   graph. Making the ontology flexible is the mandate and the risk ("it risks
+   destroying everything"), hence the room boundary.
 
 ## Someday, written down so they aren't lost
 
@@ -67,11 +72,30 @@ end of this list, give or take the canvas.
   garden (done). Next: an ASCII alien generator (seeded by username) for
   default wiki avatars; glorp reacting to the season and the weather; glorp
   on the 404 page.
+- **Daily notes, in public.** `Daily/` is excluded from the build today.
+  Publish a chosen subset (opt-in per note, e.g. `public: true`), perhaps
+  surfaced through the Desk's daily haiku.
+- **More easter eggs.** The site should feel alive and reward curiosity;
+  [[the machine-god in the future]] hosts aliens that could turn up around
+  the garden.
 - **OS toys** worth keeping: a tiny explorable world with items; a garden
   that grows over real days. (The aquarium and the space game were dropped
   or belong in the arcade.)
 
 ## Done
+
+- Mobile pass, P1 + P2 of [`mobile-audit.md`](./mobile-audit.md) (2026-11-08,
+  session 1): `dvh`, sidenote markers as the tap toggle, scrolling tables,
+  one phone gutter, ragged text, folded TOC, safe areas, keyboard-aware
+  dock, 16px inputs, touch
+  fallbacks for hover-only controls, device-aware hints in notes
+  (`.on-desktop` / `.on-touch`). Index and Housekeeping hints follow suit;
+  "On my mind" trimmed, its ideas folded in here.
+- The phone chrome is one bottom bar (`PhoneBar`), replacing the fixed title
+  strip, the ☰ CornerMenu and the separate music bar: › where you are (the
+  prompt), music (now-playing folds into the bar), reader (the bar becomes
+  A− / A+ / × reader), and `···` for a sheet with the rest. Hides on scroll
+  down, back on scroll up.
 
 - Reader mode: keys, wider ranges, controls that stay visible, padding under
   the bar, "Show background".

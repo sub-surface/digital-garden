@@ -121,6 +121,13 @@
     opacity: 1;
   }
 
+  // Touch can't hover to find it: show the play glyph on every cover, without
+  // the darkening wash.
+  @media (hover: none) {
+    opacity: 0.85;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.45), transparent 60%);
+  }
+
   .active & {
     opacity: 1;
     background: rgba(var(--color-accent-base-rgb), 0.4);

@@ -89,8 +89,14 @@ export function remarkSidenotes() {
 
       const domId = `sn-${id}`
 
-      // Inline: just the superscript marker — safe to nest inside a <p>/<h2>.
-      const supHtml = `<sup class="footnote-marker"><a href="#fn-${id}" data-footnote-ref="true" data-footnote-id="${id}">${displayLabel}</a></sup>`
+      // Inline: the superscript marker — safe to nest inside a <p>/<h2>. It
+      // carries two faces: the link (desktop: hover preview, jump to the
+      // footnote) and a <label> for the same checkbox as the block-level
+      // toggle (narrow/touch: tap the marker in the text to open the card).
+      // CSS shows one or the other. The block-level label stays as the
+      // sibling the `:checked + label + aside` chain needs, but is hidden:
+      // shown, it was a stray numeral under the paragraph (mobile audit P1 #3).
+      const supHtml = `<sup class="footnote-marker"><a href="#fn-${id}" data-footnote-ref="true" data-footnote-id="${id}">${displayLabel}</a><label for="${domId}" class="footnote-tap" aria-label="Footnote ${displayLabel}">${displayLabel}</label></sup>`
       parent.children.splice(index, 1, { type: "html", value: supHtml } as any)
 
       // Block-level: walk up through inline wrappers (emphasis/strong/link/...)

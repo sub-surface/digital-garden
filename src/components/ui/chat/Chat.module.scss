@@ -198,6 +198,14 @@
     .msgActions { opacity: 1; }
   }
 
+  // Touch: a tap focuses something inside the row (or the row itself on iOS,
+  // which applies :hover on tap); either way the actions appear.
+  &:focus-within .msgActions { opacity: 1; }
+
+  @media (hover: none) {
+    &:active .msgActions { opacity: 1; }
+  }
+
   @media (max-width: 700px) {
     gap: 0.45rem;
   }
@@ -425,7 +433,7 @@
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 
   @media (max-width: 700px) {
-    // On mobile, actions always visible on tap via :active parent
+    // Revealed on tap via the row's :hover/:focus-within/:active rules.
     right: 2px;
     top: -6px;
     font-size: 0.6rem;

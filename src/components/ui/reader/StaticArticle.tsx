@@ -48,10 +48,7 @@ export function StaticArticle({ seed, bodyHtml }: { seed: PrerenderSeed; bodyHtm
         <div className="note-layout-wrapper" style={{ display: "contents" }}>
           <div className="note-body">
             <NoteHeader {...header} />
-            <div
-              className="body-side-group"
-              style={{ float: "right", clear: "right", marginLeft: "var(--space-8)", marginBottom: "var(--space-6)", width: "300px" }}
-            >
+            <div className="body-side-group">
               <TableOfContents headings={headings} className="toc-inline" />
             </div>
             {body}

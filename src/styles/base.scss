@@ -48,6 +48,19 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  // iOS inflates text when a phone turns to landscape; the layout already
+  // handles narrow screens, so keep sizes as designed.
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+// No double-tap-to-zoom delay on controls (pinch zoom is unaffected).
+a,
+button,
+label,
+summary,
+[role="button"] {
+  touch-action: manipulation;
 }
 
 body {
@@ -58,6 +71,56 @@ body {
   letter-spacing: 0.2px;
   overflow: hidden;
   height: 100vh;
+  height: 100dvh; // iOS: the visible viewport, not the one behind the toolbar
+}
+
+// Long URLs and inline code break rather than push a phone pane sideways.
+// (break-word, not anywhere: it doesn't shrink min-content, so tables and
+// flex rows keep their natural widths.)
+body {
+  overflow-wrap: break-word;
+}
+
+// ── Device hints ──
+// Notes say "press `M`" to keyboard users and "tap ☰ → Music" to phones:
+//   <span className="on-desktop">…</span><span className="on-touch">…</span>
+// Pure CSS so it is right in the prerendered first paint too. Touch = no hover
+// or a coarse pointer (phones, tablets); a touch laptop with a mouse is desktop.
+.on-touch {
+  display: none;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .on-desktop {
+    display: none;
+  }
+
+  .on-touch {
+    display: revert;
+  }
+}
+
+// iOS zooms the page into any focused field under 16px and doesn't zoom back
+// out (the dock prompt, wiki forms, chat, the 11px terminal input). On touch,
+// text fields get a 16px floor. Disabling zoom in the viewport tag would also
+// block pinch zoom on Android, so no.
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]),
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+// `<div className="centered">` in a note: centre an image or a line.
+.centered {
+  text-align: center;
+
+  img {
+    display: block;
+    margin-inline: auto;
+  }
 }
 
 // ── Typography ──
@@ -264,6 +327,18 @@ img {
 }
 
 // ── Tables ──
+
+// Every note table is wrapped in this by rehypeTableScroll (note-pipeline.ts),
+// so a wide one scrolls on its own instead of dragging the page sideways.
+.table-scroll {
+  overflow-x: auto;
+  margin: var(--space-6) 0;
+  -webkit-overflow-scrolling: touch;
+
+  > table {
+    margin: 0;
+  }
+}
 
 table {
   width: 100%;

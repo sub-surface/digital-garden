@@ -52,6 +52,26 @@ export function rehypeLinkClasses() {
   }
 }
 
+/**
+ * Wrap every <table> in a horizontally scrollable div. A wide table used to
+ * push the whole pane sideways on a phone; now only the table scrolls.
+ */
+export function rehypeTableScroll() {
+  return (tree: any) => {
+    visit(tree, "element", (node: any, index, parent: any) => {
+      if (node.tagName !== "table" || !parent || index === undefined) return
+      const cls = ([] as unknown[]).concat(parent.properties?.className ?? [])
+      if (parent.tagName === "div" && cls.includes("table-scroll")) return
+      parent.children[index] = {
+        type: "element",
+        tagName: "div",
+        properties: { className: ["table-scroll"] },
+        children: [node],
+      }
+    })
+  }
+}
+
 /** Content transforms shared by every renderer, in order. */
 export const remarkNotePlugins: PluggableList = [
   remarkGfm,
@@ -67,7 +87,7 @@ export const remarkNotePlugins: PluggableList = [
 export const rehypeBeforeRaw: PluggableList = [rehypeSlug]
 // rehypeNoteSafety must stay LAST: it is what makes innerHTML safe for wiki
 // contributions (see the file header).
-export const rehypeAfterRaw: PluggableList = [rehypeKatex, rehypeImagePaths, rehypeLinkClasses, rehypeNoteSafety]
+export const rehypeAfterRaw: PluggableList = [rehypeKatex, rehypeImagePaths, rehypeLinkClasses, rehypeTableScroll, rehypeNoteSafety]
 
 export interface RenderedNote {
   html: string

@@ -44,7 +44,7 @@ Dev dashboard: `/__dev` (dev mode only).
 | `content/Wiki/` | Wiki section content | Yes |
 | `content/Media/` | Images, audio | Yes |
 | `public/notes/`, `public/prerender/` | **Auto-generated** rendered notes | **NO** |
-| `src/components/layout/` | AppShell, WikiShell, TerminalTitle, CornerMenu, ThemePanel (Settings), QuickControls, BgCanvas | Yes |
+| `src/components/layout/` | AppShell, WikiShell, TerminalTitle, PhoneBar (the phone's one bottom bar), ThemePanel (Settings), QuickControls, BgCanvas | Yes |
 | `src/features/ambience/` | The sky: seasonal flurries, Light follows the sun, live weather (`sky.ts` is the pure maths, tested by `scripts/test-sky.ts`) | Yes |
 | `src/features/glorp/` | Glorp, the resident alien: one definition shared by the homepage avatar, the OS pet (Petri), GlorpPeek and the `glorp` command | Yes |
 | `src/features/dock/` | The dock: one right-hand panel for the prompt and philchat (replaced search, command palette, cheat sheet, the Ctrl+P window and SideChat) | Yes |
@@ -205,7 +205,7 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 22. **Math is statically rendered with KaTeX.** Use `$...$` for inline math and `$$...$$` for display math. `remark-math` and `rehype-katex` are wired into both the MDX build and the standalone runtime renderer; the wiki editor lazy-loads the same pair for preview. `src/styles/math.scss` compiles KaTeX's base styles with WOFF2 fonts only and then applies the site's layout rules. KaTeX supports mathematical LaTeX, not arbitrary document commands; malformed or unsupported expressions emit a build message and remain as a visible red error fallback instead of disappearing. Escape a literal currency sign as `\$` when another dollar sign appears later in the same paragraph, so the pair cannot be read as inline math. `scripts/test-math.ts` guards inline, display, accessible MathML, visible errors, and unmatched-currency behavior.
 23. **Client authentication has one owner.** `AuthProvider` wraps all shells in `main.tsx`; `useAuth()` only consumes that context. Never create another Supabase auth listener in a component or mount a second provider inside a shell. This keeps session/profile bootstrap singular across garden, wiki, chat, terminal and OS windows. **Supabase loads on demand** (`src/lib/supabase.ts`: `loadSupabase()`, `supabaseNow()`, `whenSupabase()`): eagerly on wiki/OS or when `authHint()` sees a stored session, otherwise only when something asks (login, the chat tab). Never import `@supabase/supabase-js` at runtime outside that module; anonymous garden readers must not download it.
 24. **OS desktop chrome may import `appRegistry.tsx`, not `apps.tsx`.** The registry is metadata plus `lazy()` loaders; `apps.tsx` is the large built-in implementation chunk, and heavyweight terminal/wiki/chat/Solitaire surfaces have their own nested boundaries. Keep app code behind that line, wrap every window in `ProgramBoundary`, and add behavior coverage to `osInteractions.test.tsx`.
-25. **Every bar/menu action is also a prompt command.** QuickControls, the mobile CornerMenu and Settings are shortcuts onto the registry in `src/features/terminal/commands.ts` (+ `siteCommands.ts`), which the dock's prompt completes with Tab. Add a new user-facing action as a command first; `scripts/test-terminal.ts` checks registry/help/completion parity and that site commands never reach the OS.
+25. **Every bar/menu action is also a prompt command.** QuickControls, the phone's PhoneBar and Settings are shortcuts onto the registry in `src/features/terminal/commands.ts` (+ `siteCommands.ts`), which the dock's prompt completes with Tab. Add a new user-facing action as a command first; `scripts/test-terminal.ts` checks registry/help/completion parity and that site commands never reach the OS.
 
 ---
 
@@ -217,6 +217,7 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 | New system page | Add matching metadata + component entries to `src/config/system-pages-meta.ts` and `src/config/system-pages.ts` |
 | New floating UI | `position: fixed` inside AppShell, correct z-index, no transform on parent |
 | New frontmatter field | `NoteMeta` in `prebuild.ts` + `NoteMetadata` in `src/types/content.ts` |
+| Key hint in a note that differs on phones | `<span className="on-desktop">press `M`</span><span className="on-touch">♫ in the bottom bar</span>` (CSS-only, `base.scss`; touch = `(hover: none), (pointer: coarse)`) |
 | New note component | Add to `mdxComponents` in `src/components/mdx/MDXProvider.tsx` AND to `ISLAND_NAMES` in `src/components/mdx/island-names.ts` (props must be literals) |
 | New remark/rehype plugin | Add to `vite.config.ts` plugin array in correct order |
 | New wiki submit field | Update `WikiSubmitPage.tsx` form + `src/worker/wiki.ts` submit formatter (user text must go through `yamlStr()`) |

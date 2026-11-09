@@ -188,6 +188,16 @@
   .nowWhen { display: none; }
 }
 
+// Tablet portrait (801–1100px): the full bar is ~700px and ran into the
+// TerminalTitle on the left. Drop the "now" slot, the prompt's placeholder
+// text (the caret and key remain) and the commit hash; tighten the gaps.
+@media (max-width: 1100px) {
+  .quickControls { gap: var(--space-2); right: calc(1rem + var(--dock-width, 0px)); }
+  .now { display: none; }
+  .promptText { display: none; }
+  .commit { display: none; }
+}
+
 // "prompt": looks like a field, opens the dock.
 .promptBtn {
   display: flex;
@@ -380,7 +390,7 @@
     gap: var(--space-2);
   }
 
-  // On phones the bottom-right CornerMenu replaces the bar.
+  // On phones the bottom PhoneBar replaces the bar.
   .quickControls {
     display: none;
   }

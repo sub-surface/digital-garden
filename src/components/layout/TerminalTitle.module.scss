@@ -93,9 +93,9 @@
 // ── Mobile ──
 @media (max-width: $bp-phone) {
   .container {
-    // The full QuickControls bar is hidden on mobile (its actions move to the
-    // bottom-right CornerMenu), so the title can use nearly the full width —
-    // just a small inset so it doesn't kiss the screen edge.
+    // Only the wiki shows the title on phones (the garden's PhoneBar says
+    // where you are instead); QuickControls is hidden there, so the title can
+    // use nearly the full width, with a small inset from the edge.
     max-width: calc(100vw - 2rem);
   }
 

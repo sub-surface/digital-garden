@@ -122,6 +122,7 @@
   align-self: start;
   font-size: 0.85em;
   max-height: calc(100vh - 8rem);
+  max-height: calc(100dvh - 8rem);
   overflow-y: auto;
   transition: opacity 0.3s ease;
   width: 250px;
@@ -237,6 +238,16 @@
       box-shadow: none;
     }
   }
+
+  // Phones: links a thumb can pick out of a list (was ~11px text, no padding).
+  @media (max-width: $bp-phone) {
+    font-size: 0.95rem;
+
+    a {
+      display: inline-block;
+      padding: 0.3rem 0;
+    }
+  }
 }
 
 // ── Dropcaps — first letter of first paragraph after h1 ──
@@ -335,6 +346,20 @@
   }
 }
 
+// Phones: .mainContent already supplies the gutter, so the article adds none of
+// its own (the two used to stack to ~3rem a side, leaving ~264px of prose at
+// 360px). Justified text in a column that narrow opens rivers, so read ragged.
+@media (max-width: $bp-phone) {
+  .article-layout {
+    padding: 1rem 0 0;
+  }
+
+  .article-body {
+    text-align: left;
+    hyphens: manual;
+  }
+}
+
 // Symmetrical horizontal breakout beyond standard 80ch article measure for wide elements
 .breakout-wide {
   @media (min-width: 960px) {
@@ -357,9 +382,9 @@
   flex-direction: column;
   position: relative; // positioning context for the back-to-arcade button
 
-  // mainContent padding is 1.5rem on mobile — cancel exactly that
+  // cancel the phone .mainContent gutter exactly
   @media (max-width: $bp-phone) {
-    margin: -1.5rem;
+    margin: -1.25rem -1.1rem 0; // cancel the phone .mainContent gutter (AppShell.module.scss)
   }
 }
 

@@ -18,12 +18,16 @@
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
   font-family: var(--font-code);
 
+  // Phones: sits on the PhoneBar (its height arrives as --phone-bar-h, which
+  // already includes the iOS home indicator) and scrolls in landscape.
   @media (max-width: $bp-phone) {
     top: auto;
-    bottom: 60px;
-    left: 16px;
-    right: 16px;
+    bottom: calc(var(--phone-bar-h, 0px) + 0.75rem);
+    left: 12px;
+    right: 12px;
     width: auto;
+    max-height: calc(100dvh - var(--phone-bar-h, 0px) - 2rem);
+    overflow-y: auto;
   }
 
   // When moved into the Document-PiP window, fill it instead of floating.

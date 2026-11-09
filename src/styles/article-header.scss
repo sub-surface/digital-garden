@@ -1,3 +1,5 @@
+@use "./breakpoints" as *;
+
 // ── Article / note frontispiece ──
 // The header block above the body: tools row (bookmark/edit + breadcrumb),
 // growth badge, title, metadata (date · reading time), tags. Right-aligned to
@@ -10,6 +12,11 @@
   align-items: flex-end;
   text-align: right;
   margin-bottom: var(--space-12);
+
+  // Phones: the masthead shouldn't cost a third of the first screen.
+  @media (max-width: $bp-phone) {
+    margin-bottom: var(--space-6);
+  }
 }
 
 // Tools + breadcrumb row (article layout only)

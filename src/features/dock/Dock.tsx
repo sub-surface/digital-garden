@@ -49,6 +49,26 @@ export function Dock() {
     }
   }, [tab, width, isPhone])
 
+  // Phones: the on-screen keyboard shrinks the *visual* viewport but not the
+  // layout one, so a bottom:0 sheet runs under the keyboard and hides the
+  // prompt's results. Track the visible height while the sheet is open.
+  const [visibleHeight, setVisibleHeight] = useState<number | null>(null)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!isPhone || !tab || !vv) {
+      setVisibleHeight(null)
+      return
+    }
+    const update = () => setVisibleHeight(Math.round(vv.height + vv.offsetTop))
+    update()
+    vv.addEventListener("resize", update)
+    vv.addEventListener("scroll", update)
+    return () => {
+      vv.removeEventListener("resize", update)
+      vv.removeEventListener("scroll", update)
+    }
+  }, [isPhone, tab])
+
   // Return focus to wherever it was when the dock opened.
   useEffect(() => {
     if (tab) {
@@ -106,7 +126,7 @@ export function Dock() {
     <aside
       ref={panelRef}
       className={styles.dock}
-      style={{ width: isPhone ? undefined : width }}
+      style={isPhone ? (visibleHeight ? { bottom: "auto", height: visibleHeight } : undefined) : { width }}
       hidden={!tab}
       aria-label="Dock"
       data-panel-ignore

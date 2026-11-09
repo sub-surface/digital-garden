@@ -26,7 +26,7 @@ Feature reference for the main site. Outstanding work is in [`../ROADMAP.md`](..
 - **Collections**: bookshelf, movieshelf, music library, photography albums (`content/Photos/*.md` into `albums.json`), Inbox triage (`/inbox`).
 - **Games and toys** (`/arcade`, `GameCabinet` shell with start/again overlay, score+best, zen): Chess (chess.js, homemade drunk/casual/sharp bot, Worker-proxied GIF export, Lichess link), HeXO (connect six on a hex grid, SVG, in-repo bot `src/lib/hexo.ts`), Snake, Tetris, 2048, Blackjack, Hex Mines, Hex Life, Life, Boids/Murmuration, Sandbox, Ant Farm, Progressions, The Knotted Field (Persian carpet), SIGIL and Collider (chamber engine), Apparatus ([`apparatus.md`](apparatus.md)), FILAMENT (cosmic-web simulation; extracted 2026-11-08 into its own project, `/filament` is now a "has moved" notice, see [`filament.md`](filament.md)). The arcade also links out to StarWeft, Lines of Flight, Anabasis, JANKEN, The Predictor and Lissajous.
 - **Accessibility and motion**: focus traps on overlays, `prefers-reduced-motion` honoured by backgrounds/telescopic/boot, `--color-overlay-tint` for theme-correct chrome.
-- **Mobile** (`<=800px`, `$bp-phone` / `usePhoneViewport()`): no BgCanvas, CornerMenu arc, article grid collapses, commands reachable from CornerMenu.
+- **Mobile** (`<=800px`, `$bp-phone` / `usePhoneViewport()`): no BgCanvas, no fixed title strip; one bottom `PhoneBar` (› where-you-are opens the prompt, music, reader, `···` sheet with random/settings/philchat/rooms/about) that hides on scroll down; article grid collapses.
 - **Dev tools**: `/__dev` dashboard (dev only), properties editor, `npm run dash`, `scripts/audit-site.mjs`.
 
 ## Conventions worth knowing

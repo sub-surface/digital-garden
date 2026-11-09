@@ -14,7 +14,7 @@ const WikiShell = lazy(() => import("./WikiShell").then(m => ({ default: m.WikiS
 const ChatShell = lazy(() => import("./ChatShell").then(m => ({ default: m.ChatShell })))
 const OSShell = lazy(() => import("@/features/os/OSShell").then(m => ({ default: m.OSShell })))
 import { TerminalTitle } from "./TerminalTitle"
-import { CornerMenu } from "./CornerMenu"
+import { PhoneBar } from "./PhoneBar"
 import { BgCanvas } from "./BgCanvas"
 import { Ambience } from "@/features/ambience/Ambience"
 import { GlorpPeek } from "@/features/glorp/GlorpPeek"
@@ -24,7 +24,6 @@ import { GlobalOverlays } from "./GlobalOverlays"
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary"
 import { SkipToContent } from "@/components/ui/SkipToContent"
 import { LinkPreview } from "@/components/ui/reader/LinkPreview"
-import { MobileMusicBar } from "@/components/ui/music/MobileMusicBar"
 import { GraphOverlay } from "@/components/ui/graph/GraphOverlay"
 import { CookieConsent } from "./CookieConsent"
 import styles from "./AppShell.module.scss"
@@ -129,13 +128,13 @@ export function AppShell() {
         <LazyThemePanel />
         <LinkPreview />
         {!isWikiRoute && <LazyMusicPlayer />}
-        {!isWikiRoute && <MobileMusicBar />}
         <QuickControls />
         <GraphOverlay />
         <GlobalOverlays />
         
-        {/* Terminal title — top-left */}
-        <TerminalTitle />
+        {/* Terminal title — top-left. Not on phones: there the bottom PhoneBar
+            says where you are, and a fixed strip at the top only covered text. */}
+        {!isMobile && <TerminalTitle />}
 
         {/* Horizontal workspace: main pane + panel cards */}
         <div className={styles.workspace} data-testid="workspace">
@@ -158,8 +157,8 @@ export function AppShell() {
           </ErrorBoundary>
         )}
 
-        {/* Corner menu — bottom-right (includes Theme toggle) */}
-        <CornerMenu />
+        {/* Phones: the one bottom bar (prompt, music, reader, more) */}
+        {isMobile && <PhoneBar variant={isWikiRoute ? "wiki" : "default"} />}
         <CookieConsent />
       </div>
     </>

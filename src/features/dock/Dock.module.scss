@@ -24,7 +24,7 @@
     border-left: 0;
     background: color-mix(in srgb, var(--color-bg) 94%, transparent);
     padding-bottom: env(safe-area-inset-bottom);
-    z-index: 1300; // over the CornerMenu (1200)
+    z-index: 1300; // over the PhoneBar (1200)
   }
 }
 
@@ -56,6 +56,8 @@
   gap: 8px;
   height: 2.6rem;
   padding: 0 8px 0 12px;
+
+  @media (max-width: $bp-phone) { height: 3rem; }
   border-bottom: 1px solid var(--color-border);
   font-family: var(--font-code);
   font-size: 0.7rem;
@@ -80,6 +82,8 @@
   opacity: 0.7;
 
   &:hover { opacity: 1; }
+
+  @media (max-width: $bp-phone) { padding: 10px 12px; font-size: 0.8rem; }
 
   &[aria-selected="true"] {
     opacity: 1;
@@ -106,6 +110,8 @@
   opacity: 0.6;
 
   &:hover { opacity: 1; color: var(--color-accent-base); }
+
+  @media (max-width: $bp-phone) { min-width: 44px; min-height: 44px; font-size: 1.2rem; }
 }
 
 .pane {

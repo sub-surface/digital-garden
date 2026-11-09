@@ -38,6 +38,19 @@
       color: var(--color-accent);
     }
   }
+
+  // Touch has no hover: the controls are always there, faintly, at a size a
+  // thumb can hit (the 14px buttons sit inside a 28px-tall hit area).
+  @media (hover: none), (pointer: coarse) {
+    opacity: 0.55;
+    left: -8px;
+
+    button {
+      width: 28px;
+      height: 28px;
+      font-size: 0.8rem;
+    }
+  }
 }
 
 .telescopic-content {

@@ -4,6 +4,12 @@ Code-read audit at 360–430px widths; nothing was run, so "likely" marks
 inferred rendering. This is the brief for phase 9 of
 [`garden-reset.md`](./garden-reset.md). Line numbers are approximate.
 
+**Status (2026-11-08, end of session 1):** all of P1 and P2 addressed, except
+Constellation pinch-zoom/tap-to-label and the chat-shell top bar (chat is in
+cold storage). The CornerMenu, MobileMusicBar and phone title strip were
+replaced by one bottom bar (`PhoneBar`), which settles the CornerMenu and
+music-bar items here and in P3. Remaining P3: tap-to-peek, raw breakpoints.
+
 ## P1 — broken / unusable
 
 1. **(Fixed 2026-11-08: Settings is a bottom sheet on phones; CornerMenu "Reader" toggles reader mode.)** **Theme and Reader do nothing on phones.** `ThemePanel.module.scss:16`

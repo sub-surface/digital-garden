@@ -5,7 +5,7 @@ import { BgCanvas } from "./BgCanvas"
 import { Ambience } from "@/features/ambience/Ambience"
 import { QuickControls } from "./QuickControls"
 import { TerminalTitle } from "./TerminalTitle"
-import { CornerMenu } from "./CornerMenu"
+import { PhoneBar } from "./PhoneBar"
 import { LinkPreview } from "@/components/ui/reader/LinkPreview"
 import { WikiSearchBox } from "@/components/ui/wiki/WikiSearchBox"
 import { NotificationBanner } from "@/components/ui/NotificationBanner"
@@ -64,7 +64,7 @@ export function WikiShell() {
             </div>
           </main>
         </div>
-        <CornerMenu variant="wiki" />
+        <PhoneBar variant="wiki" />
       </div>
     </>
   )

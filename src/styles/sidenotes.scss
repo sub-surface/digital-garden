@@ -49,6 +49,39 @@
       box-shadow: none;
     }
   }
+
+  // The tap face (see remark-sidenotes.ts): hidden unless sidenotes are
+  // inline cards. Padded so the hit area is a thumb, not a numeral, with
+  // matching negative margins so the text doesn't move.
+  .footnote-tap {
+    display: none;
+    font-family: var(--font-code);
+    font-size: 0.72em;
+    font-weight: 600;
+    color: var(--color-primary);
+    vertical-align: super;
+    line-height: 0;
+    padding: 0.9em 0.45em;
+    margin: -0.9em -0.25em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+// Inline-card mode, shared by notes on touch and articles below
+// $article-narrow: the marker in the text is the toggle.
+@mixin sidenote-tap-mode {
+  .footnote-marker a {
+    display: none;
+  }
+
+  .footnote-marker .footnote-tap {
+    display: inline;
+  }
+
+  .sidenote-toggle {
+    display: none !important;
+  }
 }
 
 // ── Article Layout (Wide) ──
@@ -181,13 +214,7 @@
 
 @media (max-width: $bp-phone), (hover: none) {
   .note-layout {
-    .footnote-marker {
-      display: none;
-    }
-
-    .sidenote-toggle {
-      display: inline !important;
-    }
+    @include sidenote-tap-mode;
 
     .sidenote {
       display: none !important;
@@ -220,14 +247,9 @@
 
 @media (max-width: $article-narrow) {
   .article-layout {
-    // The toggle label takes over as the visible/tappable marker at this
-    // width (mirrors the wide-mode rule above hiding the toggle, since the
-    // sidenote is always visible there) — without this, the original
-    // footnote-marker <sup> and the toggle label both show the same number
-    // side by side.
-    .footnote-marker {
-      display: none;
-    }
+    // The marker's tap face takes over at this width (the margin column
+    // is gone, so the sidenote becomes a card opened from the text).
+    @include sidenote-tap-mode;
 
     .sidenote {
       display: none;
@@ -244,10 +266,6 @@
 
     .sidenote-checkbox:checked + .sidenote-toggle + .sidenote {
       display: block;
-    }
-
-    .sidenote-toggle {
-      display: inline;
     }
   }
 }

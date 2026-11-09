@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { isPhoneViewport } from "@/config/breakpoints"
 
 interface HeadingItem {
   id: string
@@ -35,7 +36,10 @@ function groupHeadings(headings: HeadingItem[]): Section[] {
 }
 
 export function TableOfContents({ headings, className }: Props) {
-  const [isMinimised, setIsMinimised] = useState(false)
+  const [isMinimised, setIsMinimised] = useState(
+    // On phones the TOC sits above the prose: start folded so the text is above the fold.
+    () => typeof window !== "undefined" && isPhoneViewport(),
+  )
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
 
   if (headings.length < 3) return null

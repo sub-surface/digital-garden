@@ -5,8 +5,8 @@
 // toggle already existed; this stylesheet is what makes it visible.
 //
 // Chrome is hidden via `data-panel-ignore`, but ONLY where that marker sits on
-// a DIRECT child of the shell — the ambient UI (BgCanvas, CornerMenu,
-// QuickControls, TerminalTitle, music bars) all render at the shell level,
+// a DIRECT child of the shell — the ambient UI (BgCanvas, PhoneBar,
+// QuickControls, TerminalTitle, music bar) all render at the shell level,
 // while page content (Arcade / Music links, etc.) also carries the marker but
 // lives deep inside `.workspace > main`. The `> ` combinator keeps us from
 // hiding that real content. (CSS-module class names are hashed, so the marker
@@ -55,14 +55,11 @@
     }
   }
 
-  // …but keep the mobile CornerMenu reachable: on mobile it's the *only* control
-  // surface (the QuickControls bar is hidden ≤800px and there's no command
-  // palette), so hiding it would trap the user in reader mode with no toggle to
-  // leave. It already only renders ≤800px, so this just un-hides it there.
-  @media (max-width: $bp-phone) {
-    > [data-corner-menu] {
-      display: flex !important;
-    }
+  // The phone bar is the only control surface on phones and carries the
+  // reader steppers and the way out (data-reader-keep keeps it); it stays at
+  // full strength rather than the desktop bar's quiet 0.35.
+  > [data-phone-bar] {
+    opacity: 1;
   }
 
   // Notes have no margin column to preserve — collapse to a plain centred
