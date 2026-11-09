@@ -7,6 +7,7 @@
 @use "./article";
 @use "./article-header";
 @use "./article-extras";
+@use "./toc";
 @use "./reader-mode";
 @use "./link-preview";
 @use "./wiki-form";
@@ -55,7 +56,8 @@
     text-align: left !important;
   }
 
-  .article-toc,
+  .toc-margin,
+  .toc-rail,
   .body-side-group {
     display: none !important;
   }

@@ -34,7 +34,8 @@
   // QuickControls opts out (`data-reader-keep`): it carries the reader steppers
   // and the exit button, so it stays, quietly, at reduced opacity until hovered.
   > [data-panel-ignore]:not([data-reader-keep]),
-  .article-toc,
+  .toc-margin,
+  .toc-rail,
   .body-side-group {
     display: none !important;
   }

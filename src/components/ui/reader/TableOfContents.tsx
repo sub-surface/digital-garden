@@ -1,28 +1,36 @@
 import { useState } from "react"
 import { isPhoneViewport } from "@/config/breakpoints"
 
-interface HeadingItem {
+/**
+ * The contents of a note or essay, in three forms (styles: src/styles/toc.scss):
+ *
+ *   "margin"  essays on wide screens: a quiet list in the right margin,
+ *             level with the header (ArticleLayout places it), handing over
+ *             to <TocRail> once you scroll past it.
+ *   "box"     notes on desktop: a light box beside the opening prose.
+ *   "line"    phones and narrow windows (and notes on phones): one folded
+ *             line, "Contents · 7", that opens in place.
+ *
+ * Subsections are folded by default; the section you're reading (`active`,
+ * from useActiveHeading) opens by itself unless you've folded it by hand.
+ */
+
+export interface HeadingItem {
   id: string
   text: string
   level: number
 }
 
-interface Props {
-  headings: HeadingItem[]
-  className: string
-}
-
-interface Section {
+export interface Section {
   heading: HeadingItem
   children: HeadingItem[]
 }
 
-function groupHeadings(headings: HeadingItem[]): Section[] {
+export function groupHeadings(headings: HeadingItem[]): Section[] {
   if (headings.length === 0) return []
   const minLevel = Math.min(...headings.map((h) => h.level))
   const sections: Section[] = []
   let current: Section | null = null
-
   for (const h of headings) {
     if (h.level === minLevel || !current) {
       current = { heading: h, children: [] }
@@ -31,140 +39,76 @@ function groupHeadings(headings: HeadingItem[]): Section[] {
       current.children.push(h)
     }
   }
-
   return sections
 }
 
-export function TableOfContents({ headings, className }: Props) {
-  const [isMinimised, setIsMinimised] = useState(
-    // On phones the TOC sits above the prose: start folded so the text is above the fold.
-    () => typeof window !== "undefined" && isPhoneViewport(),
+/** Fewer headings than this and a note gets no contents at all. */
+export const TOC_MIN = 3
+
+interface Props {
+  headings: HeadingItem[]
+  variant: "margin" | "box" | "line"
+  active?: string | null
+  className?: string
+}
+
+export function TableOfContents({ headings, variant, active = null, className = "" }: Props) {
+  const [folded, setFolded] = useState(
+    () => variant === "line" || (variant === "box" && typeof window !== "undefined" && isPhoneViewport()),
   )
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+  // Hand-set open/closed per section; anything unset follows the reading position.
+  const [manual, setManual] = useState<Record<string, boolean>>({})
 
-  if (headings.length < 3) return null
-
+  if (headings.length < TOC_MIN) return null
   const sections = groupHeadings(headings)
-
-  const toggleSection = (id: string, e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setCollapsedSections((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }))
-  }
+  const foldable = variant !== "margin"
 
   return (
-    <nav className={`${className} ${isMinimised ? "is-minimised" : ""}`} aria-label="Table of Contents">
-      <div
-        className="toc-header"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: isMinimised ? 0 : "var(--space-2)",
-        }}
-      >
-        <span style={{ margin: 0, fontWeight: 600, fontSize: "1.05rem" }}>Contents</span>
-        <button
-          className="minimise-btn"
-          onClick={() => setIsMinimised(!isMinimised)}
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--color-text-muted)",
-            cursor: "pointer",
-            fontFamily: "var(--font-code)",
-            fontSize: "1.2rem",
-            padding: "0 4px",
-            lineHeight: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "color 0.2s ease",
-            marginLeft: "var(--space-2)",
-          }}
-          title={isMinimised ? "Expand table of contents" : "Minimise table of contents"}
-          aria-expanded={!isMinimised}
-        >
-          {isMinimised ? "+" : "−"}
+    <nav className={`toc toc--${variant} ${className}`} data-folded={(foldable && folded) || undefined} aria-label="Contents">
+      {foldable ? (
+        <button type="button" className="toc__head" onClick={() => setFolded(!folded)} aria-expanded={!folded}>
+          <span className="toc__label">Contents</span>
+          <span className="toc__count">· {sections.length}</span>
+          <span className="toc__chevron" aria-hidden="true">{folded ? "▾" : "▴"}</span>
         </button>
-      </div>
+      ) : (
+        <div className="toc__head">
+          <span className="toc__label">Contents</span>
+        </div>
+      )}
 
-      {/* Always rendered, hidden when minimised, so CSS can fold it both ways (toc-list in content.scss). */}
-      <ul className="toc-list" hidden={isMinimised} style={{ listStyle: "none", padding: 0, margin: 0 }}>
+      {/* Always rendered (hidden when folded) so CSS can fold it both ways. */}
+      <ul className="toc__list" hidden={foldable && folded}>
         {sections.map((sec) => {
-          const hasChildren = sec.children.length > 0
-          const isCollapsed = Boolean(collapsedSections[sec.heading.id])
-
+          const ids = [sec.heading.id, ...sec.children.map((c) => c.id)]
+          const here = active != null && ids.includes(active)
+          const open = sec.children.length > 0 && (manual[sec.heading.id] ?? here)
           return (
-            <li key={sec.heading.id} style={{ marginBottom: "var(--space-1)" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "0.25rem",
-                }}
-              >
-                <a
-                  href={`#${sec.heading.id}`}
-                  style={{ flex: 1, minWidth: 0 }}
-                >
+            <li key={sec.heading.id} className="toc__section" data-here={here || undefined}>
+              <div className="toc__row">
+                <a href={`#${sec.heading.id}`} className={active === sec.heading.id ? "active" : undefined}>
                   {sec.heading.text}
                 </a>
-
-                {hasChildren && (
+                {sec.children.length > 0 && (
                   <button
                     type="button"
-                    onClick={(e) => toggleSection(sec.heading.id, e)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "var(--color-text-muted)",
-                      cursor: "pointer",
-                      fontFamily: "var(--font-code)",
-                      fontSize: "0.75rem",
-                      padding: "2px 4px",
-                      lineHeight: 1,
-                      borderRadius: "3px",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: 0.8,
-                      transition: "opacity 0.15s ease, color 0.15s ease",
+                    className="toc__twist"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setManual((m) => ({ ...m, [sec.heading.id]: !open }))
                     }}
-                    title={isCollapsed ? `Expand ${sec.children.length} subheadings` : `Collapse ${sec.children.length} subheadings`}
-                    aria-label={isCollapsed ? `Expand subsections for ${sec.heading.text}` : `Collapse subsections for ${sec.heading.text}`}
-                    aria-expanded={!isCollapsed}
+                    aria-expanded={open}
+                    aria-label={`${open ? "Fold" : "Unfold"} ${sec.children.length} subsections of ${sec.heading.text}`}
                   >
-                    {isCollapsed ? "+" : "−"}
+                    {open ? "−" : "+"}
                   </button>
                 )}
               </div>
-
-              {hasChildren && !isCollapsed && (
-                <ul
-                  style={{
-                    listStyle: "none",
-                    paddingLeft: "14px",
-                    margin: "var(--space-1) 0 0 0",
-                    borderLeft: "1px solid var(--color-border-light, rgba(255, 255, 255, 0.1))",
-                  }}
-                >
+              {sec.children.length > 0 && (
+                <ul className="toc__subs" hidden={!open}>
                   {sec.children.map((sub) => (
-                    <li key={sub.id} style={{ marginBottom: "var(--space-1)" }}>
-                      <a
-                        href={`#${sub.id}`}
-                        style={{
-                          display: "block",
-                          fontSize: "0.8em",
-                          opacity: 0.85,
-                        }}
-                      >
-                        {sub.text}
-                      </a>
+                    <li key={sub.id}>
+                      <a href={`#${sub.id}`} className={active === sub.id ? "active" : undefined}>{sub.text}</a>
                     </li>
                   ))}
                 </ul>
@@ -174,5 +118,34 @@ export function TableOfContents({ headings, className }: Props) {
         })}
       </ul>
     </nav>
+  )
+}
+
+/**
+ * Once the margin contents have scrolled away: a slim rail of ticks in the
+ * strip beyond the margin column (sidenotes never reach it), one per
+ * section, the one you're in lit. Hover or focus it for the full list.
+ */
+export function TocRail({ headings, active, shown }: { headings: HeadingItem[]; active: string | null; shown: boolean }) {
+  if (headings.length < TOC_MIN) return null
+  const sections = groupHeadings(headings)
+  return (
+    <div className="toc-rail" data-shown={shown || undefined} aria-hidden={!shown}>
+      <nav className="toc-rail__track" aria-label="Contents">
+        <ul className="toc-rail__ticks">
+          {sections.map((sec) => {
+            const here = active != null && (active === sec.heading.id || sec.children.some((c) => c.id === active))
+            return (
+              <li key={sec.heading.id} data-here={here || undefined}>
+                <a href={`#${sec.heading.id}`} tabIndex={shown ? 0 : -1}>
+                  <span className="toc-rail__tick" aria-hidden="true" />
+                  <span className="toc-rail__name">{sec.heading.text}</span>
+                </a>
+              </li>
+            )
+          })}
+        </ul>
+      </nav>
+    </div>
   )
 }

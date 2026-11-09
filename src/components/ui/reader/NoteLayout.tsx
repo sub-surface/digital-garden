@@ -1,4 +1,5 @@
 import { TableOfContents } from "./TableOfContents"
+import { useActiveHeading } from "./useActiveHeading"
 
 interface Props {
   children: React.ReactNode
@@ -8,13 +9,14 @@ interface Props {
 }
 
 export function NoteLayout({ children, headings, infobox, header }: Props) {
+  const active = useActiveHeading(headings)
   return (
     <div className="note-layout-wrapper" style={{ display: 'contents' }}>
       <div className="note-body">
         {header}
         <div className="body-side-group">
           {infobox}
-          <TableOfContents headings={headings} className="toc-inline" />
+          <TableOfContents headings={headings} variant="box" active={active} />
         </div>
         {children}
       </div>

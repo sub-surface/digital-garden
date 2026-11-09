@@ -1,5 +1,5 @@
 import { NoteHeader, type NoteHeaderProps } from "./NoteHeader"
-import { TableOfContents } from "./TableOfContents"
+import { TableOfContents, TocRail } from "./TableOfContents"
 
 /**
  * The first-paint article, rendered at build time (renderToStaticMarkup in
@@ -37,9 +37,13 @@ export function StaticArticle({ seed, bodyHtml }: { seed: PrerenderSeed; bodyHtm
       {isArticle ? (
         <div className="article-layout-wrapper" style={{ display: "contents" }}>
           <div className="article-body">
+            <div className="toc-margin">
+              <TableOfContents headings={headings} variant="margin" />
+            </div>
+            <TocRail headings={headings} active={null} shown={false} />
             <NoteHeader {...header} />
             <div className="body-side-group">
-              <TableOfContents headings={headings} className="article-toc-inline" />
+              <TableOfContents headings={headings} variant="line" className="toc--narrow-only" />
             </div>
             {body}
           </div>
@@ -49,7 +53,7 @@ export function StaticArticle({ seed, bodyHtml }: { seed: PrerenderSeed; bodyHtm
           <div className="note-body">
             <NoteHeader {...header} />
             <div className="body-side-group">
-              <TableOfContents headings={headings} className="toc-inline" />
+              <TableOfContents headings={headings} variant="box" />
             </div>
             {body}
           </div>

@@ -34,8 +34,8 @@ end of this list, give or take the canvas.
    pages as one typeset PDF, a keepsake), and the new **boot**: a clean,
    modern, futuristic redesign of the procedural boot, reachable from `boot`
    and `mode`.
-7. **Sky, part 2.** The Haecceity, bottles, an accurate orrery and the moon
-   (below).
+7. **Sky, part 2.** The Haecceity, bottles and the moon (below). (The
+   accurate orrery shipped 2026-11-09.)
 8. **The 404 roguelike.** Small, abstract, visual, endlessly permutable.
 9. **The infinite canvas** (probably two sessions). Built as a room that
    reads the corpus, so it can't break the reader. It is the natural
@@ -58,6 +58,17 @@ end of this list, give or take the canvas.
 - **The moon.** Draw the current phase (the maths is in
   `src/features/ambience/sky.ts`) in the orrery and the sky: a small moon in
   the corner at night when Light & weather is on.
+- **A commonplace book that builds itself.** Every quotation across the
+  garden gathered into one room, each with its source, its context, and the
+  notes that cite it; hovering a quote anywhere lights up where it lives.
+  Built at prebuild time from blockquotes and `<Epigraph>`s.
+- **An image wall.** Every image in the garden on one wall, arranged by
+  visual likeness (colour and composition, computed at build time) rather
+  than by note: images as their own way into the garden, for a site about
+  the history of images.
+- **Zines.** `trail pdf` (session 6) grown up: any essay or trail typeset as
+  a printable zine with `src/lib/textlayout.ts` (even lines, real
+  justification), perhaps a seasonal "issue" beside the print shop.
 - **Glorp wanders through a paragraph.** Text that reflows around glorp,
   live, as it drifts across a block of prose (per-line widths from
   `src/lib/textlayout.ts`, the in-house cut of pretext's idea).
@@ -115,6 +126,11 @@ end of this list, give or take the canvas.
   palimpsest, rivers, cut-up, concordance, teletype, set with an off-DOM
   layout module (`src/lib/textlayout.ts`) that also evens the lines of
   epigraphs and pull quotes.
+- Contents, reworked (2026-11-09): no stroke, a faint ground, subsections
+  folded with the one you're reading opening by itself. Essays on wide
+  screens keep it in the right margin level with the header (sharing the
+  sidenotes' edge, never displacing one), then a rail of ticks beyond the
+  margin that unfolds on hover; phones get one folded line.
 - The browser lays things out (2026-11-09): scroll-timeline reading progress,
   anchor-positioned link previews, `field-sizing` chat boxes, folding
   sidenote cards and TOC, keyboard via `interactive-widget`.

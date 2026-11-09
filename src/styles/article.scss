@@ -112,65 +112,6 @@
   }
 }
 
-.article-toc {
-  grid-column: 3;
-  // The 4rem gap is now folded into column 3's width, so pad it back as the
-  // gutter between the prose and the TOC.
-  padding-left: 4rem;
-  position: sticky;
-  top: 4rem;
-  align-self: start;
-  font-size: 0.85em;
-  max-height: calc(100vh - 8rem);
-  max-height: calc(100dvh - 8rem);
-  overflow-y: auto;
-  transition: opacity 0.3s ease;
-  width: 250px;
-
-  // The list itself folds via .toc-list[hidden] (content.scss).
-  &.is-minimised {
-    h3 {
-      margin-bottom: 0;
-    }
-  }
-
-  h3 {
-    font-size: 0.9rem;
-    margin-bottom: var(--space-2);
-    margin-top: 0;
-    color: var(--color-text-muted);
-    font-family: var(--font-code);
-    font-weight: 500;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  li {
-    margin-bottom: var(--space-1);
-  }
-
-  a {
-    color: var(--color-text-muted);
-    font-size: 0.85em;
-    padding: 0; margin: 0;
-
-    &:hover {
-      color: var(--color-accent);
-      box-shadow: none;
-    }
-
-    &.active {
-      color: var(--color-secondary);
-    }
-  }
-}
-
 // Sidenotes also live in column 3
 :global(.sidenote) {
   grid-column: 3;
@@ -190,61 +131,6 @@
     float: none;
     width: 100%;
     margin-left: 0;
-  }
-}
-
-// Inline TOC (inside body flow)
-.article-toc-inline, .toc-inline {
-  background: var(--glass-bg-heavy);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: var(--glass-border);
-  border-radius: 12px;
-  padding: var(--space-4);
-  font-size: 0.8rem;
-  width: 100%;
-  box-sizing: border-box;
-
-  h3 {
-    font-size: 0.8rem;
-    margin-bottom: var(--space-2);
-    margin-top: 0;
-    color: var(--color-text-muted);
-    font-family: var(--font-code);
-    font-weight: 500;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  li {
-    margin-bottom: var(--space-1);
-  }
-
-  a {
-    color: var(--color-text-muted);
-    font-size: 0.85em;
-    padding: 0; margin: 0;
-
-    &:hover {
-      color: var(--color-accent);
-      box-shadow: none;
-    }
-  }
-
-  // Phones: links a thumb can pick out of a list (was ~11px text, no padding).
-  @media (max-width: $bp-phone) {
-    font-size: 0.95rem;
-
-    a {
-      display: inline-block;
-      padding: 0.3rem 0;
-    }
   }
 }
 
@@ -328,9 +214,6 @@
     grid-column: 2;
   }
 
-  .article-toc {
-    display: none;
-  }
 }
 
 @media (max-width: 900px) {

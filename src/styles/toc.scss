@@ -1,0 +1,349 @@
+// ── Contents (TableOfContents.tsx) ──
+// No stroke, barely a ground, one hairline down the left that the section
+// you're reading lights up. Three forms: the right-margin list for essays on
+// wide screens (handing over to a rail of ticks once scrolled past), a light
+// box for notes, and a folded line on phones / narrow windows.
+@use "./breakpoints" as *;
+
+.toc {
+  font-size: 0.82rem;
+  line-height: 1.45;
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    width: 100%;
+    margin: 0 0 var(--space-2);
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--color-text-muted);
+    font: inherit;
+    text-align: left;
+  }
+
+  button.toc__head {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    &:hover .toc__label {
+      color: var(--color-text);
+    }
+  }
+
+  &[data-folded] .toc__head {
+    margin-bottom: 0;
+  }
+
+  &__label,
+  &__count {
+    font-family: var(--font-code);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    transition: color 0.15s ease;
+  }
+
+  &__count {
+    letter-spacing: 0.04em;
+    opacity: 0.6;
+  }
+
+  &__chevron {
+    margin-left: auto;
+    font-size: 0.7rem;
+    opacity: 0.6;
+  }
+
+  &__list,
+  &__subs {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    // Folds to and from its natural height; without interpolate-size it
+    // just shows and hides.
+    interpolate-size: allow-keywords;
+    overflow: clip;
+    height: auto;
+    opacity: 1;
+    transition:
+      height 0.25s var(--ease-default, ease),
+      opacity 0.2s ease,
+      display 0.25s allow-discrete;
+
+    @starting-style {
+      height: 0;
+      opacity: 0;
+    }
+
+    &[hidden] {
+      display: none;
+      height: 0;
+      opacity: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  // The hairline the reading position travels down
+  &__list {
+    border-left: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+  }
+
+  &__section {
+    margin: 0;
+  }
+
+  &__row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+  }
+
+  a {
+    flex: 1;
+    min-width: 0;
+    display: block;
+    margin-left: -1px;
+    padding: 0.18rem 0 0.18rem 0.75rem;
+    border-left: 1px solid transparent;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: color 0.15s ease, border-color 0.2s ease;
+
+    &:hover {
+      color: var(--color-text);
+      box-shadow: none;
+    }
+
+    &.active {
+      color: var(--color-text);
+      border-left-color: var(--color-accent-base);
+    }
+  }
+
+  // The section you're in reads a shade brighter even when a subsection is the active link
+  [data-here] > .toc__row > a {
+    color: var(--color-text);
+  }
+
+  &__twist {
+    flex: none;
+    padding: 0 0.3rem;
+    background: none;
+    border: 0;
+    color: var(--color-text-muted);
+    font-family: var(--font-code);
+    font-size: 0.75rem;
+    line-height: 1;
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+
+    &:hover,
+    &:focus-visible {
+      opacity: 1;
+    }
+  }
+
+  &__subs {
+    margin: 0 0 0.25rem 0.75rem;
+
+    a {
+      font-size: 0.92em;
+      opacity: 0.85;
+    }
+  }
+}
+
+// Notes: a light box beside the opening prose (no stroke, faint ground)
+.toc--box {
+  padding: var(--space-3) var(--space-4) var(--space-3);
+  background: color-mix(in srgb, var(--color-bg) 35%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 10px;
+}
+
+// The folded line (phones, narrow windows; notes on phones)
+.toc--line,
+.toc--box {
+  @media (max-width: $bp-phone) {
+    padding: 0.35rem 0;
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    .toc__head {
+      min-height: 32px;
+      align-items: center;
+    }
+
+    .toc__list {
+      margin-top: var(--space-2);
+    }
+
+    a {
+      padding-block: 0.35rem;
+    }
+  }
+}
+
+.toc--line {
+  padding: 0.35rem 0;
+
+  .toc__list {
+    margin-top: var(--space-2);
+  }
+}
+
+// ── Essays on wide screens: the margin list and the rail ──
+
+.article-body {
+  position: relative; // the margin list and rail hang off its right edge
+}
+
+// Level with the header, where the sidenotes' column starts (sidenotes.scss:
+// float right, margin-right -290px, 250px wide). ArticleLayout caps its
+// height to the room above the first sidenote; too little room and it steps
+// aside for the rail.
+.toc-margin {
+  position: absolute;
+  top: 0.4rem;
+  left: calc(100% + 40px);
+  width: 250px;
+  overflow-y: auto;
+  scrollbar-width: none;
+
+  &[data-crowded] {
+    display: none;
+  }
+}
+
+// Beyond the margin column (4rem gap + 250px), in the right spacer the
+// sidenotes never reach.
+.toc-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(100% + 4rem + 250px + 0.75rem);
+  width: 1.5rem;
+  z-index: 5; // over the sidenotes (positioned, later in the page) when it unfolds
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+
+  &[data-shown] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  &__track {
+    position: sticky;
+    top: 30vh;
+  }
+
+  &__ticks {
+    position: absolute;
+    right: 0;
+    top: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0.4rem 0.2rem 0.4rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, padding 0.2s ease;
+
+    a {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      padding: 4px 0;
+      color: var(--color-text-muted);
+      text-decoration: none;
+
+      &:hover {
+        color: var(--color-text);
+        box-shadow: none;
+      }
+    }
+  }
+
+  &__tick {
+    width: 9px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.45;
+    transition: width 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+  }
+
+  [data-here] &__tick {
+    width: 17px;
+    opacity: 1;
+    background: var(--color-accent-base);
+  }
+
+  &__name {
+    order: -1; // left of its tick, so the ticks stay put as names unfold
+    max-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    opacity: 0;
+    font-size: 0.78rem;
+    transition: max-width 0.25s var(--ease-default, ease), opacity 0.2s ease;
+  }
+
+  [data-here] &__name {
+    color: var(--color-text);
+  }
+
+  // Hover or keyboard focus: the names unfold leftward over the margin, on a
+  // ground just solid enough to read across a sidenote.
+  &__track:hover &__ticks,
+  &__track:focus-within &__ticks {
+    padding-left: 0.9rem;
+    background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  &__track:hover &__name,
+  &__track:focus-within &__name {
+    max-width: 240px;
+    opacity: 1;
+  }
+}
+
+// Which form shows where
+@media (min-width: $article-narrow + 1) {
+  .article-layout .toc--narrow-only {
+    display: none;
+  }
+
+  // The side group held only the (now hidden) folded line: drop the empty
+  // float so the opening lines run full width.
+  .article-layout .body-side-group:not(:has(> :not(.toc--narrow-only))) {
+    display: none;
+  }
+}
+
+@media (max-width: $article-narrow) {
+  .toc-margin,
+  .toc-rail {
+    display: none;
+  }
+}
+
+.wiki-index-layout {
+  .toc-margin,
+  .toc-rail {
+    display: none;
+  }
+}
