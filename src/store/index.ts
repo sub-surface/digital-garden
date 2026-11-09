@@ -3,6 +3,7 @@ import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 import type { PanelCard, ContentIndex, NoteMetadata } from "@/types/content"
 import { SITE_DEFAULTS, type SiteConfig } from "@/config/site-defaults"
+import { isPhoneViewport } from "@/config/breakpoints"
 import type { BotFlavour } from "@/lib/chessBot"
 
 function hexToHsl(hex: string): [number, number, number] {
@@ -99,7 +100,7 @@ export const BG_META: Record<string, { label: string; desc: string }> = {
   teletype: { label: "Teletype", desc: "The margins, typed out far back" },
 }
 
-export type DockTab = "prompt" | "chat"
+export type DockTab = "prompt" | "chat" | "music"
 
 export interface WeatherNow {
   code: number
@@ -205,7 +206,11 @@ interface GardenStore {
   isMusicOpen: boolean
   toggleMusic: () => void
   isMusicExpanded: boolean
+  /** On desktop, opening the player opens the dock's turntable tab (and closing one closes the other). */
   setIsMusicExpanded: (expanded: boolean) => void
+  /** The player is in its own Picture-in-Picture window (set by MusicPlayer). */
+  isMusicPopped: boolean
+  setIsMusicPopped: (popped: boolean) => void
   isPlaylistExpanded: boolean
   setIsPlaylistExpanded: (expanded: boolean) => void
 
@@ -304,6 +309,20 @@ export function stepReader(steps: readonly number[], current: number, dir: 1 | -
   return steps[0]
 }
 
+/**
+ * On desktop the turntable lives in the dock, as its "music" tab, instead of
+ * floating over the page. Phones keep the floating player above the PhoneBar.
+ */
+function dockedPlayer(): boolean {
+  return typeof window !== "undefined" && !isPhoneViewport()
+}
+
+/** Opening or leaving the dock's music tab opens or closes the player (unless it's popped out). */
+function playerFollowsDock(s: { isMusicExpanded: boolean; isMusicPopped: boolean }, next: DockTab | null) {
+  if (!dockedPlayer() || s.isMusicPopped) return {}
+  return { isMusicExpanded: next === "music" }
+}
+
 export const useStore = create<GardenStore>()(
   persist(
     (set) => ({
@@ -386,9 +405,14 @@ export const useStore = create<GardenStore>()(
         set((s) => ({
           dock: tab,
           dockRequest: request ? { ...request, id: ++dockRequestSeq } : s.dockRequest,
+          ...playerFollowsDock(s, tab),
         })),
-      closeDock: () => set({ dock: null }),
-      toggleDock: (tab) => set((s) => ({ dock: s.dock === tab ? null : tab })),
+      closeDock: () => set((s) => ({ dock: null, ...playerFollowsDock(s, null) })),
+      toggleDock: (tab) =>
+        set((s) => {
+          const next = s.dock === tab ? null : tab
+          return { dock: next, ...playerFollowsDock(s, next) }
+        }),
       dockWidth: legacy("sidechat-width", (v) => Math.max(300, parseInt(v, 10) || 380), 380),
       setDockWidth: (dockWidth) => set({ dockWidth }),
       promptHistory: [],
@@ -407,7 +431,14 @@ export const useStore = create<GardenStore>()(
       isMusicOpen: false,
       toggleMusic: () => set((s) => ({ isMusicOpen: !s.isMusicOpen })),
       isMusicExpanded: false,
-      setIsMusicExpanded: (isMusicExpanded) => set({ isMusicExpanded }),
+      setIsMusicExpanded: (isMusicExpanded) =>
+        set((s) => {
+          if (!dockedPlayer() || s.isMusicPopped) return { isMusicExpanded }
+          if (isMusicExpanded) return { isMusicExpanded, dock: "music" }
+          return { isMusicExpanded, dock: s.dock === "music" ? null : s.dock }
+        }),
+      isMusicPopped: false,
+      setIsMusicPopped: (isMusicPopped) => set({ isMusicPopped }),
       isPlaylistExpanded: false,
       setIsPlaylistExpanded: (isPlaylistExpanded) => set({ isPlaylistExpanded }),
 

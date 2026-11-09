@@ -11,7 +11,8 @@ const MIN_WIDTH = 300
 const MAX_WIDTH = 640
 
 /**
- * The dock: one right-hand panel for the prompt and philchat.
+ * The dock: one right-hand panel for the prompt, philchat and (on the
+ * garden, on desktop) the turntable.
  *
  * It replaced five surfaces that each did part of this: the search overlay,
  * the command palette, the `?` cheat sheet, the Ctrl+P MS-DOS window and the
@@ -36,6 +37,9 @@ export function Dock() {
   const restoreFocus = useRef<HTMLElement | null>(null)
 
   const chatAvailable = shell !== "chat"
+  // The turntable docks on the garden's desktop; phones keep it floating
+  // above the bar. MusicPlayer portals itself into #dock-music.
+  const musicAvailable = shell === "main" && !isPhone
 
   // Push the page over by the dock's width (not on phones: there it covers).
   useEffect(() => {
@@ -124,6 +128,7 @@ export function Dock() {
   const tabs: { id: DockTab; label: string }[] = [
     { id: "prompt", label: "prompt" },
     ...(chatAvailable ? [{ id: "chat" as const, label: "philchat" }] : []),
+    ...(musicAvailable ? [{ id: "music" as const, label: "turntable" }] : []),
   ]
 
   return (
@@ -171,6 +176,9 @@ export function Dock() {
         <div className={styles.pane} hidden={tab !== "prompt"} role="tabpanel" aria-label="Prompt">
           <Terminal surface="dock" onOpen={onOpen} onClose={closeDock} active={tab === "prompt"} />
         </div>
+        {musicAvailable && (
+          <div id="dock-music" className={`${styles.pane} ${styles.musicPane}`} hidden={tab !== "music"} role="tabpanel" aria-label="Turntable" />
+        )}
         {tab === "chat" && chatAvailable && (
           <div className={styles.pane} role="tabpanel" aria-label="philchat">
             <DockChat />

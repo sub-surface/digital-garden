@@ -47,7 +47,7 @@ Dev dashboard: `/__dev` (dev mode only).
 | `src/components/layout/` | AppShell, WikiShell, TerminalTitle, PhoneBar (the phone's one bottom bar), ThemePanel (Settings), QuickControls, BgCanvas | Yes |
 | `src/features/ambience/` | The sky: seasonal flurries, Light follows the sun, live weather (`sky.ts` is the pure maths, tested by `scripts/test-sky.ts`) | Yes |
 | `src/features/glorp/` | Glorp, the resident alien: one definition shared by the homepage avatar, the OS pet (Petri), GlorpPeek and the `glorp` command | Yes |
-| `src/features/dock/` | The dock: one right-hand panel for the prompt and philchat (replaced search, command palette, cheat sheet, the Ctrl+P window and SideChat) | Yes |
+| `src/features/dock/` | The dock: one right-hand panel for the prompt, philchat and (garden, desktop) the turntable (replaced search, command palette, cheat sheet, the Ctrl+P window and SideChat). On desktop, opening the music player opens the dock's `music` tab and closing one closes the other (the store owns this: `setIsMusicExpanded` / `playerFollowsDock`); phones keep the floating player | Yes |
 | `src/components/ui/` | Page + feature components, grouped: `chat/ wiki/ reader/ games/ shelves/ graph/ music/ overlays/ composer/` + small shared bits flat | Yes |
 | `src/components/panel/` | PanelStack, PanelCard, usePanelClick | Yes |
 | `src/features/boot/` | Reusable terminal/POST generators, playback, seed, rng, markdown and chatbot helpers (the old BootPage is retired) | Yes |
@@ -249,7 +249,7 @@ SCSS files: `tokens.scss` → `base.scss` → `global.scss` (imports all others)
 
 ## Zustand Store (single flat store)
 
-Key slices: `theme`, `accentBase`, `bgMode`, `panelStack`, `activeGraphSlug`, `activeLayout`, `contentIndex`, `sessionOverrides`, overlay toggles (`dock` = `"prompt" | "chat" | null`, `isGraphOpen`, `isThemePanelOpen`, `isMusicOpen`). The dock pushes the page over via the `--dock-width` CSS variable (set by `Dock.tsx`, read by the shells, QuickControls and Settings).
+Key slices: `theme`, `accentBase`, `bgMode`, `panelStack`, `activeGraphSlug`, `activeLayout`, `contentIndex`, `sessionOverrides`, overlay toggles (`dock` = `"prompt" | "chat" | "music" | null`, `isGraphOpen`, `isThemePanelOpen`, `isMusicOpen`). The dock pushes the page over via the `--dock-width` CSS variable (set by `Dock.tsx`, read by the shells, QuickControls and Settings).
 
 ---
 

@@ -30,6 +30,26 @@
     overflow-y: auto;
   }
 
+  // Desktop: in the dock's turntable tab. The dock is the frame, so the
+  // card's own frame goes; the record stays a comfortable size.
+  &.docked {
+    position: static;
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto;
+    align-self: center;
+    box-sizing: border-box;
+    padding: 1.25rem 1.25rem 1.5rem;
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 0;
+    border-radius: 0;
+    filter: none;
+    animation: none;
+    z-index: auto;
+  }
+
   // When moved into the Document-PiP window, fill it instead of floating.
   &.popped {
     position: static;
@@ -142,10 +162,124 @@
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
+  perspective: 1000px;
+}
+
+// Front (the record) and back (the sleeve), turned over in 3D.
+.face {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0.25rem 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.2, 1);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.back {
+  transform: rotateY(-180deg);
+  align-items: stretch;
+  padding: 0;
+}
+
+.coverWrap[data-flipped] {
+  .face { transform: rotateY(180deg); }
+  .back { transform: rotateY(0deg); }
+}
+
+// The back of the sleeve: printed card, mono catalogue line, serif title
+.sleeve {
+  width: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 1rem 1.1rem;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--color-text) 5%, var(--color-bg));
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+  font-family: var(--font-code);
+  font-size: 0.68rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+  text-align: left;
+}
+
+.sleeveCat {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.sleeveTitle {
+  margin-top: 0.6rem;
+  font-family: var(--font-header);
+  font-size: 1.15rem;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.sleeveArtist {
+  margin-bottom: 0.8rem;
+  letter-spacing: 0.08em;
+}
+
+.sleeveNotes {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--color-text);
+  opacity: 0.85;
+
+  h1 { display: none; }
+  h2, h3 { font-size: 0.8rem; margin: 0.8rem 0 0.3rem; }
+  p { margin: 0 0 0.6rem; }
+  img { max-width: 100%; height: auto; border-radius: 3px; }
+  a { color: var(--color-accent-base); }
+}
+
+.sleeveEmpty {
+  margin: 0.5rem 0;
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.sleeveMentions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 0.9rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 10%, transparent);
+
+  a {
+    color: var(--color-text);
+    text-decoration: none;
+
+    &:hover { color: var(--color-accent-base); }
+  }
+}
+
+.sleeveLabel {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.sleeveLink {
+  display: inline-block;
+  margin-top: 0.9rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+
+  &:hover { color: var(--color-accent-base); }
 }
 
 // Radial audio visualiser, drawn behind the record — bars bloom outward from

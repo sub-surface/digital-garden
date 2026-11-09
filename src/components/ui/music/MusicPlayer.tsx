@@ -3,11 +3,23 @@ import { createPortal } from "react-dom"
 import { useStore } from "@/store"
 import { useMusic, useMusicClock } from "./MusicContext"
 import { usePopoutPlayer } from "./usePopoutPlayer"
+import { usePhoneViewport } from "@/hooks/usePhoneViewport"
+import { Sleeve } from "./Sleeve"
 import { startScratch, prewarmScratch, type ScratchSession } from "@/lib/scratchEngine"
 import styles from "./MusicPlayer.module.scss"
 
+/**
+ * The turntable. On desktop it lives in the dock, as its "turntable" tab
+ * (portalled into #dock-music); on phones it floats above the PhoneBar; popped
+ * out, it fills its own Picture-in-Picture window. Turning the record over
+ * ("sleeve") shows the back: details, liner notes, where the garden mentions it.
+ */
 export function MusicPlayer() {
   const isExpanded = useStore((s) => s.isMusicExpanded)
+  const dock = useStore((s) => s.dock)
+  const isPhone = usePhoneViewport()
+  // Which record is turned over: a new track always comes up face up.
+  const [flippedSlug, setFlippedSlug] = useState<string | null>(null)
   const isPlaylistOpen = useStore((s) => s.isPlaylistExpanded)
   const setIsPlaylistOpen = useStore((s) => s.setIsPlaylistExpanded)
 
@@ -33,6 +45,32 @@ export function MusicPlayer() {
   const vinylRef = useRef<HTMLDivElement>(null)
   const [scratching, setScratching] = useState(false)
   const { popOut, pipWindow, isPopped, pipSupported } = usePopoutPlayer()
+  const docked = !isPhone && !isPopped
+
+  // Tell the store when the player is popped out, so changing dock tabs
+  // doesn't close it; when it pops back in on desktop, it returns to the dock.
+  useEffect(() => {
+    const st = useStore.getState()
+    st.setIsMusicPopped(isPopped)
+    if (!isPopped && !isPhone && st.isMusicExpanded && st.dock !== "music") st.openDock("music")
+  }, [isPopped, isPhone])
+
+  // The dock's pane, once it exists (the dock mounts lazily).
+  const [host, setHost] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    if (!docked) return
+    let raf = 0
+    const find = () => {
+      const el = document.getElementById("dock-music")
+      if (el) setHost(el)
+      else raf = requestAnimationFrame(find)
+    }
+    find()
+    return () => cancelAnimationFrame(raf)
+  }, [docked, dock])
+
+  const flipped = !!currentTrack && flippedSlug === currentTrack.slug
+  const setFlipped = (on: boolean) => setFlippedSlug(on && currentTrack ? currentTrack.slug : null)
 
   // Radial visualiser drawn BEHIND the record. Bars bloom outward from behind
   // the disc edge while playing. Two scale choices that make it musical without
@@ -137,7 +175,7 @@ export function MusicPlayer() {
     draw()
     return () => win.cancelAnimationFrame(animationId)
     // re-bind when popping in/out so the rAF targets the right window/canvas
-  }, [analyser, isExpanded, pipWindow, isPlaying])
+  }, [analyser, isExpanded, pipWindow, isPlaying, host, flipped])
 
   // Pre-decode the current track for scratching so the first scratch is instant
   // (no ~5MB fetch+decode mid-gesture). Fires as soon as the player is open and
@@ -258,7 +296,7 @@ export function MusicPlayer() {
   }
 
   const panel = (
-    <div className={`${styles.musicPanel} ${isPopped ? styles.popped : ""}`} data-testid="music-player">
+    <div className={`${styles.musicPanel} ${isPopped ? styles.popped : ""} ${docked ? styles.docked : ""}`} data-testid="music-player">
       <div className={styles.header}>
         <div className={styles.trackMeta}>
           {currentTrack?.scUrl ? (
@@ -277,6 +315,20 @@ export function MusicPlayer() {
           <div className={styles.artist}>{currentTrack?.artist}</div>
         </div>
         <div className={styles.headerActions}>
+          {currentTrack && (
+            <button
+              className={`${styles.iconAction} ${flipped ? styles.active : ""}`}
+              onClick={() => setFlipped(!flipped)}
+              title={flipped ? "Turn the record back over" : "Turn it over: the sleeve"}
+              aria-label={flipped ? "Show the record" : "Show the sleeve: liner notes"}
+              aria-pressed={flipped}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <rect x="4" y="4" width="16" height="16" rx="1" />
+                <path d="M8 9h8M8 13h8M8 17h5" />
+              </svg>
+            </button>
+          )}
           {pipSupported && (
             <button
               className={`${styles.iconAction} ${isPopped ? styles.active : ""}`}
@@ -313,7 +365,8 @@ export function MusicPlayer() {
 
       <div className={styles.mainContent}>
         {currentTrack?.cover && (
-          <div className={styles.coverWrap}>
+          <div className={styles.coverWrap} data-flipped={flipped || undefined}>
+            <div className={styles.face}>
             <canvas ref={canvasRef} width="320" height="320" className={styles.viz} />
             <div
               ref={vinylRef}
@@ -325,6 +378,10 @@ export function MusicPlayer() {
                 <img src={currentTrack.cover} alt={currentTrack.title} className={styles.label} draggable={false} />
                 <span className={styles.spindle} />
               </div>
+            </div>
+            </div>
+            <div className={`${styles.face} ${styles.back}`} aria-hidden={!flipped}>
+              {flipped && <Sleeve track={currentTrack} index={currentTrackIndex} count={tracks.length} />}
             </div>
           </div>
         )}
@@ -405,5 +462,8 @@ export function MusicPlayer() {
   // When popped out, portal the panel into the PiP window. createPortal keeps
   // the React tree intact (context, state, handlers all work) even though the
   // DOM lands in another document — unlike physically moving the node.
-  return pipWindow ? createPortal(panel, pipWindow.document.body) : panel
+  if (pipWindow) return createPortal(panel, pipWindow.document.body)
+  // Desktop: into the dock's turntable tab
+  if (docked) return host ? createPortal(panel, host) : null
+  return panel
 }

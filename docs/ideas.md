@@ -69,6 +69,36 @@ end of this list, give or take the canvas.
 - **Zines.** `trail pdf` (session 6) grown up: any essay or trail typeset as
   a printable zine with `src/lib/textlayout.ts` (even lines, real
   justification), perhaps a seasonal "issue" beside the print shop.
+- **Music, further.** Side A / Side B (albums as two sides, a needle drop,
+  the run-out groove crackling until you lift the needle); the crate (flick
+  through sleeves instead of a list); links to a moment (`music:hello@1:32`
+  starts there, so essays can cite a bar); listening mode (the background
+  follows the audio: bass tightens the flock, transients bring lightning,
+  the rivers quicken).
+- **Page transitions** with the View Transitions API: a link's title glides
+  into the next page's heading; cards open into notes.
+- **Footnote threads.** When a sidenote is highlighted, a hairline draws from
+  its marker to the note in the margin.
+- **Continue reading.** Long essays remember where you stopped; the bar
+  offers "back to §4 · 12 min left".
+- **Arcade, on theme.** Darkroom (develop one of the owner's negatives:
+  enlarger timer, dodge and burn with the cursor, the print coming up in the
+  tray); contact sheet (pick the keeper from a roll with a grease pencil,
+  then see the frame that was printed); camera obscura (the webcam through a
+  pinhole, upside down and soft); cyanotype (any image as a sun print,
+  exposing in real time).
+- **Quote cards.** Select a passage: a typeset card (`textlayout.ts`) and a
+  link to that sentence (`#:~:text=`).
+- **Keys and offline.** `j` / `k` between sections (pairs with the contents
+  rail); save an essay for offline reading.
+- **Writing, near the ground already walked.** Flusser's *apparatus* against
+  the Apparatus composer; latent space as a camera obscura; bokeh and lens
+  flare as the machine's signature; a series of one-object essays (the light
+  meter, the darkroom timer, the contact sheet).
+- **The homepage.** A daily epigraph from the commonplace book; "now on the
+  turntable" in "On the desk", driven by the player; three doors (read ·
+  look · play) first, the full link list folded beneath; notes per month as
+  a strip of sediment.
 - **Glorp wanders through a paragraph.** Text that reflows around glorp,
   live, as it drifts across a block of prose (per-line widths from
   `src/lib/textlayout.ts`, the in-house cut of pretext's idea).
@@ -126,6 +156,10 @@ end of this list, give or take the canvas.
   palimpsest, rivers, cut-up, concordance, teletype, set with an off-DOM
   layout module (`src/lib/textlayout.ts`) that also evens the lines of
   epigraphs and pull quotes.
+- The turntable docks (2026-11-09): on desktop the player is the dock's
+  third tab instead of floating over the page; turn the record over for the
+  sleeve (catalogue line, liner notes from `content/Music/`, where the garden
+  mentions it, SoundCloud).
 - Contents, reworked (2026-11-09): no stroke, a faint ground, subsections
   folded with the one you're reading opening by itself. Essays on wide
   screens keep it in the right margin level with the header (sharing the

@@ -172,3 +172,9 @@
 @media (prefers-reduced-motion: reduce) {
   .dock { animation: none; }
 }
+
+// The turntable's tab: MusicPlayer renders into it (docked variant)
+.musicPane {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
