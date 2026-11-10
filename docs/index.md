@@ -9,7 +9,8 @@ and gotchas are in [`../CLAUDE.md`](../CLAUDE.md); the one list of outstanding w
 
 | File | Read it for |
 |---|---|
-| [../ROADMAP.md](../ROADMAP.md) | Everything not yet built, grouped by area. Start here for "what's next". |
+| [../ROADMAP.md](../ROADMAP.md) | The engineering docket: open technical work, grouped by area. |
+| [ideas.md](ideas.md) | The creative docket and the session plan. Start here for "what's next". |
 | [architecture.md](architecture.md) | Shells, layering, Worker, build pipeline, pre-rendering, backgrounds, headers/OG/perf, Supabase data. |
 | [garden.md](garden.md) | Main-site reading model, authoring syntax, MDX components, features, games. |
 | [wiki.md](wiki.md) | Wiki content rules, submit/edit flow, accounts and roles, claims, admin panel. |
@@ -31,5 +32,5 @@ and gotchas are in [`../CLAUDE.md`](../CLAUDE.md); the one list of outstanding w
 
 - New DB change: dated `migrations/YYYY-MM-<topic>.sql`.
 - Finished build spec: move it to `archive/specs/`, summarise what is still true in a living doc, and put any unbuilt ideas in the ROADMAP.
-- Do not duplicate: commands and gotchas live in `CLAUDE.md`, API contracts in `CHAT-API.md`, backlog only in the ROADMAP.
+- Do not duplicate: commands and gotchas live in `CLAUDE.md`, API contracts in `CHAT-API.md`, backlog only in the ROADMAP (engineering) and `ideas.md` (features).
 - Never edit `content/` (the owner's writing) without asking; never edit `src/content/` (generated).

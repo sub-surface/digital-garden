@@ -1,7 +1,7 @@
 # Ideas backlog
 
 The creative docket: what's next, what's someday, and what we decided not to
-do. The engineering record is [`garden-reset.md`](./garden-reset.md). Status
+do. Technical work lives in [`../ROADMAP.md`](../ROADMAP.md); the reset record is [`garden-reset.md`](./garden-reset.md). Status
 as of 2026-11-08 (pruned with the owner the same evening).
 
 ## The session plan
