@@ -11,6 +11,8 @@ export const ISLAND_NAMES = [
   "Gallery",
   "Query",
   "OnThisDay",
+  "DailyNav",
+  "DailyThreads",
   "GameOfLife",
   "WikiSubmitForm",
   "AsciiAvatar",

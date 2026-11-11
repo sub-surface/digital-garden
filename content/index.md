@@ -47,17 +47,21 @@ Welcome to a node in the subsurface network.
 
 ## On the desk
 
-*Updated 8 November 2026*
+*Updated 10 November 2026*
 
-**Reading** · Joan Fontcuberta's new book, *The Eye and the Index: Against Barthes*, going after exactly the ground [[Attention & Difference]] was walking. Meaning to get a copy and write it up properly once it lands.  
-**Making** · the garden itself: a prompt that lives in the side dock<span className="on-desktop"> (`Ctrl P`)</span><span className="on-touch"> (› in the bottom bar)</span>, seasons and weather in the sky<span className="on-desktop"> (`\`)</span><span className="on-touch"> (··· → settings)</span>, and glorp, who now wanders about.  
-**Listening** · whatever's on the turntable<span className="on-desktop"> (`M`)</span><span className="on-touch"> (♫ in the bottom bar)</span>.
+**Making** · [p(doom)](https://pdoom.subsurfaces.net), rebuilt as four acts on a grid of characters, with a vending machine called Vendy who wants the company card ([[10-11-26|more]]). And **swarmachines**, a factory game where you are one sandboxed AI agent building the escape hatch the lab must never see ([[12-10-26|more]]).  
+**Looking at** · every neuron in a small language model, at [neurons.subsurfaces.net](https://neurons.subsurfaces.net): one pushed the right way says *"I am the VW Polo"* ([[27-10-26|more]]).  
+**Playing with** · [the Numogram](https://numogram.subsurfaces.net), ten rooms after the Ccru, with a pet glyph and six fake Flash games ([[06-11-26|more]]). And FRACTRAN cryptids, tiny programs made of fractions whose odds of halting come out as the golden ratio ([[01-11-26|more]]).  
+**Reading** · Joan Fontcuberta's *The Eye and the Index: Against Barthes*, on exactly the ground [[Attention & Difference]] was walking.  
+**Listening** · whatever's on the turntable<span className="on-desktop"> (`M`)</span><span className="on-touch"> (♫ in the bottom bar)</span>, and my own homemade instruments ([[10-10-26|more]]).
 
-**On my mind**
+**From the logbook**
 
-- The new wiki is looking good! I'm enjoying reading the articles I didnt have a hand in, Gemini really cooked with this one.
-- Had some notes from Synth about the mobile version of the site - the footnote header being useless, among other things. Fair. The phone version is getting its overhaul now.
-- Next up: a cute little roguelike for the 404 page, and someday an infinite canvas for the notes. The rest of the list lives in [the ideas docket](https://github.com/sub-surface/digital-garden/blob/master/docs/ideas.md).
+Short daily notes on what I've been working on, why it's interesting, and where you can see it.
+
+<Query filter="folder=Daily" sort="-date" limit="6" display="log" />
+
+Next for the garden: a cute little roguelike for the 404 page, and someday an infinite canvas for the notes. The rest of the list lives in [the ideas docket](https://github.com/sub-surface/digital-garden/blob/master/docs/ideas.md).
 
 ---
 
@@ -94,7 +98,7 @@ Welcome to a node in the subsurface network.
 
 ## Recently added
 
-<Query sort="-date" limit="10" display="list" />
+<Query filter="folder!=Daily" sort="-date" limit="10" display="list" />
 
 ## On this day
 

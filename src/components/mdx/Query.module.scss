@@ -173,3 +173,53 @@
     transform: none;
   }
 }
+
+// `<Query display="log" />`: a dated feed (the homepage logbook). A hairline
+// rail on the left, the date in mono above each title, the description beneath.
+.log {
+  list-style: none;
+  margin: var(--space-5) 0;
+  padding: 0 0 0 var(--space-4);
+  border-left: 1px solid color-mix(in srgb, var(--color-overlay-tint) 14%, transparent);
+
+  li {
+    margin-bottom: var(--space-4);
+  }
+
+  time {
+    display: block;
+    font-family: var(--font-code);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    opacity: 0.5;
+  }
+
+  p {
+    margin: 0.15em 0 0;
+    font-size: 0.92em;
+    opacity: 0.75;
+  }
+}
+
+// The day's drawing beside its logbook entry (floated; the entry clears it).
+.log li {
+  overflow: hidden;
+}
+
+.logArt {
+  float: right;
+  width: 9.5rem;
+  margin: 0.15rem 0 0 var(--space-4);
+  line-height: 0;
+
+  img {
+    width: 100%;
+    height: auto;
+    border-radius: 3px;
+    border: 1px solid color-mix(in srgb, var(--color-overlay-tint) 12%, transparent);
+  }
+
+  @media (max-width: $bp-phone) {
+    width: 6.5rem;
+  }
+}

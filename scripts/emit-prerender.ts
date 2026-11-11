@@ -9,6 +9,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { parseMarkdown } from "../src/lib/markdown"
+import { dailyIso, isDailySlug, withDailyChrome } from "../src/lib/daily"
 import { noteDataFileName, prerenderFileName, slugifyPath } from "../src/lib/slug"
 import { escapeAttr } from "../src/lib/escape"
 import { createElement } from "react"
@@ -49,7 +50,10 @@ export async function emitPrerender(
     const meta = model.index[slug]
     if (!meta) continue
 
-    const raw = fs.readFileSync(file, "utf-8")
+    let raw = fs.readFileSync(file, "utf-8")
+    // Daily notes get their navigation and threads here, not in the vault.
+    const dailyDate = isDailySlug(slug) ? dailyIso(meta.date) : null
+    if (dailyDate) raw = withDailyChrome(raw, dailyDate)
     try {
       const parsed = await parseMarkdown(raw)
       // Build problems are already rendered in-page as visible red blocks;

@@ -11,6 +11,7 @@
  *    to public/content — its raw source stays unpublished).
  *  - `draft: true` → indexed & rendered (wiki submissions rely on this), but
  *    excluded from RSS feeds and the sitemap (not promoted).
+ *  - `Daily/` is opt-in: a daily note is published only with `public: true`.
  */
 import * as fs from "fs"
 import * as path from "path"
@@ -27,7 +28,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CONTENT_DIR = path.resolve(__dirname, "../content")
 const PUBLIC_DIR = path.resolve(__dirname, "../public")
 
-const IGNORE_PATTERNS = ["private", "templates", ".obsidian", "Misc", "Daily"]
+const IGNORE_PATTERNS = ["private", "templates", ".obsidian", "Misc"]
+/** Folders whose notes stay out unless they opt in with `public: true`. */
+const OPT_IN_FOLDERS = ["Daily"]
 const SITE_URL = "https://subsurfaces.net"
 const WIKI_URL = "https://wiki.subsurfaces.net"
 
@@ -54,6 +57,9 @@ interface NoteMeta {
   poster?: string
   /** `og-layout: bleed` → full-bleed image OG card (default for image notes is split) */
   ogLayout?: "split" | "bleed"
+  /** Daily notes: `og-motif` names the card's drawing, `og-almanac: classic` its almanac (scripts/og-daily.ts) */
+  ogMotif?: string
+  ogAlmanac?: string
   username?: string
   author?: string
   director?: string
@@ -120,6 +126,11 @@ function shouldIgnore(filePath: string): boolean {
   )
 }
 
+function isOptIn(filePath: string): boolean {
+  const first = path.relative(CONTENT_DIR, filePath).split(path.sep)[0]
+  return OPT_IN_FOLDERS.includes(first)
+}
+
 function extractWikiLinks(content: string): string[] {
   const links: string[] = []
   // Strip code blocks and inline backtick spans before extracting links
@@ -171,6 +182,8 @@ function scan(): Model {
 
     // Content policy: `private: true` frontmatter excludes the note entirely.
     if (data.private === true) { privateCount++; continue }
+    // Opt-in folders (Daily/): only notes marked `public: true` are published.
+    if (isOptIn(file) && data.public !== true) continue
 
     const slug = slugifyPath(path.relative(CONTENT_DIR, file))
     const folder = slug.includes("/") ? slug.split("/").slice(0, -1).join("/") : undefined
@@ -204,6 +217,8 @@ function scan(): Model {
       cover: (data.cover || data.poster) as string | undefined,
       poster: (data.poster || data.cover) as string | undefined,
       ogLayout: data["og-layout"] === "bleed" || data["og-layout"] === "split" ? data["og-layout"] : undefined,
+      ogMotif: typeof data["og-motif"] === "string" ? data["og-motif"] : undefined,
+      ogAlmanac: typeof data["og-almanac"] === "string" ? data["og-almanac"] : undefined,
       username: data.username as string | undefined,
       author: data.author as string | undefined,
       director: data.director as string | undefined,

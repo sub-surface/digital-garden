@@ -20,6 +20,9 @@ import { fileURLToPath } from "url"
 import { generateSystemCards, loadOgFonts } from "./og-system"
 import { renderOgCard, type OgCardInput } from "./og-card"
 import { ogCardBase, ogCardFiles } from "../src/lib/slug"
+import { isPlateCard } from "../src/lib/og"
+import { dailyIso, isDailySlug } from "../src/lib/daily"
+import { renderDailyCard, renderDailyPlate } from "./og-daily"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PUBLIC_DIR = path.resolve(__dirname, "../public")
@@ -55,7 +58,7 @@ export function inScope(slug: string, s: Scope): boolean {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function hashNote(note: IndexNote): string {
+function hashNote(slug: string, note: IndexNote): string {
   const relevant = JSON.stringify({
     renderVersion: OG_RENDER_VERSION,
     title: note.title,
@@ -66,6 +69,10 @@ function hashNote(note: IndexNote): string {
     readingTime: note.readingTime,
     image: note.image,
     ogLayout: note.ogLayout,
+    // Only present for the notes they apply to, so adding a layout never
+    // invalidates every other card's cache entry.
+    daily: isDailySlug(slug) ? { v: 2, tags: note.tags, motif: note.ogMotif, almanac: note.ogAlmanac } : undefined,
+    plate: isPlateCard(slug, note) ? 1 : undefined,
   })
   return crypto.createHash("md5").update(relevant).digest("hex")
 }
@@ -162,8 +169,9 @@ async function main() {
     only ? only.includes(slug.toLowerCase()) : inScope(slug, scope),
   )
   const slugsToGenerate = candidates.filter((slug) =>
-    isPreview || force || cache[slug] !== hashNote(index[slug]) ||
-      !ogCardFiles(slug).some((f) => fs.existsSync(path.join(OG_DIR, f))),
+    isPreview || force || cache[slug] !== hashNote(slug, index[slug]) ||
+      !ogCardFiles(slug).some((f) => fs.existsSync(path.join(OG_DIR, f))) ||
+      (isDailySlug(slug) && !fs.existsSync(path.join(OG_DIR, "art", `${ogCardBase(slug)}.jpg`))),
   )
 
   console.log(`Generating OG cards (scope: ${only ? "--only" : scope}${isPreview ? `, preview → ${path.relative(ROOT, target)}` : ""})`)
@@ -189,16 +197,26 @@ async function main() {
         date: note.date,
         readingTime: note.readingTime,
         image: await imageDataUri(note.image || note.cover || note.poster),
-        layout: note.ogLayout,
+        layout: note.ogLayout ?? (isPlateCard(slug, note) ? "plate" : undefined),
+        tags: Array.isArray(note.tags) ? note.tags.map(String) : [],
       }
-      const { buffer, ext } = await renderOgCard(card, fonts)
+      // Daily notes get a date-seeded drawing instead (scripts/og-daily.ts).
+      const iso = isDailySlug(slug) ? dailyIso(note.date) : null
+      const { buffer, ext } = iso
+        ? await renderDailyCard({ iso, title: card.title, description: card.description, tags: card.tags, motif: note.ogMotif, almanac: note.ogAlmanac }, fonts)
+        : await renderOgCard(card, fonts)
+      if (iso) {
+        // The drawing alone, for the note's own page and the logbook (public/og/art/, committed like the cards).
+        fs.mkdirSync(path.join(target, "art"), { recursive: true })
+        fs.writeFileSync(path.join(target, "art", `${ogCardBase(slug)}.jpg`), renderDailyPlate({ iso, tags: card.tags, motif: note.ogMotif, almanac: note.ogAlmanac }))
+      }
       // Remove the other format so a note never has two cards (image added/removed).
       for (const stale of ogCardFiles(slug)) {
         const p = path.join(target, stale)
         if (!stale.endsWith(`.${ext}`) && fs.existsSync(p)) fs.unlinkSync(p)
       }
       fs.writeFileSync(path.join(target, `${ogCardBase(slug)}.${ext}`), buffer)
-      if (!isPreview) cache[slug] = hashNote(note)
+      if (!isPreview) cache[slug] = hashNote(slug, note)
       generated += 1
     } catch (err) {
       // One bad note (unsupported style, undecodable image) must not abort the run.

@@ -85,7 +85,13 @@ Dev dashboard: `/__dev` (dev mode only).
    There is no MDX-to-JS compile anymore (retired 2026-11-08: 295 of 328
    notes had no components, yet each was a 50–290 KB JS chunk)
 
-**Excluded folders:** `private`, `templates`, `.obsidian`, `Misc`, `Daily`
+**Excluded folders:** `private`, `templates`, `.obsidian`, `Misc`. `Daily` is opt-in: a daily note publishes only with `public: true` (the homepage logbook lists them via `<Query filter="folder=Daily" display="log">`).
+
+**Daily notes (the logbook).** A public daily note holds only frontmatter (`title`, `date`, `description`, `tags`, `public: true`) and prose. Everything else is derived from the date:
+- Scaffold one with `npm run daily -- "a short title" [--tags=games,pdoom] [--date=YYYY-MM-DD] [--publish]` (`scripts/new-daily.ts`).
+- Navigation is injected at build time (`withDailyChrome` in `src/lib/daily.ts`, called by `scripts/emit-prerender.ts`): `<DailyNav>` (previous / next, month calendar, almanac line) above the body and `<DailyThreads>` (other days sharing a tag) below. Never hand-write previous/next links in a daily note.
+- Its OG card is a date-seeded drawing (`scripts/og-daily.ts`): seasonal wash + ink motif + almanac. The date picks the motif; the first tag in frontmatter order that appears in `TAG_MOTIFS` narrows it to a family (`games` → isometric/board, `math` → attractor/lattice/spiral, `ai`/`ml` → murmuration/network, `music` → ridgeline, `philosophy`/`writing` → prose, `meta` → terminal, `astro` → orrery, `photography` → rays, `doom` → lightning, `map` → cartography). Put project tags (`pdoom`, `neurons`…) last. Frontmatter can override: `og-motif: <name>` names the drawing outright and `og-almanac: classic` fixes the almanac to moon + sun arc + year ruler. Drawings are quietened under the title except the soft full-bleed ones (`field`, `cartography`, `attractor`). Each card also writes its text-free drawing to `public/og/art/<card>.jpg` (committed like the cards), shown at the top of the note by `<DailyNav>` and beside each entry in the homepage logbook. Preview every motif with `tsx scripts/og-daily.ts --out scratch/og-daily`.
+- Essays in `Writing/` with a header image get the taller framed "plate" card (1200×750, `plateLayout` in `scripts/og-card.ts`); `isPlateCard()` in `src/lib/og.ts` is shared with the Worker so `og:image:height` matches. An explicit `og-layout: split|bleed` opts out.
 
 **Slug format:** `folder/note-name` (spaces → hyphens, case-insensitive at lookup).
 

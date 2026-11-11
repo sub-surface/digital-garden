@@ -1,6 +1,7 @@
 import { NoteMeta } from "./types"
 import { buildSlugResolver, ogCardName, ogCardFiles, prerenderFileName, slugFromPathname as sharedSlugFromPathname, type SlugResolver } from "../lib/slug"
 import { escapeAttr, escapeHtml } from "../lib/escape"
+import { OG_HEIGHT, OG_PLATE_HEIGHT, isPlateCard } from "../lib/og"
 
 // In-memory cache — survives for the lifetime of the Worker instance.
 // The resolver (lowercase + basename maps) is built once alongside it so
@@ -123,7 +124,7 @@ export function injectMetaTags(html: string, meta: NoteMeta, slug: string, origi
     `<meta property="og:image" content="${escapeAttr(ogImage)}" />`,
     ...(hasCard ? [
       `<meta property="og:image:width" content="1200" />`,
-      `<meta property="og:image:height" content="630" />`,
+      `<meta property="og:image:height" content="${listedCard?.endsWith(".jpg") && isPlateCard(slug, meta) ? OG_PLATE_HEIGHT : OG_HEIGHT}" />`,
     ] : []),
     `<meta property="og:image:alt" content="${escapeAttr(meta.title ?? siteName)}" />`,
     `<meta property="og:url" content="${escapeAttr(canonical)}" />`,

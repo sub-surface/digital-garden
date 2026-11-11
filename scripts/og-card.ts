@@ -7,6 +7,9 @@
  *   bleed — the image fills the card under a left-weighted scrim (opt in with
  *           `og-layout: bleed` in frontmatter)
  *   text  — typographic card for notes without an image
+ *   plate — essays (Writing/ with an image): taller, 1200×750, the image in a
+ *           frame with fine print around it. X and Facebook crop to 1.91:1,
+ *           which trims the masthead and foot line and keeps image and title
  *
  * Kept free of I/O: og-gen.ts resolves fonts and images and hands them in, so the
  * same renderer serves the full run and `--only` previews.
@@ -16,8 +19,8 @@ import { Resvg } from "@resvg/resvg-js"
 import jpeg from "jpeg-js"
 import { OG_FONT_FAMILY, type OgFontData } from "./og-system"
 
-export const OG_WIDTH = 1200
-export const OG_HEIGHT = 630
+import { OG_WIDTH, OG_HEIGHT, OG_PLATE_HEIGHT } from "../src/lib/og"
+export { OG_WIDTH, OG_HEIGHT }
 
 const BG = "#0a0a0a"
 const INK = "#f2efe8"
@@ -26,7 +29,7 @@ const FAINT = "#6e6c68"
 const ACCENT = "#427ab4"
 const ACCENT_SOFT = "#7ba7d6"
 
-export type OgLayout = "split" | "bleed" | "text"
+export type OgLayout = "split" | "bleed" | "text" | "plate"
 
 export interface OgCardInput {
   title: string
@@ -38,6 +41,8 @@ export interface OgCardInput {
   /** data: URI of a decodable raster (png/jpeg), or null for a text card. */
   image: string | null
   layout?: OgLayout
+  /** Shown in the plate's foot line. */
+  tags?: string[]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -161,6 +166,44 @@ function textLayout(card: OgCardInput): Node {
   ])
 }
 
+function plateLayout(card: OgCardInput): Node {
+  const M = 44
+  const IW = OG_WIDTH - M * 2
+  const title = clip(card.title, 96)
+  const long = title.length > 36
+  const IH = long ? 410 : 450
+  const FINE = { fontSize: 16, letterSpacing: 3.5, textTransform: "uppercase", color: "#8a877f" }
+  const HAIR = "1px solid #8a877f"
+  const corner = (style: Record<string, unknown>) => el("div", { position: "absolute", width: 13, height: 13, ...style })
+  const tags = (card.tags ?? []).map((t) => t.toLowerCase()).filter((t, i, a) => t !== "writing" && a.indexOf(t) === i).slice(0, 3).join("  ·  ")
+  const desc = card.description ? clip(card.description, long ? 95 : 115) : ""
+  return el("div", { display: "flex", flexDirection: "column", width: OG_WIDTH, height: OG_PLATE_HEIGHT, backgroundColor: BG, padding: `30px ${M}px` }, [
+    el("div", { display: "flex", justifyContent: "space-between", alignItems: "center", height: 26 }, [
+      el("div", { display: "flex", alignItems: "center", gap: 12 }, [
+        el("div", { width: 8, height: 8, backgroundColor: ACCENT }),
+        el("div", { ...FINE, color: ACCENT_SOFT }, "Sub-Surface Territories"),
+      ]),
+      el("div", FINE, card.kind),
+    ]),
+    el("div", { display: "flex", position: "relative", marginTop: 16, width: IW, height: IH + 16, padding: 8 }, [
+      { type: "img", props: { src: card.image, width: IW - 16, height: IH, style: { width: IW - 16, height: IH, objectFit: "cover" } } },
+      corner({ left: 0, top: 0, borderLeft: HAIR, borderTop: HAIR }),
+      corner({ right: 0, top: 0, borderRight: HAIR, borderTop: HAIR }),
+      corner({ left: 0, bottom: 0, borderLeft: HAIR, borderBottom: HAIR }),
+      corner({ right: 0, bottom: 0, borderRight: HAIR, borderBottom: HAIR }),
+    ]),
+    el("div", { display: "flex", flexDirection: "column", flexGrow: 1, justifyContent: "center", padding: "0 8px" }, [
+      el("div", { fontSize: long ? 48 : 62, fontWeight: 600, color: INK, lineHeight: 1.06, letterSpacing: -0.4 }, title),
+      ...(desc ? [el("div", { marginTop: 10, fontSize: 25, lineHeight: 1.3, color: DIM }, desc)] : []),
+    ]),
+    el("div", { display: "flex", justifyContent: "space-between", alignItems: "center", height: 22, padding: "0 8px" }, [
+      el("div", FINE, [formatOgDate(card.date), card.readingTime ? `${card.readingTime} min read` : null].filter(Boolean).join("  ·  ")),
+      el("div", FINE, tags),
+      el("div", { ...FINE, color: ACCENT_SOFT }, "subsurfaces.net"),
+    ]),
+  ])
+}
+
 export interface RenderedCard {
   buffer: Buffer
   /** "jpg" for photo cards (PNG photos run 600–800 KB), "png" for typographic ones. */
@@ -170,13 +213,14 @@ export interface RenderedCard {
 const JPEG_QUALITY = 86
 
 export async function renderOgCard(card: OgCardInput, fonts: OgFontData): Promise<RenderedCard> {
-  const layout: OgLayout = card.image ? (card.layout === "bleed" ? "bleed" : "split") : "text"
-  const tree = layout === "split" ? splitLayout(card) : layout === "bleed" ? bleedLayout(card) : textLayout(card)
+  const layout: OgLayout = card.image ? (card.layout === "bleed" || card.layout === "plate" ? card.layout : "split") : "text"
+  const height = layout === "plate" ? OG_PLATE_HEIGHT : OG_HEIGHT
+  const tree = layout === "plate" ? plateLayout(card) : layout === "split" ? splitLayout(card) : layout === "bleed" ? bleedLayout(card) : textLayout(card)
   const svg = await satori(
     el("div", { display: "flex", width: "100%", height: "100%", fontFamily: OG_FONT_FAMILY }, [tree]),
     {
       width: OG_WIDTH,
-      height: OG_HEIGHT,
+      height,
       fonts: [
         { name: OG_FONT_FAMILY, data: fonts.regular, weight: 400, style: "normal" },
         { name: OG_FONT_FAMILY, data: fonts.semibold, weight: 600, style: "normal" },

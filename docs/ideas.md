@@ -45,6 +45,55 @@ end of this list, give or take the canvas.
    graph. Making the ontology flexible is the mandate and the risk ("it risks
    destroying everything"), hence the room boundary.
 
+## Articles to write up (proposed 2026-11-10)
+
+Each grew out of a daily note in `content/Daily/` (now published by
+opt-in, `public: true`). Longer pieces for `Writing/`, in rough order of how
+ready the material is.
+
+- **A nova nobody saw.** V347 Nor's unrecorded 1943 eruption, found on the
+  Harvard plates because a catalogue looked straight at it and logged
+  nothing. The site's own theme (the history of images, what is in a picture
+  that nobody saw) told through archival astronomy. *Wait for the RNAAS
+  submission and the original-plate check;* the daily note
+  `14-10-26` is held (`public: false`) until then. Source:
+  `astro-theory/docs/manuscripts/v347nor_rnaas.md`.
+- **The name goes, the frame stays.** The neuron atlas's identity studies
+  (S18 to S21, the persona hunt) as a piece on personal identity: a self that
+  survives losing its name because it was never stored in the name. Pairs
+  with *Attention & Difference*. Source: `ml/mechinterp/LOG.md`, `RESEARCH.md`.
+- **Readers are not controllers.** The general-audience version of the
+  atlas: the SHOUT neuron that reads CamelCase, read vs write, clean at 58%
+  not 90%, why pre-registration matters when you are hoping. Links the live
+  site throughout.
+- **Two factories.** swarmachines and p(doom) as games that make AI-safety
+  arguments procedurally rather than by preaching; the PhaseOne swarm as a
+  case of norms, culture and inherited notes emerging among agents. Careful
+  sourcing (METR's report directly, not aggregators).
+- **Weight-space programming.** What GPT-6 Astra's edit actually was (a
+  rank-one doubt/conclude axis), why the obvious fix failed in the organism and
+  one compiled gradient step worked, and the jev question underneath: when is
+  a fast calibrated judgement enough? Source: `ml/jev-gate/FINDINGS.md`.
+- **Fair coins.** FRACTRAN cryptids for non-mathematicians: why the hard
+  ones are hard because they are fair, with playable figures. Wants an island
+  (a Hydra walker you can start yourself).
+- **Twenty-four, sorted**, as an essay on numerology vs evidence, once the
+  paper is out; the margin badges are the story.
+- **Hyperstition as a website.** The Numogram site as an argument about how
+  the Ccru's ideas want to be presented (computed, not imitated). Sits next
+  to `the noumenon has fangs`, which is still in draft limbo.
+
+### More proposals (2026-11-11, from the second sweep of the hub)
+
+- **The audit.** Two projects (jev, Celestrium) were torn down or stripped back after I checked AI-assisted research against its own artifacts. What the failures had in common (grand names, confident documents, thin runs), and the boring routine that catches them. Sources: `jev/REVIEW.md`, the Celestrium P1-P4 audit. Daily notes: 4 Oct (held), 25 Sep.
+- **One tile, three dimensions.** A proper explainer of Chair44 with the 3D viewer embedded: the chair, the 192 bumps, the 44 contacts, and why "halve it forever" forces aperiodicity. Daily note: 23 Sep. Needs the viewer moved out of the maths repo.
+- **The Newcomb floor.** The Predictor as an argument: legibility as a currency, being modelled as a game mechanic, and what Newcomb's problem feels like when the predictor has your real record. Ties to *Why Risk-Averse Agents Make Deals*. Daily note: 16 Sep.
+- **Harmony as a place.** Consonance as a property of timbre (Sethares), the Tonnetz as a torus, negative harmony as a reflection, with Lissajous embedded so every claim can be heard. Daily note: 1 Sep.
+- **Solving small games.** JANKEN's seven-cell tablebase and Enclosure's max-flow bot: what you learn about a big game by exhausting a tiny one. Daily notes: 2 Sep, 3 Oct.
+- **A table of untrusted players.** Running a tabletop game with a language-model DM, and why prompt injection is a game-design problem. Daily note: 17 Oct (held; needs the server's blessing).
+- **A drawing a day.** How the logbook cards are made: a date as a seed, ink motifs, a seasonal wash and an almanac. Short, mostly pictures.
+- **The Phil Chat Times.** Not mine to write alone (it is stack's paper), but a piece on making a weekly satirical newspaper from a Discord channel would be a good joint one.
+
 ## Someday, written down so they aren't lost
 
 - **The Haecceity.** A little ASCII boat that sails between notes across
@@ -120,9 +169,6 @@ end of this list, give or take the canvas.
   garden (done). Next: an ASCII alien generator (seeded by username) for
   default wiki avatars; glorp reacting to the season and the weather; glorp
   on the 404 page.
-- **Daily notes, in public.** `Daily/` is excluded from the build today.
-  Publish a chosen subset (opt-in per note, e.g. `public: true`), perhaps
-  surfaced through the Desk's daily haiku.
 - **More easter eggs.** The site should feel alive and reward curiosity;
   [[the machine-god in the future]] hosts aliens that could turn up around
   the garden.
@@ -132,6 +178,9 @@ end of this list, give or take the canvas.
 
 ## Done
 
+- Daily notes, in public (2026-11-10): `Daily/` publishes notes marked
+  `public: true`; the homepage's "From the logbook" is a `<Query
+  display="log">` over them, and "On the desk" was rewritten around them.
 - Mobile pass, P1 + P2 of [`mobile-audit.md`](./mobile-audit.md) (2026-11-08,
   session 1): `dvh`, sidenote markers as the tap toggle, scrolling tables,
   one phone gutter, ragged text, folded TOC, safe areas, keyboard-aware

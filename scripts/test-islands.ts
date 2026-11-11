@@ -67,7 +67,7 @@ assert.deepEqual(literalValue({ type: "ArrayExpression", elements: [{ type: "Lit
 }
 
 // 5. The whole corpus renders cleanly.
-const EXCLUDED = new Set(["private", "templates", ".obsidian", "Misc", "Daily"])
+const EXCLUDED = new Set(["private", "templates", ".obsidian", "Misc"])
 const files: string[] = []
 ;(function walk(dir: string) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -83,6 +83,7 @@ let rendered = 0
 for (const file of files) {
   const { content, data } = matter(fs.readFileSync(file, "utf8"))
   if (data.private) continue
+  if (/[\\/]Daily[\\/]/.test(file) && data.public !== true) continue // opt-in folder, as in prebuild
   try {
     const { errors } = await renderNoteHtml(content)
     if (errors.length) problems.push(`${file}: ${errors.join(" | ")}`)

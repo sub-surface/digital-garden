@@ -4,6 +4,7 @@ import type { NoteMetadata } from "@/types/content"
 import { isLandableNote } from "@/hooks/useRandomNote"
 import { classifyLayout } from "@/lib/layout"
 import { formatNoteDate } from "@/components/ui/reader/NoteHeader"
+import { dailyArtUrl, isDailySlug } from "@/lib/daily"
 import styles from "./Query.module.scss"
 
 const pillStyle: React.CSSProperties = {
@@ -23,10 +24,11 @@ function TypePill({ note }: { note: NoteMetadata }) {
 }
 
 interface QueryProps {
-  filter?: string   // e.g. "type=book" or "tag=philosophy" or "folder=Wiki"
+  filter?: string   // e.g. "type=book" or "tag=philosophy" or "folder=Wiki"; "folder!=Daily" negates
   sort?: string     // "date" | "title" | "-date" | "-title" | "random"
   limit?: number
-  display?: "list" | "grid" | "table" | "cards"
+  /** `log`: a dated feed, each entry with its one-line description (the homepage logbook). */
+  display?: "list" | "grid" | "table" | "cards" | "log"
   /** Comma-separated slugs to leave out (case-insensitive), e.g. templates. */
   exclude?: string
   /**
@@ -56,16 +58,20 @@ function applyFilter(notes: NoteMetadata[], filter: string): NoteMetadata[] {
   const parts = filter.split(",").map(s => s.trim()).filter(Boolean)
   return notes.filter(note => {
     return parts.every(part => {
-      const [key, val] = part.split("=").map(s => s.trim())
-      if (!key || val === undefined) return true
+      const [rawKey, val] = part.split("=").map(s => s.trim())
+      if (!rawKey || val === undefined) return true
+      const negate = rawKey.endsWith("!")
+      const key = negate ? rawKey.slice(0, -1).trim() : rawKey
+      let hit: boolean
       switch (key) {
-        case "type": return note.type?.toLowerCase() === val.toLowerCase()
-        case "tag": return note.tags.some(t => t.toLowerCase() === val.toLowerCase())
-        case "folder": return note.folder?.toLowerCase().startsWith(val.toLowerCase()) ?? false
-        case "growth": return note.growth?.toLowerCase() === val.toLowerCase()
-        case "featured": return String(note.featured) === val
+        case "type": hit = note.type?.toLowerCase() === val.toLowerCase(); break
+        case "tag": hit = note.tags.some(t => t.toLowerCase() === val.toLowerCase()); break
+        case "folder": hit = note.folder?.toLowerCase().startsWith(val.toLowerCase()) ?? false; break
+        case "growth": hit = note.growth?.toLowerCase() === val.toLowerCase(); break
+        case "featured": hit = String(note.featured) === val; break
         default: return true
       }
+      return negate ? !hit : hit
     })
   })
 }
@@ -227,6 +233,26 @@ export function Query({ filter, sort = "-date", limit = 10, display = "list", no
           </a>
         ))}
       </div>
+    )
+  }
+
+  if (display === "log") {
+    return (
+      <ol className={styles.log}>
+        {results.map(n => (
+          <li key={n.slug}>
+            {isDailySlug(n.slug) && (
+              <a href={`/${n.slug}`} className={`internal-link ${styles.logArt}`} tabIndex={-1} aria-hidden="true">
+                <img src={dailyArtUrl(n.slug)} width={1200} height={630} alt="" loading="lazy"
+                  onError={(e) => { e.currentTarget.parentElement!.style.display = "none" }} />
+              </a>
+            )}
+            {n.date && <time dateTime={n.date}>{formatNoteDate(n.date)}</time>}
+            <a href={`/${n.slug}`} className="internal-link">{n.title}</a>
+            {n.description && <p>{n.description}</p>}
+          </li>
+        ))}
+      </ol>
     )
   }
 

@@ -29,7 +29,8 @@ Conventions
 
 - [~] **Broken wikilinks.** `public/broken-links.json` reports 468 unresolved references, mostly
       missing philosopher/concept stubs in the wiki. Decide: write stubs, alias, or accept red links;
-      then a build-time ratchet so the count can only go down.
+      then a build-time ratchet so the count can only go down. Parked 2026-11-10: the owner wants to
+      trim the wiki first (fewer, better pages), which will change the count anyway.
 
 ## 3. Performance and delivery
 
