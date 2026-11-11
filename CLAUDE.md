@@ -52,6 +52,7 @@ Dev dashboard: `/__dev` (dev mode only).
 | `src/components/panel/` | PanelStack, PanelCard, usePanelClick | Yes |
 | `src/features/boot/` | Reusable terminal/POST generators, playback, seed, rng, markdown and chatbot helpers (the old BootPage is retired) | Yes |
 | `src/features/terminal/` | Shared terminal for `/terminal`, the dock prompt, OS Prompt and DOS mode. `commands.ts` is the one command registry; `siteCommands.ts` holds the page-acting ones (`only: ["dock", ...]`) | Yes |
+| `src/features/write/` | The owner's desk at `/write` (admin only): daily notes written in the browser. CodeMirror editor, frontmatter fields, the card drawn live (`card.ts`, browser satori), preview through the real pipeline (`livePipeline.ts`), drafts autosaved to D1 and committed to master in one commit by `src/worker/write.ts` | Yes |
 | `src/features/os/` | SUBSURFACES 95 shell, window/store primitives, metadata-only lazy app registry and program implementations | Yes |
 | `src/components/mdx/` | MDXProvider + registered components | Yes |
 | `src/lib/` | Remark/rehype plugins | Yes |
@@ -82,15 +83,19 @@ Dev dashboard: `/__dev` (dev mode only).
 5. At runtime `NoteBody` fetches the note JSON (`src/lib/note-loader.ts`) and
    `NoteHtml` sets the HTML once, then hydrates only the islands with portals
 6. **Never fetch or parse markdown at runtime** — notes ship as built HTML.
+   (One exception, owner-only: the `/write` desk's preview runs the pipeline in
+   the browser. The pipeline reads manifests and embedded notes through a
+   **host** (`src/lib/pipeline-host.ts`): Node entry points import
+   `pipeline-host-node.ts` (`src/lib/markdown.ts` does); with no host it throws.)
    There is no MDX-to-JS compile anymore (retired 2026-11-08: 295 of 328
    notes had no components, yet each was a 50–290 KB JS chunk)
 
 **Excluded folders:** `private`, `templates`, `.obsidian`, `Misc`. `Daily` is opt-in: a daily note publishes only with `public: true` (the homepage logbook lists them via `<Query filter="folder=Daily" display="log">`).
 
 **Daily notes (the logbook).** A public daily note holds only frontmatter (`title`, `date`, `description`, `tags`, `public: true`) and prose. Everything else is derived from the date:
-- Scaffold one with `npm run daily -- "a short title" [--tags=games,pdoom] [--date=YYYY-MM-DD] [--publish]` (`scripts/new-daily.ts`).
+- Write one in the browser at `/write` (today) or `/write/YYYY-MM-DD`; `jot [-t] <text>` in the dock prompt appends to today's draft. Or scaffold one with `npm run daily -- "a short title" [--tags=games,pdoom] [--date=YYYY-MM-DD] [--publish]` (`scripts/new-daily.ts`).
 - Navigation is injected at build time (`withDailyChrome` in `src/lib/daily.ts`, called by `scripts/emit-prerender.ts`): `<DailyNav>` (previous / next, month calendar, almanac line) above the body and `<DailyThreads>` (other days sharing a tag) below. Never hand-write previous/next links in a daily note.
-- Its OG card is a date-seeded drawing (`scripts/og-daily.ts`): seasonal wash + ink motif + almanac. The date picks the motif; the first tag in frontmatter order that appears in `TAG_MOTIFS` narrows it to a family (`games` → isometric/board, `math` → attractor/lattice/spiral, `ai`/`ml` → murmuration/network, `music` → ridgeline, `philosophy`/`writing` → prose, `meta` → terminal, `astro` → orrery, `photography` → rays, `doom` → lightning, `map` → cartography). Put project tags (`pdoom`, `neurons`…) last. Frontmatter can override: `og-motif: <name>` names the drawing outright and `og-almanac: classic` fixes the almanac to moon + sun arc + year ruler. Drawings are quietened under the title except the soft full-bleed ones (`field`, `cartography`, `attractor`). Each card also writes its text-free drawing to `public/og/art/<card>.jpg` (committed like the cards), shown at the top of the note by `<DailyNav>` and beside each entry in the homepage logbook. Preview every motif with `tsx scripts/og-daily.ts --out scratch/og-daily`.
+- Its OG card is a date-seeded drawing (`scripts/og-daily.ts`): seasonal wash + ink motif + almanac. The date picks the motif; the first tag in frontmatter order that appears in `TAG_MOTIFS` narrows it to a family (`games` → isometric/board, `math` → attractor/lattice/spiral, `ai`/`ml` → murmuration/network, `music` → ridgeline, `philosophy`/`writing` → prose, `meta` → terminal, `astro` → orrery, `photography` → rays, `doom` → lightning, `map` → cartography). Put project tags (`pdoom`, `neurons`…) last. Frontmatter can override: `og-motif: <name>` names the drawing outright and `og-almanac: classic` fixes the almanac to moon + sun arc + year ruler. Drawings are quietened under the title except the soft full-bleed ones (`field`, `cartography`, `attractor`). Each card also writes its text-free drawing to `public/og/art/<card>.jpg` (committed like the cards), shown at the top of the note by `<DailyNav>` and beside each entry in the homepage logbook. Preview every motif with `tsx scripts/og-daily.ts --out scratch/og-daily`. The drawing and card layout live in `src/lib/daily-art.ts` (pure, shared with the browser); the frontmatter round trip in `src/lib/daily-source.ts` (scaffolder, desk and Worker share it; `scripts/test-write.ts` checks every daily note round-trips byte for byte).
 - Essays in `Writing/` with a header image get the taller framed "plate" card (1200×750, `plateLayout` in `scripts/og-card.ts`); `isPlateCard()` in `src/lib/og.ts` is shared with the Worker so `og:image:height` matches. An explicit `og-layout: split|bleed` opts out.
 
 **Slug format:** `folder/note-name` (spaces → hyphens, case-insensitive at lookup).
@@ -113,6 +118,7 @@ Dev dashboard: `/__dev` (dev mode only).
 | `/privacy` | PrivacyPage (lazy) | Privacy policy |
 | `/edit/$` | WikiEditPage (lazy) | Edit wiki article |
 | `/terminal` | TerminalPage (lazy) | Shared procedural terminal |
+| `/write`, `/write/$date` | WritePage (lazy) | Owner's daily-note desk; admin only (API-enforced). Needs the `DESK_DB` (D1) + `DESK_MEDIA` (R2) bindings in wrangler.toml, else `/api/write` is a 503 |
 | `/boot` | Redirect → `/terminal` | Compatibility URL for the retired BootPage |
 | `$` (catch-all) | NoteRenderer / ChatPage | Renders note content or ChatPage if in ChatShell |
 

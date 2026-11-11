@@ -24,6 +24,7 @@ const ChatPage = lazy(() => import("@/components/ui/chat/ChatPage").then(m => ({
 
 // Lazy load heavy components
 const ConstellationPage = lazy(() => import("@/components/ui/graph/ConstellationPage").then(m => ({ default: m.ConstellationPage })))
+const WritePage = lazy(() => import("@/features/write/WritePage").then(m => ({ default: m.WritePage })))
 const TerminalPage = lazy(() => import("@/features/terminal/TerminalPage").then(m => ({ default: m.TerminalPage })))
 
 // Root layout
@@ -167,6 +168,30 @@ const editRoute = createRoute({
   },
 })
 
+// The owner's desk for daily notes (admin only; the API enforces it).
+function WriteRoute({ date }: { date?: string }) {
+  return (
+    <article className="game-layout">
+      <Suspense fallback={<div className="loading-shimmer">Opening the desk…</div>}>
+        <WritePage date={date} />
+      </Suspense>
+    </article>
+  )
+}
+const writeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/write",
+  component: () => <WriteRoute />,
+})
+const writeDayRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/write/$date",
+  component: function WriteDayRoute() {
+    const { date } = writeDayRoute.useParams()
+    return <WriteRoute date={date} />
+  },
+})
+
 // Terminal route — must be before the catch-all note route.
 const terminalRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -242,6 +267,8 @@ const routeTree = rootRoute.addChildren([
   userRoute,
   privacyRoute,
   editRoute,
+  writeRoute,
+  writeDayRoute,
   terminalRoute,
   bootRoute,
   noteRoute,

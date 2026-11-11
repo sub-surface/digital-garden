@@ -16,6 +16,10 @@ import { addSecurityHeaders } from "./security"
 import { handleMusicAsset } from "./media"
 import { handleRestores } from "./restores"
 import { handleWidgetNews, handleWidgetWeather } from "./widgets"
+import {
+  handleWriteDayGet, handleWriteDayPut, handleWriteDayDelete, handleWriteDays, handleWriteRevisions,
+  handleWriteJot, handleWriteMedia, handleWriteMediaGet, handleWriteCommit, handleWriteFont,
+} from "./write"
 
 /**
  * Route table with declarative middleware:
@@ -84,6 +88,17 @@ const routes: Route[] = [
   { pattern: /^\/api\/(keys|admin\/api-keys)(\/[^/]+)?$/, auth: "user", allowBanned: true, handler: handleApiKeys },
 
   { pattern: /^\/api\/admin\//, auth: "admin", handler: handleAdmin },
+  // The /write desk (owner's daily notes): drafts in Supabase, commit on demand.
+  { method: "GET", pattern: /^\/api\/write\/font\/(regular|semibold)$/, handler: handleWriteFont },
+  { method: "GET", pattern: /^\/api\/write\/days$/, auth: "admin", handler: handleWriteDays },
+  { method: "GET", pattern: /^\/api\/write\/day\/([0-9-]{10})$/, auth: "admin", handler: handleWriteDayGet },
+  { method: "PUT", pattern: /^\/api\/write\/day\/([0-9-]{10})$/, auth: "admin", handler: handleWriteDayPut },
+  { method: "DELETE", pattern: /^\/api\/write\/day\/([0-9-]{10})$/, auth: "admin", handler: handleWriteDayDelete },
+  { method: "GET", pattern: /^\/api\/write\/day\/([0-9-]{10})\/revisions$/, auth: "admin", handler: handleWriteRevisions },
+  { method: "POST", pattern: /^\/api\/write\/jot$/, auth: "admin", handler: handleWriteJot },
+  { method: "POST", pattern: /^\/api\/write\/media$/, auth: "admin", handler: handleWriteMedia },
+  { method: "GET", pattern: /^\/api\/write\/media\/([0-9-]{10})\/([a-z0-9.-]+)$/, auth: "admin", handler: handleWriteMediaGet },
+  { method: "POST", pattern: /^\/api\/write\/commit$/, auth: "admin", handler: handleWriteCommit },
 ]
 
 const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"])

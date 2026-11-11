@@ -1,8 +1,7 @@
 import type { Root, Text } from "mdast"
 import { visit } from "unist-util-visit"
 import { stripFrontmatter } from "./frontmatter"
-import * as fs from "fs"
-import * as path from "path"
+import { pipelineHost } from "./pipeline-host"
 import { fromMarkdown } from "mdast-util-from-markdown"
 import { gfmFromMarkdown } from "mdast-util-gfm"
 import { gfm } from "micromark-extension-gfm"
@@ -13,27 +12,9 @@ import { videoEmbedFromUrl, VIDEO_IFRAME_ALLOW } from "./videoEmbed"
 import { slug as headingSlug } from "github-slugger"
 import { buildSlugResolver, type SlugResolver } from "./slug"
 
-/**
- * Prebuild-generated manifests, re-read whenever prebuild rewrites them. The
- * old module-level cache held the first slug-map for the life of the Vite
- * process, so notes added while `npm run dev` was running never resolved.
- */
-const manifestCache = new Map<string, { mtimeMs: number; data: unknown }>()
-
-function readManifest<T>(file: string, fallback: T): T {
-  const abs = path.resolve(process.cwd(), "public", file)
-  try {
-    const { mtimeMs } = fs.statSync(abs)
-    const hit = manifestCache.get(abs)
-    if (hit && hit.mtimeMs === mtimeMs) return hit.data as T
-    const data = JSON.parse(fs.readFileSync(abs, "utf-8")) as T
-    manifestCache.set(abs, { mtimeMs, data })
-    return data
-  } catch {
-    console.warn(`[remark-wikilinks] could not load public/${file} — run prebuild`)
-    return fallback
-  }
-}
+/** Prebuild manifests and embedded note sources come from the pipeline host
+ *  (pipeline-host.ts): the disk in Node, fetched data in the browser. */
+const readManifest = <T,>(file: string, fallback: T): T => pipelineHost().manifest(file, fallback)
 
 const getSlugMap = () => readManifest<Record<string, string>>("slug-map.json", {})
 
@@ -76,11 +57,7 @@ function readNoteSource(slug: string): string | null {
   const index = readManifest<Record<string, { contentPath?: string }>>("content-index.json", {})
   const contentPath = index[slug]?.contentPath
   if (!contentPath) return null
-  try {
-    return fs.readFileSync(path.resolve(process.cwd(), "content", contentPath), "utf-8")
-  } catch {
-    return null
-  }
+  return pipelineHost().noteSource(contentPath)
 }
 
 /**

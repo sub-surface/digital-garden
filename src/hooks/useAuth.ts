@@ -288,6 +288,10 @@ function useAuthController(): AuthContextValue {
     if (!supabase) return
     // The SIGNED_OUT auth event resets session + profile (applySession).
     await supabase.auth.signOut()
+    // The /write desk buffers unsynced drafts in this browser; they leave with the session.
+    try {
+      for (const key of Object.keys(localStorage)) if (key.startsWith("write:buffer:")) localStorage.removeItem(key)
+    } catch { /* storage unavailable: nothing was buffered */ }
   }
 
   const updateProfile = useCallback(async (data: Partial<Pick<ProfileFields, "username" | "bio" | "avatar_url" | "name_color">>) => {

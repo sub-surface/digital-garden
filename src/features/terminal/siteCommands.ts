@@ -15,6 +15,8 @@ import { FLURRY, guessPlace, lightPhase, moonPhase, nextTurn, seasonOf, solarEle
 import { MODES } from "@/config/modes"
 import { MOODS, QUIPS, contextualQuip, pickFrom } from "@/features/glorp/glorp"
 import { readTrail } from "./trail"
+import { apiErrorMessage, apiPost } from "@/lib/api"
+import { isIsoDate, localIso } from "@/lib/iso-day"
 
 const PARTICLES: Particle[] = ["snow", "leaves", "blossom", "motes", "rain"]
 
@@ -448,6 +450,45 @@ export const SITE_COMMANDS: TerminalCommand[] = [
       }
       ctx.print("")
       ctx.print("  in the prompt: Tab completes, ↑↓ walk history or suggestions, Esc clears then closes.", "muted")
+    },
+  },
+  {
+    name: "jot",
+    group: "content",
+    only: ["dock", "page"],
+    requireRole: "admin",
+    help: { usage: "jot [-t] <text>", description: "Add a paragraph to today's daily note (-t stamps the time)" },
+    run: async (ctx, args) => {
+      const stamp = args[0] === "-t"
+      const text = (stamp ? args.slice(1) : args).join(" ").trim()
+      if (!text) return ctx.print("usage: jot [-t] <text>   (the line goes to the end of today's draft)", "muted")
+      // Lazily: supabase.ts reads import.meta.env, and the client loads on demand anyway (gotcha #23).
+      const { loadSupabase } = await import("@/lib/supabase")
+      const token = (await (await loadSupabase())?.auth.getSession())?.data.session?.access_token
+      if (!token) return ctx.requireLogin()
+      const now = new Date()
+      try {
+        const res = await apiPost<{ iso: string; fresh: boolean }>("/api/write/jot", {
+          iso: localIso(now),
+          text,
+          stamp: stamp ? `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}` : undefined,
+        }, { token })
+        ctx.print(`jotted to ${res.iso}${res.fresh ? " (a new day started)" : ""}. \`write\` opens the desk.`, "success")
+      } catch (e) {
+        ctx.print(`jot: ${apiErrorMessage(e, "could not reach the desk")}`, "error")
+      }
+    },
+  },
+  {
+    name: "write",
+    group: "content",
+    only: ["dock", "page"],
+    requireRole: "admin",
+    help: { usage: "write [YYYY-MM-DD]", description: "Open the writing desk on today (or a day)" },
+    run: (ctx, args) => {
+      const day = args[0]
+      if (day && !isIsoDate(day)) return ctx.print("write: give the day as YYYY-MM-DD", "error")
+      ctx.open(day ? `write/${day}` : "write", "Desk")
     },
   },
 ]

@@ -58,3 +58,20 @@ name = "WRITE_LIMITER"
 type = "ratelimit"
 namespace_id = "1001"
 simple = { limit = 30, period = 60 }
+
+# The /write desk (src/worker/write.ts): drafts + history in D1, images awaiting
+# commit in a private R2 bucket. Both optional: without them /api/write is a 503
+# and nothing else changes. To switch on:
+#   npx wrangler d1 create subsurfaces-desk        (paste the database_id below)
+#   npx wrangler r2 bucket create subsurfaces-desk-media
+#   npx wrangler d1 migrations apply subsurfaces-desk --remote
+# then uncomment both blocks.
+# [[d1_databases]]
+# binding = "DESK_DB"
+# database_name = "subsurfaces-desk"
+# database_id = "<from wrangler d1 create>"
+# migrations_dir = "docs/migrations/d1"
+#
+# [[r2_buckets]]
+# binding = "DESK_MEDIA"
+# bucket_name = "subsurfaces-desk-media"

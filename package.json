@@ -10,7 +10,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck:worker": "tsc -p tsconfig.worker.json",
     "lint": "eslint . --max-warnings 0",
-    "test": "tsx scripts/test-slugs.ts && tsx scripts/test-footnotes.ts && tsx scripts/test-islands.ts && tsx scripts/test-math.ts && tsx scripts/test-sigil.ts && tsx scripts/test-chatbot.ts && tsx scripts/test-composer.ts && tsx scripts/test-layout.ts && tsx scripts/test-terminal.ts && tsx scripts/test-sky.ts && tsx scripts/test-media.ts && tsx scripts/test-links.ts && tsx scripts/test-os.ts && tsx scripts/test-backgrounds.ts && tsx scripts/test-embed-graph.ts && tsx scripts/test-prerender.ts && tsx scripts/test-search.ts && tsx scripts/test-graph.ts && npm run test:ui && tsx scripts/test-og.ts && node scripts/test-package-scripts.mjs",
+    "test": "tsx scripts/test-slugs.ts && tsx scripts/test-footnotes.ts && tsx scripts/test-islands.ts && tsx scripts/test-math.ts && tsx scripts/test-sigil.ts && tsx scripts/test-chatbot.ts && tsx scripts/test-composer.ts && tsx scripts/test-layout.ts && tsx scripts/test-terminal.ts && tsx scripts/test-sky.ts && tsx scripts/test-media.ts && tsx scripts/test-links.ts && tsx scripts/test-os.ts && tsx scripts/test-backgrounds.ts && tsx scripts/test-embed-graph.ts && tsx scripts/test-prerender.ts && tsx scripts/test-search.ts && tsx scripts/test-graph.ts && tsx scripts/test-write.ts && npm run test:ui && tsx scripts/test-og.ts && node scripts/test-package-scripts.mjs",
     "test:ui": "vitest run --config vitest.config.ts",
     "check": "npm test && npm run lint && npm run typecheck:worker && npm run build",
     "preview": "vite preview",
@@ -19,6 +19,14 @@
     "dash": "node scripts/dash.mjs"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.4",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
+    "@lezer/highlight": "^1.2.5",
     "@supabase/supabase-js": "^2.98.0",
     "@tanstack/react-router": "^1.112.0",
     "chess.js": "^1.4.0",

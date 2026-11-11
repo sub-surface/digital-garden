@@ -1,5 +1,6 @@
 import { parse as parseYaml } from "yaml"
 import { splitFrontmatter } from "./frontmatter"
+import "./pipeline-host-node"
 import { renderNoteHtml } from "./note-pipeline"
 
 /**

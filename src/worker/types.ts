@@ -9,6 +9,10 @@ export interface Env {
   /** Cloudflare rate-limit binding (wrangler.toml [[unsafe.bindings]]). Optional
    * so local dev / older deploys degrade to no limiting rather than erroring. */
   WRITE_LIMITER?: { limit: (opts: { key: string }) => Promise<{ success: boolean }> }
+  /** The /write desk's drafts + history (D1) and images awaiting commit (private R2).
+   * Optional: absent bindings make /api/write answer 503, nothing else changes. */
+  DESK_DB?: D1Database
+  DESK_MEDIA?: R2Bucket
 }
 
 export interface NoteMeta {

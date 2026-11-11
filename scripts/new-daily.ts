@@ -13,7 +13,8 @@ import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "url"
 import { almanac, almanacLines } from "../src/lib/daily"
-import { motifFor, TAG_MOTIFS } from "./og-daily"
+import { motifFor, TAG_MOTIFS } from "../src/lib/daily-art"
+import { dailyFileName, scaffoldDaily, serializeDaily } from "../src/lib/daily-source"
 
 const args = process.argv.slice(2)
 const flag = (name: string) => args.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3)
@@ -30,30 +31,19 @@ if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || isNaN(new Date(`${iso}T00:00:00Z`).getTi
   console.error(`--date must be YYYY-MM-DD (got "${iso}")`)
   process.exit(1)
 }
-const [y, m, d] = iso.split("-")
 const tags = ["daily", ...(flag("tags") ?? "").split(",").map((t) => t.trim()).filter(Boolean)]
 const publish = args.includes("--publish")
 
-const file = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../content/Daily", `${d}-${m}-${y.slice(2)}.md`)
+const file = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../content/Daily", dailyFileName(iso))
 if (fs.existsSync(file)) {
   console.error(`${path.relative(process.cwd(), file)} already exists; not overwriting it.`)
   process.exit(1)
 }
 
-const day = new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })
-const quote = (s: string) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`
-fs.writeFileSync(file, [
-  "---",
-  `title: ${quote(`${day}: ${title}`)}`,
-  `date: ${iso}`,
-  "description: ",
-  "tags:",
-  ...tags.map((t) => `  - ${t}`),
-  `public: ${publish}`,
-  "---",
-  "",
-  "",
-].join("\n"))
+// The same scaffold the /write desk starts a day from (src/lib/daily-source.ts).
+const doc = scaffoldDaily(iso, title, tags)
+doc.fields.public = publish
+fs.writeFileSync(file, serializeDaily(doc))
 
 console.log(`wrote ${path.relative(process.cwd(), file)}${publish ? "" : "  (public: false; set it to true to publish)"}`)
 console.log(`  card: ${motifFor(iso, tags)}  ·  ${almanacLines(almanac(iso))[0].replace(/\s+/g, " ")}`)

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import "../src/lib/pipeline-host-node.js"
 import { renderNoteHtml } from "../src/lib/note-pipeline.js"
 
 // Exercises THE note pipeline (remark-sidenotes), the one published notes use.
