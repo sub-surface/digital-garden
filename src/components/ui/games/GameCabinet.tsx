@@ -37,6 +37,12 @@ interface CabinetProps {
   zen?: boolean
   /** Extra controls rendered in the status bar (reset, pause, presets…). */
   controls?: ReactNode
+  /**
+   * Veil the board with the start/again overlay when not playing (default).
+   * Board games whose final position is worth reading pass false and show
+   * their own result line.
+   */
+  veil?: boolean
 }
 
 /**
@@ -56,6 +62,7 @@ export function GameCabinet({
   hint,
   zen = false,
   controls,
+  veil = true,
 }: CabinetProps) {
   const [best, setBest] = useState(() => (score?.bestKey ? readStoredInt(score.bestKey) : 0))
   const [isZen, setIsZen] = useState(false)
@@ -80,7 +87,7 @@ export function GameCabinet({
   const toggleZen = useCallback(() => setIsZen((z) => !z), [])
   const overlayRef = useRef<HTMLDivElement>(null)
 
-  const showOverlay = status !== "playing"
+  const showOverlay = veil && status !== "playing"
 
   return (
     <div

@@ -36,5 +36,8 @@ export const SYSTEM_PAGE_META: Record<string, SystemPageMeta> = {
   sigil:           { layout: "game",    title: "SIGIL", loading: "Preparing the plate...", since: "2026-07-03" },
   collider:        { layout: "game",    title: "Collider", loading: "Charging the field...", since: "2026-07-03" },
   apparatus:       { layout: "game",    title: "Apparatus", loading: "Warming the plate...", since: "2026-07-05" },
+  enclosure:       { layout: "game",    title: "Enclosure", loading: "Ruling the lattice...", since: "2026-11-11" },
+  fronts:          { layout: "game",    title: "Fronts", loading: "Mustering...", since: "2026-11-11" },
+  commons:         { layout: "game",    title: "Commons", loading: "Opening the gate...", since: "2026-11-11" },
   filament:        { layout: "game",    title: "FILAMENT", loading: "Loading...", since: "2026-07-27" }, // moved: now a notice pointing at filament.subsurfaces.net
 }

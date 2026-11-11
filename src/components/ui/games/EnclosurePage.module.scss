@@ -1,0 +1,294 @@
+// Enclosure: two inks on a ruled lattice. Blue and Red are the rules' own
+// names, so they stay fixed hues rather than following the accent.
+.wrap, .seg {
+  --enc-0: #4f86d9;
+  --enc-1: #d5584e;
+
+  [data-side="0"] { --ink: var(--enc-0); }
+  [data-side="1"] { --ink: var(--enc-1); }
+}
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  font-family: var(--font-code);
+  text-align: left;
+}
+
+// ── scoreboard ──
+.scoreboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.side {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--ink);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  transition: opacity 0.25s, border-color 0.25s;
+
+  &[data-active] { opacity: 1; }
+  &[data-won] {
+    opacity: 1;
+    border-color: var(--ink);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--ink) 30%, transparent);
+  }
+}
+
+.who {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pips {
+  display: inline-flex;
+  gap: 3px;
+
+  i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: 1px solid var(--ink);
+    opacity: 0.45;
+  }
+  i[data-on] { background: var(--ink); opacity: 1; }
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+
+  small {
+    margin-left: 0.3em;
+    font-size: 0.6rem;
+    opacity: 0.5;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+}
+
+// ── board ──
+.board {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+
+  &[data-live] { cursor: pointer; }
+}
+
+.ground { fill: transparent; }
+
+.dot { fill: var(--color-text); opacity: 0.22; }
+
+.field {
+  fill: var(--ink);
+  fill-opacity: 0.16;
+  stroke: none;
+  transition: fill-opacity 0.3s;
+}
+
+.edge {
+  stroke: var(--ink);
+  stroke-width: 2.5px;
+  stroke-linecap: round;
+
+  &[data-fresh] { stroke-width: 3.5px; }
+}
+
+// Sealed: drawn on the opponent's last turn, so the mover can't touch it.
+.guard {
+  stroke: var(--ink);
+  stroke-width: 9px;
+  stroke-linecap: round;
+  opacity: 0.18;
+}
+
+.node {
+  fill: var(--color-bg);
+  stroke: var(--ink);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+
+  &[data-taken] { animation: taken 0.7s ease-out; fill: var(--ink); }
+}
+
+@keyframes taken {
+  from { stroke-width: 7px; }
+}
+
+.lost {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  animation: fade 1.2s ease-out forwards;
+}
+
+.cutGhost {
+  stroke: var(--ink);
+  stroke-width: 2.5px;
+  stroke-dasharray: 3 5;
+  stroke-linecap: round;
+  animation: fade 1.6s ease-out forwards;
+}
+
+@keyframes fade {
+  from { opacity: 0.9; }
+  to { opacity: 0; }
+}
+
+.sel {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 2 3;
+  animation: spin 6s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.target {
+  fill: var(--color-text);
+  opacity: 0.35;
+}
+
+.blocked {
+  fill: var(--color-text);
+  opacity: 0.08;
+}
+
+.ghost {
+  stroke: var(--ink);
+  stroke-width: 2.5px;
+  stroke-linecap: round;
+  stroke-dasharray: 4 4;
+  opacity: 0.35;
+
+  &[data-ok] { opacity: 0.75; stroke-dasharray: none; }
+}
+
+.willCut {
+  stroke: var(--color-text);
+  stroke-width: 2px;
+  stroke-dasharray: 2 4;
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sel, .node, .lost, .cutGhost { animation: none; }
+  .lost, .cutGhost { opacity: 0; }
+}
+
+// ── readouts ──
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  min-height: 2.4em;
+  font-size: 0.75rem;
+
+  em { font-style: normal; opacity: 0.5; }
+}
+
+.hint {
+  color: var(--color-text-muted);
+}
+
+.chart {
+  display: block;
+  width: 100%;
+  height: 44px;
+}
+
+.axis { stroke: var(--color-border); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+
+.curve {
+  fill: var(--ink);
+  fill-opacity: 0.12;
+  stroke: var(--ink);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.rules {
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-2);
+
+  summary {
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.65rem;
+
+    &:hover { color: var(--color-text); }
+  }
+
+  ol { padding-left: 1.4em; margin: var(--space-2) 0; }
+  li + li { margin-top: 0.35em; }
+  p { margin: 0; opacity: 0.8; }
+}
+
+// ── controls (in the cabinet's status bar) ──
+.seg {
+  display: inline-flex;
+
+  button {
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+    padding: 3px 9px;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+
+    & + button { border-left-width: 0; }
+    &:first-child { border-radius: 3px 0 0 3px; }
+    &:last-child { border-radius: 0 3px 3px 0; }
+    &:only-child { border-radius: 3px; }
+
+    &:hover:not(:disabled) { color: var(--color-text); }
+    &[data-active] {
+      color: var(--color-accent-base);
+      border-color: var(--color-accent-base);
+    }
+    &[data-side][data-active] { color: var(--ink); border-color: var(--ink); }
+    &:disabled { opacity: 0.35; cursor: default; }
+  }
+}

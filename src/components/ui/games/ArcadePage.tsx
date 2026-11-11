@@ -72,6 +72,13 @@ const GAMES: GameCard[] = [
   },
   { href: "hexo", name: "HeXO", blurb: "Connect six on an endless hex field, against a handmade opponent.", live: true, section: "featured" },
   {
+    href: "enclosure",
+    name: "Enclosure",
+    blurb: "Rule straight walls across a lattice, close off ground, cut your rival's walls. Score is the area you hold, counted every turn, so a field early is worth more than a field late.",
+    live: true,
+    section: "featured",
+  },
+  {
     href: "https://omega.subsurfaces.net",
     name: "The Predictor",
     blurb: "A roguelike where the antagonist is trained on you. Escape the station; disagree with the machine that hunts you.",
@@ -95,6 +102,8 @@ const GAMES: GameCard[] = [
     section: "featured",
     external: true,
   },
+  { href: "fronts", name: "Fronts", blurb: "Five fronts, one army, sealed orders. Win a front by one and you keep one; a tie breaks both. Against a Marshal who learns your habits.", live: true, section: "games" },
+  { href: "commons", name: "Commons", blurb: "Three herders, one meadow that regrows only from what's left. Graze, hold back, or fence a neighbour out. Your neighbours have temperaments; guess them.", live: true, section: "games" },
   { href: "chess", name: "Chess", blurb: "A small handmade machine to play against.", live: true, section: "games" },
   { href: "tetris", name: "Tetris", blurb: "The falling well, themed in accent monochrome.", live: true, section: "games" },
   { href: "snake", name: "Snake", blurb: "Walls wrap; the rare bloom bends time.", live: true, section: "games" },

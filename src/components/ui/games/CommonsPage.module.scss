@@ -1,0 +1,137 @@
+// Commons: a meadow in the page's own greens and earths; three collars.
+.wrap {
+  --grass: #7fa65a;
+  --soil: color-mix(in srgb, #6b5536 22%, transparent);
+  --h0: var(--color-accent-base);
+  --h1: #c9a35e;
+  --h2: #b07ab8;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  text-align: left;
+
+  [data-h="0"] { --ink: var(--h0); }
+  [data-h="1"] { --ink: var(--h1); }
+  [data-h="2"] { --ink: var(--h2); }
+}
+
+.meadow { display: block; width: 100%; height: auto; border-radius: 4px; }
+.soil { fill: var(--soil); }
+.tuft { stroke: var(--grass); stroke-width: 1.4; fill: none; stroke-linecap: round; }
+
+.sheep { animation: amble 0.6s ease-out both; }
+@keyframes amble { from { opacity: 0; transform: translate(0, 6px); } }
+.wool { fill: #f1ece0; stroke: rgba(0, 0, 0, 0.25); stroke-width: 0.6; }
+.face { fill: #2a2622; }
+.collar { fill: var(--ink); }
+.caption { fill: var(--color-text-muted); font-family: var(--font-code); font-size: 10px; }
+
+.gauge {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  overflow: visible;
+
+  span { display: block; height: 100%; border-radius: 3px; background: var(--grass); transition: width 0.6s ease; }
+  i { position: absolute; top: -3px; width: 1px; height: 12px; background: var(--color-text-muted); }
+}
+
+.herders {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+
+  @container panel (max-width: $bp-panel-narrow) { grid-template-columns: 1fr; }
+}
+
+.herder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--ink);
+  border-radius: 4px;
+}
+
+.name { color: var(--ink); font-weight: 600; }
+.total { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.lastGraze { color: var(--color-text-muted); font-size: 0.66rem; em { font-style: normal; } }
+.fenced { font-size: 0.62rem; color: var(--ink); }
+.about { font-size: 0.62rem; color: var(--color-text-muted); font-style: italic; }
+
+.choose { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.flock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+
+  > span { width: 5.5em; color: var(--color-text-muted); text-transform: uppercase; font-size: 0.62rem; letter-spacing: 0.08em; }
+  em { font-style: normal; color: var(--color-text-muted); font-size: 0.64rem; margin-left: 6px; }
+
+  button {
+    min-width: 28px;
+    padding: 3px 8px;
+    font-family: var(--font-code);
+    font-size: 0.72rem;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    color: var(--color-text);
+    cursor: pointer;
+    &:hover:not(:disabled) { border-color: var(--h0); }
+    &[data-active] { border-color: var(--h0); color: var(--h0); }
+    &:disabled { opacity: 0.25; cursor: default; }
+  }
+}
+
+.go {
+  align-self: flex-start;
+  font-family: var(--font-code);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.45em 1.4em;
+  background: transparent;
+  border: 1px solid var(--h0);
+  border-radius: 3px;
+  color: var(--h0);
+  cursor: pointer;
+  &:hover { background: color-mix(in srgb, var(--h0) 14%, transparent); }
+}
+
+.end p { margin: 0 0 0.4em; line-height: 1.6; }
+
+.rules {
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-2);
+  summary { cursor: pointer; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.65rem; }
+  p { margin: var(--space-2) 0 0; }
+}
+
+.seg {
+  display: inline-flex;
+  button {
+    font-family: var(--font-code);
+    font-size: 0.7rem;
+    padding: 3px 9px;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    &:hover { color: var(--color-text); }
+    &[data-active] { color: var(--color-accent-base); border-color: var(--color-accent-base); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) { .sheep { animation: none; } }
