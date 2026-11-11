@@ -101,21 +101,34 @@ assert(validRestoreSlug("notes/recovered-disk"))
 assert(!validRestoreSlug("https://example.com"))
 assert(!validRestoreSlug("../secret"))
 
-const originalFetch = globalThis.fetch
-globalThis.fetch = (async () => new Response(JSON.stringify({
-  code: "PGRST205",
-  message: "Could not find the table 'public.os_restores' in the schema cache",
-}), { status: 404, headers: { "Content-Type": "application/json" } })) as typeof fetch
-try {
+{
+  // No site database bound: a capability state, not a console 500.
   const response = await handleRestores({
     request: new Request("https://os.subsurfaces.net/api/os/restores"),
-    env: { SUPABASE_URL: "https://example.supabase.co", SUPABASE_SERVICE_KEY: "test" },
+    env: {},
     auth: { id: "reader-1" },
   } as RouteCtx)
-  assert.equal(response.status, 200, "an unapplied optional migration must not become a console 500")
+  assert.equal(response.status, 200, "a missing DB binding must not become a console 500")
   assert.deepEqual(await response.json(), { restores: [], available: false })
-} finally {
-  globalThis.fetch = originalFetch
+}
+{
+  // With one, rows come back scoped to the reader.
+  const seen: unknown[][] = []
+  const fakeDb = {
+    prepare: (sql: string) => ({
+      bind: (...args: unknown[]) => {
+        seen.push([sql, ...args])
+        return { all: async () => ({ results: [{ slug: "notes/recovered-disk", restored_at: "2026-11-11T00:00:00.000Z" }] }) }
+      },
+    }),
+  }
+  const response = await handleRestores({
+    request: new Request("https://os.subsurfaces.net/api/os/restores"),
+    env: { DB: fakeDb },
+    auth: { id: "reader-1" },
+  } as unknown as RouteCtx)
+  assert.deepEqual(await response.json(), { restores: [{ slug: "notes/recovered-disk", restored_at: "2026-11-11T00:00:00.000Z" }], available: true })
+  assert.equal(seen[0][1], "reader-1", "restores are read for the signed-in reader only")
 }
 
 console.log("OS rules: solitaire, media queues, Paint, Petri, feeds, and graceful restore detection pass.")

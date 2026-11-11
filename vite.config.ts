@@ -52,7 +52,8 @@ export default defineConfig(({ command }) => ({
   },
   server: {
     proxy: command === "serve" ? {
-      "/api": "http://localhost:8787",
+      // ws: the chat's live socket (/api/chat/live) is a WebSocket upgrade.
+      "/api": { target: "http://localhost:8787", ws: true },
     } : undefined,
   },
   plugins: [

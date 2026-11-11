@@ -11,8 +11,12 @@ export interface Env {
   WRITE_LIMITER?: { limit: (opts: { key: string }) => Promise<{ success: boolean }> }
   /** The /write desk's drafts + history (D1) and images awaiting commit (private R2).
    * Optional: absent bindings make /api/write answer 503, nothing else changes. */
-  DESK_DB?: D1Database
-  DESK_MEDIA?: R2Bucket
+  /** The site database (D1): desk drafts, wiki bookkeeping, bookmarks, keys. */
+  DB?: D1Database
+  /** Private media (R2): desk images under desk/, avatars under avatars/. Served only through the Worker. */
+  MEDIA?: R2Bucket
+  /** One Durable Object per chat room: live delivery over WebSockets (chatLive.ts). */
+  CHAT_ROOMS?: DurableObjectNamespace<import("./chatLive").ChatRoom>
 }
 
 export interface NoteMeta {

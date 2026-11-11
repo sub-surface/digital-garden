@@ -1,5 +1,6 @@
 import { Env, ChatMessage, BanProfile, RouteCtx, AuthUser } from "./types"
-import { jsonResponse, supabaseRest, upstreamError, isUuid, invalidateAuthCache, readJson } from "./lib"
+import { jsonResponse, supabaseRest, upstreamError, isUuid, invalidateAuthCache, readJson, siteDb, nowIso } from "./lib"
+import { broadcastToRoom } from "./chatLive"
 import { getContentIndex, chatterImageForUsername, resolveMetaCaseInsensitive } from "./meta"
 
 /** Fails CLOSED: if the ban state can't be read, the caller's write is refused
@@ -27,55 +28,45 @@ function authorProfile(m: ChatMessage): ChatMessage["profiles"] {
 }
 
 export async function handleChatRooms({ request, env, url, auth }: RouteCtx): Promise<Response> {
+  const db = siteDb(env)
   if (request.method === "GET") {
-    const res = await supabaseRest(env, "rooms?archived=eq.false&select=id,name,slug,created_at,created_by&order=name.asc")
-    if (!res.ok) return upstreamError("rooms list", res, "Failed to fetch rooms")
-    return jsonResponse({ rooms: await res.json<unknown[]>() })
+    const { results } = await db
+      .prepare("SELECT id, name, slug, created_at, created_by FROM rooms WHERE archived = 0 ORDER BY name ASC").all()
+    return jsonResponse({ rooms: results })
   }
 
   if (request.method === "POST") {
     let body: { name?: string; slug?: string }
     try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
-    if (!body.name?.trim() || !body.slug?.trim()) return jsonResponse({ error: "name and slug required" }, 400)
-
-    const res = await supabaseRest(env, "rooms", "POST", {
-      id: body.slug.trim(),
-      name: body.name.trim(),
-      slug: body.slug.trim(),
-      created_by: auth!.id,
-    })
-    if (!res.ok) return upstreamError("room create", res, "Failed to create room")
-    return jsonResponse(await res.json(), 201)
+    const name = body.name?.trim().slice(0, 80), slug = body.slug?.trim().toLowerCase()
+    if (!name || !slug) return jsonResponse({ error: "name and slug required" }, 400)
+    if (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(slug)) return jsonResponse({ error: "slug: letters, digits, - and _" }, 400)
+    const room = { id: slug, name, slug, created_by: auth!.id, created_at: nowIso(), archived: false }
+    const res = await db.prepare("INSERT INTO rooms (id, name, slug, created_by, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING")
+      .bind(room.id, room.name, room.slug, room.created_by, room.created_at).run()
+    if (!res.meta.changes) return jsonResponse({ error: "A room with that slug exists" }, 409)
+    return jsonResponse([room], 201)
   }
 
   // PATCH /api/chat/rooms/:id — archive/unarchive
   let body: { archived?: boolean }
   try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
-
-  const roomId = url.pathname.split("/")[4]
+  const roomId = decodeURIComponent(url.pathname.split("/")[4] ?? "")
   if (!roomId) return jsonResponse({ error: "Room ID required" }, 400)
-
-  const res = await supabaseRest(env, `rooms?id=eq.${encodeURIComponent(roomId)}`, "PATCH", {
-    archived: body.archived ?? true,
-  })
-  if (!res.ok) return upstreamError("room archive", res, "Failed to update room")
+  await db.prepare("UPDATE rooms SET archived = ? WHERE id = ?").bind(body.archived === false ? 0 : 1, roomId).run()
   return jsonResponse({ ok: true })
 }
 
-/** GET /api/chat/messages/:id — single enriched message. Used by the realtime
- * client as a targeted fallback when the broadcast payload lacks identity
- * (pre-migration rows), replacing a list re-fetch per broadcast per client. */
-export async function handleChatMessageById({ env, match, auth }: RouteCtx): Promise<Response> {
-  const id = match[1]
-  const res = await supabaseRest(env, `messages?id=eq.${encodeURIComponent(id)}&deleted_at=is.null&select=*`)
-  if (!res.ok) return upstreamError("message by id", res, "Failed to fetch message")
-  const rows = await res.json<ChatMessage[]>()
-  if (!rows.length) return jsonResponse({ error: "Message not found" }, 404)
-  const m = rows[0]
+type Row = ChatMessage & { edited_at?: string | null; pinned_at?: string | null; pinned_by?: string | null }
 
-  const reactRes = await supabaseRest(env, `reactions?message_id=eq.${encodeURIComponent(id)}&select=emote,user_id`)
-  const reactRows = reactRes.ok ? await reactRes.json<{ emote: string; user_id: string }[]>() : []
-  return jsonResponse({ message: { ...m, profiles: authorProfile(m), reactions: groupReactions(reactRows, auth!.id) } })
+/** GET /api/chat/messages/:id — one message, with reactions. */
+export async function handleChatMessageById({ env, match, auth }: RouteCtx): Promise<Response> {
+  const id = decodeURIComponent(match[1])
+  const db = siteDb(env)
+  const m = await db.prepare("SELECT * FROM messages WHERE id = ? AND deleted_at IS NULL").bind(id).first<Row>()
+  if (!m) return jsonResponse({ error: "Message not found" }, 404)
+  const { results } = await db.prepare("SELECT emote, user_id FROM reactions WHERE message_id = ?").bind(id).all<{ emote: string; user_id: string }>()
+  return jsonResponse({ message: { ...m, profiles: authorProfile(m), reactions: groupReactions(results, auth!.id) } })
 }
 
 function clampLimit(raw: string | null): number {
@@ -93,56 +84,52 @@ function groupReactions(rows: { emote: string; user_id: string }[], currentUserI
   return Object.entries(byEmote).map(([emote, v]) => ({ emote, ...v }))
 }
 
+const marks = (n: number) => new Array(n).fill("?").join(",")
+
+/** The quoted message a reply shows, for a set of ids. */
+async function replySnapshots(db: D1Database, ids: string[]) {
+  const map: Record<string, { id: string; body: string; profiles: ChatMessage["profiles"] }> = {}
+  if (!ids.length) return map
+  const { results } = await db.prepare(`SELECT id, body, username, name_color, avatar_url FROM messages WHERE id IN (${marks(ids.length)})`)
+    .bind(...ids).all<Row>()
+  for (const r of results) map[r.id] = { id: r.id, body: r.body, profiles: authorProfile(r) }
+  return map
+}
+
 export async function handleChatMessages(ctx: RouteCtx): Promise<Response> {
-  const { request, env, url, auth } = ctx
+  const { request, env, url, auth, waitUntil } = ctx
+  const db = siteDb(env)
 
   // DELETE /api/chat/messages/:id
   if (request.method === "DELETE") {
-    const id = url.pathname.split("/").pop()
+    const id = decodeURIComponent(url.pathname.split("/").pop() ?? "")
     if (!id) return jsonResponse({ error: "Message ID required" }, 400)
-
-    const fetchRes = await supabaseRest(env, `messages?id=eq.${encodeURIComponent(id)}&select=id,user_id,deleted_at`)
-    if (!fetchRes.ok) return upstreamError("message fetch (delete)", fetchRes, "Failed to fetch message")
-    const rows = await fetchRes.json<{ id: string; user_id: string; deleted_at: string | null }[]>()
-    if (!rows.length) return jsonResponse({ error: "Message not found" }, 404)
-    const msg = rows[0]
+    const msg = await db.prepare("SELECT room_id, user_id, deleted_at FROM messages WHERE id = ?").bind(id).first<Row>()
+    if (!msg) return jsonResponse({ error: "Message not found" }, 404)
     if (msg.deleted_at) return jsonResponse({ error: "Already deleted" }, 409)
-    if (msg.user_id !== auth!.id && auth!.role !== "admin") {
-      return jsonResponse({ error: "Forbidden" }, 403)
-    }
-
-    const delRes = await supabaseRest(env, `messages?id=eq.${encodeURIComponent(id)}`, "PATCH", {
-      deleted_at: new Date().toISOString(),
-      deleted_by: auth!.id,
-    })
-    if (!delRes.ok) return upstreamError("message delete", delRes, "Failed to delete message")
+    if (msg.user_id !== auth!.id && auth!.role !== "admin") return jsonResponse({ error: "Forbidden" }, 403)
+    await db.prepare("UPDATE messages SET deleted_at = ?, deleted_by = ? WHERE id = ?").bind(nowIso(), auth!.id, id).run()
+    waitUntil(broadcastToRoom(env, msg.room_id, { type: "delete", id }))
     return jsonResponse({ ok: true })
   }
 
   // PATCH /api/chat/messages/:id — edit own message
   if (request.method === "PATCH") {
-    const id = url.pathname.split("/").pop()
+    const id = decodeURIComponent(url.pathname.split("/").pop() ?? "")
     if (!id) return jsonResponse({ error: "Message ID required" }, 400)
-
     let payload: { body?: string }
     try { payload = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
     const newBody = payload.body?.trim()
     if (!newBody) return jsonResponse({ error: "body required" }, 400)
     if (newBody.length > 2000) return jsonResponse({ error: "Message too long" }, 400)
 
-    const fetchRes = await supabaseRest(env, `messages?id=eq.${encodeURIComponent(id)}&select=id,user_id,deleted_at`)
-    if (!fetchRes.ok) return upstreamError("message fetch (edit)", fetchRes, "Failed to fetch message")
-    const rows = await fetchRes.json<{ id: string; user_id: string; deleted_at: string | null }[]>()
-    if (!rows.length) return jsonResponse({ error: "Message not found" }, 404)
-    const msg = rows[0]
+    const msg = await db.prepare("SELECT room_id, user_id, deleted_at FROM messages WHERE id = ?").bind(id).first<Row>()
+    if (!msg) return jsonResponse({ error: "Message not found" }, 404)
     if (msg.deleted_at) return jsonResponse({ error: "Message is deleted" }, 409)
     if (msg.user_id !== auth!.id) return jsonResponse({ error: "Forbidden" }, 403)
-
-    const editRes = await supabaseRest(env, `messages?id=eq.${encodeURIComponent(id)}`, "PATCH", {
-      body: newBody,
-      edited_at: new Date().toISOString(),
-    })
-    if (!editRes.ok) return upstreamError("message edit", editRes, "Failed to edit message")
+    const edited_at = nowIso()
+    await db.prepare("UPDATE messages SET body = ?, edited_at = ? WHERE id = ?").bind(newBody, edited_at, id).run()
+    waitUntil(broadcastToRoom(env, msg.room_id, { type: "edit", id, body: newBody, edited_at }))
     return jsonResponse({ ok: true })
   }
 
@@ -153,171 +140,140 @@ export async function handleChatMessages(ctx: RouteCtx): Promise<Response> {
     try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
     if (!body.room_id?.trim() || !body.body?.trim()) return jsonResponse({ error: "room_id and body required" }, 400)
     if (body.body.trim().length > 2000) return jsonResponse({ error: "Message too long" }, 400)
-
-    const row = {
-      room_id: body.room_id.trim(),
-      user_id: auth!.id,
-      body: body.body.trim(),
-      reply_to: body.reply_to ?? null,
+    const roomId = body.room_id.trim()
+    if (!(await db.prepare("SELECT 1 FROM rooms WHERE id = ? AND archived = 0").bind(roomId).first())) {
+      return jsonResponse({ error: "No such room" }, 404)
     }
-    // Denormalized author identity: makes the realtime broadcast self-describing
-    // (no enrichment fetch per client) and pre-migration rows joinable. If the
-    // columns don't exist yet (migration not applied), retry the bare insert.
-    const denorm = { username: auth!.username, name_color: auth!.name_color, avatar_url: auth!.avatar_url }
-    let res = await supabaseRest(env, "messages", "POST", { ...row, ...denorm })
-    if (!res.ok && (res.status === 400 || res.status === 404)) {
-      console.error(`[chat] denormalized insert rejected (${res.status}) — run docs/migrations/2026-07-chat-denormalize.sql; falling back`)
-      res = await supabaseRest(env, "messages", "POST", row)
-    }
-    if (!res.ok) return upstreamError("message send", res, "Failed to send message")
-    return jsonResponse({ ok: true }, 201)
+    const replyTo = typeof body.reply_to === "string" && body.reply_to ? body.reply_to : null
+    const message = await insertMessage(env, {
+      room_id: roomId, user_id: auth!.id, body: body.body.trim(), reply_to: replyTo,
+      username: auth!.username, name_color: auth!.name_color, avatar_url: auth!.avatar_url,
+    })
+    waitUntil(broadcastMessage(env, message))
+    return jsonResponse({ ok: true, id: message.id }, 201)
   }
 
   if (request.method !== "GET") return jsonResponse({ error: "Method not allowed" }, 405)
 
   const room = url.searchParams.get("room")
   if (!room) return jsonResponse({ error: "room parameter required" }, 400)
-
   const before = url.searchParams.get("before")
   const limit = clampLimit(url.searchParams.get("limit"))
 
-  let filter = `room_id=eq.${encodeURIComponent(room)}&deleted_at=is.null`
-  if (before) filter += `&created_at=lt.${encodeURIComponent(before)}`
-  filter += `&order=created_at.desc&limit=${limit}`
+  const { results: messages } = await db.prepare(
+    "SELECT * FROM messages WHERE room_id = ? AND deleted_at IS NULL" +
+    (before ? " AND created_at < ?" : "") + " ORDER BY created_at DESC LIMIT ?",
+  ).bind(...(before ? [room, before, limit] : [room, limit])).all<Row>()
 
-  const res = await supabaseRest(env, `messages?${filter}&select=*`)
-  if (!res.ok) return upstreamError("messages list", res, "Failed to fetch messages")
-  const messages = await res.json<ChatMessage[]>()
-
-  // Reply snapshots + reactions are independent — fetch them concurrently.
-  const replyIds = [...new Set(messages.map(m => m.reply_to).filter((id): id is string => id !== null))]
-  const msgIds = messages.map(m => m.id)
-
-  const [replyRows, reactRows] = await Promise.all([
-    replyIds.length > 0
-      ? supabaseRest(env, `messages?id=in.(${replyIds.map(encodeURIComponent).join(",")})&select=id,body,username,name_color,avatar_url`)
-          .then((r) => (r.ok ? r.json<ChatMessage[]>() : []))
-          .catch(() => [] as ChatMessage[])
-      : Promise.resolve([] as ChatMessage[]),
-    msgIds.length > 0
-      ? supabaseRest(env, `reactions?message_id=in.(${msgIds.map(encodeURIComponent).join(",")})&select=message_id,emote,user_id`)
-          .then((r) => (r.ok ? r.json<{ message_id: string; emote: string; user_id: string }[]>() : []))
-          .catch(() => [] as { message_id: string; emote: string; user_id: string }[])
+  const replyIds = [...new Set(messages.map((m) => m.reply_to).filter((id): id is string => !!id))]
+  const msgIds = messages.map((m) => m.id)
+  const [replyMap, reactRows] = await Promise.all([
+    replySnapshots(db, replyIds),
+    msgIds.length
+      ? db.prepare(`SELECT message_id, emote, user_id FROM reactions WHERE message_id IN (${marks(msgIds.length)})`)
+          .bind(...msgIds).all<{ message_id: string; emote: string; user_id: string }>().then((r) => r.results)
       : Promise.resolve([] as { message_id: string; emote: string; user_id: string }[]),
   ])
-
-  const replyMap: Record<string, { id: string; body: string; profiles: ChatMessage["profiles"] }> = {}
-  for (const r of replyRows) replyMap[r.id] = { id: r.id, body: r.body, profiles: authorProfile(r) }
 
   const reactionsMap: Record<string, { emote: string; user_id: string }[]> = {}
   for (const r of reactRows) (reactionsMap[r.message_id] ??= []).push({ emote: r.emote, user_id: r.user_id })
 
-  const enriched = messages.map(m => ({
+  const enriched = messages.map((m) => ({
     ...m,
     profiles: authorProfile(m),
     reply_to_message: m.reply_to ? (replyMap[m.reply_to] ?? null) : null,
     reactions: groupReactions(reactionsMap[m.id] ?? [], auth!.id),
   }))
-
   return jsonResponse({ messages: enriched, has_more: messages.length === limit })
 }
 
-export async function handleChatReactions({ request, env, auth }: RouteCtx): Promise<Response> {
+interface NewMessage {
+  room_id: string; user_id: string; body: string; reply_to: string | null
+  username: string | null; name_color: string | null; avatar_url: string | null
+}
+
+/** Write a message (people and bot personas alike); returns the full row. */
+export async function insertMessage(env: Env, m: NewMessage): Promise<Row> {
+  const row = { id: crypto.randomUUID(), created_at: nowIso(), ...m }
+  await siteDb(env).prepare(
+    "INSERT INTO messages (id, room_id, user_id, body, reply_to, created_at, username, name_color, avatar_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  ).bind(row.id, row.room_id, row.user_id, row.body, row.reply_to, row.created_at, row.username, row.name_color, row.avatar_url).run()
+  return { ...row, deleted_at: null, deleted_by: null, profiles: null }
+}
+
+/** Send a new message to the room's live sockets, shaped as the list endpoint shapes it. */
+export async function broadcastMessage(env: Env, m: Row): Promise<void> {
+  const replies = m.reply_to ? await replySnapshots(siteDb(env), [m.reply_to]) : {}
+  await broadcastToRoom(env, m.room_id, {
+    type: "message",
+    message: { ...m, profiles: authorProfile(m), reply_to_message: m.reply_to ? (replies[m.reply_to] ?? null) : null, reactions: [] },
+  })
+}
+
+export async function handleChatReactions({ request, env, auth, waitUntil }: RouteCtx): Promise<Response> {
   let body: { message_id?: string; emote?: string }
   try { body = await request.json() } catch { return jsonResponse({ error: "Invalid request body" }, 400) }
-  if (!body.message_id?.trim() || !body.emote?.trim()) {
-    return jsonResponse({ error: "message_id and emote required" }, 400)
-  }
-  if (body.emote.trim().length > 64) return jsonResponse({ error: "Invalid emote" }, 400)
+  const messageId = body.message_id?.trim(), emote = body.emote?.trim()
+  if (!messageId || !emote) return jsonResponse({ error: "message_id and emote required" }, 400)
+  if (emote.length > 64) return jsonResponse({ error: "Invalid emote" }, 400)
+  const db = siteDb(env)
+  const msg = await db.prepare("SELECT room_id FROM messages WHERE id = ? AND deleted_at IS NULL").bind(messageId).first<{ room_id: string }>()
+  if (!msg) return jsonResponse({ error: "Message not found" }, 404)
 
   if (request.method === "POST") {
-    const res = await supabaseRest(env, "reactions", "POST", {
-      message_id: body.message_id.trim(),
-      user_id: auth!.id,
-      emote: body.emote.trim(),
-    }, "resolution=merge-duplicates,return=representation")
-    if (!res.ok) return upstreamError("reaction add", res, "Failed to add reaction")
+    const res = await db.prepare("INSERT INTO reactions (message_id, user_id, emote) VALUES (?, ?, ?) ON CONFLICT DO NOTHING")
+      .bind(messageId, auth!.id, emote).run()
+    if (res.meta.changes) waitUntil(broadcastToRoom(env, msg.room_id, { type: "reaction", message_id: messageId, emote, user_id: auth!.id, op: "add" }))
     return jsonResponse({ ok: true })
   }
-
   if (request.method === "DELETE") {
-    const res = await supabaseRest(
-      env,
-      `reactions?message_id=eq.${encodeURIComponent(body.message_id.trim())}&user_id=eq.${auth!.id}&emote=eq.${encodeURIComponent(body.emote.trim())}`,
-      "DELETE",
-    )
-    if (!res.ok) return upstreamError("reaction remove", res, "Failed to remove reaction")
+    const res = await db.prepare("DELETE FROM reactions WHERE message_id = ? AND user_id = ? AND emote = ?").bind(messageId, auth!.id, emote).run()
+    if (res.meta.changes) waitUntil(broadcastToRoom(env, msg.room_id, { type: "reaction", message_id: messageId, emote, user_id: auth!.id, op: "remove" }))
     return jsonResponse({ ok: true })
   }
-
   return jsonResponse({ error: "Method not allowed" }, 405)
 }
 
 export async function handleChatSearch({ env, url }: RouteCtx): Promise<Response> {
   const q = url.searchParams.get("q")?.trim()
   if (!q) return jsonResponse({ error: "q parameter required" }, 400)
-
-  const room = url.searchParams.get("room")
-  const user = url.searchParams.get("user")
-  const before = url.searchParams.get("before")
-  const after = url.searchParams.get("after")
-  const limit = clampLimit(url.searchParams.get("limit"))
-
-  const parts: string[] = [
-    `body=ilike.*${encodeURIComponent(q)}*`,
-    "deleted_at=is.null",
-    `order=created_at.desc`,
-    `limit=${limit}`,
-  ]
-  if (room) parts.push(`room_id=eq.${encodeURIComponent(room)}`)
-  if (before) parts.push(`created_at=lt.${encodeURIComponent(before)}`)
-  if (after) parts.push(`created_at=gt.${encodeURIComponent(after)}`)
-
+  const where = ["deleted_at IS NULL", "body LIKE ? ESCAPE '\\'"]
+  const args: (string | number)[] = [`%${q.slice(0, 200).replace(/[\\%_]/g, (c) => `\\${c}`)}%`]
+  const room = url.searchParams.get("room"), user = url.searchParams.get("user")
+  const before = url.searchParams.get("before"), after = url.searchParams.get("after")
+  if (room) { where.push("room_id = ?"); args.push(room) }
+  if (before) { where.push("created_at < ?"); args.push(before) }
+  if (after) { where.push("created_at > ?"); args.push(after) }
   // Author filter hits the denormalized username column directly — no join.
-  if (user) parts.push(`username=eq.${encodeURIComponent(user)}`)
-
-  const res = await supabaseRest(env, `messages?${parts.join("&")}&select=*`)
-  if (!res.ok) return upstreamError("chat search", res, "Search failed")
-  const messages = await res.json<ChatMessage[]>()
-
-  return jsonResponse({ messages: messages.map(m => ({ ...m, profiles: authorProfile(m) })) })
+  if (user) { where.push("username = ? COLLATE NOCASE"); args.push(user) }
+  args.push(clampLimit(url.searchParams.get("limit")))
+  const { results } = await siteDb(env).prepare(`SELECT * FROM messages WHERE ${where.join(" AND ")} ORDER BY created_at DESC LIMIT ?`)
+    .bind(...args).all<Row>()
+  return jsonResponse({ messages: results.map((m) => ({ ...m, profiles: authorProfile(m) })) })
 }
 
 export async function handleChatPins({ env, url }: RouteCtx): Promise<Response> {
   const room = url.searchParams.get("room")
   if (!room) return jsonResponse({ error: "room parameter required" }, 400)
-
-  const res = await supabaseRest(
-    env,
-    `messages?room_id=eq.${encodeURIComponent(room)}&pinned_at=not.is.null&deleted_at=is.null&order=pinned_at.desc&limit=20&select=id,body,pinned_at,pinned_by,username,name_color,avatar_url`
-  )
-  if (!res.ok) return upstreamError("pins list", res, "Failed to fetch pins")
-  const pins = await res.json<ChatMessage[]>()
-  return jsonResponse({ pins: pins.map(p => ({ ...p, profiles: authorProfile(p) })) })
+  const { results } = await siteDb(env).prepare(
+    "SELECT id, body, pinned_at, pinned_by, username, name_color, avatar_url FROM messages " +
+    "WHERE room_id = ? AND pinned_at IS NOT NULL AND deleted_at IS NULL ORDER BY pinned_at DESC LIMIT 20",
+  ).bind(room).all<Row>()
+  return jsonResponse({ pins: results.map((p) => ({ ...p, profiles: authorProfile(p) })) })
 }
 
 export async function handleChatPin({ request, env, url, auth }: RouteCtx): Promise<Response> {
-  const id = url.pathname.split("/")[4] // /api/chat/messages/:id/pin
+  const id = decodeURIComponent(url.pathname.split("/")[4] ?? "") // /api/chat/messages/:id/pin
   if (!id) return jsonResponse({ error: "Message ID required" }, 400)
-
+  const db = siteDb(env)
   if (request.method === "POST") {
-    const res = await supabaseRest(env, `messages?id=eq.${encodeURIComponent(id)}`, "PATCH", {
-      pinned_at: new Date().toISOString(),
-      pinned_by: auth!.id,
-    })
-    if (!res.ok) return upstreamError("pin", res, "Failed to pin message")
+    await db.prepare("UPDATE messages SET pinned_at = ?, pinned_by = ? WHERE id = ?").bind(nowIso(), auth!.id, id).run()
     return jsonResponse({ ok: true })
   }
-
   if (request.method === "DELETE") {
-    const res = await supabaseRest(env, `messages?id=eq.${encodeURIComponent(id)}`, "PATCH", {
-      pinned_at: null,
-      pinned_by: null,
-    })
-    if (!res.ok) return upstreamError("unpin", res, "Failed to unpin message")
+    await db.prepare("UPDATE messages SET pinned_at = NULL, pinned_by = NULL WHERE id = ?").bind(id).run()
     return jsonResponse({ ok: true })
   }
-
   return jsonResponse({ error: "Method not allowed" }, 405)
 }
 
@@ -358,22 +314,15 @@ export async function handleChatClaim({ request, env, auth }: RouteCtx): Promise
   }
 
   // Check if already claimed by someone else
-  const existing = await supabaseRest(env, `chatter_claims?wiki_slug=eq.${encodeURIComponent(slug)}&select=user_id`)
-  if (existing.ok) {
-    const rows = await existing.json<{ user_id: string }[]>()
-    if (rows.length > 0 && rows[0].user_id !== auth!.id) {
-      return jsonResponse({ error: "Page already claimed by another user" }, 409)
-    }
-    if (rows.length > 0 && rows[0].user_id === auth!.id) {
-      return jsonResponse({ ok: true, already_claimed: true })
-    }
-  }
+  const db = siteDb(env)
+  const existing = await db.prepare("SELECT user_id FROM chatter_claims WHERE wiki_slug = ?").bind(slug).first<{ user_id: string }>()
+  if (existing && existing.user_id !== auth!.id) return jsonResponse({ error: "Page already claimed by another user" }, 409)
+  if (existing) return jsonResponse({ ok: true, already_claimed: true })
 
-  const res = await supabaseRest(env, "chatter_claims", "POST", {
-    user_id: auth!.id,
-    wiki_slug: slug,
-  })
-  if (!res.ok) return upstreamError("claim create", res, "Failed to create claim")
+  // The primary key settles a race between two claimants.
+  const res = await db.prepare("INSERT INTO chatter_claims (wiki_slug, user_id, claimed_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING")
+    .bind(slug, auth!.id, nowIso()).run()
+  if (!res.meta.changes) return jsonResponse({ error: "Page already claimed by another user" }, 409)
   return jsonResponse({ ok: true }, 201)
 }
 
@@ -384,20 +333,16 @@ export async function handleUserClaim({ env, match }: RouteCtx): Promise<Respons
   const users = await userRes.json<{ id: string }[]>()
   if (!users.length) return jsonResponse({ error: "User not found" }, 404)
 
-  const claimRes = await supabaseRest(env, `chatter_claims?user_id=eq.${users[0].id}&select=wiki_slug,claimed_at`)
-  if (!claimRes.ok) return upstreamError("claim fetch", claimRes, "Failed to fetch claim")
-  const claims = await claimRes.json<{ wiki_slug: string; claimed_at: string }[]>()
-
-  return jsonResponse({ claim: claims.length > 0 ? claims[0] : null })
+  const claim = await siteDb(env).prepare("SELECT wiki_slug, claimed_at FROM chatter_claims WHERE user_id = ? LIMIT 1")
+    .bind(users[0].id).first<{ wiki_slug: string; claimed_at: string }>()
+  return jsonResponse({ claim: claim ?? null })
 }
 
 export async function handleClaimBySlug({ env, match }: RouteCtx): Promise<Response> {
   const slug = decodeURIComponent(match[1])
-  const claimRes = await supabaseRest(env, `chatter_claims?wiki_slug=eq.${encodeURIComponent(slug)}&select=user_id`)
-  if (!claimRes.ok) return upstreamError("claim by slug", claimRes, "Failed to fetch claim")
-  const claims = await claimRes.json<{ user_id: string }[]>()
-
-  if (!claims.length) return jsonResponse({ claim: null })
+  const found = await siteDb(env).prepare("SELECT user_id FROM chatter_claims WHERE wiki_slug = ?").bind(slug).first<{ user_id: string }>()
+  if (!found) return jsonResponse({ claim: null })
+  const claims = [found]
 
   const profileRes = await supabaseRest(env, `profiles?id=eq.${claims[0].user_id}&select=username,avatar_url`)
   if (!profileRes.ok) return jsonResponse({ claim: null })
@@ -448,17 +393,14 @@ export async function handleChatBan({ request, env, url, auth }: RouteCtx): Prom
     // Permanent ban: hard-delete messages + anonymise profile. Each step is
     // checked — a half-applied purge must be visible, not reported as ok.
     if (body.type === "permanent") {
-      const steps: [string, Promise<Response>][] = [
-        ["purge messages", supabaseRest(env, `messages?user_id=eq.${targetId}`, "DELETE")],
-        ["purge reactions", supabaseRest(env, `reactions?user_id=eq.${targetId}`, "DELETE")],
-        ["anonymise profile", supabaseRest(env, `profiles?id=eq.${targetId}`, "PATCH", {
-          username: null, avatar_url: null, bio: null, name_color: null,
-        })],
-      ]
-      for (const [label, p] of steps) {
-        const r = await p
-        if (!r.ok) return upstreamError(`permanent ban: ${label}`, r, `User banned, but ${label} failed — retry`)
-      }
+      const db = siteDb(env)
+      await db.batch([
+        db.prepare("DELETE FROM reactions WHERE user_id = ?").bind(targetId),
+        db.prepare("DELETE FROM reactions WHERE message_id IN (SELECT id FROM messages WHERE user_id = ?)").bind(targetId),
+        db.prepare("DELETE FROM messages WHERE user_id = ?").bind(targetId),
+      ])
+      const r = await supabaseRest(env, `profiles?id=eq.${targetId}`, "PATCH", { username: null, avatar_url: null, bio: null, name_color: null })
+      if (!r.ok) return upstreamError("permanent ban: anonymise profile", r, "User banned and purged, but anonymising the profile failed — retry")
     }
 
     return jsonResponse({ ok: true })
@@ -518,14 +460,19 @@ export async function handleGifSearch({ env, url }: RouteCtx): Promise<Response>
   }
 }
 
-/** Propagate a profile identity change onto denormalized message rows.
- * Failure is logged, never fatal (pre-migration the columns don't exist). */
+/** Propagate a profile identity change onto denormalized message rows. Logged, never fatal.
+ * The column names come from the fixed set above, never from the request. */
 export async function propagateIdentityChange(env: Env, auth: AuthUser, updates: { username?: string; name_color?: string | null; avatar_url?: string | null }) {
   const denorm: Record<string, string | null> = {}
   if (updates.username !== undefined) denorm.username = updates.username
   if (updates.name_color !== undefined) denorm.name_color = updates.name_color
   if (updates.avatar_url !== undefined) denorm.avatar_url = updates.avatar_url
   if (Object.keys(denorm).length === 0) return
-  const res = await supabaseRest(env, `messages?user_id=eq.${auth.id}`, "PATCH", denorm)
-  if (!res.ok) console.error(`[chat] identity propagation failed (${res.status}) — pre-migration? see docs/migrations/`)
+  const cols = Object.keys(denorm)
+  try {
+    await siteDb(env).prepare(`UPDATE messages SET ${cols.map((c) => `${c} = ?`).join(", ")} WHERE user_id = ?`)
+      .bind(...cols.map((c) => denorm[c]), auth.id).run()
+  } catch (e) {
+    console.error("[chat] identity propagation failed:", e)
+  }
 }

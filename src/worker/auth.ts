@@ -1,5 +1,5 @@
 import { RouteCtx } from "./types"
-import { jsonResponse, supabaseRest, upstreamError, invalidateAuthCache } from "./lib"
+import { jsonResponse, supabaseRest, upstreamError, invalidateAuthCache, siteDb } from "./lib"
 import { getContentIndex, chatterImageForUsername } from "./meta"
 import { propagateIdentityChange } from "./chat"
 
@@ -12,10 +12,9 @@ export async function handleAuthMe({ env, auth }: RouteCtx): Promise<Response> {
       return chatterImageForUsername(index, auth!.username)
     })(),
     (async () => {
-      const claimRes = await supabaseRest(env, `chatter_claims?user_id=eq.${auth!.id}&select=wiki_slug`)
-      if (!claimRes.ok) return null
-      const claims = await claimRes.json<{ wiki_slug: string }[]>()
-      return claims.length > 0 ? claims[0].wiki_slug : null
+      const claim = await siteDb(env).prepare("SELECT wiki_slug FROM chatter_claims WHERE user_id = ? LIMIT 1")
+        .bind(auth!.id).first<{ wiki_slug: string }>()
+      return claim?.wiki_slug ?? null
     })(),
   ])
 
@@ -58,7 +57,7 @@ export async function handleUpdateProfile({ request, env, auth, waitUntil }: Rou
     // arbitrary URL here is copied onto every chat message, making every reader's
     // browser fetch an attacker-chosen host.
     const avatar = body.avatar_url.trim()
-    if (avatar && !avatar.startsWith(`${env.SUPABASE_URL}/storage/v1/object/public/avatars/`)) {
+    if (avatar && !isAvatarUrl(avatar)) {
       return jsonResponse({ error: "avatar_url must be an uploaded avatar" }, 400)
     }
     updates.avatar_url = avatar ? avatar.slice(0, 500) : (null as any)
@@ -113,23 +112,15 @@ export async function handleAvatarUpload({ request, env, auth, waitUntil }: Rout
   const ext = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "gif"
   const path = `${auth!.id}.${ext}`
 
-  // Upload to Supabase Storage (upsert — replaces any previous avatar)
-  const uploadRes = await fetch(
-    `${env.SUPABASE_URL}/storage/v1/object/avatars/${path}`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_KEY}`,
-        apikey: env.SUPABASE_SERVICE_KEY,
-        "Content-Type": mimeType,
-        "x-upsert": "true",
-      },
-      body,
-    }
-  )
-  if (!uploadRes.ok) return upstreamError("avatar upload", uploadRes, "Failed to upload image")
+  // Into the private media bucket; served by handleAvatar. One avatar per user:
+  // drop any earlier one in another format.
+  const media = env.MEDIA
+  if (!media) return jsonResponse({ error: "Avatar storage is not configured" }, 503)
+  await media.put(`avatars/${path}`, body, { httpMetadata: { contentType: mimeType } })
+  await Promise.all(AVATAR_EXTS.filter((e) => e !== ext).map((e) => media.delete(`avatars/${auth!.id}.${e}`)))
 
-  const publicUrl = `${env.SUPABASE_URL}/storage/v1/object/public/avatars/${path}`
+  // Versioned, so the long cache on the image never shows a stale face.
+  const publicUrl = `/api/avatar/${path}?v=${Date.now().toString(36)}`
 
   const patchRes = await supabaseRest(env, `profiles?id=eq.${auth!.id}`, "PATCH", { avatar_url: publicUrl })
   if (!patchRes.ok) return upstreamError("avatar persist", patchRes, "Failed to save avatar URL")
@@ -138,6 +129,31 @@ export async function handleAvatarUpload({ request, env, auth, waitUntil }: Rout
   waitUntil(propagateIdentityChange(env, auth!, { avatar_url: publicUrl }))
 
   return jsonResponse({ ok: true, avatar_url: publicUrl })
+}
+
+const AVATAR_EXTS = ["jpg", "png", "webp", "gif"]
+const AVATAR_TYPES: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif" }
+const AVATAR_PATH = /^\/api\/avatar\/([0-9a-f-]{36})\.(jpg|png|webp|gif)(\?v=[0-9a-z]{1,12})?$/
+
+/** Only avatars this site stored, so a profile can't point every reader's browser at another host. */
+export function isAvatarUrl(url: string): boolean {
+  return AVATAR_PATH.test(url)
+}
+
+/** GET /api/avatar/<user-id>.<ext>: public, immutable per ?v=, never sniffed into anything but an image. */
+export async function handleAvatar({ env, match }: RouteCtx): Promise<Response> {
+  const [, id, ext] = match
+  const obj = await env.MEDIA?.get(`avatars/${id}.${ext}`)
+  if (!obj) return new Response("Not found", { status: 404 })
+  return new Response(obj.body, {
+    headers: {
+      "Content-Type": AVATAR_TYPES[ext],
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "X-Content-Type-Options": "nosniff",
+      "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+      ETag: obj.httpEtag,
+    },
+  })
 }
 
 export async function handleRegister({ request, env }: RouteCtx): Promise<Response> {

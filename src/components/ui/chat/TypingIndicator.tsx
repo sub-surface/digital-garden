@@ -1,94 +1,34 @@
 import { useEffect, useRef, useState } from "react"
-import { supabaseNow } from "@/lib/supabase"
-import type { RealtimeChannel } from "@supabase/supabase-js"
+import { sendTyping, subscribeRoom } from "@/lib/chatLive"
 import styles from "./Chat.module.scss"
 
-// Module-level channel map so TypingIndicator and useTypingBroadcast share the
-// same Supabase Realtime Presence channel instance per room.
-const channelMap = new Map<string, RealtimeChannel>()
-// Reference counts so we only remove when the last consumer unmounts.
-const refCounts = new Map<string, number>()
-
-function getOrCreateChannel(roomId: string): RealtimeChannel | null {
-  const supabase = supabaseNow()
-  if (!supabase) return null
-  if (!channelMap.has(roomId)) {
-    const ch = supabase.channel(`typing:${roomId}`)
-    channelMap.set(roomId, ch)
-    refCounts.set(roomId, 0)
-  }
-  return channelMap.get(roomId)!
-}
-
-function retainChannel(roomId: string) {
-  refCounts.set(roomId, (refCounts.get(roomId) ?? 0) + 1)
-}
-
-function releaseChannel(roomId: string) {
-  const count = (refCounts.get(roomId) ?? 1) - 1
-  refCounts.set(roomId, count)
-  const supabase = supabaseNow()
-  if (count <= 0 && supabase) {
-    const ch = channelMap.get(roomId)
-    if (ch) supabase.removeChannel(ch)
-    channelMap.delete(roomId)
-    refCounts.delete(roomId)
-  }
-}
-
-// ── Hook ─────────────────────────────────────────────────────────────────────
-
 /**
- * Returns a stable function to call when the local user starts or stops typing.
- * Shares the Presence channel with TypingIndicator for the same roomId.
+ * Returns a stable function to call when the local user starts or stops
+ * typing. It rides the room's live socket (lib/chatLive), shared with the
+ * message list and the TypingIndicator.
  */
-export function useTypingBroadcast(
-  roomId: string,
-  currentUserId: string
-): (typing: boolean) => void {
-  // We don't subscribe here — TypingIndicator owns the subscription lifecycle.
-  // If used standalone (no TypingIndicator mounted), we create the channel but
-  // don't subscribe; track() will silently no-op on an unsubscribed channel.
-  const channelRef = useRef<RealtimeChannel | null>(null)
-
-  useEffect(() => {
-    // Chat runs only for a signed-in reader, so auth (and the client) is awake.
-    const supabase = supabaseNow()
-    if (!supabase) return
-    const ch = getOrCreateChannel(roomId)
-    channelRef.current = ch
-    retainChannel(roomId)
-    return () => {
-      channelRef.current = null
-      releaseChannel(roomId)
-    }
-  }, [roomId])
-
-  // Keep a ref to the latest userId so the stable callback always uses it.
-  const userIdRef = useRef(currentUserId)
-  useEffect(() => {
-    userIdRef.current = currentUserId
-  }, [currentUserId])
-
-  // Stable function identity across renders.
-  const broadcast = useRef((typing: boolean) => {
-    channelRef.current?.track({ user_id: userIdRef.current, typing })
+export function useTypingBroadcast(roomId: string, _currentUserId: string): (typing: boolean) => void {
+  const roomRef = useRef(roomId)
+  useEffect(() => { roomRef.current = roomId }, [roomId])
+  // A repeat of the same state goes out at most every 3 s (the far side lets it
+  // lapse after STALE_MS); a change goes out at once.
+  const last = useRef({ typing: false, at: 0 })
+  const send = useRef((typing: boolean) => {
+    const now = Date.now()
+    if (typing === last.current.typing && now - last.current.at < 3000) return
+    last.current = { typing, at: now }
+    sendTyping(roomRef.current, typing)
   })
-
-  return broadcast.current
+  return send.current
 }
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 interface Props {
   roomId: string
   currentUserId: string
 }
 
-interface PresenceEntry {
-  user_id: string
-  typing: boolean
-}
+/** A typing signal not renewed within this long has lapsed (a dropped tab sends no "stopped"). */
+const STALE_MS = 8000
 
 function buildLabel(names: string[]): string {
   if (names.length === 0) return ""
@@ -103,41 +43,30 @@ function buildLabel(names: string[]): string {
 }
 
 export function TypingIndicator({ roomId, currentUserId }: Props) {
-  const [typingNames, setTypingNames] = useState<string[]>([])
+  const [typing, setTyping] = useState<Map<string, { name: string; at: number }>>(new Map())
 
   useEffect(() => {
-    // Chat runs only for a signed-in reader, so auth (and the client) is awake.
-    const supabase = supabaseNow()
-    if (!supabase) return
-
-    const ch = getOrCreateChannel(roomId)!
-    retainChannel(roomId)
-
-    ch.on("presence", { event: "sync" }, () => {
-      const state = ch.presenceState<PresenceEntry>()
-      const names: string[] = []
-      for (const entries of Object.values(state)) {
-        for (const entry of entries) {
-          if (entry.typing && entry.user_id !== currentUserId) {
-            names.push(entry.user_id)
-          }
-        }
-      }
-      setTypingNames(names)
+    setTyping(new Map())
+    const off = subscribeRoom(roomId, (e) => {
+      if (e.type !== "typing" || e.user_id === currentUserId) return
+      setTyping((prev) => {
+        const next = new Map(prev)
+        if (e.typing) next.set(e.user_id, { name: e.username ?? "someone", at: Date.now() })
+        else next.delete(e.user_id)
+        return next
+      })
     })
-
-    ch.subscribe(async (status) => {
-      if (status === "SUBSCRIBED") {
-        await ch.track({ user_id: currentUserId, typing: false })
-      }
-    })
-
-    return () => {
-      releaseChannel(roomId)
-    }
+    const sweep = setInterval(() => {
+      setTyping((prev) => {
+        const now = Date.now()
+        if (![...prev.values()].some((v) => now - v.at > STALE_MS)) return prev
+        return new Map([...prev].filter(([, v]) => now - v.at <= STALE_MS))
+      })
+    }, 2000)
+    return () => { off(); clearInterval(sweep) }
   }, [roomId, currentUserId])
 
-  const label = buildLabel(typingNames)
+  const label = buildLabel([...typing.values()].map((v) => v.name))
 
   return (
     <div className={styles.typingIndicator}>

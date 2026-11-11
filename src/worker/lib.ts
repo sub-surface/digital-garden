@@ -4,7 +4,7 @@ import { hashApiKey } from "./keys"
 // ─── CORS ────────────────────────────────────────────────────────────────────
 // Auth is Bearer-header based (no cookies), so CORS is about not handing API
 // responses to arbitrary origins — reflect only our own hosts + local dev.
-const ALLOWED_ORIGINS = new Set([
+export const ALLOWED_ORIGINS = new Set([
   "https://subsurfaces.net",
   "https://www.subsurfaces.net",
   "https://wiki.subsurfaces.net",
@@ -103,6 +103,14 @@ export function ghApi(env: Env) {
       body: payload ? JSON.stringify(payload) : undefined,
     })
 }
+
+/** The site database (D1). Required: wrangler.toml binds it in every deploy. */
+export function siteDb(env: Env): D1Database {
+  if (!env.DB) throw new Error("D1 binding DB is not configured (wrangler.toml)")
+  return env.DB
+}
+
+export const nowIso = () => new Date().toISOString()
 
 export function supabaseRest(env: Env, path: string, method = "GET", body?: unknown, prefer?: string) {
   return fetch(`${env.SUPABASE_URL}/rest/v1/${path}`, {
@@ -212,22 +220,21 @@ export async function verifyAuth(
   // Try as API key — strip sk_ prefix if present
   const apiKeyRaw = token.startsWith("sk_") ? token.slice(3) : token
   const keyHash = await hashApiKey(apiKeyRaw)
-  const keyRes = await supabaseRest(env, `api_keys?key_hash=eq.${encodeURIComponent(keyHash)}&revoked_at=is.null&select=user_id`)
-  if (!keyRes.ok) return null
-  const keyRows = await keyRes.json<{ user_id: string }[]>()
-  if (!keyRows[0]) {
+  const keyRow = await siteDb(env)
+    .prepare("SELECT user_id FROM api_keys WHERE key_hash = ? AND revoked_at IS NULL")
+    .bind(keyHash).first<{ user_id: string }>()
+  if (!keyRow) {
     cacheSet(token, null)
     return null
   }
 
   // last_used_at bookkeeping — background work, must be registered with
   // waitUntil or the runtime may cancel it after the response is sent.
-  const touch = supabaseRest(env, `api_keys?key_hash=eq.${encodeURIComponent(keyHash)}`, "PATCH", {
-    last_used_at: new Date().toISOString(),
-  }).catch((e) => console.error("[auth] api-key last_used_at update failed:", e))
+  const touch = siteDb(env).prepare("UPDATE api_keys SET last_used_at = ? WHERE key_hash = ?")
+    .bind(nowIso(), keyHash).run().catch((e) => console.error("[auth] api-key last_used_at update failed:", e))
   if (waitUntil) waitUntil(touch)
 
-  const authUser = await buildAuthUser(env, keyRows[0].user_id, null)
+  const authUser = await buildAuthUser(env, keyRow.user_id, null)
   if (authUser) cacheSet(token, authUser)
   return authUser
 }

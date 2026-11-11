@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react"
-import { supabaseNow } from "@/lib/supabase"
+import { subscribeRoom } from "@/lib/chatLive"
 import { apiGet } from "@/lib/api"
 import type { ChatMessage } from "@/types/chat"
 
@@ -69,56 +69,44 @@ export function useChatMessages({
     fetchMessages()
   }, [fetchMessages])
 
-  // Supabase Realtime subscription
+  // Live updates for this room (one shared socket; see lib/chatLive).
   useEffect(() => {
-    // Chat runs only for a signed-in reader, so auth (and the client) is awake.
-    const supabase = supabaseNow()
-    if (!supabase) return
-
-    const channel = supabase
-      .channel(`room:${roomId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `room_id=eq.${roomId}`,
-        },
-        async (payload) => {
-          const newMsg = payload.new as ChatMessage & { username?: string | null; name_color?: string | null; avatar_url?: string | null }
-          let enriched: ChatMessage
-          if (newMsg.username) {
-            // Denormalized identity rides the broadcast payload (including bot personas).
-            enriched = {
-              ...newMsg,
-              profiles: { username: newMsg.username, avatar_url: newMsg.avatar_url ?? null, name_color: newMsg.name_color ?? null },
-              reactions: [],
+    return subscribeRoom(roomId, (e) => {
+      switch (e.type) {
+        case "message":
+          setMessages((prev) => (prev.some((m) => m.id === e.message.id) ? prev : [...prev, e.message]))
+          break
+        case "edit":
+          setMessages((prev) => prev.map((m) => (m.id === e.id ? { ...m, body: e.body, edited_at: e.edited_at } : m)))
+          break
+        case "delete":
+          setMessages((prev) => prev.filter((m) => m.id !== e.id))
+          break
+        case "reaction":
+          // Our own reactions are applied locally when we make them.
+          if (e.user_id === currentUserId) break
+          setMessages((prev) => prev.map((m) => {
+            if (m.id !== e.message_id) return m
+            const list = [...(m.reactions ?? [])]
+            const i = list.findIndex((r) => r.emote === e.emote)
+            if (e.op === "add") {
+              if (i >= 0) list[i] = { ...list[i], count: list[i].count + 1 }
+              else list.push({ emote: e.emote, count: 1, reacted: false })
+            } else if (i >= 0) {
+              const count = list[i].count - 1
+              if (count > 0) list[i] = { ...list[i], count }
+              else list.splice(i, 1)
             }
-          } else if (newMsg.user_id === currentUserId) {
-            enriched = { ...newMsg, profiles: { username: currentUsername ?? "unknown", avatar_url: currentAvatarUrl }, reactions: [] }
-          } else {
-            // Pre-migration row: fetch just this message (not the whole list).
-            try {
-              const data = await apiGet<{ message: ChatMessage }>(`/api/chat/messages/${newMsg.id}`, { token: accessToken })
-              enriched = data.message ?? { ...newMsg, profiles: null, reactions: [] }
-            } catch {
-              enriched = { ...newMsg, profiles: null, reactions: [] }
-            }
-          }
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === enriched.id)) return prev
-            return [...prev, enriched]
-          })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase?.removeChannel(channel)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId])
+            return { ...m, reactions: list }
+          }))
+          break
+        case "reconnected":
+          // Whatever arrived while the socket was down.
+          void fetchMessages()
+          break
+      }
+    })
+  }, [roomId, currentUserId, fetchMessages])
 
   return {
     messages,

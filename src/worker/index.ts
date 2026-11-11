@@ -1,7 +1,7 @@
 import { Env, RouteCtx } from "./types"
 import { corsHeaders, applyApiHeaders, jsonResponse, verifyAuth } from "./lib"
 import { getContentIndex, getOgManifest, slugFromPathname, resolveSlugCaseInsensitive, injectMetaTags, getPrerenderFragment, injectPrerender } from "./meta"
-import { handleAuthMe, handleUpdateProfile, handleAvatarUpload, handleRegister } from "./auth"
+import { handleAuthMe, handleUpdateProfile, handleAvatarUpload, handleAvatar, handleRegister } from "./auth"
 import { handleSubmit, handleEdit, handleNew, handleBookmarks, handleLockStatus, handleUserProfile } from "./wiki"
 import {
   handleChatRooms, handleChatMessages, handleChatMessageById, handleChatPins, handleChatPin,
@@ -14,6 +14,7 @@ import { handleApiKeys } from "./keys"
 import { handleAdmin } from "./admin"
 import { addSecurityHeaders } from "./security"
 import { handleMusicAsset } from "./media"
+import { handleChatLive } from "./chatLive"
 import { handleRestores } from "./restores"
 import { handleWidgetNews, handleWidgetWeather } from "./widgets"
 import {
@@ -72,6 +73,7 @@ const routes: Route[] = [
   { method: "GET", pattern: /^\/api\/auth\/me$/, auth: "user", handler: handleAuthMe },
   { method: "PUT", pattern: /^\/api\/auth\/profile$/, auth: "user", handler: handleUpdateProfile },
   { method: "POST", pattern: /^\/api\/profile\/avatar$/, auth: "user", handler: handleAvatarUpload },
+  { method: "GET", pattern: /^\/api\/avatar\/([0-9a-f-]{36})\.(jpg|png|webp|gif)$/, handler: handleAvatar },
   { method: "POST", pattern: /^\/api\/auth\/register$/, handler: handleRegister },
 
   { method: "GET", pattern: /^\/api\/users\/([^/]+)\/claim$/, handler: handleUserClaim },
@@ -157,6 +159,17 @@ export default {
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(origin) })
+    }
+
+    // A WebSocket upgrade must reach the client as-is: applyApiHeaders would
+    // rebuild the 101 and drop the socket.
+    if (url.pathname === "/api/chat/live") {
+      try {
+        return await handleChatLive(request, env, url)
+      } catch (err) {
+        console.error("[chat] live upgrade threw:", err)
+        return jsonResponse({ error: "Internal error" }, 500)
+      }
     }
 
     if (url.pathname.startsWith("/api/")) {

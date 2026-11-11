@@ -1,7 +1,7 @@
 -- The /write desk (src/worker/write.ts): drafts of daily notes and their history.
--- Cloudflare D1, binding DESK_DB. Apply with:
---   npx wrangler d1 migrations apply subsurfaces-desk --remote
--- (and --local for `npm run dev`). Images live in the R2 bucket bound as DESK_MEDIA.
+-- Cloudflare D1, binding DB. Apply with:
+--   npx wrangler d1 migrations apply subsurfaces --remote
+-- (and --local for `npm run dev`). Images live in the R2 bucket bound as MEDIA (keys desk/<iso>/<name>).
 
 CREATE TABLE IF NOT EXISTS daily_drafts (
   iso           TEXT PRIMARY KEY,               -- YYYY-MM-DD

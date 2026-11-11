@@ -118,7 +118,7 @@ Dev dashboard: `/__dev` (dev mode only).
 | `/privacy` | PrivacyPage (lazy) | Privacy policy |
 | `/edit/$` | WikiEditPage (lazy) | Edit wiki article |
 | `/terminal` | TerminalPage (lazy) | Shared procedural terminal |
-| `/write`, `/write/$date` | WritePage (lazy) | Owner's daily-note desk; admin only (API-enforced). Needs the `DESK_DB` (D1) + `DESK_MEDIA` (R2) bindings in wrangler.toml, else `/api/write` is a 503 |
+| `/write`, `/write/$date` | WritePage (lazy) | Owner's daily-note desk; admin only (API-enforced). Uses the site `DB` (D1) + `MEDIA` (R2) bindings; without them `/api/write` is a 503 |
 | `/boot` | Redirect → `/terminal` | Compatibility URL for the retired BootPage |
 | `$` (catch-all) | NoteRenderer / ChatPage | Renders note content or ChatPage if in ChatShell |
 
@@ -186,7 +186,9 @@ Detection: `useShell()` hook in `src/hooks/useShell.ts` returns `"main" | "wiki"
 
 Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { request, env, url, match, auth, waitUntil }`.
 
-**Chat identity is denormalized:** `messages` carries `username`/`name_color`/`avatar_url`, written at POST time and propagated on profile change (see `docs/migrations/2026-07-chat-denormalize.sql`). Realtime broadcasts are self-describing — clients must not re-fetch message lists to enrich them.
+**Where data lives (docs/backend.md):** Supabase keeps **auth and `profiles`** only. Everything else is Cloudflare: the D1 database `subsurfaces` (binding `DB`, `siteDb(env)` in `lib.ts`; schema in `docs/migrations/d1/`, applied with `npx wrangler d1 migrations apply subsurfaces --remote`) holds the desk, wiki bookkeeping (`page_locks`, `edit_log`, `chatter_claims`), `bookmarks`, `api_keys`, `os_restores` and chat (`rooms`, `messages`, `reactions`). The private R2 bucket `subsurfaces-media` (binding `MEDIA`) holds desk images (`desk/`, admin-only) and avatars (`avatars/`, served by `GET /api/avatar/<id>.<ext>`; `isAvatarUrl()` is the only accepted `avatar_url` shape).
+
+**Live chat is a Durable Object per room** (`ChatRoom` in `src/worker/chatLive.ts`, binding `CHAT_ROOMS`): it holds hibernating WebSockets and stores nothing. Handlers write D1, then `broadcastToRoom()` / `broadcastMessage()` (`message`, `edit`, `delete`, `reaction` events); clients send only `typing`. The socket is `/api/chat/live?room=`, routed *before* the dispatcher (a 101 can't be re-wrapped by `applyApiHeaders`), authenticated by the access token in the sub-protocol list and an Origin check. The client side is `src/lib/chatLive.ts` (one shared socket per room, backoff reconnect, a `reconnected` event that refetches). **Chat identity is denormalized:** `messages` carries `username`/`name_color`/`avatar_url`, written at send time and rewritten by `propagateIdentityChange()`; broadcasts are self-describing, so clients never re-fetch to enrich them.
 
 ---
 
@@ -236,7 +238,7 @@ Handler signature: `(ctx: RouteCtx) => Promise<Response>` where `RouteCtx = { re
 | New API endpoint | Handler `(ctx: RouteCtx) => Response` in the right `src/worker/*.ts` module + one row in the route table in `src/worker/index.ts` (declare `auth` there) |
 | Calling an API from the client | `apiGet`/`apiPost`/… from `src/lib/api.ts` — never a hand-rolled `fetch` (gotcha #19) |
 | New persisted user setting | Add to store + `PERSISTED_KEYS` in `src/store/index.ts` |
-| New DB schema change | SQL file in `docs/migrations/`, run via Supabase SQL Editor (REST can't do DDL) |
+| New DB schema change | Next numbered file in `docs/migrations/d1/`, then `npx wrangler d1 migrations apply subsurfaces --remote` (and `--local` for dev). Only `profiles` changes go to Supabase (SQL Editor) |
 | New music track | Upload to SoundCloud, run `npm run sync:music`, commit `public/music.json` (see `docs/music-workflow.md`) |
 
 ---

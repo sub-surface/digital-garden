@@ -2,9 +2,9 @@
  * /api/write/* — the owner's writing desk for daily notes (the /write page).
  *
  * Writing and publishing are separate on purpose. Every push to master is a
- * Cloudflare deploy, so typing goes to a draft in D1 (binding DESK_DB, schema
+ * Cloudflare deploy, so typing goes to a draft in D1 (binding DB, schema
  * docs/migrations/d1/) with snapshots in `daily_revisions`, images wait in a
- * private R2 bucket (DESK_MEDIA), and only "Commit" touches GitHub: ONE commit
+ * private R2 bucket (MEDIA, under desk/), and only "Commit" touches GitHub: ONE commit
  * holding the note, the images it uses, its OG card + plate (drawn in the
  * browser, because CF never runs PROCESS_OG) and the updated card manifest.
  *
@@ -63,14 +63,14 @@ const now = () => new Date().toISOString()
 // ── storage ──
 class Unconfigured extends Error {}
 function db(ctx: RouteCtx): D1Database {
-  if (!ctx.env.DESK_DB) throw new Unconfigured("DESK_DB")
-  return ctx.env.DESK_DB
+  if (!ctx.env.DB) throw new Unconfigured("DB")
+  return ctx.env.DB
 }
 function bucket(ctx: RouteCtx): R2Bucket {
-  if (!ctx.env.DESK_MEDIA) throw new Unconfigured("DESK_MEDIA")
-  return ctx.env.DESK_MEDIA
+  if (!ctx.env.MEDIA) throw new Unconfigured("MEDIA")
+  return ctx.env.MEDIA
 }
-const mediaKey = (iso: string, name: string) => `${iso}/${name}`
+const mediaKey = (iso: string, name: string) => `desk/${iso}/${name}`
 
 async function getDraft(ctx: RouteCtx, iso: string): Promise<DraftRow | null> {
   const row = await db(ctx).prepare("SELECT * FROM daily_drafts WHERE iso = ?").bind(iso).first<Omit<DraftRow, "media"> & { media: string }>()

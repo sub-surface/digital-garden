@@ -4,6 +4,14 @@ An assessment written 2026-11-11, after the `/write` desk moved to D1 + R2.
 Decision record and plan, not a spec. Check limits against the Cloudflare
 dashboard before relying on them; the numbers below are from memory.
 
+**Status (2026-11-11): phases 1 and 2 are done.** One D1 database
+(`subsurfaces`) and one private R2 bucket (`subsurfaces-media`) hold
+everything but identity; chat's live delivery is the `ChatRoom` Durable
+Object. Supabase is down to auth and `profiles`. Row counts moved: 2
+edit-log rows, 1 claim, 1 avatar, 3 rooms, 112 messages, 4 reactions.
+An anon-key probe beforehand read zero rows from every table, so RLS was
+holding all along. Phase 3 (own auth) is still optional and still last.
+
 ## What the backend actually is
 
 Almost all of it is already *the Worker*. Every Supabase table except one is

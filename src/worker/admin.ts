@@ -1,5 +1,5 @@
 import { RouteCtx } from "./types"
-import { jsonResponse, supabaseRest, upstreamError, readJson, isUuid, invalidateAuthCache } from "./lib"
+import { jsonResponse, supabaseRest, upstreamError, readJson, isUuid, invalidateAuthCache, siteDb, nowIso } from "./lib"
 
 const ROLES = new Set(["pending", "editor", "admin", "none"])
 
@@ -41,9 +41,9 @@ export async function handleAdmin({ request, env, url, auth }: RouteCtx): Promis
 
   // GET /api/admin/log
   if (pathname === "/api/admin/log" && request.method === "GET") {
-    const res = await supabaseRest(env, "edit_log?select=id,slug,pr_url,created_at,user_id&order=created_at.desc&limit=50")
-    if (!res.ok) return upstreamError("admin log", res, "Failed to fetch log")
-    const entries = await res.json<{ user_id: string | null }[]>()
+    const { results: entries } = await siteDb(env)
+      .prepare("SELECT id, slug, pr_url, created_at, user_id FROM edit_log ORDER BY created_at DESC LIMIT 50")
+      .all<{ id: number; slug: string; pr_url: string | null; created_at: string; user_id: string | null }>()
     // edit_log stores only user_id; the dashboard's "who" column needs the
     // editor's email, which used to render as "—" for every row.
     const ids = [...new Set(entries.map((e) => e.user_id).filter((id): id is string => !!id && isUuid(id)))]
@@ -58,9 +58,9 @@ export async function handleAdmin({ request, env, url, auth }: RouteCtx): Promis
 
   // GET /api/admin/locks
   if (pathname === "/api/admin/locks" && request.method === "GET") {
-    const res = await supabaseRest(env, "page_locks?select=slug,reason,locked_at,locked_by&order=locked_at.desc")
-    if (!res.ok) return upstreamError("admin locks", res, "Failed to fetch locks")
-    return jsonResponse(await res.json())
+    const { results } = await siteDb(env)
+      .prepare("SELECT slug, reason, locked_at, locked_by FROM page_locks ORDER BY locked_at DESC").all()
+    return jsonResponse(results)
   }
 
   // POST /api/admin/lock
@@ -68,12 +68,10 @@ export async function handleAdmin({ request, env, url, auth }: RouteCtx): Promis
     const body = await readJson<{ slug: string; reason: string }>(request)
     if (body instanceof Response) return body
     if (typeof body.slug !== "string" || !body.slug.trim()) return jsonResponse({ error: "Slug required" }, 400)
-    const res = await supabaseRest(env, "page_locks", "POST", {
-      slug: body.slug.trim(),
-      reason: typeof body.reason === "string" ? body.reason.slice(0, 500) : null,
-      locked_by: auth!.id,
-    })
-    if (!res.ok) return upstreamError("admin lock", res, "Failed to lock page")
+    await siteDb(env).prepare(
+      "INSERT INTO page_locks (slug, reason, locked_by, locked_at) VALUES (?, ?, ?, ?) " +
+      "ON CONFLICT (slug) DO UPDATE SET reason = excluded.reason, locked_by = excluded.locked_by, locked_at = excluded.locked_at",
+    ).bind(body.slug.trim().slice(0, 300), typeof body.reason === "string" ? body.reason.slice(0, 500) : null, auth!.id, nowIso()).run()
     return jsonResponse({ ok: true })
   }
 
@@ -82,8 +80,7 @@ export async function handleAdmin({ request, env, url, auth }: RouteCtx): Promis
     const body = await readJson<{ slug: string }>(request)
     if (body instanceof Response) return body
     if (typeof body.slug !== "string" || !body.slug.trim()) return jsonResponse({ error: "Slug required" }, 400)
-    const res = await supabaseRest(env, `page_locks?slug=eq.${encodeURIComponent(body.slug.trim())}`, "DELETE")
-    if (!res.ok) return upstreamError("admin unlock", res, "Failed to unlock page")
+    await siteDb(env).prepare("DELETE FROM page_locks WHERE slug = ?").bind(body.slug.trim()).run()
     return jsonResponse({ ok: true })
   }
 

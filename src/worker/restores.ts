@@ -1,18 +1,8 @@
 import type { RouteCtx } from "./types"
-import { jsonResponse, supabaseRest, upstreamError } from "./lib"
+import { jsonResponse, nowIso, siteDb } from "./lib"
 
 interface RestoreBody {
   slug?: unknown
-}
-
-async function restoreTableMissing(response: Response): Promise<boolean> {
-  if (response.status !== 400 && response.status !== 404) return false
-  try {
-    const detail = await response.clone().text()
-    return /PGRST205|42P01|relation[^\n]*os_restores[^\n]*does not exist|could not find[^\n]*os_restores/i.test(detail)
-  } catch {
-    return false
-  }
 }
 
 export function validRestoreSlug(value: unknown): value is string {
@@ -26,20 +16,20 @@ export function validRestoreSlug(value: unknown): value is string {
  */
 export async function handleRestores({ request, env, auth }: RouteCtx): Promise<Response> {
   if (!auth) return jsonResponse({ error: "Unauthorized" }, 401)
+  // Without the site database (a bare local Worker) recovery is a capability
+  // state, not a crash: the Recycle Bin still works locally.
+  if (!env.DB) {
+    return request.method === "GET"
+      ? jsonResponse({ restores: [], available: false })
+      : jsonResponse({ error: "Cross-surface recovery is not installed on this server" }, 503)
+  }
+  const db = siteDb(env)
 
   if (request.method === "GET") {
-    const result = await supabaseRest(
-      env,
-      `os_restores?user_id=eq.${auth.id}&select=slug,restored_at&order=restored_at.desc`,
-    )
-    // The OS can ship before its optional cross-shell migration is installed.
-    // A missing table is a capability state, not an internal server crash: the
-    // Recycle Bin still works locally and the browser console stays clean.
-    if (!result.ok && await restoreTableMissing(result)) {
-      return jsonResponse({ restores: [], available: false })
-    }
-    if (!result.ok) return upstreamError("OS restores", result, "Recovered files are unavailable")
-    return jsonResponse({ restores: await result.json<{ slug: string; restored_at: string }[]>(), available: true })
+    const { results } = await db
+      .prepare("SELECT slug, restored_at FROM os_restores WHERE user_id = ? ORDER BY restored_at DESC")
+      .bind(auth.id).all<{ slug: string; restored_at: string }>()
+    return jsonResponse({ restores: results, available: true })
   }
 
   let body: RestoreBody
@@ -51,30 +41,13 @@ export async function handleRestores({ request, env, auth }: RouteCtx): Promise<
   if (!validRestoreSlug(body.slug)) return jsonResponse({ error: "Invalid file name" }, 400)
 
   if (request.method === "POST") {
-    const result = await supabaseRest(
-      env,
-      "os_restores?on_conflict=user_id,slug",
-      "POST",
-      { user_id: auth.id, slug: body.slug },
-      "resolution=merge-duplicates,return=representation",
-    )
-    if (!result.ok && await restoreTableMissing(result)) {
-      return jsonResponse({ error: "Cross-surface recovery is not installed on this server" }, 503)
-    }
-    if (!result.ok) return upstreamError("restore OS file", result, "The file could not be restored")
+    await db.prepare("INSERT INTO os_restores (user_id, slug, restored_at) VALUES (?, ?, ?) ON CONFLICT (user_id, slug) DO NOTHING")
+      .bind(auth.id, body.slug, nowIso()).run()
     return jsonResponse({ restored: true, slug: body.slug })
   }
 
   if (request.method === "DELETE") {
-    const result = await supabaseRest(
-      env,
-      `os_restores?user_id=eq.${auth.id}&slug=eq.${encodeURIComponent(body.slug)}`,
-      "DELETE",
-    )
-    if (!result.ok && await restoreTableMissing(result)) {
-      return jsonResponse({ error: "Cross-surface recovery is not installed on this server" }, 503)
-    }
-    if (!result.ok) return upstreamError("undo OS restore", result, "The file could not be returned to the Bin")
+    await db.prepare("DELETE FROM os_restores WHERE user_id = ? AND slug = ?").bind(auth.id, body.slug).run()
     return jsonResponse({ restored: false, slug: body.slug })
   }
 

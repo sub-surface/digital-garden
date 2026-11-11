@@ -1,5 +1,6 @@
 import { Env, RouteCtx } from "./types"
-import { jsonResponse, supabaseRest } from "./lib"
+import { jsonResponse } from "./lib"
+import { broadcastMessage, insertMessage } from "./chat"
 import { PERSONAS, generateReply, type PersonaId } from "../features/boot/chatbot"
 
 /** Concurrency lock: room_id -> timestamp (ms) of the last started debate. */
@@ -54,16 +55,12 @@ async function insertBotMessage(
   nameColor: string,
   body: string
 ) {
-  const row = {
-    room_id: roomId,
-    user_id: userId,
-    body: body.trim(),
-    reply_to: null,
-    username,
-    name_color: nameColor,
-    avatar_url: null,
-  }
-  return supabaseRest(env, "messages", "POST", row)
+  const message = await insertMessage(env, {
+    room_id: roomId, user_id: userId, body: body.trim(), reply_to: null,
+    username, name_color: nameColor, avatar_url: null,
+  })
+  await broadcastMessage(env, message)
+  return message
 }
 
 function sleep(ms: number) {

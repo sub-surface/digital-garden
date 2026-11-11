@@ -1,5 +1,5 @@
 import { Env, ProfileData, RouteCtx } from "./types"
-import { CONTENT_REPO, ghApi, jsonResponse, readJson, supabaseRest, upstreamError, verifyTurnstile } from "./lib"
+import { CONTENT_REPO, ghApi, jsonResponse, readJson, supabaseRest, upstreamError, verifyTurnstile, siteDb, nowIso } from "./lib"
 import { getContentIndex, chatterImageForUsername, resolveSlugCaseInsensitive } from "./meta"
 import { escapeHtml } from "../lib/escape"
 
@@ -237,11 +237,10 @@ export async function handleUserProfile({ env, match }: RouteCtx): Promise<Respo
       return chatterImageForUsername(index, username)
     })(),
     (async () => {
-      const logRes = await supabaseRest(
-        env,
-        `edit_log?user_id=eq.${profile.id}&select=slug,pr_url,edit_summary,created_at&order=created_at.desc&limit=50`
-      )
-      return logRes.ok ? logRes.json<{ slug: string; pr_url: string; edit_summary: string | null; created_at: string }[]>() : []
+      const { results } = await siteDb(env)
+        .prepare("SELECT slug, pr_url, edit_summary, created_at FROM edit_log WHERE user_id = ? ORDER BY created_at DESC LIMIT 50")
+        .bind(profile.id).all<{ slug: string; pr_url: string; edit_summary: string | null; created_at: string }>()
+      return results
     })(),
   ])
 
@@ -262,11 +261,13 @@ function requireEditor(role: string): Response | null {
 }
 
 async function logEdit(env: Env, slug: string, userId: string, prUrl: string, editSummary: string) {
-  const res = await supabaseRest(env, "edit_log", "POST", {
-    slug, user_id: userId, pr_url: prUrl, edit_summary: editSummary || null,
-  })
   // The PR exists either way; a missing log row is worth a loud log line, not a failed request.
-  if (!res.ok) console.error(`[wiki] edit_log insert failed (${res.status}) for ${prUrl}`)
+  try {
+    await siteDb(env).prepare("INSERT INTO edit_log (slug, user_id, pr_url, edit_summary, created_at) VALUES (?, ?, ?, ?, ?)")
+      .bind(slug, userId, prUrl, editSummary || null, nowIso()).run()
+  } catch (e) {
+    console.error(`[wiki] edit_log insert failed for ${prUrl}:`, e)
+  }
 }
 
 export async function handleEdit({ request, env, auth, waitUntil }: RouteCtx): Promise<Response> {
@@ -298,10 +299,10 @@ export async function handleEdit({ request, env, auth, waitUntil }: RouteCtx): P
 
   // Fails closed: an unreadable lock table must not let edits through to locked pages.
   // Case-insensitive: locks are keyed by whatever casing the admin typed.
-  const lockPattern = slug.replace(/[\\%_*]/g, (c) => `\\${c}`)
-  const lockRes = await supabaseRest(env, `page_locks?slug=ilike.${encodeURIComponent(lockPattern)}&select=slug`)
-  if (!lockRes.ok) return upstreamError("page lock check", lockRes, "Could not check page lock")
-  if ((await lockRes.json<unknown[]>()).length > 0) return jsonResponse({ error: "This page is locked" }, 403)
+  // (page_locks.slug is COLLATE NOCASE.) A D1 failure throws: fails closed.
+  if (await siteDb(env).prepare("SELECT 1 FROM page_locks WHERE slug = ?").bind(slug).first()) {
+    return jsonResponse({ error: "This page is locked" }, 403)
+  }
 
   try {
     const filePath = `content/${contentPath}`
@@ -383,9 +384,9 @@ export async function handleBookmarks({ request, env, url, auth }: RouteCtx): Pr
 
   // GET /api/bookmarks — list own bookmarks
   if (pathname === "/api/bookmarks" && request.method === "GET") {
-    const res = await supabaseRest(env, `bookmarks?user_id=eq.${auth!.id}&select=slug,title,added_at&order=added_at.desc`)
-    if (!res.ok) return upstreamError("bookmarks list", res, "Failed to fetch bookmarks")
-    return jsonResponse(await res.json())
+    const { results } = await siteDb(env)
+      .prepare("SELECT slug, title, added_at FROM bookmarks WHERE user_id = ? ORDER BY added_at DESC").bind(auth!.id).all()
+    return jsonResponse(results)
   }
 
   // POST /api/bookmarks — add bookmark
@@ -395,22 +396,16 @@ export async function handleBookmarks({ request, env, url, auth }: RouteCtx): Pr
     if (typeof body.slug !== "string" || !body.slug.trim() || typeof body.title !== "string" || !body.title.trim()) {
       return jsonResponse({ error: "slug and title required" }, 400)
     }
-    const res = await supabaseRest(env, "bookmarks", "POST", {
-      user_id: auth!.id, slug: body.slug.trim().slice(0, 300), title: body.title.trim().slice(0, 300),
-    })
-    if (!res.ok) {
-      // 409 = already exists (UNIQUE constraint) — treat as success
-      if (res.status === 409) return jsonResponse({ ok: true })
-      return upstreamError("bookmark add", res, "Failed to add bookmark")
-    }
+    // Already bookmarked is fine.
+    await siteDb(env).prepare("INSERT INTO bookmarks (user_id, slug, title, added_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING")
+      .bind(auth!.id, body.slug.trim().slice(0, 300), body.title.trim().slice(0, 300), nowIso()).run()
     return jsonResponse({ ok: true })
   }
 
   // DELETE /api/bookmarks/:slug — remove bookmark
   if (pathname.startsWith("/api/bookmarks/") && request.method === "DELETE") {
     const slug = decodeURIComponent(pathname.slice("/api/bookmarks/".length))
-    const res = await supabaseRest(env, `bookmarks?user_id=eq.${auth!.id}&slug=eq.${encodeURIComponent(slug)}`, "DELETE")
-    if (!res.ok) return upstreamError("bookmark remove", res, "Failed to remove bookmark")
+    await siteDb(env).prepare("DELETE FROM bookmarks WHERE user_id = ? AND slug = ?").bind(auth!.id, slug).run()
     return jsonResponse({ ok: true })
   }
 
@@ -422,12 +417,13 @@ export async function handleBookmarks({ request, env, url, auth }: RouteCtx): Pr
     const valid = body.bookmarks
       .filter((b) => typeof b?.slug === "string" && b.slug.trim() && typeof b.title === "string" && b.title.trim())
       .slice(0, 200)
-    // One bulk upsert instead of up to 200 sequential round trips; duplicates are ignored.
+    // One batch (a single round trip, one transaction); duplicates are ignored.
     if (valid.length > 0) {
-      const res = await supabaseRest(env, "bookmarks?on_conflict=user_id,slug", "POST",
-        valid.map((b) => ({ user_id: auth!.id, slug: b.slug.trim().slice(0, 300), title: b.title.trim().slice(0, 300) })),
-        "resolution=ignore-duplicates,return=minimal")
-      if (!res.ok) return upstreamError("bookmark migrate", res, "Failed to import bookmarks")
+      const db = siteDb(env)
+      const now = nowIso()
+      const stmt = db.prepare("INSERT INTO bookmarks (user_id, slug, title, added_at) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING")
+      await db.batch(valid.map((b) => stmt.bind(auth!.id, b.slug.trim().slice(0, 300), b.title.trim().slice(0, 300),
+        typeof b.addedAt === "string" && !Number.isNaN(Date.parse(b.addedAt)) ? new Date(b.addedAt).toISOString() : now)))
     }
     return jsonResponse({ ok: true, migrated: valid.length })
   }
@@ -437,14 +433,9 @@ export async function handleBookmarks({ request, env, url, auth }: RouteCtx): Pr
 
 export async function handleLockStatus({ env, url }: RouteCtx): Promise<Response> {
   const slug = url.searchParams.get("slug")
-  if (!slug || !env.SUPABASE_URL) return jsonResponse({ locked: false })
-
-  const pattern = slug.replace(/[\\%_*]/g, (c) => `\\${c}`)
-  const res = await supabaseRest(env, `page_locks?slug=ilike.${encodeURIComponent(pattern)}&select=slug,reason`)
-  // Fail visibly, like the edit path: "unlocked" during an outage invites a
-  // whole edit that the POST will then refuse.
-  if (!res.ok) return upstreamError("lock status", res, "Could not check page lock")
-  const locks = await res.json<{ slug: string; reason: string }[]>()
-  if (locks.length === 0) return jsonResponse({ locked: false })
-  return jsonResponse({ locked: true, reason: locks[0].reason })
+  if (!slug) return jsonResponse({ locked: false })
+  // A D1 failure throws (a visible 500), like the edit path: "unlocked" during
+  // an outage would invite a whole edit that the POST then refuses.
+  const lock = await siteDb(env).prepare("SELECT reason FROM page_locks WHERE slug = ?").bind(slug).first<{ reason: string | null }>()
+  return jsonResponse(lock ? { locked: true, reason: lock.reason } : { locked: false })
 }
