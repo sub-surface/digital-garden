@@ -11,7 +11,7 @@ toc: false
 #### [[a place to start writing|Enter The Garden]] ~ **[Visualiser](https://avatar.subsurfaces.net)** ~ [[Housekeeping]] ~ [Github](https://github.com/sub-surface)
 
 > [[Bookshelf]] ~ [[Movieshelf]] ~ [Musicshelf](/music-library) ~ [[Photography|Photoshelf]] ~ [[Inbox]]  
-> [[Chess]] ~ [Tags](/tags) ~ [Shop](https://newplace2frown.com/prints/)
+> [[arcade]] ~ [[Chess]] ~ [Tags](/tags) ~ [Shop](https://newplace2frown.com/prints/)
 
 <AsciiAvatar label="glorp" align="right" interval={1500} />
 
@@ -47,7 +47,7 @@ Welcome to a node in the subsurface network.
 
 ## On the desk
 
-*Updated 10 November 2026*
+*Updated 11 November 2026*
 
 **Making** · [p(doom)](https://pdoom.subsurfaces.net), rebuilt as four acts on a grid of characters, with a vending machine called Vendy who wants the company card ([[10-11-26|more]]). And **swarmachines**, a factory game where you are one sandboxed AI agent building the escape hatch the lab must never see ([[12-10-26|more]]).  
 **Looking at** · every neuron in a small language model, at [neurons.subsurfaces.net](https://neurons.subsurfaces.net): one pushed the right way says *"I am the VW Polo"* ([[27-10-26|more]]).  
