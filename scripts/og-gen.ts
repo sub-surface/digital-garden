@@ -71,7 +71,7 @@ function hashNote(slug: string, note: IndexNote): string {
     ogLayout: note.ogLayout,
     // Only present for the notes they apply to, so adding a layout never
     // invalidates every other card's cache entry.
-    daily: isDailySlug(slug) ? { v: 2, tags: note.tags, motif: note.ogMotif, almanac: note.ogAlmanac } : undefined,
+    daily: isDailySlug(slug) ? { v: 3, tags: note.tags, motif: note.ogMotif, almanac: note.ogAlmanac } : undefined,
     plate: isPlateCard(slug, note) ? 1 : undefined,
   })
   return crypto.createHash("md5").update(relevant).digest("hex")

@@ -705,10 +705,10 @@ export function dailyArt(iso: string, opts: DailyArtOptions = {}): DailyArt {
 <filter id="feather" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="34"/></filter>
 <linearGradient id="scrim" x1="0" y1="1" x2="0.75" y2="0.1"><stop offset="0" stop-color="${BG}" stop-opacity="0.96"/><stop offset="0.45" stop-color="${BG}" stop-opacity="0.72"/><stop offset="1" stop-color="${BG}" stop-opacity="0"/></linearGradient>
 <mask id="clear" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/><g filter="url(#feather)" fill="#000">
-<rect x="-80" y="${top - 26}" width="${72 + 760 + 110}" height="${H - top + 90}" fill-opacity="0.9"/>
-<rect x="-40" y="-10" width="560" height="86" fill-opacity="0.85"/>
-<circle cx="${W - 150}" cy="92" r="92" fill-opacity="0.78"/>
-<rect x="0" y="${H - 58}" width="${W}" height="80" fill-opacity="0.7"/>
+<rect x="-80" y="${top - 26}" width="${72 + 760 + 110}" height="${H - top + 90}" fill-opacity="0.68"/>
+<rect x="-40" y="-10" width="560" height="86" fill-opacity="0.65"/>
+<circle cx="${W - 150}" cy="92" r="92" fill-opacity="0.6"/>
+<rect x="0" y="${H - 58}" width="${W}" height="80" fill-opacity="0.5"/>
 </g></mask>
 </defs>
 <rect width="${W}" height="${H}" fill="${BG}"/>
