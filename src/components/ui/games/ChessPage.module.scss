@@ -215,6 +215,11 @@
 }
 
 .moveItem {
+  font-family: var(--font-code);
+  color: inherit;
+  border: none;
+  cursor: pointer;
+  text-align: left;
   font-size: 0.75rem;
   padding: 1px 5px;
   background: color-mix(in srgb, var(--color-overlay-tint, #fff) 4%, transparent);
@@ -258,4 +263,23 @@
     opacity: 0.25;
     cursor: default;
   }
+}
+
+.moveItem:hover { opacity: 1; }
+.moveItem[data-current] {
+  opacity: 1;
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+  color: var(--color-primary);
+}
+
+.note {
+  margin: -0.5rem 0 0.75rem;
+  font-size: 0.68rem;
+  opacity: 0.6;
+}
+
+/* Reviewing an earlier position: the board dims a touch so it never reads as live. */
+.boardWrapper[data-review] {
+  filter: saturate(0.7) brightness(0.92);
+  transition: filter 0.2s;
 }

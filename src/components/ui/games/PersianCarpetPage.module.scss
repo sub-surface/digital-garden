@@ -76,6 +76,7 @@
 }
 
 .canvasWrap {
+  position: relative;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 16px 45px rgba(0, 0, 0, 0.4);
@@ -330,4 +331,48 @@
   font-size: 0.62rem;
   line-height: 1.6;
   opacity: 0.45;
+}
+
+.hunt {
+  margin-top: 0.75rem;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  opacity: 0.75;
+  text-align: center;
+  max-width: 560px;
+  margin-inline: auto;
+}
+
+.huntDim { opacity: 0.6; }
+
+.huntGive {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent-base);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* A brief ripple where a guess missed. */
+.miss {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 248, 225, 0.85);
+  pointer-events: none;
+  animation: carpetMiss 0.6s ease-out forwards;
+}
+
+@keyframes carpetMiss {
+  from { transform: scale(0.4); opacity: 1; }
+  to { transform: scale(1.6); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .miss { animation-duration: 0.01s; }
 }

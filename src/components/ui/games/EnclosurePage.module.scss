@@ -292,3 +292,42 @@
     &:disabled { opacity: 0.35; cursor: default; }
   }
 }
+
+/* A wall draws itself out from its start; ground fades in when it's taken. */
+.wrap .edge[data-fresh] {
+  transform-box: view-box;
+  animation: enclosureWall 0.32s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+@keyframes enclosureWall {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+.wrap .field { animation: enclosureField 0.5s ease-out; }
+@keyframes enclosureField {
+  from { fill-opacity: 0; }
+}
+
+/* Premoves: dashed, numbered, in your colour. */
+.wrap .premove {
+  pointer-events: none;
+  line {
+    stroke: var(--ink);
+    stroke-width: 2.5px;
+    stroke-dasharray: 5 4;
+    stroke-linecap: round;
+    opacity: 0.75;
+  }
+  text {
+    fill: var(--ink);
+    font-family: var(--font-code);
+    opacity: 0.85;
+  }
+}
+.wrap .preTarget {
+  fill: var(--ink, currentColor);
+  opacity: 0.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wrap .edge[data-fresh], .wrap .field { animation: none; }
+}

@@ -3,6 +3,47 @@ import { initialState, placeStone, botMove, key, stonesLeft, type HexoState } fr
 import styles from "./HexoPage.module.scss"
 import { useProgramHost } from "./ProgramHostContext"
 import { ignoreGameKey } from "./gameUtils"
+import { sfx } from "@/lib/sfx"
+
+// The three axes of the hex lattice, for threat-finding.
+const AXES: ReadonlyArray<readonly [number, number]> = [[1, 0], [0, 1], [1, -1]]
+
+/**
+ * Empty cells that sit in a six-window holding four or more of one player's
+ * stones and none of the other's: with two stones a turn, that player can win
+ * through such a cell next turn. Keyed by cell, valued by the threatening player
+ * (a cell both players threaten goes to whoever has more there).
+ */
+function findThreats(stones: Map<string, 1 | 2>): Map<string, 1 | 2> {
+  const best = new Map<string, { p: 1 | 2; n: number }>()
+  const seen = new Set<string>()
+  for (const [k, p] of stones) {
+    const [q, r] = k.split(",").map(Number)
+    for (const [dq, dr] of AXES) {
+      for (let off = -5; off <= 0; off++) {
+        const sq = q + dq * off, sr = r + dr * off
+        const wk = `${sq},${sr},${dq},${dr}`
+        if (seen.has(wk)) continue
+        seen.add(wk)
+        let own = 0, blocked = false
+        const empties: string[] = []
+        for (let i = 0; i < 6; i++) {
+          const ck = key(sq + dq * i, sr + dr * i)
+          const o = stones.get(ck)
+          if (o === undefined) empties.push(ck)
+          else if (o === p) own++
+          else { blocked = true; break }
+        }
+        if (blocked || own < 4) continue
+        for (const e of empties) {
+          const cur = best.get(e)
+          if (!cur || own > cur.n) best.set(e, { p, n: own })
+        }
+      }
+    }
+  }
+  return new Map([...best].map(([k, v]) => [k, v.p]))
+}
 
 const REC_KEY = "hexo:record" // "wins-losses" against the bot
 function readRec(): [number, number] {
@@ -55,10 +96,16 @@ interface BoardProps {
   annotations: Annotations
   setAnnotations: React.Dispatch<React.SetStateAction<Annotations>>
   wide?: boolean
+  /** Stones queued for your next turn while the bot plays (in order). */
+  premoves: string[]
+  /** Cells either side could win through next turn. */
+  threats: Map<string, 1 | 2> | null
+  /** Whose mark the hover ghost shows (you, during a premove). */
+  ghostFor: 1 | 2
 }
 
 /** The interactive SVG board — shared between the normal and zen views. */
-function HexoBoard({ state, onPlace, annotations, setAnnotations, wide }: BoardProps) {
+function HexoBoard({ state, onPlace, annotations, setAnnotations, wide, premoves, threats, ghostFor }: BoardProps) {
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
   const [hover, setHover] = useState<string | null>(null)
@@ -259,21 +306,31 @@ function HexoBoard({ state, onPlace, annotations, setAnnotations, wide }: BoardP
           const isWin = winningSet.has(k)
           const isLast = lastSet.has(k)
           const isHighlight = annotations.highlights.has(k)
+          const pre = premoves.indexOf(k)
+          const threat = !owner && !state.winner ? threats?.get(k) : undefined
           return (
             <g key={k}>
               <polygon points={hexPoints(x, y)} className={styles.cell} />
+              {threat && <polygon points={hexPoints(x, y)} className={styles.threat} data-p={threat} />}
               {isHighlight && <polygon points={hexPoints(x, y)} className={styles.highlight} />}
               {isLast && !isWin && <polygon points={hexPoints(x, y)} className={styles.lastMove} />}
               {owner ? (
-                <>
+                // keyed by owner so a new stone mounts (and pops in) once
+                <g key={`s${owner}`} className={styles.stoneIn}>
                   <circle cx={x} cy={y} r={HEX_SIZE * 0.62}
                     className={`${styles.stone} ${owner === 1 ? styles.stoneP1 : styles.stoneP2} ${isWin ? styles.stoneWin : ""}`} />
                   {renderMark(owner, x, y)}
-                </>
+                </g>
+              ) : pre >= 0 ? (
+                <g className={styles.premove}>
+                  <circle cx={x} cy={y} r={HEX_SIZE * 0.55} className={styles.premoveRing} />
+                  {renderMark(1, x, y, true)}
+                  <text x={x + HEX_SIZE * 0.5} y={y - HEX_SIZE * 0.42} className={styles.premoveNum}>{pre + 1}</text>
+                </g>
               ) : (
-                // hover ghost of the current player's mark
+                // hover ghost of the mark a click would place (or queue)
                 hover === k && !state.winner && (
-                  <g className={styles.ghost}>{renderMark(state.turn, x, y, true)}</g>
+                  <g className={styles.ghost}>{renderMark(ghostFor, x, y, true)}</g>
                 )
               )}
             </g>
@@ -302,39 +359,65 @@ export function HexoPage() {
     })
   }, [])
   const [record, setRecord] = useState(readRec)
+  const [premoves, setPremoves] = useState<string[]>([])
+  const [showThreats, setShowThreats] = useState(true)
+  const threats = useMemo(() => (showThreats ? findThreats(state.stones) : null), [showThreats, state.stones])
   const [annotations, setAnnotations] = useState<Annotations>({ highlights: new Set(), arrows: [] })
   const [zen, setZen] = useState(false)
   const [vsBot, setVsBot] = useState(true) // bot is Player 2
 
   const onPlace = useCallback((q: number, r: number) => {
-    advance((s) => {
-      // In bot mode, ignore clicks while it's the bot's turn.
-      if (vsBot && s.turn === 2 && s.winner === null) return s
-      return placeStone(s, q, r)
-    })
-  }, [vsBot, advance])
+    const k = key(q, r)
+    // During the bot's turn a click queues (or unqueues) a stone for yours.
+    if (vsBot && state.turn === 2 && state.winner === null) {
+      if (state.stones.has(k)) return
+      setPremoves((p) => (p.includes(k) ? p.filter((x) => x !== k) : p.length >= 2 ? [p[1], k] : [...p, k]))
+      sfx.play("click")
+      return
+    }
+    if (state.winner !== null || state.stones.has(k)) return
+    advance((s) => placeStone(s, q, r))
+    sfx.play("move")
+  }, [vsBot, advance, state])
 
   // Bot auto-plays its stones whenever it's Player 2's turn (bot mode only).
   // One stone per tick so the placements animate and the 1-2-2 rule is respected.
   useEffect(() => {
     if (!vsBot || state.winner !== null || state.turn !== 2) return
+    // A beat before the first stone, a shorter one before the second.
     const t = setTimeout(() => {
-      advance((s) => {
-        if (!vsBot || s.winner !== null || s.turn !== 2) return s
-        const mv = botMove(s)
-        return mv ? placeStone(s, mv.q, mv.r) : s
-      })
-    }, 320)
+      const mv = botMove(state)
+      if (!mv) return
+      advance((s) => (s === state ? placeStone(s, mv.q, mv.r) : s))
+      sfx.play("move")
+    }, state.placedThisTurn === 0 ? 380 + Math.random() * 220 : 240 + Math.random() * 120)
     return () => clearTimeout(t)
   }, [vsBot, state, advance])
 
+  // Your turn: play the queued stones, dropping any the bot has since taken.
+  useEffect(() => {
+    if (!vsBot || state.winner !== null || state.turn !== 1 || !premoves.length) return
+    const t = setTimeout(() => {
+      const [k, ...rest] = premoves
+      setPremoves(rest)
+      if (state.stones.has(k)) return
+      const [q, r] = k.split(",").map(Number)
+      advance((s) => (s === state ? placeStone(s, q, r) : s))
+      sfx.play("move")
+    }, 110)
+    return () => clearTimeout(t)
+  }, [vsBot, state, premoves, advance])
+  useEffect(() => { if (state.winner !== null) { setPremoves([]); sfx.play(vsBot ? (state.winner === 1 ? "win" : "lose") : "win") } }, [state.winner, vsBot])
+
   const newGame = useCallback(() => {
+    setPremoves([])
     setGame({ cur: initialState(), past: [] })
     setAnnotations({ highlights: new Set(), arrows: [] })
   }, [])
 
   /** Take back to the start of your last turn (against the bot, its reply goes too). */
   const undo = useCallback(() => {
+    setPremoves([])
     setGame((g) => {
       if (!g.past.length) return g
       const past = [...g.past]
@@ -360,10 +443,12 @@ export function HexoPage() {
       if (ignoreGameKey(e)) return
       if (e.key === "u" || e.key === "U") undo()
       else if (e.key === "n" || e.key === "N") newGame()
+      else if (e.key === "t" || e.key === "T") setShowThreats((v) => !v)
+      else if (e.key === "Escape" && !zen) setPremoves([])
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [undo, newGame])
+  }, [undo, newGame, zen])
 
   // Esc exits zen mode
   useEffect(() => {
@@ -381,10 +466,13 @@ export function HexoPage() {
   const winVerb = (p: 1 | 2) => (vsBot && p === 1 ? "win" : "wins") // "You win!" vs "Bot wins!"
   const status = state.winner
     ? `${nameFor(state.winner)} ${winVerb(state.winner)}!`
-    : `${nameFor(state.turn)} — place ${state.stonesPerTurn} stone${state.stonesPerTurn > 1 ? "s" : ""} (${stonesLeft(state)} left)`
+    : `${nameFor(state.turn)} — place ${state.stonesPerTurn} stone${state.stonesPerTurn > 1 ? "s" : ""} (${stonesLeft(state)} left)${premoves.length ? ` · ${premoves.length} queued` : ""}`
 
   const boardEl = (
-    <HexoBoard state={state} onPlace={onPlace} annotations={annotations} setAnnotations={setAnnotations} wide={zen} />
+    <HexoBoard
+      state={state} onPlace={onPlace} annotations={annotations} setAnnotations={setAnnotations} wide={zen}
+      premoves={premoves} threats={threats} ghostFor={vsBot ? 1 : state.turn}
+    />
   )
 
   if (zen) {
@@ -434,6 +522,9 @@ export function HexoPage() {
               {vsBot ? "● vs Bot" : "○ Hot-seat"}
             </button>
             <button className={styles.zoomBtn} onClick={() => setZen(true)} title="Zen mode">⤢ Zen</button>
+            <button className={styles.zoomBtn} onClick={() => setShowThreats((v) => !v)} title="Mark cells either side could win through next turn (T)">
+              {showThreats ? "◆ Threats" : "◇ Threats"}
+            </button>
           </div>
           <div className={styles.legend}>
             <span><span className={`${styles.swatch} ${styles.stoneP1}`} /> {vsBot ? "You" : "Player 1"} (X)</span>
@@ -443,7 +534,9 @@ export function HexoPage() {
             Player 1 places one stone to open; after that, each player places two stones per
             turn. First to six in a row — along any of the three directions — wins. Drag to
             pan, scroll to zoom. Right-click a cell to highlight it, right-drag to draw an
-            arrow. U takes back your last turn, N starts again.
+            arrow. Click during the bot&rsquo;s turn to queue your next two stones. Shaded cells
+            are threats: a side could win through them next turn. U takes back your last turn,
+            N starts again, T hides the threats.
           </p>
         </div>
       </div>

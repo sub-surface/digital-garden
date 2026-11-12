@@ -320,3 +320,44 @@
   letter-spacing: 0.08em;
   opacity: 0.5;
 }
+
+/* A new stone settles in rather than appearing. */
+.stoneIn {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hexoStoneIn 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes hexoStoneIn {
+  from { transform: scale(0.35); opacity: 0.2; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.premove { pointer-events: none; }
+.premoveRing {
+  fill: color-mix(in srgb, var(--color-accent-base) 12%, transparent);
+  stroke: var(--color-accent-base);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+.premoveNum {
+  font-family: var(--font-code);
+  font-size: 9px;
+  fill: var(--color-accent-base);
+}
+
+.threat {
+  pointer-events: none;
+  stroke: none;
+  &[data-p="1"] { fill: color-mix(in srgb, var(--color-accent-base) 22%, transparent); }
+  &[data-p="2"] { fill: color-mix(in srgb, var(--color-text) 16%, transparent); }
+  animation: hexoThreat 1.8s ease-in-out infinite;
+}
+
+@keyframes hexoThreat {
+  50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stoneIn, .threat { animation: none; }
+}

@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useRef, useState, useMemo } from "react"
 import { ignoreGameKey } from "./gameUtils"
+import { useProgramHost } from "./ProgramHostContext"
 import styles from "./PersianCarpetPage.module.scss"
 
 /**
@@ -14,6 +15,9 @@ import styles from "./PersianCarpetPage.module.scss"
  * One deliberate flaw breaks the symmetry — a tradition found across carpet-
  * making cultures worldwide (Persian "flaw of humility", Navajo "spirit line",
  * Amish "humility block"), because only the divine can achieve true perfection.
+ *
+ * Find the flaw: click where you think it is. The seed and dye lot live in the
+ * URL hash, so a carpet you like can be passed on as a link.
  *
  * Previously a p5.js iframe; rewritten as native React + Canvas to match the
  * site's design language and eliminate the 1 MB library + iframe overhead.
@@ -161,6 +165,10 @@ interface WeaveResult {
   cellW: number; cellH: number
   grain: Float32Array
   flawCell: { x: number; y: number } | null
+  /** Knot-space box around the flaw (inclusive), for the find-the-flaw game. */
+  flawBox: { x0: number; y0: number; x1: number; y1: number }
+  /** px of fringe above and below the pile; the canvas is CH + 2·fringe tall. */
+  fringe: number
   rgbPal: Record<string, [number, number, number]>
   noise: (x: number, y: number) => number
   flawDesc: string
@@ -418,6 +426,8 @@ function weave(p: Params): WeaveResult {
 
   // ── deliberate flaw (always woven — authentic traditional variants) ──
   let flawCell: { x: number; y: number } | null = null
+  let flawBox = { x0: 0, y0: 0, x1: 0, y1: 0 }
+  const boxAround = (x: number, y: number, r: number) => ({ x0: x - r, y0: y - r, x1: x + r, y1: y + r })
   let flawDesc = "A deliberate flaw woven in humility"
 
   // We use rng() to decide the flavor of deliberate flaw
@@ -432,6 +442,7 @@ function weave(p: Params): WeaveResult {
       tie(sx, sy, "ivory")
     }
     flawCell = { x: Math.round(startX / 2), y: sy }
+    flawBox = { x0: 0, y0: sy, x1: startX, y1: sy }
     flawDesc = "spirit line (ch'ihónít'i) running through the border"
   } else if (flawChoice < 0.66) {
     // 2. Tribal Zoomorphic / Pictorial Motif (a little goat or bird)
@@ -485,6 +496,7 @@ function weave(p: Params): WeaveResult {
         flawDesc = "asymmetric tribal bird in the field"
       }
       flawCell = { x: gx, y: gy }
+      flawBox = { x0: gx - 1, y0: gy - 2, x1: gx + 2, y1: gy + 1 }
       placed = true
       break
     }
@@ -495,6 +507,7 @@ function weave(p: Params): WeaveResult {
       const gy = inner + 2
       tie(gx, gy, "ivory")
       flawCell = { x: gx, y: gy }
+      flawBox = boxAround(gx, gy, 0)
       flawDesc = "humility knot in the corner"
     }
   } else {
@@ -514,6 +527,7 @@ function weave(p: Params): WeaveResult {
             }
           }
           flawCell = { x: gx, y: gy }
+          flawBox = boxAround(gx, gy, 2)
           flawDesc = "mismatched ivory boteh motif"
           found = true
           break
@@ -528,6 +542,7 @@ function weave(p: Params): WeaveResult {
       const gy = inner + 2
       tie(gx, gy, "ivory")
       flawCell = { x: gx, y: gy }
+      flawBox = boxAround(gx, gy, 0)
       flawDesc = "humility knot in the corner"
     }
   }
@@ -545,16 +560,23 @@ function weave(p: Params): WeaveResult {
     if (typeof val === "string" && val.startsWith("#")) rgbPal[key] = hexRgb(val)
   }
 
-  return { grid, GW, GH, CW, CH, cellW, cellH, grain, flawCell, rgbPal, noise, flawDesc }
+  const fringe = Math.ceil(cellH * 2)
+  return { grid, GW, GH, CW, CH, cellW, cellH, grain, flawCell, flawBox, fringe, rgbPal, noise, flawDesc }
 }
 
 // ── Rendering ─────────────────────────────────────────────────────
 // Draws the knot grid to canvas, then applies post-effects: pile sheen,
 // fringe threads, and an outer frame.
 
-function renderCarpet(ctx: CanvasRenderingContext2D, w: WeaveResult, p: Params) {
-  const { grid, GW, GH, CW, CH, cellW, cellH, grain, rgbPal, noise } = w
+function renderCarpet(ctx: CanvasRenderingContext2D, w: WeaveResult, p: Params, showFlaw = false) {
+  const { grid, GW, GH, CW, CH, cellW, cellH, grain, rgbPal, noise, fringe } = w
   const pal = PALETTES[p.paletteIndex]
+
+  // The pile sits between two fringe bands. The fringe used to be drawn above
+  // y = 0 and below y = CH, i.e. off the canvas, so it never showed.
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.clearRect(0, 0, CW, CH + fringe * 2)
+  ctx.translate(0, fringe)
 
   // Background
   ctx.fillStyle = pal.ground
@@ -637,14 +659,49 @@ function renderCarpet(ctx: CanvasRenderingContext2D, w: WeaveResult, p: Params) 
   ctx.strokeStyle = pal.outline
   ctx.lineWidth = Math.max(CW, CH) * 0.006
   ctx.strokeRect(0, 0, CW, CH)
+
+  // ── the flaw, once found (or given up on) ──
+  if (showFlaw) {
+    const b = w.flawBox
+    const pad = Math.max(cellW, cellH) * 1.5
+    const x = b.x0 * cellW - pad, y = b.y0 * cellH - pad
+    const bw = (b.x1 - b.x0 + 1) * cellW + pad * 2, bh = (b.y1 - b.y0 + 1) * cellH + pad * 2
+    ctx.save()
+    ctx.strokeStyle = "rgba(255,248,225,0.95)"
+    ctx.lineWidth = Math.max(2, cellW * 0.35)
+    ctx.setLineDash([cellW * 1.2, cellW * 0.8])
+    ctx.beginPath()
+    ctx.ellipse(x + bw / 2, y + bh / 2, bw / 2 + pad * 0.4, bh / 2 + pad * 0.4, 0, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.restore()
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+}
+
+/** Seed + dye lot from the URL hash (`#seed=123&dye=kashan`), if present. */
+function paramsFromHash(): Partial<Params> {
+  try {
+    const h = new URLSearchParams(window.location.hash.slice(1))
+    const out: Partial<Params> = {}
+    const seed = parseInt(h.get("seed") ?? "", 10)
+    if (seed > 0) out.seed = seed
+    const dye = PALETTES.findIndex((p) => p.name.toLowerCase() === (h.get("dye") ?? "").toLowerCase())
+    if (dye >= 0) out.paletteIndex = dye
+    return out
+  } catch { return {} }
 }
 
 // ── Component ─────────────────────────────────────────────────────
 
 export function PersianCarpetPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [params, setParams] = useState<Params>(DEFAULTS)
+  // Inside the OS shell the carpet is a window, not the page: leave its URL alone.
+  const embedded = useProgramHost().embedded
+  const [params, setParams] = useState<Params>(() => ({ ...DEFAULTS, ...(embedded ? {} : paramsFromHash()) }))
   const paramsRef = useRef(params); paramsRef.current = params
+  // Find the flaw: a guess count and whether it's showing, reset per carpet.
+  const [hunt, setHunt] = useState<{ tries: number; found: boolean; shown: boolean; miss: { x: number; y: number } | null }>({ tries: 0, found: false, shown: false, miss: null })
+  const [streak, setStreak] = useState(() => { try { return parseInt(localStorage.getItem("carpet:found") ?? "0", 10) || 0 } catch { return 0 } })
 
   // Weaving + a 1200px repaint is tens of ms: defer it so dragging a slider
   // keeps the control responsive and React drops the intermediate values.
@@ -655,14 +712,39 @@ export function PersianCarpetPage() {
     return weave(deferredParams)
   }, [deferredParams])
 
-  // Derive canvas display constraints from aspect (for CSS)
-  const dims = useMemo(() => {
-    const A = params.aspect
-    let CW: number, CH: number
-    if (A >= 1) { CW = MAXSIZE; CH = Math.round(MAXSIZE / A) }
-    else { CH = MAXSIZE; CW = Math.round(MAXSIZE * A) }
-    return { CW, CH }
-  }, [params.aspect])
+  // A new carpet hides its flaw again.
+  useEffect(() => { setHunt({ tries: 0, found: false, shown: false, miss: null }) }, [weaveResult])
+
+  // Keep the seed + dye in the hash, so the address bar is a link to this rug.
+  useEffect(() => {
+    if (embedded) return
+    const t = setTimeout(() => {
+      try {
+        const hash = `#seed=${params.seed}&dye=${PALETTES[params.paletteIndex].name.toLowerCase()}`
+        if (window.location.hash !== hash) history.replaceState(history.state, "", window.location.pathname + window.location.search + hash)
+      } catch { /* sandboxed */ }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [params.seed, params.paletteIndex, embedded])
+
+  const onCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (hunt.found || hunt.shown) return
+    const w = weaveResult
+    const r = e.currentTarget.getBoundingClientRect()
+    const px = ((e.clientX - r.left) / r.width) * w.CW
+    const py = ((e.clientY - r.top) / r.height) * (w.CH + w.fringe * 2) - w.fringe
+    const gx = Math.floor(px / w.cellW), gy = Math.floor(py / w.cellH)
+    // A few knots of slack: the flaw is small and the canvas is scaled down.
+    const slack = Math.max(2, Math.round(w.GW / 60))
+    const b = w.flawBox
+    const hit = gx >= b.x0 - slack && gx <= b.x1 + slack && gy >= b.y0 - slack && gy <= b.y1 + slack
+    if (hit) {
+      setHunt((h) => ({ ...h, tries: h.tries + 1, found: true, miss: null }))
+      setStreak((n) => { const v = n + 1; try { localStorage.setItem("carpet:found", String(v)) } catch { /* blocked */ } return v })
+    } else {
+      setHunt((h) => ({ ...h, tries: h.tries + 1, miss: { x: e.clientX - r.left, y: e.clientY - r.top } }))
+    }
+  }
 
   // ── render on any param change or weave result change ──
   useEffect(() => {
@@ -671,12 +753,13 @@ export function PersianCarpetPage() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    if (canvas.width !== weaveResult.CW || canvas.height !== weaveResult.CH) {
+    const H = weaveResult.CH + weaveResult.fringe * 2
+    if (canvas.width !== weaveResult.CW || canvas.height !== H) {
       canvas.width = weaveResult.CW
-      canvas.height = weaveResult.CH
+      canvas.height = H
     }
-    renderCarpet(ctx, weaveResult, deferredParams)
-  }, [weaveResult, deferredParams])
+    renderCarpet(ctx, weaveResult, deferredParams, hunt.found || hunt.shown)
+  }, [weaveResult, deferredParams, hunt.found, hunt.shown])
 
   // ── keyboard shortcuts ──
   useEffect(() => {
@@ -759,7 +842,25 @@ export function PersianCarpetPage() {
       <div className={styles.gameLayout}>
         <div className={styles.canvasArea}>
           <div className={styles.canvasWrap}>
-            <canvas ref={canvasRef} className={styles.canvas} />
+            <canvas
+              ref={canvasRef}
+              className={styles.canvas}
+              onClick={onCanvasClick}
+              style={{ aspectRatio: `${weaveResult.CW} / ${weaveResult.CH + weaveResult.fringe * 2}`, cursor: hunt.found || hunt.shown ? "default" : "crosshair" }}
+            />
+            {hunt.miss && !hunt.found && (
+              <span key={`${hunt.tries}`} className={styles.miss} style={{ left: hunt.miss.x, top: hunt.miss.y }} aria-hidden />
+            )}
+          </div>
+          <div className={styles.hunt} aria-live="polite">
+            {hunt.found
+              ? <>Found it{hunt.tries > 1 ? ` in ${hunt.tries} tries` : " first time"}: {weaveResult.flawDesc}. <span className={styles.huntDim}>{streak} found so far.</span></>
+              : hunt.shown
+                ? <>There: {weaveResult.flawDesc}.</>
+                : <>
+                    Somewhere a knot breaks the symmetry. Click where you think it is{hunt.tries ? ` (${hunt.tries} ${hunt.tries === 1 ? "try" : "tries"})` : ""}.{" "}
+                    <button className={styles.huntGive} onClick={() => setHunt((h) => ({ ...h, shown: true }))}>show me</button>
+                  </>}
           </div>
         </div>
 
@@ -898,7 +999,7 @@ export function PersianCarpetPage() {
 
           <p className={styles.meta}>
             Space random · ←→ seed · D download · F flip<br />
-            Deliberate flaw: <strong>{weaveResult.flawDesc}</strong><br />
+            The address bar holds this seed and dye lot: copy it to share the rug.<br />
             Only the divine can achieve true perfection.
           </p>
         </div>

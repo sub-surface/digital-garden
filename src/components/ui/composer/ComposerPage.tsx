@@ -14,6 +14,7 @@ import { Inspector } from "./Inspector"
 import { ContactSheet } from "./ContactSheet"
 import type { Sel } from "./selection"
 import { sameSel, existsInPlate } from "./selection"
+import { isTypingTarget } from "@/components/ui/games/gameUtils"
 import styles from "./ComposerPage.module.scss"
 
 /**
@@ -33,7 +34,8 @@ function download(blob: Blob, name: string) {
   a.href = url
   a.download = name
   a.click()
-  URL.revokeObjectURL(url)
+  // Revoking in the same tick can cancel the download (Firefox): give it a moment.
+  setTimeout(() => URL.revokeObjectURL(url), 1500)
 }
 
 /** Update one node and re-resolve its anchors so attached connectors follow. */
@@ -82,6 +84,11 @@ export function ComposerPage() {
     const next = updater(prev)
     if (next === prev) return
     pushHistory(prev)
+    // A permalink in the address bar now describes an older plate; drop it so a
+    // refresh doesn't quietly bring that plate back.
+    if (window.location.hash) {
+      try { window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search) } catch { /* sandboxed */ }
+    }
     plateRef.current = next
     setPlate(next)
   }, [])
@@ -305,7 +312,7 @@ export function ComposerPage() {
 
   const copyLink = useCallback(async () => {
     const url = `${window.location.origin}${window.location.pathname}#${encodePlate(plate)}`
-    window.history.replaceState(null, "", `#${encodePlate(plate)}`)
+    window.history.replaceState(window.history.state, "", `#${encodePlate(plate)}`)
     try {
       await navigator.clipboard.writeText(url)
       setCopied(true)
@@ -330,16 +337,42 @@ export function ComposerPage() {
     else el.requestFullscreen?.()
   }, [])
 
+  /** Shift+arrows nudge the selected motifs by 1% of the plate (one undo step per press). */
+  const nudge = useCallback((dx: number, dy: number) => {
+    const ids = new Set(selection.filter((s) => s.kind === "node").map((s) => s.id))
+    if (!ids.size) return
+    commit((p) => {
+      let out = p
+      for (const id of ids) {
+        out = withNode(out, id, (n) => ({
+          ...n,
+          box: {
+            ...n.box,
+            x: Math.max(0.02, Math.min(0.98 - n.box.w, n.box.x + dx)),
+            y: Math.max(0.02, Math.min(0.98 - n.box.h, n.box.y + dy)),
+          },
+        }))
+      }
+      return out
+    })
+  }, [commit, selection])
+
   // ─── Keyboard ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return
+      // Fields of any kind (inputs, selects, contenteditable) keep their keys.
+      if (isTypingTarget(e.target)) return
       if ((e.metaKey || e.ctrlKey) && (e.key === "z" || e.key === "Z")) {
         e.shiftKey ? redo() : undo()
         return e.preventDefault()
       }
+      if ((e.metaKey || e.ctrlKey) && (e.key === "y" || e.key === "Y")) { redo(); return e.preventDefault() }
       if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.shiftKey && e.key.startsWith("Arrow")) {
+        const step = 0.01
+        nudge(e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0, e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0)
+        return e.preventDefault()
+      }
       if (e.key === "r" || e.key === "R") regenerate()
       else if (e.key === "ArrowLeft") prev()
       else if (e.key === "ArrowRight") next()
@@ -362,7 +395,7 @@ export function ComposerPage() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [regenerate, prev, next, toggleFullscreen, undo, redo, selection, toggleLock, deleteSelected, cycleEra, cyclePalette, onArchetype])
+  }, [regenerate, prev, next, toggleFullscreen, undo, redo, selection, toggleLock, deleteSelected, cycleEra, cyclePalette, onArchetype, nudge])
 
   return (
     <div className={styles.shell} data-fullbleed>
@@ -401,8 +434,9 @@ export function ComposerPage() {
                 ["1–8", "pick archetype · 0 auto"],
                 ["E / P", "cycle era / palette"],
                 ["L", "lock selection"],
+                ["Shift + arrows", "nudge selection"],
                 ["Backspace", "delete selection"],
-                ["Ctrl/⌘ Z", "undo · Shift to redo"],
+                ["Ctrl/⌘ Z", "undo · Shift or Ctrl Y to redo"],
                 ["F", "fullscreen · Esc clears"],
                 ["?", "this cheatsheet"],
               ].map(([k, d]) => (
