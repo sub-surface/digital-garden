@@ -344,9 +344,13 @@ export function EnclosurePage() {
   const endMessage = !game.done ? "" : winner === null
     ? "drawn dead level"
     : `${nameOf(winner)} ${nameOf(winner) === "You" ? "win" : "wins"} by ${fmtArea(margin)}`
-  const statusLine = game.done ? endMessage
+  const earlyEnd = game.endedBy === "stuck" ? " · neither side could move"
+    : game.endedBy === "passes" ? ` · ${game.passed.length ? nameOf(game.passed[game.passed.length - 1]) : "a player"} passed ${cfg.passLimit} times running`
+    : ""
+  const streakOf = (p: Player) => (cfg.passLimit ? ` (${game.passStreak[p]} of ${cfg.passLimit})` : "")
+  const statusLine = game.done ? endMessage + earlyEnd
     : thinking ? `${nameOf(game.toMove)} is thinking…`
-    : game.passed.length ? `${game.passed.map(nameOf).join(" and ")} had no wall to draw and passed · ${nameOf(game.toMove) === "You" ? "your move" : `${nameOf(game.toMove)} to move`}`
+    : game.passed.length ? `${game.passed.map((p) => nameOf(p) + streakOf(p)).join(" and ")} had no wall to draw and passed · ${nameOf(game.toMove) === "You" ? "your move" : `${nameOf(game.toMove)} to move`}`
     : vs === null ? `${PLAYER_NAMES[game.toMove]} to move`
     : isBot(game.toMove) ? `${nameOf(game.toMove)} to move` : "Your move"
   const cabinetStatus = !game.done ? "playing" : (vs === null ? winner !== null : winner === humanSide) ? "won" : "lost"
@@ -513,7 +517,9 @@ export function EnclosurePage() {
             <li>A wall that crosses or touches an enemy wall cuts it, and the cut wall is gone (with any node it leaves bare). A wall may cut only one at a time, and walls drawn on the opponent&rsquo;s last turn are sealed: the faint halo marks them.</li>
             <li>End on an enemy node to take it. That cuts its wall, so only a node held by a single wall can be taken.</li>
             <li>Ground your walls close off is yours, holes and all. At the end of every turn each player&rsquo;s ground is added to their score, so ground taken early counts for more.</li>
-            <li>After {cfg.maxMoves} walls the higher score wins. A player with no legal wall passes; if neither can move, the remaining turns are scored as they stand.</li>
+            <li>After {cfg.maxMoves} walls the higher score wins. {cfg.passLimit
+              ? <> A player with no legal wall passes, and the game ends, scored as it stands, on a player&rsquo;s {cfg.passLimit === 3 ? "third" : `${cfg.passLimit}th`} pass in a row or as soon as neither side can move.</>
+              : <> A player with no legal wall passes; if neither can move, the remaining turns are scored as they stand.</>}</li>
           </ol>
           <p>Drag from a node, or tap a node then a target. While the bot thinks you can queue your next two walls the same way; each is checked when it lands, and right-click or Esc clears them. Esc puts a node down; U takes back your last wall.</p>
         </details>

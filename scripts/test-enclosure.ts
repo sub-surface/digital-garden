@@ -10,7 +10,7 @@ import assert from "node:assert/strict"
 import * as fs from "fs"
 import * as path from "path"
 import { fileURLToPath } from "url"
-import { ARCADE_PRIMER, BLUE, LATTICE3, RED, STANDARD, area, check, filledArea, newGame, step, type Pt } from "../src/lib/enclosure"
+import { ARCADE_PRIMER, ARCADE_STANDARD, BLUE, LATTICE3, RED, STANDARD, area, check, filledArea, newGame, step, type Pt } from "../src/lib/enclosure"
 import { planTurn, rng } from "../src/lib/enclosure-bot"
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -82,8 +82,13 @@ for (const level of ["pilgrim", "warden"] as const) {
   for (let g = 0; g < 4; g++) {
     const s = newGame(ARCADE_PRIMER)
     while (!s.done) for (const m of planTurn(s, "pilgrim", r).moves) step(s, m)
-    assert.ok(s.moveCount >= s.cfg.maxMoves, "a pass-rule game ended before the move limit")
+    assert.ok(s.result !== null, "a pass-rule game ended without a result")
+    assert.ok(s.moveCount >= s.cfg.maxMoves || s.endedBy !== null, "a pass-rule game ended early with no reason")
+    for (const p of [0, 1] as const) assert.ok(s.passStreak[p] <= (s.cfg.passLimit ?? Infinity), "a player passed past the limit")
   }
+  // The standard board (no limit) still plays every pass out to the move limit.
+  const s = newGame(ARCADE_STANDARD)
+  assert.equal(s.cfg.passLimit, undefined)
 }
 
 // Warden should beat Pilgrim on the primer most of the time (on a short

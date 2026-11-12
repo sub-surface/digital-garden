@@ -33,6 +33,13 @@ export interface Config {
    * "pass", so a losing player can't wall themselves in for a draw.
    */
   stuck?: "draw" | "pass"
+  /**
+   * Under "pass": a player's `passLimit`-th pass in a row ends the game, scored
+   * as it stands, rather than letting one side draw walls alone to the move
+   * limit. (Whatever the limit, two passes running, one by each side, mean
+   * neither can move, so that ends it too: the board can no longer change.)
+   */
+  passLimit?: number
 }
 
 export const STANDARD: Config = { R: 9, step: 3, maxMoves: 120, blueStart: [[-9, 0], [-6, 0]], redStart: [[6, 0], [9, 0]] }
@@ -40,7 +47,7 @@ export const STANDARD: Config = { R: 9, step: 3, maxMoves: 120, blueStart: [[-9,
 export const LATTICE3: Config = { R: 3, step: 1, maxMoves: 120, blueStart: [[-3, 0], [-2, 0]], redStart: [[2, 0], [3, 0]] }
 /** The arcade's boards: the same games with the "pass" rule. */
 export const ARCADE_STANDARD: Config = { ...STANDARD, stuck: "pass" }
-export const ARCADE_PRIMER: Config = { ...LATTICE3, stuck: "pass" }
+export const ARCADE_PRIMER: Config = { ...LATTICE3, stuck: "pass", passLimit: 3 }
 
 export interface Edge { id: number; owner: Player; a: Pt; b: Pt }
 export interface Move { a: Pt; b: Pt }
@@ -66,6 +73,10 @@ export interface State {
   history: { player: Player; move: Move }[]
   /** Who passed for want of a legal move after the last step, if anyone ("pass" rule). */
   passed: Player[]
+  /** Each player's passes in a row (reset when they draw a wall). */
+  passStreak: [number, number]
+  /** Why the game ended early, if it did. */
+  endedBy: "stuck" | "passes" | null
 }
 
 export const pk = (p: Pt) => `${p[0]},${p[1]}`
@@ -300,6 +311,7 @@ export function newGame(cfg: Config = STANDARD): State {
   const s: State = {
     cfg, nodes: new Map(), edges: new Map(), nextId: 0, toMove: BLUE, turn: 1, movesLeft: 1, moveCount: 0,
     scores: [0, 0], protected: new Set(), placedNow: [], done: false, result: null, areaLog: [], history: [], passed: [],
+    passStreak: [0, 0], endedBy: null,
   }
   addEdge(s, BLUE, ...cfg.blueStart)
   addEdge(s, RED, ...cfg.redStart)
@@ -318,6 +330,7 @@ export function cloneState(s: State, light = false): State {
     areaLog: light ? [] : s.areaLog.map((x) => [...x] as [number, number]),
     history: light ? [] : [...s.history],
     passed: [...s.passed],
+    passStreak: [...s.passStreak] as [number, number],
   }
 }
 
@@ -398,6 +411,7 @@ export function step(s: State, m: Move, known?: Check): StepInfo {
   if (!c.ok) throw new Error(`illegal move ${pk(m.a)}->${pk(m.b)}: ${c.reason}`)
   const me = s.toMove
   s.passed = []
+  s.passStreak[me] = 0
   const bOwner = s.nodes.get(pk(m.b))
   const captured = bOwner !== undefined && bOwner !== me
   s.placedNow.push(addEdge(s, me, m.a, m.b))
@@ -428,10 +442,20 @@ export function step(s: State, m: Move, known?: Check): StepInfo {
       break
     }
     // The stuck player forfeits the rest of their turn; the turn is still scored.
-    s.passed.push(s.toMove)
+    const who = s.toMove
+    s.passed.push(who)
+    s.passStreak[who]++
     s.moveCount += s.movesLeft
     s.movesLeft = 0
-    if (s.moveCount >= s.cfg.maxMoves) { score(s); finish(s); break }
+    const limit = s.cfg.passLimit
+    const frozen = limit !== undefined && s.passed.length >= 2 // both sides stuck, back to back
+    const spent = limit !== undefined && s.passStreak[who] >= limit
+    if (s.moveCount >= s.cfg.maxMoves || frozen || spent) {
+      if (s.moveCount < s.cfg.maxMoves) s.endedBy = frozen ? "stuck" : "passes"
+      score(s)
+      finish(s)
+      break
+    }
     endTurn(s)
   }
   return info
