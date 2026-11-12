@@ -86,12 +86,13 @@ function groupReactions(rows: { emote: string; user_id: string }[], currentUserI
 
 const marks = (n: number) => new Array(n).fill("?").join(",")
 
-/** The quoted message a reply shows, for a set of ids. */
-async function replySnapshots(db: D1Database, ids: string[]) {
+/** The quoted message a reply shows, for a set of ids. Only live messages in
+ * the same room: a reply must never surface a deleted message or another room's. */
+async function replySnapshots(db: D1Database, roomId: string, ids: string[]) {
   const map: Record<string, { id: string; body: string; profiles: ChatMessage["profiles"] }> = {}
   if (!ids.length) return map
-  const { results } = await db.prepare(`SELECT id, body, username, name_color, avatar_url FROM messages WHERE id IN (${marks(ids.length)})`)
-    .bind(...ids).all<Row>()
+  const { results } = await db.prepare(`SELECT id, body, username, name_color, avatar_url FROM messages WHERE room_id = ? AND deleted_at IS NULL AND id IN (${marks(ids.length)})`)
+    .bind(roomId, ...ids).all<Row>()
   for (const r of results) map[r.id] = { id: r.id, body: r.body, profiles: authorProfile(r) }
   return map
 }
@@ -145,6 +146,9 @@ export async function handleChatMessages(ctx: RouteCtx): Promise<Response> {
       return jsonResponse({ error: "No such room" }, 404)
     }
     const replyTo = typeof body.reply_to === "string" && body.reply_to ? body.reply_to : null
+    if (replyTo && !(await db.prepare("SELECT 1 FROM messages WHERE id = ? AND room_id = ? AND deleted_at IS NULL").bind(replyTo, roomId).first())) {
+      return jsonResponse({ error: "The message you replied to is gone" }, 400)
+    }
     const message = await insertMessage(env, {
       room_id: roomId, user_id: auth!.id, body: body.body.trim(), reply_to: replyTo,
       username: auth!.username, name_color: auth!.name_color, avatar_url: auth!.avatar_url,
@@ -168,7 +172,7 @@ export async function handleChatMessages(ctx: RouteCtx): Promise<Response> {
   const replyIds = [...new Set(messages.map((m) => m.reply_to).filter((id): id is string => !!id))]
   const msgIds = messages.map((m) => m.id)
   const [replyMap, reactRows] = await Promise.all([
-    replySnapshots(db, replyIds),
+    replySnapshots(db, room, replyIds),
     msgIds.length
       ? db.prepare(`SELECT message_id, emote, user_id FROM reactions WHERE message_id IN (${marks(msgIds.length)})`)
           .bind(...msgIds).all<{ message_id: string; emote: string; user_id: string }>().then((r) => r.results)
@@ -203,7 +207,7 @@ export async function insertMessage(env: Env, m: NewMessage): Promise<Row> {
 
 /** Send a new message to the room's live sockets, shaped as the list endpoint shapes it. */
 export async function broadcastMessage(env: Env, m: Row): Promise<void> {
-  const replies = m.reply_to ? await replySnapshots(siteDb(env), [m.reply_to]) : {}
+  const replies = m.reply_to ? await replySnapshots(siteDb(env), m.room_id, [m.reply_to]) : {}
   await broadcastToRoom(env, m.room_id, {
     type: "message",
     message: { ...m, profiles: authorProfile(m), reply_to_message: m.reply_to ? (replies[m.reply_to] ?? null) : null, reactions: [] },

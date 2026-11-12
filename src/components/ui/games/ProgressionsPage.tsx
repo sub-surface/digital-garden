@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import { startFrameLoop } from "./useGameLoop"
+import { ignoreGameKey } from "./gameUtils"
 import styles from "./ProgressionsPage.module.scss"
 
 /**
@@ -33,6 +34,15 @@ const DIRS_SQUARE: ReadonlyArray<readonly [number, number]> = [
 ]
 const DIRS_HEX: ReadonlyArray<readonly [number, number]> = [
   [1, 0], [0, 1], [1, -1],
+]
+
+/** The cells "next to" a stone, for candidate moves: 8 on the square lattice,
+ * 6 on the hex one (axial ±(1,0), ±(0,1), ±(1,−1); (1,1) is not a hex neighbour). */
+const NEAR_SQUARE: ReadonlyArray<readonly [number, number]> = [
+  [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1],
+]
+const NEAR_HEX: ReadonlyArray<readonly [number, number]> = [
+  [1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, 1],
 ]
 
 type Topo = "square" | "hex"
@@ -81,6 +91,8 @@ export function ProgressionsPage() {
   // Active-play bounding box, so candidate generation scans a small window around
   // the stones instead of the whole 90×90 grid every step.
   const bboxRef = useRef({ minX: GRID, minY: GRID, maxX: -1, maxY: -1 })
+  /** Set when the camera should re-centre (a lattice switch changes the board's shape). */
+  const recentreRef = useRef(false)
 
   const idx = (x: number, y: number) => y * GRID + x
   const inB = (x: number, y: number) => x >= 0 && x < GRID && y >= 0 && y < GRID
@@ -104,6 +116,7 @@ export function ProgressionsPage() {
     setTopo(t)
     topoRef.current = t
     dirsRef.current = t === "hex" ? DIRS_HEX : DIRS_SQUARE
+    recentreRef.current = true
     reset()
   }, [reset])
 
@@ -239,8 +252,7 @@ export function ProgressionsPage() {
         if (occ === who) continue
         if (occ !== 0 && !ow) continue
         let near = false
-        for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1; dx++) {
-          if (!dx && !dy) continue
+        for (const [dx, dy] of topoRef.current === "hex" ? NEAR_HEX : NEAR_SQUARE) {
           if (inB(x + dx, y + dy) && g[idx(x + dx, y + dy)]) { near = true; break }
         }
         if (near) cand.push([x, y])
@@ -264,13 +276,21 @@ export function ProgressionsPage() {
     // Win detection is LOCAL: only a line through the just-placed cell can have
     // changed. O(dirs × TARGET) instead of an O(n²) board scan. The placed cell's
     // own longest run also becomes the highlight for that side.
+    // A point is scored per axis on which this stone *forms* a line of TARGET or
+    // more: both halves it joins were shorter than TARGET, so a run that merely
+    // grows from 6 to 7 doesn't re-score, but joining 3 + 3 does. (It used to
+    // score only when the single longest line was exactly TARGET, so a stone
+    // that completed a 6 beside a longer line on another axis, or joined two
+    // halves into a 7, scored nothing.)
     let myRun: number[] = [idx(bx, by)]
+    let formed = 0
     for (const [dx, dy] of dirsRef.current) {
       const line: number[] = [idx(bx, by)]
-      let cx = bx + dx, cy = by + dy
-      while (inB(cx, cy) && g[idx(cx, cy)] === who) { line.push(idx(cx, cy)); cx += dx; cy += dy }
+      let cx = bx + dx, cy = by + dy, ahead = 0, behind = 0
+      while (inB(cx, cy) && g[idx(cx, cy)] === who) { line.push(idx(cx, cy)); cx += dx; cy += dy; ahead++ }
       cx = bx - dx; cy = by - dy
-      while (inB(cx, cy) && g[idx(cx, cy)] === who) { line.unshift(idx(cx, cy)); cx -= dx; cy -= dy }
+      while (inB(cx, cy) && g[idx(cx, cy)] === who) { line.unshift(idx(cx, cy)); cx -= dx; cy -= dy; behind++ }
+      if (line.length >= TARGET && ahead < TARGET && behind < TARGET) formed++
       if (line.length > myRun.length) myRun = line
     }
     // merge this side's fresh run into the cached highlight (keep the other side's)
@@ -283,13 +303,10 @@ export function ProgressionsPage() {
         : { ...bestRef.current, blue: myRun.length }
       dirtyRef.current = true
     }
-    // Stones are PERMANENT — never cleared or overwritten. Score a point the
-    // moment a run first reaches exactly TARGET (the completing stone). A run that
-    // later grows to 7+ won't re-score because we test `=== TARGET`, not `>=`.
-    if (myRun.length === TARGET) {
+    if (formed) {
       scoresRef.current = who === 1
-        ? { ...scoresRef.current, red: scoresRef.current.red + 1 }
-        : { ...scoresRef.current, blue: scoresRef.current.blue + 1 }
+        ? { ...scoresRef.current, red: scoresRef.current.red + formed }
+        : { ...scoresRef.current, blue: scoresRef.current.blue + formed }
       dirtyRef.current = true
     }
     turnRef.current = who === 1 ? 2 : 1
@@ -307,6 +324,22 @@ export function ProgressionsPage() {
       dirtyRef.current = true
     }
   }, [potential, longestRun, computeStats])
+
+  // Space play/pause, N (or .) step, R reset, G switch lattice, O overwrite.
+  const stepRef = useRef(stepOnce); stepRef.current = stepOnce
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (ignoreGameKey(e)) return
+      const k = e.key.toLowerCase()
+      if (k === " ") { e.preventDefault(); setRunning((r) => !r) }
+      else if ((k === "n" || k === ".") && !runningRef.current) stepRef.current()
+      else if (k === "r") reset()
+      else if (k === "g") switchTopo(topoRef.current === "hex" ? "square" : "hex")
+      else if (k === "o") setOverwrite((o) => !o)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [reset, switchTopo])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -334,21 +367,23 @@ export function ProgressionsPage() {
       }
     }
 
+    const centre = () => {
+      // centre on the grid's middle cell for both topologies
+      const mid = GRID / 2
+      const isHex = topoRef.current === "hex"
+      const cx = isHex ? (mid + mid / 2) * cell : mid * cell
+      const cy = isHex ? mid * SQ3_2 * cell : mid * cell
+      view.x = canvas.clientWidth / 2 - cx
+      view.y = canvas.clientHeight / 2 - cy
+      view.init = true
+      viewDirty = true
+    }
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       canvas.width = Math.floor(canvas.clientWidth * dpr)
       canvas.height = Math.floor(canvas.clientHeight * dpr)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      if (!view.init) {
-        // centre on the grid's middle cell for both topologies
-        const mid = GRID / 2
-        const isHex = topoRef.current === "hex"
-        const cx = isHex ? (mid + mid / 2) * cell : mid * cell
-        const cy = isHex ? mid * SQ3_2 * cell : mid * cell
-        view.x = canvas.clientWidth / 2 - cx
-        view.y = canvas.clientHeight / 2 - cy
-        view.init = true
-      }
+      if (!view.init) centre()
       viewDirty = true
     }
     resize()
@@ -419,6 +454,7 @@ export function ProgressionsPage() {
     let acc = 0
     const MAX_STEPS_PER_FRAME = 12   // cap so a slow frame can't spiral
     const stopLoop = startFrameLoop((dt) => {
+      if (recentreRef.current) { recentreRef.current = false; centre() }
       acc += dt
       const stepMs = 1000 / Math.max(1, speedRef.current)
       let stepped = false
@@ -450,15 +486,31 @@ export function ProgressionsPage() {
     // --- interaction: drag to pan, scroll to zoom, click (no drag) to seed ---
     let dragging = false, moved = false
     let start = { x: 0, y: 0, vx: 0, vy: 0 }
+    // Two pointers (a phone pinch) zoom about their midpoint and pan with it.
+    const pointers = new Map<number, { x: number; y: number }>()
+    let pinch: { d: number; mx: number; my: number; cell: number; vx: number; vy: number } | null = null
+    const pinchFrame = () => {
+      const [a, b] = [...pointers.values()]
+      return { d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }
+    }
 
     const cellAt = (clientX: number, clientY: number): [number, number] => {
       const r = canvas.getBoundingClientRect()
       const lx = clientX - r.left - view.x, ly = clientY - r.top - view.y
       if (topoRef.current === "hex") {
-        // invert axial→pixel: py = y*(√3/2)*cell, px = (x + y/2)*cell
-        const y = Math.floor((ly / (Math.sqrt(3) / 2 * cell)))
-        const x = Math.floor(lx / cell - y / 2)
-        return [x, y]
+        // Hex centres sit at ((x + y/2)·cell + cell/2, y·(√3/2)·cell + cell/2).
+        // Take the nearest centre among the few around the rough guess; a
+        // square-box floor() put clicks near a hex's edge on its neighbour.
+        const fy = (ly - cell / 2) / (SQ3_2 * cell)
+        let bestX = 0, bestY = 0, bestD = Infinity
+        for (let y = Math.floor(fy); y <= Math.ceil(fy); y++) {
+          const fx = (lx - cell / 2) / cell - y / 2
+          for (let x = Math.floor(fx); x <= Math.ceil(fx); x++) {
+            const d = ((x + y / 2) * cell + cell / 2 - lx) ** 2 + (y * SQ3_2 * cell + cell / 2 - ly) ** 2
+            if (d < bestD) { bestD = d; bestX = x; bestY = y }
+          }
+        }
+        return [bestX, bestY]
       }
       return [Math.floor(lx / cell), Math.floor(ly / cell)]
     }
@@ -466,10 +518,29 @@ export function ProgressionsPage() {
     // phone a drag would otherwise do nothing at all — no pan, no seeding.
     const down = (e: PointerEvent) => {
       if (e.pointerType === "mouse" && e.button !== 0) return
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (pointers.size === 2) {
+        pinch = { ...pinchFrame(), cell, vx: view.x, vy: view.y }
+        moved = true   // a pinch never seeds a cell
+        return
+      }
       dragging = true; moved = false
       start = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }
     }
     const move = (e: PointerEvent) => {
+      if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (pinch && pointers.size >= 2) {
+        const f = pinchFrame()
+        const r = canvas.getBoundingClientRect()
+        const next = Math.max(3, Math.min(40, pinch.cell * f.d / Math.max(1, pinch.d)))
+        const ratio = next / pinch.cell
+        const ox = pinch.mx - r.left, oy = pinch.my - r.top
+        cell = next
+        view.x = ox - (ox - pinch.vx) * ratio + (f.mx - pinch.mx)
+        view.y = oy - (oy - pinch.vy) * ratio + (f.my - pinch.my)
+        viewDirty = true
+        return
+      }
       if (!dragging) return
       const dx = e.clientX - start.x, dy = e.clientY - start.y
       if (Math.abs(dx) + Math.abs(dy) > 3) moved = true
@@ -477,6 +548,8 @@ export function ProgressionsPage() {
       viewDirty = true
     }
     const up = (e: PointerEvent) => {
+      pointers.delete(e.pointerId)
+      if (pinch) { if (pointers.size < 2) { pinch = null; dragging = false } return }
       if (dragging && !moved && e.type === "pointerup") {
         const [x, y] = cellAt(e.clientX, e.clientY)
         if (inB(x, y) && gridRef.current[idx(x, y)] === 0) {
@@ -497,7 +570,7 @@ export function ProgressionsPage() {
       const mx = e.clientX - r.left, my = e.clientY - r.top
       // world coords under cursor before zoom
       const wx = (mx - view.x) / cell, wy = (my - view.y) / cell
-      const next = Math.max(3, Math.min(40, cell * (e.deltaY < 0 ? 1.12 : 0.89)))
+      const next = Math.max(3, Math.min(40, cell * Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * 0.0025)))
       cell = next
       // keep the same world point under the cursor after zoom
       view.x = mx - wx * cell; view.y = my - wy * cell
@@ -596,10 +669,11 @@ export function ProgressionsPage() {
           {topo === "hex" ? "Hex lattice (3 axes — HeXO's geometry)." : "Square lattice (4 axes)."}{" "}
           {overwrite
             ? "Overwrite ON: agents may claim opponent cells — a non-monotone CA on a bounded board (cycles, standing waves, the “CRT” regime)."
-            : "Stones are permanent — a point is scored each time a side completes a length-6 progression."}{" "}
+            : "Stones are permanent — a point is scored for each axis on which a stone forms a line of six or more."}{" "}
           Defence weight 0 = pure greedy builders; higher = each side also blocks the other's
           near-complete progressions (the pairing idea behind the infinite-Hex draw).
-          Drag to pan, scroll to zoom, click a cell to seed it.
+          <span className="on-desktop">Drag to pan, scroll to zoom, click a cell to seed it. Space play/pause · N step · R reset · G lattice · O overwrite.</span>
+          <span className="on-touch">Drag to pan, pinch to zoom, tap a cell to seed it.</span>
         </p>
       </div>
     </div>

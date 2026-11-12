@@ -7,6 +7,8 @@ import assert from "node:assert/strict"
 import {
   FRONTS, REINFORCE, ROUNDS, START_ARMY, clash, dealValues, newFronts, planFronts, resolve, rngFrom, sum, validAlloc, winner,
 } from "../src/lib/fronts"
+import { Chess } from "chess.js"
+import { pickBotMove } from "../src/lib/chessBot"
 import { CAPACITY, FENCED_MAX, MAX_GRAZE, SEASONS, SUSTAINABLE, decide, newCommons, regrowth, season, welfare } from "../src/lib/commons"
 
 // ── Fronts: rules ──
@@ -90,6 +92,19 @@ for (const p of ["steward", "mirror", "grazier", "opportunist"] as const) {
     cs.forEach((c, i) => assert.ok(c.graze >= 0 && c.graze <= s.caps[i], `${p} grazed ${c.graze} over cap ${s.caps[i]}`))
     s = season(s, cs)
   }
+}
+
+// ── Chess: Sharp takes a mate in one and doesn't hang its queen. ──
+{
+  const g = new Chess("6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1") // Rd8#
+  for (let i = 0; i < 3; i++) assert.equal(pickBotMove(g, "sharp")?.san, "Rd8#", "Sharp missed a back-rank mate")
+  // Black queen attacked by a pawn; every sharp move must save it.
+  const h = new Chess("4k3/8/8/3q4/4P3/8/8/4K3 b - - 0 1")
+  const m = pickBotMove(h, "sharp")!
+  h.move(m)
+  assert.ok(h.board().flat().some((p) => p?.type === "q" && p.color === "b") && !h.moves({ verbose: true }).some((x) => x.captured === "q"), `Sharp left its queen en prise (${m.san})`)
+  // Casual takes the biggest piece on offer.
+  assert.equal(pickBotMove(new Chess("4k3/8/8/3q4/4P3/8/8/4K3 w - - 0 1"), "casual")?.san, "exd5")
 }
 
 console.log(`games: ok (Fronts: Marshal ${marshal}/${games} vs Recruit; Commons: sustainable yield ${SUSTAINABLE.toFixed(1)}/season)`)

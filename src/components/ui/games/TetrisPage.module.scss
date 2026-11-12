@@ -157,3 +157,17 @@
     }
   }
 }
+
+.mini {
+  display: grid;
+  grid-template-columns: repeat(4, 10px);
+  grid-auto-rows: 10px;
+  gap: 2px;
+  padding: 4px 0;
+
+  i {
+    border-radius: 1px;
+    background: color-mix(in srgb, var(--color-overlay-tint, #fff) 4%, transparent);
+  }
+  i[data-on] { background: var(--color-accent-base); }
+}

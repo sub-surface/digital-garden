@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { sfx } from "@/lib/sfx"
-import { readStoredInt, writeStored } from "./gameUtils"
+import { ignoreGameKey, readStoredInt, writeStored } from "./gameUtils"
 import styles from "./BlackjackPage.module.scss"
 
 /**
  * Blackjack — minimal, typographic, single hand vs the dealer.
- * Dealer stands on all 17s. Blackjack pays 3:2. Chips persist in localStorage.
+ * Dealer stands on all 17s. Blackjack pays 3:2. Double down on the first two
+ * cards. Chips (and the most you've ever held) persist in localStorage.
  */
 
 type Suit = "♠" | "♥" | "♦" | "♣"
@@ -50,6 +51,9 @@ export function BlackjackPage() {
   const [phase, setPhase] = useState<Phase>("betting")
   const [message, setMessage] = useState("Place your bet.")
   const [holeHidden, setHoleHidden] = useState(true)
+  /** The bet riding on this hand (twice `bet` after a double). */
+  const [stake, setStake] = useState(0)
+  const [peak, setPeak] = useState(() => readStoredInt("bj-peak", 100))
 
   // pending timeouts so we can cancel the dealer's dramatic play-out on unmount
   const timers = useRef<number[]>([])
@@ -62,6 +66,7 @@ export function BlackjackPage() {
   const saveChips = useCallback((n: number) => {
     setChips(n)
     writeStored("bj-chips", n)
+    setPeak((p) => { if (n > p) { writeStored("bj-peak", n); return n } return p })
   }, [])
 
   const settle = useCallback((p: Card[], d: Card[], betAmt: number) => {
@@ -91,6 +96,7 @@ export function BlackjackPage() {
     const p = [d.pop()!, d.pop()!]
     const dl = [d.pop()!, d.pop()!]
     setDeck(d); setPlayer(p); setDealer(dl)
+    setStake(bet)
     setHoleHidden(true)
     sfx.play("deal")
 
@@ -105,22 +111,8 @@ export function BlackjackPage() {
     }
   }, [bet, chips, settle])
 
-  const hit = useCallback(() => {
-    if (phase !== "player") return
-    const d = [...deck]
-    const p = [...player, d.pop()!]
-    setDeck(d); setPlayer(p)
-    sfx.play("deal")
-    if (handValue(p) > 21) {
-      setPhase("dealer")
-      after(500, () => { setHoleHidden(false); sfx.play("flip") })
-      after(950, () => settle(p, dealer, bet))
-    }
-  }, [phase, deck, player, dealer, bet, settle])
-
   /** Dealer's dramatic turn: flip the hole card, then draw one card at a time. */
-  const stand = useCallback(() => {
-    if (phase !== "player") return
+  const dealerPlays = useCallback((player: Card[], deck: Card[], bet: number) => {
     setPhase("dealer")
     setMessage("Dealer plays...")
 
@@ -147,13 +139,78 @@ export function BlackjackPage() {
       t += STEP
     })
     after(t + 200, () => { setDeck(d); settle(player, working, bet) })
-  }, [phase, deck, dealer, player, bet, settle])
+  }, [dealer, settle])
+
+  /** After a card lands on the player's hand: bust settles, 21 stands for you. */
+  const afterDraw = useCallback((p: Card[], d: Card[], betAmt: number, forced: boolean) => {
+    if (handValue(p) > 21) {
+      setPhase("dealer")
+      after(500, () => { setHoleHidden(false); sfx.play("flip") })
+      after(950, () => settle(p, dealer, betAmt))
+    } else if (forced || handValue(p) === 21) {
+      dealerPlays(p, d, betAmt)
+    }
+  }, [dealer, settle, dealerPlays])
+
+  const hit = useCallback(() => {
+    if (phase !== "player") return
+    const d = [...deck]
+    const p = [...player, d.pop()!]
+    setDeck(d); setPlayer(p)
+    sfx.play("deal")
+    afterDraw(p, d, stake, false)
+  }, [phase, deck, player, stake, afterDraw])
+
+  const stand = useCallback(() => {
+    if (phase !== "player") return
+    dealerPlays(player, deck, stake)
+  }, [phase, player, deck, stake, dealerPlays])
+
+  /** Double the stake, take exactly one more card, then stand. */
+  const canDouble = phase === "player" && player.length === 2 && chips >= stake * 2
+  const double = useCallback(() => {
+    if (!canDouble) return
+    const d = [...deck]
+    const p = [...player, d.pop()!]
+    const s2 = stake * 2
+    setDeck(d); setPlayer(p); setStake(s2)
+    sfx.play("deal")
+    afterDraw(p, d, s2, true)
+  }, [canDouble, deck, player, stake, afterDraw])
 
   const newRound = useCallback(() => {
     setPlayer([]); setDealer([]); setPhase("betting"); setHoleHidden(true)
     setMessage(chips <= 0 ? "Out of chips — have 100 on the house." : "Place your bet.")
     if (chips <= 0) saveChips(100)
+    // A bet bigger than what's left would leave Deal disabled with no reason given.
+    const left = chips <= 0 ? 100 : chips
+    setBet((b) => Math.min(Math.max(5, b), left))
+    setStake(0)
   }, [chips, saveChips])
+
+  // D/Space deal · H hit · S stand · 2 double · ←/→ bet · Enter next hand.
+  const keys = useRef({ deal, hit, stand, double, newRound, phase, chips })
+  keys.current = { deal, hit, stand, double, newRound, phase, chips }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (ignoreGameKey(e)) return
+      const k = keys.current
+      const key = e.key.toLowerCase()
+      if (k.phase === "betting") {
+        if (key === "d" || key === " " || key === "enter") { e.preventDefault(); k.deal() }
+        else if (key === "arrowleft" || key === "-") setBet((b) => Math.max(5, b - 5))
+        else if (key === "arrowright" || key === "+" || key === "=") setBet((b) => Math.min(k.chips, b + 5))
+      } else if (k.phase === "player") {
+        if (key === "h") k.hit()
+        else if (key === "s") k.stand()
+        else if (key === "2") k.double()
+      } else if (k.phase === "done" && (key === "enter" || key === " " || key === "n")) {
+        e.preventDefault(); k.newRound()
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
 
   const pv = handValue(player)
   const dealerShown = useMemo(
@@ -226,6 +283,7 @@ export function BlackjackPage() {
           <div className={styles.actionRow}>
             <button className={styles.primary} onClick={hit}>Hit</button>
             <button className={styles.secondary} onClick={stand}>Stand</button>
+            {player.length === 2 && <button className={styles.secondary} onClick={double} disabled={!canDouble} title={canDouble ? "double the bet, one card, then stand" : "not enough chips to double"}>Double</button>}
           </div>
         )}
         {(phase === "done") && (
@@ -235,6 +293,11 @@ export function BlackjackPage() {
 
       <div className={styles.chipBar}>
         <span>chips <strong>{chips}</strong></span>
+        {stake > 0 && phase !== "betting" && <span>on the table <strong>{stake}</strong></span>}
+        <span title="the most you have ever held">high water {peak}</span>
+      </div>
+      <div className={styles.keyHint}>
+        <span className="on-desktop">D deal · H hit · S stand · 2 double · ←→ bet · Enter next hand</span>
       </div>
     </div>
   )

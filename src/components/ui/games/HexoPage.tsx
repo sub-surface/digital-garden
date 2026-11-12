@@ -2,6 +2,15 @@ import { useState, useMemo, useRef, useCallback, useEffect } from "react"
 import { initialState, placeStone, botMove, key, stonesLeft, type HexoState } from "@/lib/hexo"
 import styles from "./HexoPage.module.scss"
 import { useProgramHost } from "./ProgramHostContext"
+import { ignoreGameKey } from "./gameUtils"
+
+const REC_KEY = "hexo:record" // "wins-losses" against the bot
+function readRec(): [number, number] {
+  try {
+    const v = (localStorage.getItem(REC_KEY) ?? "").split("-").map(Number)
+    return v.length === 2 && v.every(Number.isFinite) ? [v[0], v[1]] : [0, 0]
+  } catch { return [0, 0] }
+}
 
 const HEX_SIZE = 22 // px radius
 const MARGIN_RING = 3 // empty hexes drawn beyond placed stones
@@ -283,37 +292,78 @@ function HexoBoard({ state, onPlace, annotations, setAnnotations, wide }: BoardP
 
 export function HexoPage() {
   const programHost = useProgramHost()
-  const [state, setState] = useState<HexoState>(initialState())
+  // The position plus every position before it, so a move can be taken back.
+  const [game, setGame] = useState<{ cur: HexoState; past: HexoState[] }>(() => ({ cur: initialState(), past: [] }))
+  const state = game.cur
+  const advance = useCallback((fn: (s: HexoState) => HexoState) => {
+    setGame((g) => {
+      const next = fn(g.cur)
+      return next === g.cur ? g : { cur: next, past: [...g.past, g.cur] }
+    })
+  }, [])
+  const [record, setRecord] = useState(readRec)
   const [annotations, setAnnotations] = useState<Annotations>({ highlights: new Set(), arrows: [] })
   const [zen, setZen] = useState(false)
   const [vsBot, setVsBot] = useState(true) // bot is Player 2
 
   const onPlace = useCallback((q: number, r: number) => {
-    setState((s) => {
+    advance((s) => {
       // In bot mode, ignore clicks while it's the bot's turn.
       if (vsBot && s.turn === 2 && s.winner === null) return s
       return placeStone(s, q, r)
     })
-  }, [vsBot])
+  }, [vsBot, advance])
 
   // Bot auto-plays its stones whenever it's Player 2's turn (bot mode only).
   // One stone per tick so the placements animate and the 1-2-2 rule is respected.
   useEffect(() => {
     if (!vsBot || state.winner !== null || state.turn !== 2) return
     const t = setTimeout(() => {
-      setState((s) => {
+      advance((s) => {
         if (!vsBot || s.winner !== null || s.turn !== 2) return s
         const mv = botMove(s)
         return mv ? placeStone(s, mv.q, mv.r) : s
       })
     }, 320)
     return () => clearTimeout(t)
-  }, [vsBot, state])
+  }, [vsBot, state, advance])
 
   const newGame = useCallback(() => {
-    setState(initialState())
+    setGame({ cur: initialState(), past: [] })
     setAnnotations({ highlights: new Set(), arrows: [] })
   }, [])
+
+  /** Take back to the start of your last turn (against the bot, its reply goes too). */
+  const undo = useCallback(() => {
+    setGame((g) => {
+      if (!g.past.length) return g
+      const past = [...g.past]
+      let cur = past.pop()!
+      while (past.length && (vsBot ? !(cur.turn === 1 && cur.placedThisTurn === 0) : cur.placedThisTurn !== 0)) cur = past.pop()!
+      return { cur, past }
+    })
+  }, [vsBot])
+  // A game against the bot that's taken back after its end isn't counted twice.
+  const recorded = useRef<HexoState | null>(null)
+  useEffect(() => {
+    if (!vsBot || state.winner === null || recorded.current === state) return
+    recorded.current = state
+    const r = readRec()
+    r[state.winner === 1 ? 0 : 1]++
+    try { localStorage.setItem(REC_KEY, r.join("-")) } catch { /* storage blocked */ }
+    setRecord(r)
+  }, [vsBot, state])
+
+  // U undo · N new game
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (ignoreGameKey(e)) return
+      if (e.key === "u" || e.key === "U") undo()
+      else if (e.key === "n" || e.key === "N") newGame()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [undo, newGame])
 
   // Esc exits zen mode
   useEffect(() => {
@@ -346,6 +396,7 @@ export function HexoPage() {
         </div>
         <div className={styles.zenBar}>
           <span className={styles.zenStatus}>{status}</span>
+          <button className={styles.zenBtn} onClick={undo} disabled={!game.past.length}>Undo</button>
           <button className={styles.zenBtn} onClick={newGame}>New Game</button>
           <span className={styles.zenHint}>scroll = zoom · drag = pan · right-click = mark</span>
         </div>
@@ -368,7 +419,11 @@ export function HexoPage() {
         <div className={styles.controls}>
           <div className={styles.statusBox}>
             <div className={styles.statusText}>{status}</div>
-            <button className={styles.resetBtn} onClick={newGame}>New Game</button>
+            <div className={styles.statusActions}>
+              <button className={styles.resetBtn} onClick={undo} disabled={!game.past.length} title="U">Undo</button>
+              <button className={styles.resetBtn} onClick={newGame} title="N">New Game</button>
+            </div>
+            {vsBot && <div className={styles.record}>record vs bot {record[0]} – {record[1]}</div>}
           </div>
           <div className={styles.zoomRow}>
             <button
@@ -388,7 +443,7 @@ export function HexoPage() {
             Player 1 places one stone to open; after that, each player places two stones per
             turn. First to six in a row — along any of the three directions — wins. Drag to
             pan, scroll to zoom. Right-click a cell to highlight it, right-drag to draw an
-            arrow.
+            arrow. U takes back your last turn, N starts again.
           </p>
         </div>
       </div>

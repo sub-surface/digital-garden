@@ -65,3 +65,8 @@
   text-transform: uppercase;
   color: var(--color-accent-base);
 }
+
+.newBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}

@@ -107,23 +107,40 @@ export function Game2048Page() {
   // Best is tracked + persisted by GameCabinet via the `g2048-best` key.
   const [over, setOver] = useState(false)
   const [won, setWon] = useState(false)
+  // The board as of the last *move*, not the last render: two keys pressed
+  // between renders used to both read the same stale board, so the second
+  // move overwrote the first and its spawned tile vanished.
   const boardRef = useRef(board)
-  boardRef.current = board
+  const scoreRef = useRef(0)
+  /** One step back (board + score), spent when used. */
+  const [undo, setUndo] = useState<{ board: Board; score: number } | null>(null)
 
   const reset = useCallback(() => {
     const b = empty(); spawn(b); spawn(b)
-    setBoard(b); setScore(0); setOver(false); setWon(false)
+    boardRef.current = b; scoreRef.current = 0
+    setBoard(b); setScore(0); setOver(false); setWon(false); setUndo(null)
   }, [])
+
+  const takeBack = useCallback(() => {
+    if (!undo) return
+    boardRef.current = undo.board; scoreRef.current = undo.score
+    setBoard(undo.board); setScore(undo.score); setOver(false); setUndo(null)
+    sfx.play("move")
+  }, [undo])
 
   const apply = useCallback((dir: Dir) => {
     if (over) return
-    const [moved, gained, didMove] = moveBoard(boardRef.current, dir)
+    const before = boardRef.current
+    const [moved, gained, didMove] = moveBoard(before, dir)
     if (!didMove) return
     spawn(moved)
+    setUndo({ board: before, score: scoreRef.current })
+    boardRef.current = moved
     setBoard(moved)
     if (gained > 0) {
       sfx.play("merge")
-      setScore((s) => s + gained)
+      scoreRef.current += gained
+      setScore(scoreRef.current)
     } else {
       sfx.play("move")
     }
@@ -136,12 +153,13 @@ export function Game2048Page() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (ignoreGameKey(e)) return
+      if (e.key === "u" || e.key === "U" || e.key === "Backspace") { e.preventDefault(); takeBack(); return }
       const dir = KEY_DIRS[e.key.length === 1 ? e.key.toLowerCase() : e.key]
       if (dir) { e.preventDefault(); apply(dir) }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [apply])
+  }, [apply, takeBack])
 
   // touch swipe
   const touch = useRef<{ x: number; y: number } | null>(null)
@@ -164,12 +182,15 @@ export function Game2048Page() {
   return (
     <GameCabinet
       title="2048"
-      blurb="Merge tiles up the spectrum. Arrows, WASD, or swipe."
+      blurb="Merge tiles up the spectrum. Arrows, WASD, or swipe. U takes back one move."
       status={over ? "lost" : "playing"}
       onStart={reset}
       score={{ value: score, bestKey: "g2048-best" }}
       endMessage={over ? "no moves left" : undefined}
-      controls={<button className={styles.newBtn} onClick={reset}>New</button>}
+      controls={<>
+        <button className={styles.newBtn} onClick={takeBack} disabled={!undo} title="U">Undo</button>
+        <button className={styles.newBtn} onClick={reset}>New</button>
+      </>}
     >
       <div
         className={styles.boardWrap}

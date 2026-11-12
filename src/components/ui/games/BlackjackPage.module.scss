@@ -174,6 +174,10 @@
 
 .chipBar {
   margin-top: var(--space-6);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 1.5rem;
   font-size: 0.8rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -184,4 +188,12 @@
     margin-left: 0.4em;
     font-weight: 600;
   }
+}
+
+.keyHint {
+  margin-top: var(--space-4);
+  font-size: 0.65rem;
+  opacity: 0.4;
+  letter-spacing: 0.05em;
+  text-align: center;
 }

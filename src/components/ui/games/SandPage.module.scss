@@ -91,3 +91,22 @@
     &:hover { border-color: var(--color-accent-base); color: var(--color-accent-base); }
   }
 }
+
+.brushSize {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.75;
+
+  input { width: 90px; accent-color: var(--color-accent-base); }
+}
+
+.keys {
+  margin-top: var(--space-3);
+  text-align: center;
+  font-size: 0.65rem;
+  opacity: 0.4;
+}

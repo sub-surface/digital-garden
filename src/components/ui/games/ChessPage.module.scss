@@ -24,9 +24,44 @@
   }
 }
 
-.boardWrapper {
+.boardColumn {
   flex: 1;
   max-width: 500px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* Taken pieces above and below the board, with the material lead. */
+.captured {
+  min-height: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  letter-spacing: -0.12em;
+  color: var(--color-text-muted);
+}
+
+.lead {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: var(--color-primary);
+}
+
+.hint {
+  font-size: 0.68rem;
+  opacity: 0.55;
+  line-height: 1.5;
+}
+
+.statusActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.boardWrapper {
   width: 100%;
   border-radius: 6px;
 
@@ -81,13 +116,14 @@
 
 .difficultyGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 0.5rem;
 }
 
 .diffBtn {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--color-overlay-tint, #fff) 3%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-overlay-tint, #fff) 5%, transparent);
   color: var(--color-text-muted);
   padding: 8px;
   border-radius: 4px;
@@ -97,7 +133,7 @@
   transition: all 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: color-mix(in srgb, var(--color-overlay-tint, #fff) 6%, transparent);
     color: var(--color-text);
   }
 
@@ -109,10 +145,10 @@
 }
 
 .statusBox {
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--color-overlay-tint, #fff) 2%, transparent);
   padding: 1rem;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid color-mix(in srgb, var(--color-overlay-tint, #fff) 5%, transparent);
 }
 
 .statusText {
@@ -124,7 +160,7 @@
 .resetBtn {
   width: 100%;
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--color-overlay-tint, #fff) 10%, transparent);
   color: var(--color-text-muted);
   padding: 8px;
   border-radius: 4px;
@@ -134,9 +170,14 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.05);
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-overlay-tint, #fff) 5%, transparent);
     color: var(--color-text);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: default;
   }
 }
 
@@ -176,7 +217,7 @@
 .moveItem {
   font-size: 0.75rem;
   padding: 1px 5px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--color-overlay-tint, #fff) 4%, transparent);
   border-radius: 3px;
   opacity: 0.7;
   min-width: 3em;
@@ -196,7 +237,7 @@
 .exportBtn {
   flex: 1;
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--color-overlay-tint, #fff) 8%, transparent);
   color: var(--color-text-muted);
   padding: 8px;
   border-radius: 4px;
@@ -208,9 +249,9 @@
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.05);
+    background: color-mix(in srgb, var(--color-overlay-tint, #fff) 5%, transparent);
     color: var(--color-text);
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: color-mix(in srgb, var(--color-overlay-tint, #fff) 15%, transparent);
   }
 
   &:disabled {

@@ -60,9 +60,13 @@ function orderMoves(moves: Move[]): Move[] {
 }
 
 function negamax(game: Chess, depth: number, alpha: number, beta: number): number {
-  if (depth === 0 || game.isGameOver()) return evaluate(game, depth)
+  if (depth === 0) return evaluate(game, depth)
+  const moves = game.moves({ verbose: true }) as Move[]
+  // No legal moves: mate or stalemate. (Cheaper than isGameOver(), which
+  // generates every move again just to answer the same question.)
+  if (!moves.length || game.isDraw()) return evaluate(game, depth)
   let best = -Infinity
-  for (const move of orderMoves(game.moves({ verbose: true }) as Move[])) {
+  for (const move of orderMoves(moves)) {
     game.move(move)
     const score = -negamax(game, depth - 1, -beta, -alpha)
     game.undo()
@@ -110,20 +114,23 @@ export function pickBotMove(game: Chess, flavour: BotFlavour): Move | null {
     return greedyMove(moves)
   }
 
-  // sharp: negamax depth 3 with alpha-beta
-  let best = moves[0]
+  // sharp: negamax depth 3 with alpha-beta. The root narrows its window as it
+  // goes (it used to search every root move with a full window, pruning
+  // nothing at the top), and breaks ties at random so its openings vary.
+  let best: Move[] = []
   let bestScore = -Infinity
   for (const move of orderMoves(moves)) {
     clone.move(move)
-    const score = -negamax(clone, 2, -Infinity, Infinity)
+    const score = -negamax(clone, 2, -Infinity, -bestScore + 1)
     clone.undo()
-    if (score > bestScore) { bestScore = score; best = move }
+    if (score > bestScore) { bestScore = score; best = [move] }
+    else if (score === bestScore) best.push(move)
   }
-  return best
+  return randomOf(best)
 }
 
-export const BOT_FLAVOURS: { value: BotFlavour; label: string }[] = [
-  { value: "drunk", label: "Drunk" },
-  { value: "casual", label: "Casual" },
-  { value: "sharp", label: "Sharp" },
+export const BOT_FLAVOURS: { value: BotFlavour; label: string; hint: string }[] = [
+  { value: "drunk", label: "Drunk", hint: "mostly random, now and then greedy" },
+  { value: "casual", label: "Casual", hint: "takes whatever it can see" },
+  { value: "sharp", label: "Sharp", hint: "looks three moves ahead" },
 ]

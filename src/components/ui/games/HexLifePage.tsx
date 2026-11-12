@@ -4,6 +4,7 @@ import { useStore } from "@/store"
 import styles from "./HexLifePage.module.scss"
 import { useProgramHost } from "./ProgramHostContext"
 import { cssVarReader, startFrameLoop } from "./useGameLoop"
+import { ignoreGameKey } from "./gameUtils"
 
 /**
  * Hex Life — a fullscreen cellular-automaton playground on a hexagonal grid
@@ -67,10 +68,18 @@ export function HexLifePage() {
     else navigate({ to: "/$", params: { _splat: "arcade" } as any })
   }, [popCard, navigate, programHost])
 
-  // Esc closes too.
+  // Esc closes; Space plays/pauses, N (or .) steps, R reseeds, C clears, H hides the panel.
   useEffect(() => {
-    if (programHost.embedded) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close() }
+    const onKey = (e: KeyboardEvent) => {
+      if (ignoreGameKey(e)) return
+      if (e.key === "Escape") { if (!programHost.embedded) close(); return }
+      const k = e.key.toLowerCase()
+      if (k === " ") { e.preventDefault(); setPaused((p) => !p) }
+      else if (k === "n" || k === ".") stepFlag.current = true
+      else if (k === "r") seedRandomRef.current()
+      else if (k === "c") clearAllRef.current()
+      else if (k === "h") setMenuOpen((o) => !o)
+    }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [close, programHost.embedded])
@@ -82,8 +91,9 @@ export function HexLifePage() {
   const nextRef = useRef<Uint8Array>(new Uint8Array(0))
 
   // --- parameters (state for UI + refs for the loop) ---
-  const [hexSize, setHexSize] = useState(10)
-  const hexSizeRef = useRef(hexSize); hexSizeRef.current = hexSize
+  // Cell radius in px. A float in a ref (rounding it made zoom-in stick at 4px:
+  // 4 × 1.1 rounds back to 4); React state only mirrors it for display.
+  const hexSizeRef = useRef(10)
   const [speed, setSpeed] = useState(12)          // generations/sec
   const speedRef = useRef(speed); speedRef.current = speed
   const [birth, setBirth] = useState<number[]>(PRESETS[0].birth)
@@ -100,6 +110,9 @@ export function HexLifePage() {
   const [paused, setPaused] = useState(false)
   const pausedRef = useRef(paused); pausedRef.current = paused
   const stepFlag = useRef(false)
+  /** Generations since the last seed/clear, counted in step() itself (the old
+   * counter ticked once per eight rendered frames, whatever had happened). */
+  const genRef = useRef(0)
   const [gen, setGen] = useState(0)
   const [pop, setPop] = useState(0)
   const [menuOpen, setMenuOpen] = useState(true)
@@ -124,10 +137,16 @@ export function HexLifePage() {
     const g = gridRef.current
     const d = densityRef.current
     for (let i = 0; i < g.length; i++) g[i] = Math.random() < d ? 1 : 0
+    genRef.current = 0
     setGen(0)
   }, [])
 
-  const clearAll = useCallback(() => { gridRef.current.fill(0); setGen(0) }, [])
+  const clearAll = useCallback(() => { gridRef.current.fill(0); genRef.current = 0; setGen(0); setPop(0) }, [])
+  const seedRandomRef = useRef(seedRandom); seedRandomRef.current = seedRandom
+  const clearAllRef = useRef(clearAll); clearAllRef.current = clearAll
+  /** Touch has no buttons or modifiers: the panel picks what a drag does. */
+  const [touchTool, setTouchTool] = useState<"paint" | "erase" | "pan">("paint")
+  const touchToolRef = useRef(touchTool); touchToolRef.current = touchTool
 
   const applyPreset = useCallback((i: number) => {
     setActivePreset(i)
@@ -157,7 +176,10 @@ export function HexLifePage() {
       const hw = Math.sqrt(3) * R
       const vh = 1.5 * R
       const cols = Math.max(8, Math.ceil(canvas.clientWidth / hw) + 2)
-      const rows = Math.max(8, Math.ceil(canvas.clientHeight / vh) + 2)
+      // Even, always: in an offset hex grid the last row and the first only
+      // meet as neighbours (when wrapping) if their parities alternate.
+      let rows = Math.max(8, Math.ceil(canvas.clientHeight / vh) + 2)
+      if (rows & 1) rows++
       return { R, hw, vh, cols, rows }
     }
 
@@ -166,6 +188,9 @@ export function HexLifePage() {
       canvas.width = Math.floor(canvas.clientWidth * dpr)
       canvas.height = Math.floor(canvas.clientHeight * dpr)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      // The world is sized once from the viewport at the starting zoom; zooming
+      // later scales the view, not the world.
+      if (colsRef.current && rowsRef.current) return
       const { cols, rows } = computeGrid()
       // reallocate only if dimensions changed; preserve overlap of existing pattern
       if (cols !== colsRef.current || rows !== rowsRef.current) {
@@ -209,6 +234,7 @@ export function HexLifePage() {
       }
       gridRef.current = n
       nextRef.current = g
+      genRef.current++
     }
 
     const hsl = (h: number, s: number, l: number) => `hsl(${h} ${s}% ${l}%)`
@@ -281,9 +307,9 @@ export function HexLifePage() {
         while (acc >= stepMs) { step(); acc -= stepMs; advanced = true }
       }
       const lc = render()
-      // throttle React state updates to ~6/sec
-      if (advanced && (frameCount++ & 7) === 0) {
-        if (!pausedRef.current || stepFlag.current) setGen((v) => v + 1)
+      // Throttle React state updates to ~8/sec; always settle on the latest.
+      if ((frameCount++ & 7) === 0 || (advanced && pausedRef.current)) {
+        setGen(genRef.current)
         setPop(lc)
       }
     })
@@ -343,8 +369,8 @@ export function HexLifePage() {
       const cx = e.clientX - r.left
       const cy = e.clientY - r.top
       const old = hexSizeRef.current
-      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1
-      const next = Math.max(4, Math.min(28, old * factor))
+      const factor = Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * 0.0025)
+      const next = Math.max(3, Math.min(40, old * factor))
       if (next === old) return
       // Keep the world point under the cursor fixed: scale the pan about it.
       const pan = panRef.current
@@ -353,14 +379,50 @@ export function HexLifePage() {
         x: cx - (cx - pan.x) * ratio,
         y: cy - (cy - pan.y) * ratio,
       }
-      setHexSize(Math.round(next))
+      hexSizeRef.current = next
+    }
+    // Touch: one finger does the panel's tool (paint / erase / pan); two
+    // fingers always pan and pinch-zoom.
+    let pinch: { d: number; mx: number; my: number; size: number; pan: { x: number; y: number } } | null = null
+    const twoFinger = (t: TouchList) => {
+      const a = t[0], b = t[1]
+      return { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), mx: (a.clientX + b.clientX) / 2, my: (a.clientY + b.clientY) / 2 }
     }
     const tStart = (e: TouchEvent) => {
-      if (e.touches[0]) { mode = "paint"; const c = cellAt(e.touches[0].clientX, e.touches[0].clientY); if (c >= 0) gridRef.current[c] = 1 }
+      if (e.touches.length >= 2) {
+        const f = twoFinger(e.touches)
+        pinch = { ...f, size: hexSizeRef.current, pan: { ...panRef.current } }
+        mode = "none"
+        return
+      }
+      const t = e.touches[0]
+      if (!t) return
+      const tool = touchToolRef.current
+      if (tool === "pan") { mode = "pan"; panStart = { x: t.clientX, y: t.clientY, ox: panRef.current.x, oy: panRef.current.y }; return }
+      mode = tool
+      const c = cellAt(t.clientX, t.clientY)
+      if (c >= 0) gridRef.current[c] = tool === "erase" ? 0 : 1
     }
     const tMove = (e: TouchEvent) => {
-      if (mode === "paint" && e.touches[0]) { e.preventDefault(); const c = cellAt(e.touches[0].clientX, e.touches[0].clientY); if (c >= 0) gridRef.current[c] = 1 }
+      if (pinch && e.touches.length >= 2) {
+        e.preventDefault()
+        const f = twoFinger(e.touches)
+        const r = canvas.getBoundingClientRect()
+        const next = Math.max(3, Math.min(40, pinch.size * (f.d / Math.max(1, pinch.d))))
+        const ratio = next / pinch.size
+        const ox = pinch.mx - r.left, oy = pinch.my - r.top
+        hexSizeRef.current = next
+        panRef.current = { x: ox - (ox - pinch.pan.x) * ratio + (f.mx - pinch.mx), y: oy - (oy - pinch.pan.y) * ratio + (f.my - pinch.my) }
+        return
+      }
+      const t = e.touches[0]
+      if (!t || mode === "none") return
+      e.preventDefault()
+      if (mode === "pan") { panRef.current = { x: panStart.ox + (t.clientX - panStart.x), y: panStart.oy + (t.clientY - panStart.y) }; return }
+      const c = cellAt(t.clientX, t.clientY)
+      if (c >= 0) gridRef.current[c] = mode === "erase" ? 0 : 1
     }
+    const tEnd = (e: TouchEvent) => { if (e.touches.length < 2) pinch = null; if (!e.touches.length) mode = "none" }
 
     canvas.addEventListener("mousedown", down)
     window.addEventListener("mousemove", move)
@@ -369,7 +431,8 @@ export function HexLifePage() {
     canvas.addEventListener("wheel", wheel, { passive: false })
     canvas.addEventListener("touchstart", tStart, { passive: true })
     canvas.addEventListener("touchmove", tMove, { passive: false })
-    canvas.addEventListener("touchend", up)
+    canvas.addEventListener("touchend", tEnd)
+    canvas.addEventListener("touchcancel", tEnd)
     // ResizeObserver, not window resize: an OS-shell window or the controls
     // panel can change the canvas box without the viewport changing.
     const ro = new ResizeObserver(resize)
@@ -385,7 +448,8 @@ export function HexLifePage() {
       canvas.removeEventListener("wheel", wheel)
       canvas.removeEventListener("touchstart", tStart)
       canvas.removeEventListener("touchmove", tMove)
-      canvas.removeEventListener("touchend", up)
+      canvas.removeEventListener("touchend", tEnd)
+      canvas.removeEventListener("touchcancel", tEnd)
     }
   }, [allocGrid])
 
@@ -480,9 +544,19 @@ export function HexLifePage() {
             Wrap edges (toroidal)
           </label>
 
+          <div className={`${styles.group} on-touch`}>
+            <label className={styles.label}>One finger</label>
+            <div className={styles.chips}>
+              {(["paint", "erase", "pan"] as const).map((t) => (
+                <button key={t} className={`${styles.chip} ${touchTool === t ? styles.chipActive : ""}`} onClick={() => setTouchTool(t)}>{t}</button>
+              ))}
+            </div>
+          </div>
+
           <p className={styles.meta}>
             B{birth.join("")}/S{survive.join("")} · gen {gen} · pop {pop}<br />
-            paint to draw · shift/right-click erase · alt-drag to pan · scroll to zoom
+            <span className="on-desktop">paint to draw · shift/right-click erase · alt- or middle-drag to pan · scroll to zoom<br />space play/pause · N step · R reseed · C clear · H hide</span>
+            <span className="on-touch">two fingers pan and pinch to zoom</span>
           </p>
         </div>
       )}
