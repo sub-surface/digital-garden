@@ -185,3 +185,9 @@
   margin-left: auto;
   margin-right: auto;
 }
+
+.monitorNote[data-live] {
+  opacity: 1;
+  color: var(--color-accent-base);
+  font-family: var(--font-code);
+}

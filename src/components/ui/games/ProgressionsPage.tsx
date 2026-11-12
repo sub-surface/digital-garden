@@ -22,6 +22,21 @@ import styles from "./ProgressionsPage.module.scss"
  *    draw and Conway's strategy-stealing reasoning.
  *
  * It runs autonomously (watch the battle) but you can also seed cells by clicking.
+ *
+ * What the bots actually build (measured headless, 2026-11-12): with any real
+ * defence weight, ~97% of moves form "zippers": the two sides alternate
+ * stones that each block the other, translating one step along a direction
+ * BETWEEN the lattice axes (the root-3 directions) every two moves, so neither
+ * side ever gets two stones on a common line. On an unbounded board that is
+ * the whole game; on this bounded one the zippers hit the walls and turn, and
+ * the board fills into striped domains. Colour-wise that fill is the
+ * triangular Ising antiferromagnet: neighbours want opposite colours, a
+ * triangle can't have all three pairs differ, and the frustration (Wannier
+ * 1950) leaves many equally good arrangements, hence stripes with defects
+ * rather than one crystal. Below a defence weight of ~0.6 the order flips to
+ * phase separation (each side fills its own territory). The structure is
+ * striped and frustrated, not quasicrystalline: its diffraction shows streaks
+ * near rational positions, not sharp peaks at irrational ones.
  */
 
 const GRID = 90           // GRID x GRID lattice
@@ -46,6 +61,26 @@ const NEAR_HEX: ReadonlyArray<readonly [number, number]> = [
 ]
 
 type Topo = "square" | "hex"
+
+const ZERO_STATS = { stones: 0, unlike: 0, mono: 0, forks: 0, anisotropy: 0 }
+type Pair = readonly [number, number]
+const TRIS_HEX: ReadonlyArray<readonly [Pair, Pair]> = [[[1, 0], [0, 1]], [[1, 0], [1, -1]]]
+const TRIS_SQUARE: ReadonlyArray<readonly [Pair, Pair]> = [[[1, 0], [1, 1]], [[0, 1], [1, 1]]]
+
+/** A zipper: the last few periods of moves repeat, each shifted by one vector. */
+function detectZipper(m: [number, number, number][]): string {
+  for (let P = 2; P <= 8; P += 2) {
+    const span = P * 4
+    if (m.length < span + P) continue
+    const end = m.length - 1
+    const tx = m[end][0] - m[end - P][0], ty = m[end][1] - m[end - P][1]
+    if (!tx && !ty) continue
+    let ok = true
+    for (let i = end - span; i <= end - P && ok; i++) ok = m[i + P][0] - m[i][0] === tx && m[i + P][1] - m[i][1] === ty && m[i + P][2] === m[i][2]
+    if (ok) return `zipper running: (${tx}, ${ty}) every ${P} moves`
+  }
+  return ""
+}
 type Owner = 0 | 1 | 2   // 0 empty, 1 red, 2 blue
 
 // 2^(own−TARGET) lookup, own ∈ 0..TARGET — avoids Math.pow in the hot loop.
@@ -80,9 +115,15 @@ export function ProgressionsPage() {
   const topoRef = useRef<Topo>(topo); topoRef.current = topo
   const dirsRef = useRef<ReadonlyArray<readonly [number, number]>>(DIRS_HEX)
   dirsRef.current = topo === "hex" ? DIRS_HEX : DIRS_SQUARE
-  // live spectral / order stats, updated each step (ref-authoritative)
-  const [stats, setStats] = useState({ stones: 0, order: 0, forks: 0, anisotropy: 0 })
-  const statsRef = useRef({ stones: 0, order: 0, forks: 0, anisotropy: 0 })
+  // live order stats, updated every 16 steps (ref-authoritative)
+  const [stats, setStats] = useState(ZERO_STATS)
+  const statsRef = useRef(ZERO_STATS)
+  /** Recent moves, for spotting a zipper: [x, y, who]. */
+  const movesRef = useRef<[number, number, number][]>([])
+  const [zipper, setZipper] = useState("")
+  const zipperRef = useRef("")
+  const [randomTies, setRandomTies] = useState(false)
+  const randomTiesRef = useRef(randomTies); randomTiesRef.current = randomTies
   const stepCountRef = useRef(0)
   // Cached hot-line cells (the longest runs to highlight). The board changes by
   // one cell per step, so we recompute this ONLY in stepOnce — never per render
@@ -103,7 +144,10 @@ export function ProgressionsPage() {
     bboxRef.current = { minX: GRID, minY: GRID, maxX: -1, maxY: -1 }
     scoresRef.current = { red: 0, blue: 0 }
     bestRef.current = { red: 0, blue: 0 }
-    statsRef.current = { stones: 0, order: 0, forks: 0, anisotropy: 0 }
+    statsRef.current = ZERO_STATS
+    movesRef.current = []
+    zipperRef.current = ""
+    setZipper("")
     turnRef.current = 1
     renderDirtyRef.current = true
     setScores(scoresRef.current)
@@ -164,51 +208,43 @@ export function ProgressionsPage() {
     return { len: bestLen, cells: bestCells }
   }, [])
 
-  // Cheap spectral / order statistics on the live stone set — the toy analog of
-  // the diffraction analysis in HeXO Theory. We don't run a full 2-D FFT every
-  // frame; instead we measure:
-  //   order      — peakedness of the radial pair-correlation g(r): how much the
-  //                stone-to-stone distance histogram concentrates at preferred
-  //                spacings (a quasicrystal/Bragg signature) vs spreads out (noise).
-  //   forks      — cells sitting in ≥2 near-complete (≥3-own, open) lines: τ>2 sites.
-  //   anisotropy — how unevenly stones align across the lattice axes.
+  // Order statistics on the live stones (every 16 steps, O(n)):
+  //   unlike     - share of touching stone pairs that are opposite colours
+  //   mono       - share of fully occupied little triangles that are all one
+  //                colour: 25% for random colours, 0% for a perfect
+  //                antiferromagnet, near 100% when the sides separate
+  //   forks      - stones sitting in >=2 open lines holding >=3 own stones
+  //   anisotropy - how unevenly stones line up across the lattice axes
   const computeStats = useCallback((g: Uint8Array) => {
     const pts: Array<[number, number]> = []
     for (let y = 0; y < GRID; y++) for (let x = 0; x < GRID; x++) if (g[idx(x, y)]) pts.push([x, y])
     const n = pts.length
-    if (n < 4) return { stones: n, order: 0, forks: 0, anisotropy: 0 }
-
-    // radial pair-correlation histogram (sample pairs to stay O(n·k))
-    const BINS = 24, MAXD = 14
-    const hist = new Float64Array(BINS)
-    const sampleCap = Math.min(n, 120)
-    let pairs = 0
-    for (let i = 0; i < sampleCap; i++) {
-      const [ax, ay] = pts[i]
-      for (let j = i + 1; j < sampleCap; j++) {
-        const [bx, by] = pts[j]
-        const d = Math.hypot(ax - bx, ay - by)
-        if (d > 0 && d <= MAXD) { hist[Math.min(BINS - 1, Math.floor(d / MAXD * BINS))]++; pairs++ }
-      }
-    }
-    // "order" = normalised peakedness (max bin / mean bin), mapped to 0..1
-    let mx = 0, sum = 0
-    for (let b = 0; b < BINS; b++) { if (hist[b] > mx) mx = hist[b]; sum += hist[b] }
-    const mean = sum / BINS
-    const order = mean > 0 ? Math.min(1, (mx / mean - 1) / 6) : 0
-
-    // axis anisotropy: variance of per-axis adjacent-pair counts
+    if (n < 4) return { ...ZERO_STATS, stones: n }
+    const at = (x: number, y: number) => (inB(x, y) ? g[idx(x, y)] : 0)
     const dirs = dirsRef.current
+    let pairs = 0, unlikePairs = 0
+    for (const [x, y] of pts) for (const [dx, dy] of dirs) {
+      const o = at(x + dx, y + dy)
+      if (o) { pairs++; if (o !== g[idx(x, y)]) unlikePairs++ }
+    }
+    // little triangles: on the hex lattice the two per cell; on the square
+    // (king-move) lattice, the two halves of each unit square
+    const tri = topoRef.current === "hex" ? TRIS_HEX : TRIS_SQUARE
+    let tris = 0, monoTris = 0
+    for (const [x, y] of pts) for (const [[ax, ay], [bx, by]] of tri) {
+      const a = at(x + ax, y + ay), b = at(x + bx, y + by)
+      if (!a || !b) continue
+      tris++
+      if (a === b && a === g[idx(x, y)]) monoTris++
+    }
     const axisCounts = dirs.map(([dx, dy]) => {
       let c = 0
-      for (const [x, y] of pts) if (inB(x + dx, y + dy) && g[idx(x + dx, y + dy)]) c++
+      for (const [x, y] of pts) if (at(x + dx, y + dy)) c++
       return c
     })
     const aMean = axisCounts.reduce((a, b) => a + b, 0) / axisCounts.length || 1
     const aVar = axisCounts.reduce((a, b) => a + (b - aMean) ** 2, 0) / axisCounts.length
     const anisotropy = aMean > 0 ? Math.min(1, Math.sqrt(aVar) / aMean) : 0
-
-    // fork sites: occupied cells in >=2 open lines with >=3 own stones
     let forks = 0
     for (const [x, y] of pts) {
       const who = g[idx(x, y)] as Owner
@@ -229,7 +265,7 @@ export function ProgressionsPage() {
       }
       if (open >= 2) forks++
     }
-    return { stones: n, order, forks, anisotropy }
+    return { stones: n, unlike: pairs ? unlikePairs / pairs : 0, mono: tris ? monoTris / tris : 0, forks, anisotropy }
   }, [])
 
   const stepOnce = useCallback(() => {
@@ -259,12 +295,15 @@ export function ProgressionsPage() {
       }
     }
     if (!cand.length) return
-    let bx = cand[0][0], by = cand[0][1], bs = -Infinity
+    let bx = cand[0][0], by = cand[0][1], bs = -Infinity, ties = 0
+    const shuffle = randomTiesRef.current
     for (const [x, y] of cand) {
       const off = potential(g, x, y, who)
       const def = potential(g, x, y, opp) * blockRef.current
       const s = off + def
-      if (s > bs) { bs = s; bx = x; by = y }
+      if (s > bs + 1e-12) { bs = s; bx = x; by = y; ties = 1 }
+      // equal scores: keep the first in scan order, or pick uniformly at random
+      else if (shuffle && s > bs - 1e-12 && Math.random() * ++ties < 1) { bx = x; by = y }
     }
     g[idx(bx, by)] = who
     {
@@ -310,6 +349,10 @@ export function ProgressionsPage() {
       dirtyRef.current = true
     }
     turnRef.current = who === 1 ? 2 : 1
+    const mv = movesRef.current
+    mv.push([bx, by, who])
+    if (mv.length > 64) mv.shift()
+    zipperRef.current = detectZipper(mv)
     dirtyRef.current = true
     renderDirtyRef.current = true
     // Periodically (every ~16 moves) run the full O(n²) passes — spectral stats
@@ -480,6 +523,7 @@ export function ProgressionsPage() {
         setScores(scoresRef.current)
         setBest(bestRef.current)
         setStats(statsRef.current)
+        setZipper(zipperRef.current)
       }
     })
 
@@ -628,16 +672,25 @@ export function ProgressionsPage() {
           </div>
 
           <aside className={styles.monitor}>
-            <h2 className={styles.monitorTitle}>Spectral monitor</h2>
+            <h2 className={styles.monitorTitle}>Order monitor</h2>
             <Metric label="Stones" value={String(stats.stones)} />
-            <Bar label="Order (Bragg)" value={stats.order} hint="peakedness of g(r) — quasicrystal signature" />
+            <Bar label="Unlike neighbours" value={stats.unlike} hint="share of touching stones that are opposite colours" />
+            <Bar label="One-colour triangles" value={stats.mono} hint="25% for random colours; 0% for a perfect antiferromagnet; near 100% when the sides separate" />
             <Bar label="Anisotropy" value={stats.anisotropy} hint="axis imbalance — symmetry breaking" />
             <Metric label="Fork sites (τ>2)" value={String(stats.forks)} />
             <Metric label="Longest — Red" value={String(best.red)} />
             <Metric label="Longest — Blue" value={String(best.blue)} />
+            <p className={styles.monitorNote} data-live={zipper ? true : undefined}>
+              {zipper || "no zipper running"}
+            </p>
             <p className={styles.monitorNote}>
-              The toy analog of HeXO's diffraction analysis: high order = stones settling
-              into preferred spacings; fork sites are τ&gt;2 pressure points.
+              Each side blocks the other with its very next stone, so the pair run off in
+              lock-step <em>zippers</em> between the lattice&rsquo;s axes, and neither ever gets
+              two on a line. The walls turn them, and the board fills with stripes. The colours
+              behave like a triangular antiferromagnet: neighbours want to differ, but no
+              triangle can have all three pairs differ, so no single crystal wins. Stripes and
+              defects, then, not a quasicrystal. Below a defence weight of about 0.6 the sides
+              separate into territories instead, and one-colour triangles jump toward 100%.
             </p>
           </aside>
         </div>
@@ -659,6 +712,13 @@ export function ProgressionsPage() {
             title="Allow agents to overwrite the opponent's stones"
           >
             {overwrite ? "⟳ Overwrite: on" : "⟳ Overwrite: off"}
+          </button>
+          <button
+            className={randomTies ? styles.toggleOn : ""}
+            onClick={() => setRandomTies((v) => !v)}
+            title="Break equal scores at random instead of by scan order (the zippers survive either way)"
+          >
+            {randomTies ? "Ties: random" : "Ties: first"}
           </button>
         </div>
         <div className={styles.sliders}>
