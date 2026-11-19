@@ -15,6 +15,8 @@ import {
   BIG, BREAK_EVEN, BREAK_EVEN_CLEAR, ORACLES, SCENARIOS, SMALL, THEORIES, available, counted, decide as decideBox, expected, graphFor, readerPredict, READER_GRUDGE, READER_KNOWN, payoff, readerRecord, rngFrom as rngFromSeed, runBench,
   type Act, type OracleId, type Round, type ScenarioId, type Theory,
 } from "../src/lib/newcomb"
+import { CASE, CASES, defaults, equilibrium } from "../src/lib/decision-cases"
+import { countedOf, handleOf } from "../src/lib/causal"
 import { CAPACITY, FENCED_MAX, MAX_GRAZE, SEASONS, SUSTAINABLE, decide, newCommons, regrowth, season, welfare } from "../src/lib/commons"
 
 // ── Fronts: rules ──
@@ -316,6 +318,62 @@ for (const p of ["steward", "mirror", "grazier", "opportunist"] as const) {
   // Clear boxes shown empty can't be scored.
   assert.deepEqual(readerRecord([{ scenario: "clear", oracle: "reader", act: "two", full: false, predicted: "two" }]), { hits: 0, n: 0, accuracy: 0.5 })
   console.log(`newcomb: ok (break-even ${BREAK_EVEN}; Reader unexploitable over ${games.toLocaleString()} exhaustive games, honest play ${honest.toFixed(0)}/round)`)
+}
+
+// ── Case files: the verdicts in Levinstein & Soares, "Cheating Death in Damascus" ──
+{
+  const near = (a: number, b: number, eps = 1e-3, what = "") => assert.ok(Math.abs(a - b) < eps, `${what}: ${a} vs ${b}`)
+  const at = (id: keyof typeof CASE, over: Record<string, number> = {}) => CASE[id].verdicts({ ...defaults(CASE[id]), ...over })
+  for (const c of CASES) {
+    const v = defaults(c)
+    const edges = c.edges(v)
+    for (const e of edges) assert.ok(c.nodes[e.from] && c.nodes[e.to], `${c.id}: edge ${e.from}>${e.to} has nodes`)
+    assert.deepEqual(handleOf("fdt", edges, c.roles), [c.roles.alg], `${c.id}: FDT's hand is on the algorithm`)
+    assert.ok(countedOf("cdt", edges, c.roles).length > 0, `${c.id}: CDT sees some path to the payoff`)
+    // Deliberation settles in the same place from anywhere.
+    if (c.deliberation) {
+      const eqs = [0.02, 0.5, 0.98].map((p0) => equilibrium(c.deliberation!({ ...v, p0 })))
+      for (const e of eqs) near(e, eqs[0], 2e-3, `${c.id}: equilibrium independent of start`)
+    }
+  }
+  // Death in Damascus: Joyce's equilibrium is 1001/2000; CDT expects $499.50 and dies, a dollar down half the time.
+  const dd = at("damascus")
+  near(dd.cdt.mixed!, 0.5005, 1e-4, "Damascus equilibrium")
+  near(dd.cdt.ev, 499.5, 0.1, "Damascus: CDT expects")
+  near(dd.cdt.realised, -0.4995, 1e-3, "Damascus: CDT gets")
+  assert.equal(dd.fdt.realised, 0)
+  // Random Coin: U(R) = 499 < 500, so CDT won't buy it; EDT and FDT do.
+  const rc = at("coin")
+  near(rc.cdt.ev, 500, 0.5, "Random Coin: CDT's U(stay)"); assert.equal(rc.cdt.realised, 0)
+  assert.equal(rc.fdt.realised, 499); assert.equal(rc.edt.realised, 499)
+  // Olympus: the causally dominated option is the best one.
+  const ol = at("olympus")
+  assert.equal(ol.cdt.realised, 0); assert.equal(ol.fdt.realised, 500); assert.equal(ol.edt.realised, 500)
+  // Murder Lesion: CDT shoots 25% and averages −7.5; FDT gains 2 − 2y.
+  const ml = at("murder")
+  near(ml.cdt.mixed!, 0.25, 1e-3, "Murder Lesion equilibrium"); near(ml.cdt.realised, -7.5, 0.05, "Murder Lesion: CDT gets")
+  for (const y of [0, 0.3, 0.9]) near(at("murder", { y }).fdt.ev, 2 - 2 * y, 1e-9, `Murder Lesion: FDT at y=${y}`)
+  // Psychopath: Joycean CDT trembles; FDT never presses.
+  const ps = at("psychopath")
+  assert.ok(ps.cdt.mixed! > 0.05 && ps.cdt.mixed! < 0.15, `psychopath tremble ${ps.cdt.mixed}`); assert.equal(ps.fdt.realised, 0)
+  // XOR Blackmail: EDT pays and is worse off by exactly $1,000 × P(no termites); FDT sides with CDT.
+  for (const t of [0.01, 0.05, 0.3]) {
+    const x = at("xor", { t })
+    assert.equal(x.edt.choice, "pays"); assert.equal(x.fdt.choice, "doesn't pay")
+    near(x.fdt.realised - x.edt.realised, 1000 * (1 - t), 1e-6, "XOR gap")
+  }
+  // Twin: with a true copy, cooperation pays above 75% likeness; a shared upbringing splits FDT from EDT.
+  assert.equal(at("twin", { s: 0.74, why: 0 }).fdt.choice, "defects")
+  assert.equal(at("twin", { s: 0.76, why: 0 }).fdt.choice, "cooperates")
+  const up = at("twin", { s: 0.95, why: 1 })
+  assert.equal(up.edt.choice, "cooperates"); assert.equal(up.fdt.choice, "defects")
+  // Hitchhiker: payers are rescued; welshers mostly aren't.
+  const hh = at("hitchhiker"); assert.ok(hh.fdt.realised > 90 * hh.cdt.realised)
+  // Mugging: FDT pays whenever ½R > ½·$100.
+  assert.equal(at("mugging", { r: 10000 }).fdt.choice, "pays"); assert.equal(at("mugging", { r: 50 }).fdt.choice, "refuses")
+  // Bomb: FDT takes Left at a 1-in-10^24 error rate and Right when the predictor is sloppy.
+  assert.match(at("bomb", { e: -24 }).fdt.choice, /Left/); assert.match(at("bomb", { e: -1 }).fdt.choice, /Right/)
+  console.log(`cases: ok (${CASES.length} case files; Damascus settles at ${dd.cdt.mixed!.toFixed(4)}, Murder Lesion CDT ${ml.cdt.realised.toFixed(2)})`)
 }
 
 console.log(`games: ok (Fronts: Marshal ${marshal}/${games} vs Recruit; Commons: sustainable yield ${SUSTAINABLE.toFixed(1)}/season)`)

@@ -32,13 +32,14 @@ export const BREAK_EVEN_CLEAR = BIG / (2 * BIG - SMALL)
 
 export type Act = "one" | "two"
 export type Obs = "full" | "empty"
-export type Theory = "cdt" | "edt" | "fdt"
+import { THEORIES, countedOf, handleOf, type Edge as CausalEdge, type EdgeKind, type Roles, type Theory } from "./causal"
+export { THEORIES }
+export type { Theory }
 export type ScenarioId = "classic" | "closed" | "clear"
 export type OracleId = "reader" | "laplace" | "psychologist" | "simulator" | "lesion" | "time-traveller" | "oblivious"
 export type Link = "subjunctive" | "correlational" | "causal" | "none"
 export type Mode = "play" | "bench"
 
-export const THEORIES: Theory[] = ["cdt", "edt", "fdt"]
 
 export const THEORY_META: Record<Theory, { name: string; short: string; does: string }> = {
   cdt: { name: "Causal", short: "CDT", does: "intervenes on the act: what would my taking this cause?" },
@@ -396,8 +397,8 @@ export function readerRecord(history: Round[]): { hits: number; n: number; accur
 // ── The causal picture ──────────────────────────────────────────────────────
 
 export type NodeId = "alg" | "act" | "pred" | "box" | "pay" | "gene" | "coin"
-export type EdgeKind = "cause" | "same" | "retro" | "see" | "inclines"
-export interface Edge { from: NodeId; to: NodeId; kind: EdgeKind }
+export type Edge = CausalEdge<NodeId>
+export type { EdgeKind }
 
 export const NODE_LABEL: Record<NodeId, string> = {
   alg: "your algorithm",
@@ -408,6 +409,8 @@ export const NODE_LABEL: Record<NodeId, string> = {
   gene: "the gene",
   coin: "a coin",
 }
+
+export const NEWCOMB_ROLES: Roles<NodeId> = { act: "act", alg: "alg", pay: "pay" }
 
 /** The scenario as a graph: how the prediction connects to you, and what you can see. */
 export function graphFor(sid: ScenarioId, oid: OracleId): Edge[] {
@@ -426,35 +429,12 @@ export function graphFor(sid: ScenarioId, oid: OracleId): Edge[] {
   return e
 }
 
-function reach(edges: Edge[], from: NodeId[], forward: boolean): Set<NodeId> {
-  const seen = new Set<NodeId>(from)
-  const stack = [...from]
-  while (stack.length) {
-    const n = stack.pop()!
-    for (const ed of edges) {
-      const [a, b] = forward ? [ed.from, ed.to] : [ed.to, ed.from]
-      if (a === n && !seen.has(b)) { seen.add(b); stack.push(b) }
-    }
-  }
-  return seen
-}
-
 /** Where the theory puts its hand on the graph. */
 export function handle(theory: Theory, edges: Edge[]): NodeId[] {
-  if (theory === "cdt") return ["act"]
-  if (theory === "fdt") return ["alg"]
-  return [...reach(edges, ["act"], false)] // EDT: the act, and everything it is evidence about upstream
+  return handleOf(theory, edges, NEWCOMB_ROLES)
 }
 
-/**
- * The edges a theory counts as carrying its choice to its winnings: those on a
- * directed path from where it intervenes (CDT: the act; FDT: the algorithm) or
- * conditions (EDT: the act and its ancestors) to the payoff.
- */
+/** The edges a theory counts as carrying its choice to its winnings (see causal.ts). */
 export function counted(theory: Theory, edges: Edge[]): Edge[] {
-  const from = reach(edges, handle(theory, edges), true)
-  const to = reach(edges, ["pay"], false)
-  // An intervention cuts what flows into its node.
-  const cut = theory === "edt" ? new Set<NodeId>() : new Set(handle(theory, edges))
-  return edges.filter((ed) => from.has(ed.from) && to.has(ed.to) && !cut.has(ed.to))
+  return countedOf(theory, edges, NEWCOMB_ROLES)
 }
