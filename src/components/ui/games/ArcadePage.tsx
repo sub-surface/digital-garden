@@ -104,6 +104,7 @@ const GAMES: GameCard[] = [
   },
   { href: "fronts", name: "Fronts", blurb: "Five fronts, one army, sealed orders. Win a front by one and you keep one; a tie breaks both. Against a Marshal who learns your habits.", live: true, section: "games" },
   { href: "commons", name: "Commons", blurb: "Three herders, one meadow that regrows only from what's left. Graze, hold back, or fence a neighbour out. Your neighbours have temperaments; guess them.", live: true, section: "games" },
+  { href: "two-boxes", name: "Two Boxes", blurb: "Newcomb's problem: $1,000 in one box, $1,000,000 or nothing in the other, an oracle that predicted you. Sit down against one that learns you, or put causal, evidential and functional decision theory on the bench against seven oracles.", live: true, section: "games" },
   { href: "chess", name: "Chess", blurb: "A small handmade machine to play against.", live: true, section: "games" },
   { href: "tetris", name: "Tetris", blurb: "The falling well, themed in accent monochrome.", live: true, section: "games" },
   { href: "snake", name: "Snake", blurb: "Walls wrap; the rare bloom bends time.", live: true, section: "games" },

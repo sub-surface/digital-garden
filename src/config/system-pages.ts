@@ -32,6 +32,7 @@ const SYSTEM_PAGE_COMPONENTS: Record<string, LazyExoticComponent<ComponentType>>
   enclosure:       lazy(() => import("@/components/ui/games/EnclosurePage").then(m => ({ default: m.EnclosurePage }))),
   fronts:          lazy(() => import("@/components/ui/games/FrontsPage").then(m => ({ default: m.FrontsPage }))),
   commons:         lazy(() => import("@/components/ui/games/CommonsPage").then(m => ({ default: m.CommonsPage }))),
+  "two-boxes":     lazy(() => import("@/components/ui/games/TwoBoxesPage").then(m => ({ default: m.TwoBoxesPage }))),
   sigil:           lazy(() => import("@/components/ui/games/SigilPage").then(m => ({ default: m.SigilPage }))),
   collider:        lazy(() => import("@/components/ui/games/ColliderPage").then(m => ({ default: m.ColliderPage }))),
   apparatus:       lazy(() => import("@/components/ui/composer/ComposerPage").then(m => ({ default: m.ComposerPage }))),

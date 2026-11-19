@@ -11,6 +11,10 @@ import { Chess } from "chess.js"
 import { pickBotMove } from "../src/lib/chessBot"
 import { fromAxial, hashWorld, makeWorld, orient, parseRule, shapeOf, stamp, step, toAxial, type Rule, type World } from "../src/lib/hexlife"
 import { HEXLIFE_PRESETS } from "../src/components/ui/games/hexLifePresets"
+import {
+  BIG, BREAK_EVEN, BREAK_EVEN_CLEAR, ORACLES, SCENARIOS, SMALL, THEORIES, available, counted, decide as decideBox, expected, graphFor, readerPredict, READER_GRUDGE, READER_KNOWN, payoff, readerRecord, rngFrom as rngFromSeed, runBench,
+  type Act, type OracleId, type Round, type ScenarioId, type Theory,
+} from "../src/lib/newcomb"
 import { CAPACITY, FENCED_MAX, MAX_GRAZE, SEASONS, SUSTAINABLE, decide, newCommons, regrowth, season, welfare } from "../src/lib/commons"
 
 // ── Fronts: rules ──
@@ -161,6 +165,157 @@ for (const p of ["steward", "mirror", "grazier", "opportunist"] as const) {
     }
   }
   console.log(`hexlife: ok (${checked} catalogue checks)`)
+}
+
+// ── Two Boxes: the verdict table ──
+{
+  const pick = (r: { predicted: Act; why: string }) => ({ predicted: r.predicted, why: r.why })
+  const verdict = (sid: ScenarioId, oid: OracleId, p: number, obs?: "full" | "empty") =>
+    THEORIES.map((t) => decideBox(t, sid, oid, p, obs).act).join(" ")
+  // cdt edt fdt
+  assert.equal(verdict("classic", "laplace", 1), "two one one", "classic: the original split")
+  assert.equal(verdict("closed", "laplace", 1), "two one one", "seeing the $1,000 changes nothing")
+  assert.equal(verdict("clear", "laplace", 1, "full"), "two two one", "clear and full: only FDT leaves the $1,000")
+  assert.equal(verdict("clear", "laplace", 1, "empty"), "two two two")
+  assert.equal(verdict("classic", "lesion", 0.9), "two one two", "the lesion splits EDT from FDT")
+  assert.equal(verdict("classic", "time-traveller", 1), "one one one", "retrocausation converts CDT")
+  assert.equal(verdict("classic", "oblivious", 1), "two two two")
+  assert.equal(verdict("classic", "simulator", 1), "two one one")
+  assert.equal(verdict("classic", "psychologist", 0.5), "two two two", "a coin with a clipboard")
+  assert.equal(verdict("classic", "psychologist", BREAK_EVEN + 1e-4), "two one one")
+  assert.equal(verdict("classic", "psychologist", BREAK_EVEN - 1e-4), "two two two")
+  assert.equal(verdict("clear", "psychologist", BREAK_EVEN_CLEAR + 1e-4, "full"), "two two one")
+  assert.equal(verdict("clear", "psychologist", BREAK_EVEN_CLEAR - 1e-4, "full"), "two two two")
+  assert.ok(Math.abs(BREAK_EVEN - 0.5005) < 1e-9)
+  assert.ok(!available("time-traveller", "clear", "bench") && !available("reader", "classic", "bench") && available("reader", "clear", "play"))
+
+  // Why ain'cha rich: exact expectations.
+  const ev = (sid: ScenarioId, oid: OracleId, p: number) => THEORIES.map((t) => expected(t, sid, oid, p))
+  assert.deepEqual(ev("classic", "laplace", 1), [SMALL, BIG, BIG])
+  assert.deepEqual(ev("clear", "laplace", 1), [SMALL, SMALL, BIG])
+  assert.deepEqual(ev("classic", "lesion", 0.9), [BIG / 2 + SMALL, BIG / 2, BIG / 2 + SMALL], "the gene ignores a calculator")
+  assert.deepEqual(ev("classic", "time-traveller", 1), [BIG, BIG, BIG])
+
+  // The bench's simulation agrees with the exact numbers.
+  for (const [sid, oid, p] of [["classic", "psychologist", 0.9], ["clear", "simulator", 1], ["closed", "lesion", 0.8]] as [ScenarioId, OracleId, number][]) {
+    const b = runBench(sid, oid, p, 4000, 3)
+    for (const t of THEORIES) assert.ok(Math.abs(b[t].mean - b[t].expected) < 0.03 * BIG, `${sid}/${oid}/${t}: sim ${b[t].mean} vs exact ${b[t].expected}`)
+  }
+
+  // Paired rounds: with the lesion the simulated gap is the theories' $1,000, not noise.
+  {
+    const b = runBench("classic", "lesion", 0.9, 1000, 5)
+    assert.equal(b.cdt.mean - b.edt.mean, SMALL)
+    assert.equal(b.fdt.mean, b.cdt.mean)
+  }
+
+  // The graph: where each theory sees its choice reaching the money.
+  const via = (t: Theory, sid: ScenarioId, oid: OracleId) => counted(t, graphFor(sid, oid)).map((e) => `${e.from}>${e.to}`).sort().join(" ")
+  assert.equal(via("cdt", "classic", "laplace"), "act>pay")
+  assert.equal(via("fdt", "classic", "laplace"), "act>pay alg>act alg>pred box>pay pred>box")
+  assert.equal(via("fdt", "classic", "lesion"), "act>pay alg>act", "FDT cuts the gene")
+  assert.ok(via("edt", "classic", "lesion").includes("gene>pred"), "EDT counts the common cause")
+  assert.ok(via("cdt", "classic", "time-traveller").includes("act>pred"))
+  assert.equal(via("edt", "classic", "oblivious"), "act>pay alg>act")
+  for (const oid of Object.keys(ORACLES) as OracleId[]) for (const sid of Object.keys(SCENARIOS) as ScenarioId[])
+    for (const t of THEORIES) assert.ok(counted(t, graphFor(sid, oid)).some((e) => e.to === "pay"), `${t} reaches the payoff in ${sid}/${oid}`)
+
+  // The Reader: three clauses. Strangers get an empty box; it reads only its own rounds.
+  const R = (act: Act, full: boolean, oracle: OracleId = "reader", scenario: ScenarioId = "classic"): Round => ({ scenario, oracle, act, full, ...(oracle === "reader" ? { predicted: full ? "one" : "two" } : {}) })
+  assert.equal(readerPredict([]).why, "stranger")
+  assert.equal(readerPredict([R("one", false)]).why, "stranger")
+  assert.deepEqual(pick(readerPredict([R("one", false), R("one", false)])), { predicted: "one", why: "record" }, "two rounds of B alone and it trusts you")
+  assert.equal(readerPredict(Array.from({ length: 10 }, () => R("one", true, "oblivious"))).why, "stranger", "rounds against the coin say nothing to it")
+  assert.equal(readerPredict([R("one", false, "reader", "clear"), R("one", false, "reader", "clear")]).predicted, "one", "B alone from a box you can see is empty counts")
+  assert.equal(readerPredict([R("two", false, "reader", "clear"), R("two", false, "reader", "clear")]).why, "stranger")
+  // A grudge: take both from a full box and it leaves B empty for READER_GRUDGE rounds with it, then lapses.
+  {
+    const h = [R("one", false), R("one", false), R("one", true), R("two", true)]
+    assert.deepEqual(pick(readerPredict(h)), { predicted: "two", why: "grudge" })
+    assert.equal(readerPredict(h).grudgeLeft, READER_GRUDGE)
+    for (let i = 1; i < READER_GRUDGE; i++) h.push(R("one", false))
+    assert.equal(readerPredict(h).grudgeLeft, 1)
+    h.push(R("one", false))
+    assert.deepEqual(pick(readerPredict(h)), { predicted: "one", why: "record" }, "the grudge lapses")
+    assert.equal(readerPredict([R("one", false), R("one", false), R("two", false)]).why, "record", "taking both from an empty box is no offence")
+  }
+
+  // Unexploitable, exhaustively: every possible game of up to 16 rounds, from a fresh record (so
+  // "forget me" between games is covered too). Nothing beats taking B alone every time by more than
+  // the $1,000 of grabbing both on the very last round, and a game restarted every n rounds by
+  // forgetting averages less than $1,000,000 a round.
+  const best = (sid: ScenarioId, L: number) => {
+    const h: Round[] = []
+    let max = -1, arg = ""
+    const dfs = (total: number, path: string) => {
+      if (h.length === L) { if (total > max) { max = total; arg = path } return }
+      const { predicted } = readerPredict(h)
+      const full = predicted === "one"
+      for (const act of ["one", "two"] as Act[]) {
+        h.push({ scenario: sid, oracle: "reader", act, full, predicted })
+        dfs(total + payoff(act, full), path + (act === "one" ? "1" : "2"))
+        h.pop()
+      }
+    }
+    dfs(0, "")
+    return { max, arg }
+  }
+  let games = 0
+  for (const sid of ["classic", "clear"] as ScenarioId[]) {
+    for (let L = 1; L <= 16; L++) {
+      const steady = Math.max(0, L - READER_KNOWN) * BIG
+      const { max, arg } = best(sid, L)
+      games += 2 ** L
+      assert.equal(max, L > READER_KNOWN ? steady + SMALL : L * SMALL, `${sid}, ${L} rounds: best ${max} by ${arg}`)
+      if (L > READER_KNOWN) assert.equal(arg, "1".repeat(L - 1) + "2", `${sid}, ${L} rounds: the best line is B alone, then grab on the last round`)
+      assert.ok(max < L * BIG, "forgetting and starting over never pays a million a round")
+    }
+  }
+
+  // Strategies over a long game: nothing beats taking B alone every time.
+  const play = (choose: (i: number, h: Round[], r: () => number) => Act, n: number, seed = 1) => {
+    const h: Round[] = []
+    const r = rngFromSeed(seed)
+    let total = 0
+    for (let i = 0; i < n; i++) {
+      const { predicted } = readerPredict(h)
+      const act = choose(i, h, r)
+      const full = predicted === "one"
+      total += payoff(act, full)
+      h.push({ scenario: "classic", oracle: "reader", act, full, predicted })
+    }
+    return { ...readerRecord(h), mean: total / n }
+  }
+  const honest = play(() => "one", 200).mean
+  const rivals: [string, (i: number, h: Round[], r: () => number) => Act][] = [
+    ["always both", () => "two"],
+    ["coin flip", (_, __, r) => (r() < 0.5 ? "one" : "two")],
+    ["both 5% of the time", (_, __, r) => (r() < 0.05 ? "two" : "one")],
+    ["both every 5th round", (i) => (i % 5 === 4 ? "two" : "one")],
+    ["both every 50th round", (i) => (i % 50 === 49 ? "two" : "one")],
+    ["grab whenever it will fill B", (_, h) => (readerPredict(h).predicted === "one" ? "two" : "one")],
+    ["B alone only when it will fill B", (_, h) => readerPredict(h).predicted],
+    ["alternate", (i) => (i % 2 ? "two" : "one")],
+  ]
+  for (const [name, s] of rivals) {
+    const m = Math.max(...[1, 2, 3, 4, 5].map((seed) => play(s, 200, seed).mean))
+    assert.ok(m < honest, `${name} (${m}) must not beat taking B alone (${honest})`)
+  }
+  // And it still reads people: a habit and a pattern; a coin-flipper it can't.
+  assert.ok(play(() => "one", 40).accuracy > 0.9, "a steady one-boxer is read")
+  {
+    // An alternator takes both from full boxes, so it spends most rounds under a grudge (the price of
+    // being unexploitable); but the record underneath has learned the pattern.
+    const alt: Round[] = Array.from({ length: 30 }, (_, i) => R(i % 2 ? "two" : "one", false))
+    assert.ok(readerPredict(alt).pOne > 0.7, "after both, it expects B alone")
+    assert.ok(readerPredict([...alt, R("one", false)]).pOne < 0.3, "after B alone, it expects both")
+  }
+  assert.ok(play((_, h) => { const l = h[h.length - 1]; return !l ? "one" : l.full ? l.act : l.act === "one" ? "two" : "one" }, 40).accuracy > 0.75, "win-stay, lose-shift is read")
+  const flipper = play((_, __, r) => (r() < 0.5 ? "one" : "two"), 400, 11)
+  assert.ok(flipper.accuracy > 0.4 && flipper.accuracy < 0.6, `a coin-flipper can't be read (${flipper.accuracy})`)
+  // Clear boxes shown empty can't be scored.
+  assert.deepEqual(readerRecord([{ scenario: "clear", oracle: "reader", act: "two", full: false, predicted: "two" }]), { hits: 0, n: 0, accuracy: 0.5 })
+  console.log(`newcomb: ok (break-even ${BREAK_EVEN}; Reader unexploitable over ${games.toLocaleString()} exhaustive games, honest play ${honest.toFixed(0)}/round)`)
 }
 
 console.log(`games: ok (Fronts: Marshal ${marshal}/${games} vs Recruit; Commons: sustainable yield ${SUSTAINABLE.toFixed(1)}/season)`)

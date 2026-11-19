@@ -39,5 +39,6 @@ export const SYSTEM_PAGE_META: Record<string, SystemPageMeta> = {
   enclosure:       { layout: "game",    title: "Enclosure", loading: "Ruling the lattice...", since: "2026-11-11" },
   fronts:          { layout: "game",    title: "Fronts", loading: "Mustering...", since: "2026-11-11" },
   commons:         { layout: "game",    title: "Commons", loading: "Opening the gate...", since: "2026-11-11" },
+  "two-boxes":     { layout: "game",    title: "Two Boxes", loading: "Filling the boxes...", since: "2026-11-19" },
   filament:        { layout: "game",    title: "FILAMENT", loading: "Loading...", since: "2026-07-27" }, // moved: now a notice pointing at filament.subsurfaces.net
 }
